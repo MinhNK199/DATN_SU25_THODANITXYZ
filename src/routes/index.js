@@ -1,22 +1,22 @@
-const express = require('express');
-const router = express.Router();
+import { Router } from "express";
+import routerAuth from "./auth";
+import routerAddress from "./address";
+import routerBrand from "./brand";
+import routerCart from "./cart";
+import routerCategory from "./category";
+import routerCoupon from "./coupon";
+import routerNotifi from "./notification";
+import routerOrder from "./order";
+import routerProduct from "./product";
 
-const productRoutes = require('./productRoutes');
-const orderRoutes = require('./orderRoutes');
-const cartRoutes = require('./cartRoutes');
-const categoryRoutes = require('./categoryRoutes');
-const brandRoutes = require('./brandRoutes');
-const couponRoutes = require('./couponRoutes');
-const addressRoutes = require('./addressRoutes');
-const notificationRoutes = require('./notificationRoutes');
-
-router.use('/products', productRoutes);
-router.use('/orders', orderRoutes);
-router.use('/cart', cartRoutes);
-router.use('/categories', categoryRoutes);
-router.use('/brands', brandRoutes);
-router.use('/coupons', couponRoutes);
-router.use('/addresses', addressRoutes);
-router.use('/notifications', notificationRoutes);
-
-module.exports = router; 
+const router = Router();
+router.use("/auth", routerAuth);
+router.use("/address", routerAddress);
+router.use("/brand", routerBrand);
+router.use("/cart", routerCart);
+router.use("/category", routerCategory);
+router.use("/coupon", routerCoupon);
+router.use("/notification", routerNotifi);
+router.use("/order", routerOrder);
+router.use("/product", routerProduct);
+export default router;
