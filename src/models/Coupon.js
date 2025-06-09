@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const couponSchema = new mongoose.Schema({
     code: {
         type: String,
-        required: [true, 'Please add a coupon code'],
+        required: [true, 'Vui lòng nhập mã giảm giá'],
         unique: true,
         uppercase: true,
         trim: true,
@@ -13,13 +13,16 @@ const couponSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        required: true,
-        enum: ['percentage', 'fixed'],
+        required: [true, 'Vui lòng chọn loại giảm giá'],
+        enum: {
+            values: ['percentage', 'fixed'],
+            message: 'Loại giảm giá không hợp lệ (percentage hoặc fixed)',
+        },
     },
     value: {
         type: Number,
-        required: true,
-        min: 0,
+        required: [true, 'Vui lòng nhập giá trị giảm giá'],
+        min: [0, 'Giá trị giảm giá phải lớn hơn hoặc bằng 0'],
     },
     minOrderValue: {
         type: Number,
@@ -30,11 +33,11 @@ const couponSchema = new mongoose.Schema({
     },
     startDate: {
         type: Date,
-        required: true,
+        required: [true, 'Vui lòng nhập ngày bắt đầu'],
     },
     endDate: {
         type: Date,
-        required: true,
+        required: [true, 'Vui lòng nhập ngày kết thúc'],
     },
     usageLimit: {
         type: Number,
@@ -72,9 +75,10 @@ const couponSchema = new mongoose.Schema({
     }],
 }, {
     timestamps: true,
+    versionKey: false,
 });
 
-// Check if coupon is valid
+// Kiểm tra coupon còn hiệu lực không
 couponSchema.methods.isValid = function() {
     const now = new Date();
     return (
@@ -85,4 +89,5 @@ couponSchema.methods.isValid = function() {
     );
 };
 
-module.exports = mongoose.model('Coupon', couponSchema); 
+const Coupon = mongoose.model("Coupon", couponSchema);
+export default Coupon;

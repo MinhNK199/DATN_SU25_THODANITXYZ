@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema({
     name: {
         type: String,
-        required: [true, 'Please add a category name'],
+        required: [true, 'Vui lòng nhập tên danh mục'],
         trim: true,
         unique: true,
     },
@@ -36,18 +36,20 @@ const categorySchema = new mongoose.Schema({
     },
 }, {
     timestamps: true,
+    versionKey: false,
 });
 
-// Create slug from name
+// Tạo slug từ tên danh mục
 categorySchema.pre('save', function(next) {
     this.slug = this.name
         .toLowerCase()
-        .replace(/[^a-zA-Z0-9]/g, '-')
-        .replace(/-+/g, '-');
+        .replace(/[^a-z0-9]+/g, '-') // chỉ cho phép a-z, số và dấu '-'
+        .replace(/^-+|-+$/g, '')     // bỏ dấu '-' đầu cuối
+        .replace(/-+/g, '-');        // gom nhiều '-' thành 1
     next();
 });
 
-// Update level based on parent
+// Cập nhật level dựa trên parent
 categorySchema.pre('save', async function(next) {
     if (this.parent) {
         const parentCategory = await this.constructor.findById(this.parent);
@@ -58,4 +60,5 @@ categorySchema.pre('save', async function(next) {
     next();
 });
 
-module.exports = mongoose.model('Category', categorySchema); 
+const Category = mongoose.model("Category", categorySchema);
+export default Category;

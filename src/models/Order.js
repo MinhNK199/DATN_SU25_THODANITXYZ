@@ -1,33 +1,36 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: [true, 'Vui lòng liên kết với người dùng'],
     },
     orderItems: [{
-        name: { type: String, required: true },
-        quantity: { type: Number, required: true },
-        image: { type: String, required: true },
-        price: { type: Number, required: true },
+        name: { type: String, required: [true, 'Vui lòng nhập tên sản phẩm'] },
+        quantity: { type: Number, required: [true, 'Vui lòng nhập số lượng'] },
+        image: { type: String, required: [true, 'Vui lòng nhập ảnh sản phẩm'] },
+        price: { type: Number, required: [true, 'Vui lòng nhập giá sản phẩm'] },
         product: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Product',
-            required: true,
+            required: [true, 'Vui lòng liên kết với sản phẩm'],
         },
     }],
     shippingAddress: {
-        fullName: { type: String, required: true },
-        address: { type: String, required: true },
-        city: { type: String, required: true },
-        postalCode: { type: String, required: true },
-        phone: { type: String, required: true },
+        fullName: { type: String, required: [true, 'Vui lòng nhập họ và tên người nhận'] },
+        address: { type: String, required: [true, 'Vui lòng nhập địa chỉ giao hàng'] },
+        city: { type: String, required: [true, 'Vui lòng nhập tỉnh/thành phố'] },
+        postalCode: { type: String, required: [true, 'Vui lòng nhập mã bưu chính'] },
+        phone: { type: String, required: [true, 'Vui lòng nhập số điện thoại người nhận'] },
     },
     paymentMethod: {
         type: String,
-        required: true,
-        enum: ['COD', 'BANKING', 'E-WALLET'],
+        required: [true, 'Vui lòng chọn phương thức thanh toán'],
+        enum: {
+            values: ['COD', 'BANKING', 'E-WALLET'],
+            message: 'Phương thức thanh toán không hợp lệ',
+        },
     },
     paymentResult: {
         id: String,
@@ -82,13 +85,16 @@ const orderSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+        enum: {
+            values: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+            message: 'Trạng thái đơn hàng không hợp lệ',
+        },
         default: 'pending',
     },
     statusHistory: [{
         status: {
             type: String,
-            required: true,
+            required: [true, 'Vui lòng nhập trạng thái'],
         },
         date: {
             type: Date,
@@ -98,6 +104,8 @@ const orderSchema = new mongoose.Schema({
     }],
 }, {
     timestamps: true,
+    versionKey: false,
 });
 
-module.exports = mongoose.model('Order', orderSchema); 
+const Order = mongoose.model("Order", orderSchema);
+export default Order;

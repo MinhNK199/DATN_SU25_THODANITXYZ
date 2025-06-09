@@ -1,34 +1,34 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const addressSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: [true, 'Vui lòng liên kết với người dùng'],
     },
     fullName: {
         type: String,
-        required: [true, 'Please add a full name'],
+        required: [true, 'Vui lòng nhập họ và tên'],
     },
     phone: {
         type: String,
-        required: [true, 'Please add a phone number'],
+        required: [true, 'Vui lòng nhập số điện thoại'],
     },
     address: {
         type: String,
-        required: [true, 'Please add an address'],
+        required: [true, 'Vui lòng nhập địa chỉ'],
     },
     city: {
         type: String,
-        required: [true, 'Please add a city'],
+        required: [true, 'Vui lòng nhập tỉnh/thành phố'],
     },
     district: {
         type: String,
-        required: [true, 'Please add a district'],
+        required: [true, 'Vui lòng nhập quận/huyện'],
     },
     ward: {
         type: String,
-        required: [true, 'Please add a ward'],
+        required: [true, 'Vui lòng nhập phường/xã'],
     },
     postalCode: {
         type: String,
@@ -39,7 +39,10 @@ const addressSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['home', 'work', 'other'],
+        enum: {
+            values: ['home', 'work', 'other'],
+            message: 'Loại địa chỉ không hợp lệ (home, work, other)',
+        },
         default: 'home',
     },
     note: {
@@ -47,17 +50,8 @@ const addressSchema = new mongoose.Schema({
     },
 }, {
     timestamps: true,
+    versionKey: false,
 });
 
-// Ensure only one default address per user
-addressSchema.pre('save', async function(next) {
-    if (this.isDefault) {
-        await this.constructor.updateMany(
-            { user: this.user, _id: { $ne: this._id } },
-            { isDefault: false }
-        );
-    }
-    next();
-});
-
-module.exports = mongoose.model('Address', addressSchema); 
+const Address = mongoose.model("Address", addressSchema);
+export default Address;

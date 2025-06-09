@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const brandSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: [true, 'Please add a brand name'],
+        required: [true, 'Vui lòng nhập tên thương hiệu'],
         trim: true,
         unique: true,
     },
@@ -30,15 +30,20 @@ const brandSchema = new mongoose.Schema({
     },
 }, {
     timestamps: true,
+    versionKey: false,
 });
 
-// Create slug from name
+// Tạo slug từ tên
 brandSchema.pre('save', function(next) {
-    this.slug = this.name
-        .toLowerCase()
-        .replace(/[^a-zA-Z0-9]/g, '-')
-        .replace(/-+/g, '-');
+    if (this.name) {
+        this.slug = this.name
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')     // thay thế ký tự không hợp lệ
+            .replace(/^-+|-+$/g, '');        // xóa dấu - ở đầu/cuối
+    }
     next();
 });
 
-module.exports = mongoose.model('Brand', brandSchema); 
+const Brand = mongoose.model("Brand", brandSchema);
+export default Brand;

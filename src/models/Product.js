@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: [true, 'Please add a product name'],
+        required: [true, 'Vui lòng nhập tên sản phẩm'],
         trim: true,
     },
     slug: {
@@ -12,35 +12,35 @@ const productSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        required: [true, 'Please add a description'],
+        required: [true, 'Vui lòng nhập mô tả sản phẩm'],
     },
     price: {
         type: Number,
-        required: [true, 'Please add a price'],
-        min: 0,
+        required: [true, 'Vui lòng nhập giá sản phẩm'],
+        min: [0, 'Giá sản phẩm không được nhỏ hơn 0'],
     },
     salePrice: {
         type: Number,
-        min: 0,
+        min: [0, 'Giá khuyến mãi không được nhỏ hơn 0'],
     },
     images: [{
         type: String,
-        required: true,
+        required: [true, 'Vui lòng thêm ảnh sản phẩm'],
     }],
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
-        required: true,
+        required: [true, 'Vui lòng chọn danh mục sản phẩm'],
     },
     brand: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Brand',
-        required: true,
+        required: [true, 'Vui lòng chọn thương hiệu'],
     },
     stock: {
         type: Number,
-        required: true,
-        min: 0,
+        required: [true, 'Vui lòng nhập số lượng tồn kho'],
+        min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
         default: 0,
     },
     specifications: {
@@ -55,8 +55,8 @@ const productSchema = new mongoose.Schema({
         },
         rating: {
             type: Number,
-            min: 1,
-            max: 5,
+            min: [1, 'Đánh giá tối thiểu là 1'],
+            max: [5, 'Đánh giá tối đa là 5'],
         },
         review: String,
         date: {
@@ -82,9 +82,10 @@ const productSchema = new mongoose.Schema({
     },
 }, {
     timestamps: true,
+    versionKey: false,
 });
 
-// Create slug from name
+// Tạo slug tự động từ tên sản phẩm
 productSchema.pre('save', function(next) {
     this.slug = this.name
         .toLowerCase()
@@ -93,4 +94,5 @@ productSchema.pre('save', function(next) {
     next();
 });
 
-module.exports = mongoose.model('Product', productSchema); 
+const Product = mongoose.model("Product", productSchema);
+export default Product;
