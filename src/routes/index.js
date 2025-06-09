@@ -8,6 +8,8 @@ import routerCoupon from "./coupon";
 import routerNotifi from "./notification";
 import routerOrder from "./order";
 import routerProduct from "./product";
+import routerBill from "./bill";
+
 
 const router = Router();
 router.use("/auth", routerAuth);
@@ -19,4 +21,5 @@ router.use("/coupon", routerCoupon);
 router.use("/notification", routerNotifi);
 router.use("/order", routerOrder);
 router.use("/product", routerProduct);
+router.use("/bill", routerBill);
 export default router;
