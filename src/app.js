@@ -1,42 +1,16 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const dotenv = require('dotenv');
-const connectDB = require('./config/database');
+import express from "express";
+import dotenv from "dotenv";
+import router from "./routers/index.js";
+import connectDB from "./config/database.js";
 
-// Load env vars
 dotenv.config();
-
-// Connect to database
+const app = express();
 connectDB();
 
-const app = express();
-
-// Body parser
 app.use(express.json());
 
-// Enable CORS
-app.use(cors());
+app.use("/api", router);
 
-// Dev logging middleware
-if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
-}
-
-// Mount routers
-app.use('/api/auth', require('./routes/auth'));
-
-// Error handler
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({
-        success: false,
-        error: err.message || 'Server Error',
-    });
-});
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-    console.log(`Server is running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+app.listen(process.env.PORT || 3000, () => {
+  console.log(`Server Đã Được Chạy Ở Cổng ${process.env.PORT || 3000}🚀`);
 });
