@@ -1,7 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { set } from "mongoose";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
@@ -21,10 +20,9 @@ export default function Login() {
       const res = await axios.post("http://localhost:5000/api/auth/login", form);
       setSuccess(res.data.message || "Đăng nhập thành công!");
       localStorage.setItem("token", res.data.token);
-        setTimeout(() => {
-          navigate("/dashboard");
-        },);
-
+      setTimeout(() => {
+        navigate("/admin");
+      },);
     } catch (err: any) {
       setError(
         err.response?.data?.details?.join(", ") ||
@@ -35,12 +33,12 @@ export default function Login() {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: "0 auto" }}>
-      <h2>Đăng nhập</h2>
-      {error && <div style={{ color: "red" }}>{error}</div>}
-      {success && <div style={{ color: "green" }}>{success}</div>}
-      <div>
-        <label>Email</label>
+    <form onSubmit={handleSubmit} className="container mt-5" style={{ maxWidth: 400 }}>
+      <h2 className="text-center mb-4">Đăng nhập</h2>
+      {error && <div className="alert alert-danger">{error}</div>}
+      {success && <div className="alert alert-success">{success}</div>}
+      <div className="mb-3">
+        <label className="form-label">Email</label>
         <input
           name="email"
           type="email"
@@ -48,10 +46,11 @@ export default function Login() {
           onChange={handleChange}
           required
           placeholder="Nhập email của bạn"
+          className="form-control"
         />
       </div>
-      <div>
-        <label>Mật khẩu</label>
+      <div className="mb-3">
+        <label className="form-label">Mật khẩu</label>
         <input
           name="password"
           type="password"
@@ -59,9 +58,10 @@ export default function Login() {
           onChange={handleChange}
           required
           placeholder="Nhập mật khẩu của bạn"
+          className="form-control"
         />
       </div>
-      <button type="submit">Đăng nhập</button>
+      <button type="submit" className="btn btn-primary w-100">Đăng nhập</button>
     </form>
   );
 }

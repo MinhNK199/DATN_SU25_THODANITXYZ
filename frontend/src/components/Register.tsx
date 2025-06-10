@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
   const [form, setForm] = useState({
@@ -11,6 +12,7 @@ export default function Register() {
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -23,6 +25,9 @@ export default function Register() {
     try {
       const res = await axios.post("http://localhost:5000/api/auth/register", form);
       setSuccess(res.data.message || "Đăng ký thành công!");
+      setTimeout(() => {
+        navigate("/login");
+      },);
     } catch (err: any) {
       setError(
         err.response?.data?.details?.join(", ") ||
