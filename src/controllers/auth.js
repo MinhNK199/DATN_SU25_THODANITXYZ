@@ -175,33 +175,41 @@ export const toggleUserStatus = async (req, res) => {
         if (!targetUser) {
             return res.status(404).json({ message: "Người dùng không tồn tại" });
         }
-        const currentUser = req.user; 
+        const currentUser = req.user;
 
         if (currentUser._id.toString() === targetUser._id.toString()) {
             return res.status(400).json({ message: "Không thể vô hiệu hóa hoặc kích hoạt tài khoản của chính mình" });
         }
-        if (currentUser.role === "admin") {
-            if (targetUser.role === "superadmin") {
-                return res.status(403).json({ message: "Admin không thể vô hiệu hóa hoặc kích hoạt tài khoản superadmin" });
+
+        // superadmin có thể thao tác với tất cả
+        if (currentUser.role === "superadmin") {
+            targetUser.active = !targetUser.active;
+        }
+        // admin chỉ được thao tác với user không phải admin hoặc superadmin
+        else if (currentUser.role === "admin") {
+            if (["admin", "superadmin"].includes(targetUser.role)) {
+                return res.status(403).json({ message: "Admin không thể vô hiệu hóa hoặc kích hoạt tài khoản admin hoặc superadmin" });
             }
-        } else if (currentUser.role !== "superadmin") {
+            targetUser.active = !targetUser.active;
+        }
+        // các role khác không có quyền
+        else {
             return res.status(403).json({ message: "Bạn không có quyền thực hiện hành động này" });
         }
-        targetUser.active = !targetUser.active;
+
         await targetUser.save();
         await logActivity({
-            content: `tài khoản ${targetUser.email} đã ${targetUser.active ? "được kích hoạt" : "bị vô hiệu hóa"}`,
+            content: `Tài khoản ${targetUser.email} đã ${targetUser.active ? "được kích hoạt" : "bị vô hiệu hóa"}`,
             userName: targetUser.name,
             userId: targetUser._id,
-            });
+        });
         res.status(200).json({
             message: `Tài khoản đã ${targetUser.active ? "kích hoạt" : "vô hiệu hóa"}`,
             userId: targetUser._id,
             newStatus: targetUser.active,
         });
-        
+
     } catch (err) {
         res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
     }
 };
-

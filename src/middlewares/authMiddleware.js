@@ -46,7 +46,7 @@ export const checkAdmin = (requiredCheck = []) => {
         // Phân quyền theo vai trò
         const roleCheck = {
             superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
-            admin: ["view_user", "view_nhatKy"], 
+            admin: ["view_user", "view_nhatKy", "CheckTaiKhoan"], 
             staff: ["view_user"],
             customer: [],
         };

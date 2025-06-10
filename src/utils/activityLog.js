@@ -2,8 +2,8 @@ import ActivityLog from "../models/activityLog";
 
 export const getActivityLogs = async (req, res) => {
   try {
-    if (req.user.role !== "superadmin") {
-      return res.status(403).json({ message: "Chỉ superadmin mới được xem nhật ký hoạt động" });
+    if (req.user.role !== "superadmin" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Chỉ admin mới được xem nhật ký hoạt động" });
     }
 
     const { from, to, type } = req.query;
