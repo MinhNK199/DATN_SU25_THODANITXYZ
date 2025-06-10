@@ -1,8 +1,13 @@
 import { useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { set } from "mongoose";
 
 export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -10,18 +15,30 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
     try {
       const res = await axios.post("http://localhost:5000/api/auth/login", form);
-      alert(res.data.message || "Đăng nhập thành công!");
-      // Lưu token nếu cần: localStorage.setItem("token", res.data.token);
+      setSuccess(res.data.message || "Đăng nhập thành công!");
+      localStorage.setItem("token", res.data.token);
+        setTimeout(() => {
+          navigate("/dashboard");
+        },);
+
     } catch (err: any) {
-      alert(err.response?.data?.message || "Đăng nhập thất bại!");
+      setError(
+        err.response?.data?.details?.join(", ") ||
+        err.response?.data?.message ||
+        "Đăng nhập thất bại!"
+      );
     }
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: "0 auto" }}>
       <h2>Đăng nhập</h2>
+      {error && <div style={{ color: "red" }}>{error}</div>}
+      {success && <div style={{ color: "green" }}>{success}</div>}
       <div>
         <label>Email</label>
         <input
@@ -31,7 +48,6 @@ export default function Login() {
           onChange={handleChange}
           required
           placeholder="Nhập email của bạn"
-          title="Email"
         />
       </div>
       <div>
@@ -43,7 +59,6 @@ export default function Login() {
           onChange={handleChange}
           required
           placeholder="Nhập mật khẩu của bạn"
-          title="Mật khẩu"
         />
       </div>
       <button type="submit">Đăng nhập</button>
