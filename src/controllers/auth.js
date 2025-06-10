@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
 
-export const dangKy = async (req, res) => {
+export const dangKy = async(req, res) => {
     try {
         const { name, email, password, phone, addresses, avatar } = req.body;
 
@@ -11,19 +11,19 @@ export const dangKy = async (req, res) => {
             return res.status(400).json({ message: "Email đã tồn tại" });
         }
 
-        let role = "customer"; 
+        let role = "customer";
         if (email === "admindatn@gmail.com") {
             const superAdminExists = await User.findOne({ role: "superadmin" });
             if (!superAdminExists) {
-                role = "superadmin"; 
+                role = "superadmin";
             }
         }
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({ 
-            name, 
-            email, 
-            password: hashedPassword, 
+        const user = await User.create({
+            name,
+            email,
+            password: hashedPassword,
             role,
             phone,
             addresses,
@@ -45,7 +45,7 @@ export const dangKy = async (req, res) => {
 
 
 
-export const dangNhap = async (req, res) => {
+export const dangNhap = async(req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email }).select("+password");
@@ -72,7 +72,7 @@ export const dangNhap = async (req, res) => {
                 role: user.role,
             },
         });
-        
+
     } catch (error) {
         return res.status(500).json({ message: "Đăng nhập thất bại", error: error.message });
     }
