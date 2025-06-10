@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
+import { logActivity } from "../utils/activityLog"; 
 
 export const dangKy = async (req, res) => {
     try {
@@ -31,6 +32,11 @@ export const dangKy = async (req, res) => {
         });
 
         user.password = undefined;
+        await logActivity({
+        content: `Đăng ký tài khoản`,
+        userName: user.name,
+        userId: user._id,
+        });
         return res.status(201).json({
             message: `Đăng ký thành công với vai trò ${role}`,
             user,
@@ -62,6 +68,11 @@ export const dangNhap = async (req, res) => {
             return res.status(403).json({ message: "Tài khoản đang bị khóa" });
         }
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        await logActivity({
+        content: `Đăng nhập hệ thống`,
+        userName: user.name,
+        userId: user._id,
+        });
         return res.status(200).json({
             message: "Đăng nhập thành công",
             token,
@@ -101,7 +112,11 @@ export const updateUserRole = async (req, res) => {
         }
         user.role = role;
         await user.save();
-        
+        await logActivity({
+            content: ` Đã đổi vai trò ${user.name} thành ${role}`,
+            userName: user.name,
+            userId: user._id,
+        });
         res.status(200).json({
             message: "Cập nhật vai trò thành công",
             userId: user._id,
@@ -174,7 +189,11 @@ export const toggleUserStatus = async (req, res) => {
         }
         targetUser.active = !targetUser.active;
         await targetUser.save();
-        
+        await logActivity({
+            content: `tài khoản ${targetUser.email} đã ${targetUser.active ? "được kích hoạt" : "bị vô hiệu hóa"}`,
+            userName: targetUser.name,
+            userId: targetUser._id,
+            });
         res.status(200).json({
             message: `Tài khoản đã ${targetUser.active ? "kích hoạt" : "vô hiệu hóa"}`,
             userId: targetUser._id,
