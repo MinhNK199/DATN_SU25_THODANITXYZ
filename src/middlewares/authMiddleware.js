@@ -34,3 +34,31 @@ export const protect = async (req, res, next) => {
         res.status(401).json({ message: "Token không hợp lệ" });
     }
 };
+
+export const checkAdmin = (requiredCheck = []) => {
+    return (req, res, next) => {
+        const user = req.user;
+
+        if (!user) {
+            return res.status(401).json({ message: "Chưa xác thực" });
+        }
+
+        // Phân quyền theo vai trò
+        const roleCheck = {
+            superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
+            admin: ["view_user"], 
+            staff: ["view_user"],
+            customer: [],
+        };
+
+        const userCheck = roleCheck[user.role] || [];
+
+        const okCheck = requiredCheck.every(p => userCheck.includes(p));
+
+        if (!okCheck) {
+            return res.status(403).json({ message: "Không đủ quyền để thực hiện hành động này" });
+        }
+
+        next();
+    };
+};
