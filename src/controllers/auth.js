@@ -183,7 +183,7 @@ export const getUserById = async (req, res) => {
     }
 };
 export const getCurrentUser = (req, res) => {
-  res.json({ user: req.user }); // req.user đã được gán bởi protect
+  res.json({ user: req.user }); 
 };
 
 export const toggleUserStatus = async (req, res) => {

@@ -46,7 +46,6 @@ export const getProductById = async (req, res) => {
     }
 };
 
-// Tạo sản phẩm mới
 export const createProduct = async (req, res) => {
     try {
         const product = new Product({
