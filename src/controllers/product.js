@@ -1,7 +1,10 @@
 import Product from "../models/product";
+<<<<<<< HEAD
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
+=======
+>>>>>>> d2858e61da01f8dc0e0b21b1356ce2dc9f393412
 
 
 export const getProducts = async (req, res) => {
@@ -153,6 +156,7 @@ export const getTopProducts = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+<<<<<<< HEAD
 };
 
 // Soft delete sản phẩm
@@ -297,4 +301,6 @@ export const importProductsFromExcel = async (req, res) => {
             error: error.message
         });
     }
+=======
+>>>>>>> d2858e61da01f8dc0e0b21b1356ce2dc9f393412
 };
