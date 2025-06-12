@@ -15,8 +15,8 @@ const AdminSidebar = () => {
   };
 
   return (
-    <aside className="w-72 h-screen bg-gray-800 text-white flex flex-col p-6">
-      <h2 className="text-2xl font-semibold mb-10 text-center">Quản Trị</h2>
+    <aside className="w-72 h-screen bg-gray-700 text-white flex flex-col p-6">
+      <h2 className="text-2xl font-semibold mb-10 text-center">Trang Quản Trị</h2>
 
       <nav className="flex flex-col gap-0">
         <button

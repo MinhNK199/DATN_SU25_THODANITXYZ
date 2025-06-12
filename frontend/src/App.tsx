@@ -10,6 +10,7 @@ import { Toaster } from "react-hot-toast";
 import Hello from "./components/Hello";
 import Dashboard from "./components/admin/dashboard";
 import UserList from "./components/admin/users/UserList";
+import UserDetail from "./components/admin/users/userDetail";
 
   
 
@@ -27,6 +28,7 @@ const App = (props: Props) => {
     { path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
       { path: "", element: <Dashboard /> },
         { path: "user-list", element: <UserList/> },
+         { path: "user-detail/:id", element: <UserDetail/> },
         { path: "product-list", element: <ProductList/> },
         { path: "product-list", element: <ProductList/> },
         { path: "product-add", element: <ProductAdd/> },

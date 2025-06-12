@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { User } from "../../../interfaces/User";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { FaEye } from "react-icons/fa";
 
 const API_URL = "http://localhost:5000/api/auth/users";
 
@@ -128,7 +129,20 @@ const UserList: React.FC = () => {
                 <td className="py-3 px-4 text-center">{index + 1}</td>
                 <td className="py-3 px-4 text-center">{u.name}</td>
                 <td className="py-3 px-4 text-center">{u.email}</td>
-                <td className="py-3 px-4 text-center">{u.role}</td>
+                <td className="py-3 px-4 text-center">
+                  <span
+                    className={`px-2 py-1 rounded-md font-semibold border
+      ${
+        u.role === "customer"
+          ? "border-blue-500 text-blue-600 bg-blue-50"
+          : u.role === "admin"
+          ? "border-orange-400 text-orange-500 bg-orange-50"
+          : "border-red-500 text-red-600 bg-red-50"
+      }`}
+                  >
+                    {u.role}
+                  </span>
+                </td>
                 <td className="py-3 px-4 text-center">{u.phone || "-"}</td>
                 <td className="py-3 px-4 text-center">
                   {u.active ? (
@@ -144,27 +158,14 @@ const UserList: React.FC = () => {
                     ? new Date(u.createdAt).toLocaleDateString()
                     : "-"}
                 </td>
-                <td className="py-3 px-4 flex gap-2 justify-center">
+                <td className="py-3 px-4 text-center">
                   <button
-                    onClick={() => navigate(`/admin/users/${u._id}`)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                    onClick={() => navigate(`/admin/user-detail/${u._id}`)}
+                    className="text-gray-600 hover:text-red-500 transition text-2xl"
+                    title="Xem chi tiết"
                   >
-                    Chi tiết
+                    <FaEye />
                   </button>
-                  {canToggle ? (
-                    <button
-                      onClick={() => handleToggleActive(u._id, u.active)}
-                      className={`px-3 py-1 rounded-md transition ${
-                        u.active
-                          ? "bg-yellow-500 text-white hover:bg-yellow-600"
-                          : "bg-green-500 text-white hover:bg-green-600"
-                      }`}
-                    >
-                      {u.active ? "Vô hiệu hóa" : "Kích hoạt"}
-                    </button>
-                  ) : (
-                    <span className="text-gray-400">Không đủ quyền</span>
-                  )}
                 </td>
               </tr>
             ))}
