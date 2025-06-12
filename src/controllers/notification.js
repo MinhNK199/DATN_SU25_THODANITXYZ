@@ -1,35 +1,14 @@
 import Notification from "../models/notification";
 
 // Lấy thông báo của user (phân trang)
-export const getUserNotifications = async (req, res) => {
+export const getNotifications = async (req, res) => {
     try {
-        const pageSize = 10;
-        const page = Number(req.query.page) || 1;
-
-        const count = await Notification.countDocuments({
-            user: req.user._id,
-            expiresAt: { $gt: new Date() },
-        });
-
-        const notifications = await Notification.find({
-            user: req.user._id,
-            expiresAt: { $gt: new Date() },
-        })
-            .sort({ createdAt: -1 })
-            .limit(pageSize)
-            .skip(pageSize * (page - 1));
-
-        res.json({
-            notifications,
-            page,
-            pages: Math.ceil(count / pageSize),
-            total: count,
-        });
+        const notifications = await Notification.find({}).sort({ date: -1 });
+        res.json(notifications);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
-
 // Lấy thông báo theo id
 export const getNotificationById = async (req, res) => {
     try {

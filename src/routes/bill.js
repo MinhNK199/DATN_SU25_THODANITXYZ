@@ -6,7 +6,8 @@ import {
     updateBill,
     deleteBill,
     getBillsByCustomer,
-    updateBillStatus
+    updateBillStatus,
+    exportAndSendBill
 } from '../controllers/bill.js';
 
 const routerBill = express.Router();
@@ -31,5 +32,8 @@ routerBill.patch('/:id/status', updateBillStatus);
 
 // Delete bill
 routerBill.delete('/:id', deleteBill);
+
+// Xuất và gửi hóa đơn qua email
+routerBill.post('/:id/export', exportAndSendBill);
 
 export default routerBill; 
