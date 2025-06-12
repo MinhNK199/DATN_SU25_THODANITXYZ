@@ -94,15 +94,15 @@ const UserDetail: React.FC = () => {
   const borderByRole = (role: string) => {
     switch (role) {
       case "customer":
-        return "border-blue-500";
+        return "border-blue-500 bg-blue-100";
       case "staff":
-        return "border-teal-500";
+        return "border-teal-500 bg-teal-100";
       case "admin":
-        return "border-orange-400";
+        return "border-orange-400 bg-orange-100";
       case "superadmin":
-        return "border-red-500";
+        return "border-red-500 bg-red-100";
       default:
-        return "border-gray-300";
+        return "border-gray-300 bg-gray-100";
     }
   };
 
