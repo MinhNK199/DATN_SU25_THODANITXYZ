@@ -24,5 +24,5 @@ router.use("/order", routerOrder);
 router.use("/product", routerProduct);
 router.use("/bill", routerBill);
 router.use("/banner", routerBanner);
-router.user("/rating", routerRating);
+router.use("/rating", routerRating);
 export default router;
