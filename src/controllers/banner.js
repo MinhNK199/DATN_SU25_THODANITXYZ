@@ -46,7 +46,7 @@ export const updateBanner = async (req, res) => {
       runValidators: true,
     });
     if (!banner) return res.status(404).json({ success: false, message: 'Không tìm thấy banner' });
-    res.status(200).json({ success: true, banner });
+    res.status(200).json({ success: true, message: 'Cập nhậtnhật banner thành công' });
   } catch (error) {
     console.error("Lỗi cập nhật banner:", error);
     res.status(400).json({ success: false, message: error.message });

@@ -1,9 +1,9 @@
 import express from 'express';
-import {createBanner,getBanners,getActiveBanners,updateBanner,deactivateCategory,deleteBanner} from '../controllers/banner.js';
+import {createBanner,getBanners,getActiveBanners,updateBanner,deleteBanner} from '../controllers/banner.js';
 
 const router = express.Router();
 
-// Public route để lấy banners có lịch hiển thị
+// Public route để lấy banners
 router.get('/banners/active', getActiveBanners);
 router.post('/banners', createBanner);
 router.get('/banners', getBanners);
