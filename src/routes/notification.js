@@ -12,7 +12,7 @@ import { protect } from "../middlewares/authMiddleware";
 
 const routerNotifi = express.Router();
 
-routerNotifi.get("/", protect, getUserNotifications);
+routerNotifi.get("/", protect, GeolocationCoordinates);
 routerNotifi.get("/unread-count", protect, getUnreadNotificationCount);
 routerNotifi.get("/:id", protect, getNotificationById);
 routerNotifi.post("/", protect, createNotification);
