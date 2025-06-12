@@ -182,7 +182,9 @@ export const getUserById = async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
     }
 };
-
+export const getCurrentUser = (req, res) => {
+  res.json({ user: req.user }); // req.user đã được gán bởi protect
+};
 
 export const toggleUserStatus = async (req, res) => {
     try {
