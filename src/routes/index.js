@@ -10,6 +10,7 @@ import routerOrder from "./order";
 import routerProduct from "./product";
 import routerBill from "./bill";
 import routerBanner from "./banner"
+import routerRating from "./rating";
 
 const router = Router();
 router.use("/auth", routerAuth);
@@ -23,4 +24,5 @@ router.use("/order", routerOrder);
 router.use("/product", routerProduct);
 router.use("/bill", routerBill);
 router.use("/banner", routerBanner);
+router.user("/rating", routerRating);
 export default router;
