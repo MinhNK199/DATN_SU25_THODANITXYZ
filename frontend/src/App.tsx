@@ -11,6 +11,7 @@ import Hello from "./components/Hello";
 import Dashboard from "./components/admin/dashboard";
 import UserList from "./components/admin/users/UserList";
 import UserDetail from "./components/admin/users/userDetail";
+import UserEdit from "./components/admin/users/userEdit";
 
   
 
@@ -28,7 +29,8 @@ const App = (props: Props) => {
     { path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
       { path: "", element: <Dashboard /> },
         { path: "user-list", element: <UserList/> },
-         { path: "user-detail/:id", element: <UserDetail/> },
+        { path: "user-edit/:id", element: <UserEdit/> },
+        { path: "user-detail/:id", element: <UserDetail/> },
         { path: "product-list", element: <ProductList/> },
         { path: "product-list", element: <ProductList/> },
         { path: "product-add", element: <ProductAdd/> },
