@@ -9,7 +9,7 @@ import routerNotifi from "./notification";
 import routerOrder from "./order";
 import routerProduct from "./product";
 import routerBill from "./bill";
-
+import routerBanner from "./banner"
 
 const router = Router();
 router.use("/auth", routerAuth);
@@ -22,4 +22,5 @@ router.use("/notification", routerNotifi);
 router.use("/order", routerOrder);
 router.use("/product", routerProduct);
 router.use("/bill", routerBill);
+router.use("/banner", routerBanner);
 export default router;

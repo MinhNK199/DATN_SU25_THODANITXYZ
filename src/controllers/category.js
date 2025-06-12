@@ -87,6 +87,24 @@ export const updateCategory = async (req, res) => {
     }
 };
 
+// Ẩn danh mục 
+export const deactivateCategory = async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.id);
+        if (!category) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+
+        category.isActive = false;
+        await category.save();
+
+        res.json({ message: "Đã ẩn danh mục thành công", category });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
 // Xóa danh mục
 export const deleteCategory = async (req, res) => {
     try {

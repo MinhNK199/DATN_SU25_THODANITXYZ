@@ -6,6 +6,7 @@ import {
     createCategory,
     updateCategory,
     deleteCategory,
+    deactivateCategory,
     getCategoryProducts
 } from "../controllers/category";
 import { protect } from "../middlewares/authMiddleware";
@@ -19,6 +20,7 @@ routerCategory.get("/:id/products", getCategoryProducts);
 routerCategory.get("/:id", getCategoryById);
 routerCategory.post("/", protect, createCategory);
 routerCategory.put("/:id", protect, updateCategory);
+routerCategory.put("/:id/deactivate", protect, deactivateCategory); 
 routerCategory.delete("/:id", protect, deleteCategory);
 
 export default routerCategory;
