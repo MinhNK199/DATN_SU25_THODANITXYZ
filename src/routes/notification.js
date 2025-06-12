@@ -1,6 +1,6 @@
 import express from "express";
 import {
-    getUserNotifications,
+    getNotifications,
     getNotificationById,
     createNotification,
     markNotificationAsRead,
@@ -12,7 +12,7 @@ import { protect } from "../middlewares/authMiddleware";
 
 const routerNotifi = express.Router();
 
-routerNotifi.get("/", protect, GeolocationCoordinates);
+routerNotifi.get("/", protect, getNotifications);
 routerNotifi.get("/unread-count", protect, getUnreadNotificationCount);
 routerNotifi.get("/:id", protect, getNotificationById);
 routerNotifi.post("/", protect, createNotification);
