@@ -17,11 +17,11 @@ type Props = {}
 
 const App = (props: Props) => {
   const routes = useRoutes([
+    { path: "/", element: <Login/>, },
+    { path: "register", element: <Register/> },
     
-      { path: "/", element: <Hello/>, },
-        { path: "register", element: <Register/> },
-        { path: "login", element: <Login/> }
-         ,
+    //client
+     { path: "/client", element: <Hello/>},
     
     //Admin
     { path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [

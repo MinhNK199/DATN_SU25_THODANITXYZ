@@ -10,9 +10,9 @@ const PrivateRouteAdmin = ({ children }: PrivateRouteAdminProps) => {
   const user = userData ? JSON.parse(userData) : null
 
   // Nếu chưa đăng nhập hoặc không phải admin => redirect về trang chủ
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/" replace />
-  }
+  if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+  return <Navigate to="/" replace />
+}
 
   // Nếu là admin => render children (trang admin)
   return children

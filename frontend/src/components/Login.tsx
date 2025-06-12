@@ -24,8 +24,14 @@ export default function Login() {
       );
       setSuccess(res.data.message || "Đăng nhập thành công!");
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+      const role = res.data.user?.role;
       setTimeout(() => {
-        navigate("/admin");
+        if (role === "admin" || role === "superadmin") {
+          navigate("/admin");
+        } else {
+          navigate("/client");
+        }
       }, 1000);
     } catch (err: any) {
       setError(
