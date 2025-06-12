@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Product } from "../../../interfaces/Product";
 
-const API_URL = "http://localhost:5000/api/products";
+const API_URL = "http://localhost:5000/api/product";
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error" | "">("");
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -17,6 +18,7 @@ const ProductList: React.FC = () => {
       setProducts(data.products || []);
     } catch (error) {
       setMessage("Lỗi khi tải sản phẩm!");
+      setMessageType("error");
     }
     setLoading(false);
   };
@@ -30,15 +32,17 @@ const ProductList: React.FC = () => {
       const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
       if (res.ok) {
         setMessage("Xóa thành công!");
+        setMessageType("success");
         fetchProducts();
       } else {
         setMessage("Xóa thất bại!");
+        setMessageType("error");
       }
     }
   };
 
   return (
-     <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold text-gray-700 text-center flex-grow">
           Danh sách Sản phẩm
@@ -52,7 +56,16 @@ const ProductList: React.FC = () => {
       </div>
 
       {message && (
-        <div className="mb-4 text-green-600 font-medium text-center">{message}</div>
+        <div
+          className={`mb-4 px-4 py-2 rounded-md italic text-center shadow-md font-medium
+      ${
+        messageType === "success"
+          ? "text-green-700 bg-green-100"
+          : "text-red-700 bg-red-100"
+      }`}
+        >
+          {message}
+        </div>
       )}
 
       {loading ? (

@@ -36,6 +36,14 @@ const AdminSidebar = () => {
         </button>
 
         <button
+          onClick={() => navigate("/admin/user-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
+        >
+          <FaList className="text-xl" />
+          <span>Người Dùng</span>
+        </button>
+
+        <button
           onClick={handleLogout}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition mt-auto"
         >

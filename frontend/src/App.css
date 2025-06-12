@@ -5,4 +5,8 @@ tbody tr:nth-child(odd) {
   tbody tr:nth-child(even) {
     background-color: #e4e0d0; /* Vàng */
   }
-  
+  /* Nếu dùng CSS */
+.error-message {
+  color: red;
+  font-weight: bold;
+}

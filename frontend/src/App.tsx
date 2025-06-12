@@ -9,6 +9,7 @@ import ProductEdit from "./components/admin/products/ProductEdit";
 import { Toaster } from "react-hot-toast";
 import Hello from "./components/Hello";
 import Dashboard from "./components/admin/dashboard";
+import UserList from "./components/admin/users/UserList";
 
   
 
@@ -25,6 +26,8 @@ const App = (props: Props) => {
     //Admin
     { path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
       { path: "", element: <Dashboard /> },
+        { path: "user-list", element: <UserList/> },
+        { path: "product-list", element: <ProductList/> },
         { path: "product-list", element: <ProductList/> },
         { path: "product-add", element: <ProductAdd/> },
         { path: "product-edit", element: <ProductEdit/> },
