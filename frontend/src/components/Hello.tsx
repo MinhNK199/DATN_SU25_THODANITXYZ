@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-export default function Dashboard() {
+export default function Hello() {
   return (
     <div>
       <h2>Chào mừng bạn đến trang Dashboard!</h2>

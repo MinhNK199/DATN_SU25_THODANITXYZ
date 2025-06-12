@@ -1,7 +1,7 @@
 import React from "react";
 import toast from "react-hot-toast";
 import { FaBox, FaList, FaSignOutAlt } from "react-icons/fa";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
@@ -10,50 +10,40 @@ const AdminSidebar = () => {
     if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
       localStorage.removeItem("userToken");
       navigate("/");
-      toast.success("Quay về trang chủ!");
+      toast.success("Đăng xuất thành công!");
     }
-  };
-  const handleList = () => {
-    localStorage.removeItem("userToken");
-    navigate("/admin/product-list");
-  };
-  const handleCategories = () => {
-    localStorage.removeItem("userToken");
-    navigate("/admin/category-list");
   };
 
   return (
-    <div className="w-1/5 h-screen text-white p-6 flex flex-col h-full">
-      <h2 className="text-xl font-bold mb-6 text-center text-black">
-        Trang ADMIN
-      </h2>
+    <aside className="w-80 h-screen bg-gray-800 text-white flex flex-col p-6">
+      <h2 className="text-2xl font-semibold mb-10 text-center">Quản Trị</h2>
 
-      <nav className="flex flex-col gap-4">
+      <nav className="flex flex-col gap-0">
         <button
-          onClick={handleList}
-          className="flex items-center gap-3 px-4 py-3 bg-blue-600 rounded-lg transition-all duration-300 hover:bg-blue-700"
+          onClick={() => navigate("/admin/product-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
         >
-          <FaBox />
-          <span>Danh Sách Sản Phẩm</span>
+          <FaBox className="text-xl" />
+          <span>Sản phẩm</span>
         </button>
 
         <button
-          onClick={handleCategories}
-          className="flex items-center gap-3 px-4 py-3 bg-green-600 rounded-lg transition-all duration-300 hover:bg-green-700"
+          onClick={() => navigate("/admin/category-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
         >
-          <FaList />
-          <span>Danh Sách Danh Mục</span>
+          <FaList className="text-xl" />
+          <span>Danh mục</span>
         </button>
 
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 bg-red-600 rounded-lg transition-all duration-300 hover:bg-red-700"
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition mt-auto"
         >
-          <FaSignOutAlt />
-          <span>Đăng Xuất</span>
+          <FaSignOutAlt className="text-xl" />
+          <span>Đăng xuất</span>
         </button>
       </nav>
-    </div>
+    </aside>
   );
 };
 

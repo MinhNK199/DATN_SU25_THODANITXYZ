@@ -1,6 +1,4 @@
 import { BrowserRouter, Routes, Route, useRoutes } from "react-router-dom";
-
-import Dashboard from "./components/Dashboard";
 import PrivateRouteAdmin from "./components/privateRouteAdmin";
 import AdminLayout from "./layout/admin";
 import Login from "./components/Login";
@@ -9,6 +7,8 @@ import ProductList from "./components/admin/products/ProductList";
 import ProductAdd from "./components/admin/products/ProductAdd";
 import ProductEdit from "./components/admin/products/ProductEdit";
 import { Toaster } from "react-hot-toast";
+import Hello from "./components/Hello";
+import Dashboard from "./components/admin/dashboard";
 
   
 
@@ -17,7 +17,7 @@ type Props = {}
 const App = (props: Props) => {
   const routes = useRoutes([
     
-      { path: "/", element: <Dashboard/>, },
+      { path: "/", element: <Hello/>, },
         { path: "register", element: <Register/> },
         { path: "login", element: <Login/> }
          ,

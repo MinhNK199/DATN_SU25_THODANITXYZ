@@ -11,9 +11,13 @@ const ProductList: React.FC = () => {
 
   const fetchProducts = async () => {
     setLoading(true);
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    setProducts(data.products || []);
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setProducts(data.products || []);
+    } catch (error) {
+      setMessage("Lỗi khi tải sản phẩm!");
+    }
     setLoading(false);
   };
 
@@ -34,42 +38,71 @@ const ProductList: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: 1000, margin: "40px auto", background: "#fff", borderRadius: 8, padding: 24, boxShadow: "0 2px 8px #eee" }}>
-      <h2 style={{ textAlign: "center" }}>Quản lý sản phẩm</h2>
-      <div style={{ marginBottom: 16, textAlign: "right" }}>
-        <Link to="/admin/product/add" style={{ padding: "8px 16px", background: "#1890ff", color: "#fff", borderRadius: 4, textDecoration: "none" }}>+ Thêm sản phẩm</Link>
+    <div className="w-full mt-10 bg-white shadow-md rounded-lg p-6 mx-4">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Quản lý sản phẩm
+        </h2>
+        <Link
+          to="/admin/product/add"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+        >
+          + Thêm sản phẩm
+        </Link>
       </div>
-      {message && <div style={{ color: "green", marginBottom: 12 }}>{message}</div>}
+
+      {message && (
+        <div className="mb-4 text-green-600 font-medium">{message}</div>
+      )}
+
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead style={{ background: "#f5f5f5" }}>
-            <tr>
-              <th style={{ padding: 8, border: "1px solid #eee" }}>Tên</th>
-              <th style={{ padding: 8, border: "1px solid #eee" }}>Giá</th>
-              <th style={{ padding: 8, border: "1px solid #eee" }}>Tồn kho</th>
-              <th style={{ padding: 8, border: "1px solid #eee" }}>Danh mục</th>
-              <th style={{ padding: 8, border: "1px solid #eee" }}>Thương hiệu</th>
-              <th style={{ padding: 8, border: "1px solid #eee" }}>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p._id}>
-                <td style={{ padding: 8, border: "1px solid #eee" }}>{p.name}</td>
-                <td style={{ padding: 8, border: "1px solid #eee" }}>{p.price.toLocaleString()}₫</td>
-                <td style={{ padding: 8, border: "1px solid #eee" }}>{p.stock}</td>
-                <td style={{ padding: 8, border: "1px solid #eee" }}>{(p as any).category?.name || p.category}</td>
-                <td style={{ padding: 8, border: "1px solid #eee" }}>{(p as any).brand?.name || p.brand}</td>
-                <td style={{ padding: 8, border: "1px solid #eee" }}>
-                  <Link to={`/admin/product/edit/${p._id}`} style={{ marginRight: 8, color: "#1890ff" }}>Sửa</Link>
-                  <button onClick={() => handleDelete(p._id!)} style={{ color: "#f5222d", border: "none", background: "none", cursor: "pointer" }}>Xóa</button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full table-auto border-collapse">
+            <thead>
+              <tr className="bg-gray-100 text-left">
+                <th className="px-4 py-2 border">Tên</th>
+                <th className="px-4 py-2 border">Giá</th>
+                <th className="px-4 py-2 border">Tồn kho</th>
+                <th className="px-4 py-2 border">Danh mục</th>
+                <th className="px-4 py-2 border">Thương hiệu</th>
+                <th className="px-4 py-2 border">Thao tác</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p._id} className="hover:bg-gray-50">
+                  <td className="px-4 py-2 border">{p.name}</td>
+                  <td className="px-4 py-2 border">
+                    {p.price.toLocaleString()}₫
+                  </td>
+                  <td className="px-4 py-2 border">{p.stock}</td>
+                  <td className="px-4 py-2 border">
+                    {(p as any).category?.name || p.category}
+                  </td>
+                  <td className="px-4 py-2 border">
+                    {(p as any).brand?.name || p.brand}
+                  </td>
+                  <td className="px-4 py-2 border space-x-2">
+                    <Link
+                      to={`/admin/product/edit/${p._id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Sửa
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(p._id!)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
