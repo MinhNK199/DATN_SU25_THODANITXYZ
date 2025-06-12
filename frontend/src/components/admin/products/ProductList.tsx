@@ -38,71 +38,76 @@ const ProductList: React.FC = () => {
   };
 
   return (
-    <div className="w-full mt-10 bg-white shadow-md rounded-lg p-6 mx-4">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">
-          Quản lý sản phẩm
-        </h2>
+     <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold text-gray-700 text-center flex-grow">
+          Danh sách Sản phẩm
+        </h1>
         <Link
           to="/admin/product-add"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          className="px-8 py-3 bg-green-400 text-white text-xl text-gray-400 font-semibold rounded-md hover:bg-green-600 transition"
         >
-          + Thêm sản phẩm
+          + Thêm mới
         </Link>
       </div>
 
       {message && (
-        <div className="mb-4 text-green-600 font-medium">{message}</div>
+        <div className="mb-4 text-green-600 font-medium text-center">{message}</div>
       )}
 
       {loading ? (
-        <div>Đang tải...</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full table-auto border-collapse">
-            <thead>
-              <tr className="bg-gray-100 text-left">
-                <th className="px-4 py-2 border">Tên</th>
-                <th className="px-4 py-2 border">Giá</th>
-                <th className="px-4 py-2 border">Tồn kho</th>
-                <th className="px-4 py-2 border">Danh mục</th>
-                <th className="px-4 py-2 border">Thương hiệu</th>
-                <th className="px-4 py-2 border">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p._id} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 border">{p.name}</td>
-                  <td className="px-4 py-2 border">
-                    {p.price.toLocaleString()}₫
-                  </td>
-                  <td className="px-4 py-2 border">{p.stock}</td>
-                  <td className="px-4 py-2 border">
-                    {(p as any).category?.name || p.category}
-                  </td>
-                  <td className="px-4 py-2 border">
-                    {(p as any).brand?.name || p.brand}
-                  </td>
-                  <td className="px-4 py-2 border space-x-2">
-                    <Link
-                      to={`/admin/product/edit/${p._id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Sửa
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(p._id!)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Xóa
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex justify-center items-center h-20 text-gray-600 text-lg">
+          Đang tải...
         </div>
+      ) : (
+        <table className="w-full border-collapse bg-white">
+          <thead>
+            <tr className="bg-gray-200 text-gray-700">
+              <th className="py-3 px-4 border">STT</th>
+              <th className="py-3 px-4 border">Tên sản phẩm</th>
+              <th className="py-3 px-4 border">Giá</th>
+              <th className="py-3 px-4 border">Tồn kho</th>
+              <th className="py-3 px-4 border">Danh mục</th>
+              <th className="py-3 px-4 border">Thương hiệu</th>
+              <th className="py-3 px-4 border">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p, index) => (
+              <tr
+                key={p._id}
+                className="border-b text-gray-700 hover:bg-gray-100"
+              >
+                <td className="py-3 px-4 text-center">{index + 1}</td>
+                <td className="py-3 px-4 text-center">{p.name}</td>
+                <td className="py-3 px-4 text-center text-green-600 font-semibold">
+                  {p.price.toLocaleString()}₫
+                </td>
+                <td className="py-3 px-4 text-center">{p.stock}</td>
+                <td className="py-3 px-4 text-center">
+                  {(p as any).category?.name || p.category}
+                </td>
+                <td className="py-3 px-4 text-center">
+                  {(p as any).brand?.name || p.brand}
+                </td>
+                <td className="py-3 px-4 flex gap-2 justify-center">
+                  <Link
+                    to={`/admin/product-edit/${p._id}`}
+                    className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                  >
+                    Sửa
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(p._id!)}
+                    className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
+                  >
+                    Xóa
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );
