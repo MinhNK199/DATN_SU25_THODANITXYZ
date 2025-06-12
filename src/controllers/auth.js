@@ -230,3 +230,34 @@ export const toggleUserStatus = async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
     }
 };
+
+// ...existing code...
+
+export const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role, active, email, ...updateFields } = req.body;
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: "Người dùng không tồn tại" });
+        }
+
+        Object.assign(user, updateFields);
+
+        await user.save();
+        await logActivity({
+            content: `${user.name} đã Cập nhật thông tin của mình`,
+            userName: user.name,
+            userId: user._id,
+        });
+
+        res.status(200).json({
+            message: "Cập nhật thông tin người dùng thành công",
+            user,
+        });
+    } catch (err) {
+        res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
+    }
+};
+

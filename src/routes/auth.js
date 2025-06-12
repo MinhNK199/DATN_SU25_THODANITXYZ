@@ -1,7 +1,7 @@
 import express from "express";
 import { validateRequest } from "../middlewares/validateRequest";
 import { loginSchema, registerSchema } from "../validation/user";
-import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUserRole } from "../controllers/auth";
+import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole } from "../controllers/auth";
 import { checkAdmin, protect } from "../middlewares/authMiddleware";
 import { getActivityLogs } from "../utils/activityLog";
 
@@ -15,5 +15,6 @@ routerAuth.get("/me", protect, getCurrentUser);
 routerAuth.get("/users/:id", protect, getUserById);
 routerAuth.patch("/users/:id/status", protect, checkAdmin(["CheckTaiKhoan"]), toggleUserStatus);
 routerAuth.get("/nhatKy", protect, checkAdmin(["view_nhatKy"]), getActivityLogs);
+routerAuth.put("/users/:id", protect, updateUser);
 
 export default routerAuth;
