@@ -12,7 +12,7 @@ export interface User {
   email: string;
   password?: string; // nếu được trả về (thường là không)
   passwordChangedAt?: string; // hoặc Date nếu bạn chuyển sang dùng Date object
-  role?: UserRole;
+  role: UserRole;
   phone?: string;
   addresses?: Address[];
   avatar?: string;

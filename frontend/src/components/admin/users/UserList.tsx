@@ -114,9 +114,7 @@ const UserList: React.FC = () => {
               <th className="py-3 px-4 border">Tên</th>
               <th className="py-3 px-4 border">Email</th>
               <th className="py-3 px-4 border">Vai trò</th>
-              <th className="py-3 px-4 border">Số điện thoại</th>
               <th className="py-3 px-4 border">Trạng thái</th>
-              <th className="py-3 px-4 border">Ngày tạo</th>
               <th className="py-3 px-4 border">Thao tác</th>
             </tr>
           </thead>
@@ -143,7 +141,6 @@ const UserList: React.FC = () => {
                     {u.role}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-center">{u.phone || "-"}</td>
                 <td className="py-3 px-4 text-center">
                   {u.active ? (
                     <span className="text-green-600 font-semibold">
@@ -153,11 +150,7 @@ const UserList: React.FC = () => {
                     <span className="text-red-500 font-semibold">Khóa</span>
                   )}
                 </td>
-                <td className="py-3 px-4 text-center">
-                  {u.createdAt
-                    ? new Date(u.createdAt).toLocaleDateString()
-                    : "-"}
-                </td>
+                
                 <td className="py-3 px-4 text-center">
                   <button
                     onClick={() => navigate(`/admin/user-detail/${u._id}`)}

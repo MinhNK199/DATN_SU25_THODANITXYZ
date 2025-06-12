@@ -1,94 +1,160 @@
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { Card, Spin, Tag } from 'antd'
 import { User } from '../../../interfaces/User'
+import { FaArrowLeft } from 'react-icons/fa'
 
-const UserDetail = () => {
-  const { id } = useParams()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+const API_URL = 'http://localhost:5000/api/auth/users';
+
+const UserDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const nav = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const fetchUser = async () => {
-  try {
-    const res = await axios.get(`http://localhost:5000/api/auth/users/${id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-    // Đúng: lấy user từ res.data.user
-    setUser(res.data.user);
-  } catch {
-    setUser(null);
-  } finally {
-    setLoading(false);
-  }
-};
-    fetchUser()
-  }, [id])
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_URL}/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUser(res.data.user);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Lỗi khi tải user');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [id]);
 
-  if (loading) return <Spin />
+  const borderByRole = (role: string) => {
+    switch (role) {
+      case 'customer': return 'border-blue-500';
+      case 'staff': return 'border-teal-500';
+      case 'admin': return 'border-orange-400';
+      case 'superadmin': return 'border-red-500';
+      default: return 'border-gray-300';
+    }
+  };
 
-  if (!user) return <div>Không tìm thấy người dùng</div>
+  if (loading) return <div className="p-6">Đang tải...</div>;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  if (!user) return <div className="p-6">Không tìm thấy người dùng</div>;
 
   return (
-    <Card title={`Thông tin người dùng: ${user.name || ''}`} className="rounded-2xl shadow-md p-6 text-gray-800 text-sm">
-  <p className="mb-[15px]"><b>Email:</b> <span className="text-gray-700">{user.email}</span></p>
-
-  <p className="flex items-center gap-2 mb-[15px]">
-    <b>Quyền:</b>
-    <Tag
-      color={
-        user.role === 'superadmin' ? 'red' :
-        user.role === 'admin' ? 'orange' :
-        user.role === 'staff' ? 'blue' : 'blue'
-      }
-      className="uppercase px-1.5 py-0.5 text-xs font-semibold rounded"
+  <div className="max-w-3xl mx-auto bg-white shadow-md rounded-lg p-6">
+    <button
+      onClick={() => nav(-1)}
+      className="flex items-center gap-2 mb-4 text-gray-600 hover:text-gray-800"
     >
-      {user.role?.toUpperCase()}
-    </Tag>
-  </p>
+      <FaArrowLeft /> Quay lại
+    </button>
 
-  <p className="flex items-center gap-2 mb-[15px]">
-    <b>Trạng thái:</b>
-    <Tag
-      color={user.active ? 'green' : 'red'}
-      className="px-2 py-0.5 text-xs font-medium rounded"
-    >
-      {user.active ? 'Hoạt động' : 'Vô hiệu hóa'}
-    </Tag>
-  </p>
+    {/* Avatar + Tên + Vai trò */}
+    <div className="flex flex-col items-center mb-6">
+      {user.avatar ? (
+        <img
+          src={user.avatar}
+          alt={user.name}
+          className="w-32 h-32 rounded-full object-cover mb-4"
+        />
+      ) : (
+        <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+          <span className="text-gray-500 text-xl">No Avatar</span>
+        </div>
+      )}
+      <h2 className="text-2xl font-bold">{user.name}</h2>
+      <span
+        className={`mt-2 px-3 py-1 rounded-full border ${borderByRole(
+          user.role
+        )} font-semibold`}
+      >
+        {user.role.toUpperCase()}
+      </span>
+    </div>
 
-  <p className="mb-[15px]"><b>Số điện thoại:</b> <span className="text-gray-700">{user.phone || 'Chưa cập nhật'}</span></p>
-
-  <p className="mb-[15px]">
-    <b>Địa chỉ:</b>{' '}
-    {Array.isArray(user.addresses) && user.addresses.length > 0 ? (
-      user.addresses.map((a, idx) => (
-        <div key={idx} className="pl-4 text-gray-700 text-sm">
-          {a.street}, {a.city}{' '}
-          {a.isDefault && (
-            <Tag color="blue" className="ml-2 px-1.5 py-0.5 text-xs rounded">
-              Mặc định
-            </Tag>
+    {/* Grid 2 cột */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      {/* Cột trái */}
+      <div className="space-y-4">
+        <p className="text-gray-700">
+          <span className="font-medium text-blue-600">Email:</span>{" "}
+          {user.email || <span className="text-red-400">chưa cập nhật</span>}
+        </p>
+        <p className="text-gray-700">
+          <span className="font-medium text-blue-600">Số điện thoại:</span>{" "}
+          {user.phone || <span className="text-red-400">chưa cập nhật</span>}
+        </p>
+        <div>
+          <p className="font-medium text-blue-600 mb-1">Địa chỉ:</p>
+          {user.addresses && user.addresses.length > 0 ? (
+            <ul className="space-y-2">
+              {user.addresses.map((addr, idx) => (
+                <li
+                  key={idx}
+                  className={`p-2 rounded border ${
+                    addr.isDefault ? "border-blue-500" : "border-gray-300"
+                  }`}
+                >
+                  <p className="text-gray-700">
+                    <span className="font-medium text-blue-600">Đường:</span>{" "}
+                    {addr.street || <span className="text-red-400">chưa cập nhật</span>}
+                  </p>
+                  <p className="text-gray-700">
+                    <span className="font-medium text-blue-600">Thành phố:</span>{" "}
+                    {addr.city || <span className="text-red-400">chưa cập nhật</span>}
+                  </p>
+                  {addr.isDefault && (
+                    <span className="text-sm text-blue-600 font-semibold">
+                      (Mặc định)
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-red-400">chưa cập nhật</p>
           )}
         </div>
-      ))
-    ) : (
-      'Chưa cập nhật'
-    )}
-  </p>
+      </div>
 
-  <p className="mb-[15px]">
-    <b>Ngày tạo:</b>{' '}
-    {user.createdAt ? new Date(user.createdAt).toLocaleString() : ''}
-  </p>
-</Card>
+      {/* Cột phải */}
+      <div className="space-y-4">
+        <p className="text-gray-700">
+          <span className="font-medium text-blue-600">Trạng thái:</span>{" "}
+          <span
+            className={
+              user.active ? "text-green-600 font-semibold" : "text-red-600 font-semibold"
+            }
+          >
+            {user.active ? "Hoạt động" : "Đã khóa"}
+          </span>
+        </p>
+        <p className="text-gray-700">
+          <span className="font-medium text-blue-600">Ngày tạo:</span>{" "}
+          {user.createdAt ? (
+            new Date(user.createdAt).toLocaleDateString("vi-VN")
+          ) : (
+            <span className="text-red-400">chưa cập nhật</span>
+          )}
+        </p>
 
+        <button
+          className="mt-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition"
+          onClick={() => nav(`/admin/user-edit/${user._id}`)}
+        >
+          Sửa thông tin
+        </button>
+      </div>
+    </div>
+  </div>
+);
 
+};
 
-  )
-}
-
-export default UserDetail
+export default UserDetail;
