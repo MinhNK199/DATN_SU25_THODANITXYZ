@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import type { Product } from "../../interfaces/Product";
+import type { Product } from "../../../interfaces/Product";
 
 
 const API_URL = "http://localhost:5000/api/products";

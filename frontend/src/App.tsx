@@ -12,31 +12,32 @@ import Dashboard from "./components/admin/dashboard";
 import UserList from "./components/admin/users/UserList";
 import UserDetail from "./components/admin/users/userDetail";
 import UserEdit from "./components/admin/users/userEdit";
-
-  
+import BillList from "./components/admin/bill/BillList";
 
 type Props = {}
 
 const App = (props: Props) => {
   const routes = useRoutes([
-    { path: "/", element: <Login/>, },
-    { path: "register", element: <Register/> },
-    
+    { path: "/", element: <Login />, },
+    { path: "register", element: <Register /> },
+
     //client
-     { path: "/client", element: <Hello/>},
-    
+    { path: "/client", element: <Hello /> },
+
     //Admin
-    { path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
-      { path: "", element: <Dashboard /> },
-        { path: "user-list", element: <UserList/> },
-        { path: "user-edit/:id", element: <UserEdit/> },
-        { path: "user-detail/:id", element: <UserDetail/> },
-        { path: "product-list", element: <ProductList/> },
-        { path: "product-list", element: <ProductList/> },
-        { path: "product-add", element: <ProductAdd/> },
-        { path: "product-edit", element: <ProductEdit/> },
-      ]}
-       
+    {
+      path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
+        { path: "", element: <Dashboard /> },
+        { path: "user-list", element: <UserList /> },
+        { path: "user-edit/:id", element: <UserEdit /> },
+        { path: "user-detail/:id", element: <UserDetail /> },
+        { path: "product-list", element: <ProductList /> },
+        { path: "product-add", element: <ProductAdd /> },
+        { path: "product-edit/:id", element: <ProductEdit /> },
+        { path: "bill-list", element: <BillList /> }
+      ]
+    }
+
   ])
   return (
     <div>

@@ -1,6 +1,6 @@
 import React from "react";
 import toast from "react-hot-toast";
-import { FaBox, FaList, FaSignOutAlt, FaUser } from "react-icons/fa";
+import { FaBox, FaList, FaSignOutAlt, FaUser, FaFileInvoiceDollar } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const AdminSidebar = () => {
@@ -41,6 +41,14 @@ const AdminSidebar = () => {
         >
           <FaList className="text-xl" />
           <span>Danh mục</span>
+        </button>
+
+        <button
+          onClick={() => navigate("/admin/bill-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
+        >
+          <FaFileInvoiceDollar className="text-xl" />
+          <span>Hóa đơn</span>
         </button>
 
         <button
