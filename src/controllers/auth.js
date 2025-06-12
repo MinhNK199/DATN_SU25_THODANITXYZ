@@ -236,16 +236,45 @@ export const toggleUserStatus = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { role, active, email, ...updateFields } = req.body;
+        const {
+            role, active, email, name, phone, avatar,
+            province_code, district_code, ward_code, street,
+            ...rest
+        } = req.body;
 
         const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ message: "Người dùng không tồn tại" });
         }
 
-        Object.assign(user, updateFields);
+        // Cập nhật thông tin cơ bản
+        user.name = name || user.name;
+        user.phone = phone || user.phone;
+        user.avatar = avatar || user.avatar;
+
+        // ✅ Cập nhật địa chỉ mặc định
+        const newAddress = {
+            street,
+            province_code,
+            district_code,
+            ward_code,
+            street,
+            isDefault: true, // Đặt là mặc định
+        };
+
+        // Nếu user đã có addresses, cập nhật phần tử mặc định
+        if (user.addresses && user.addresses.length > 0) {
+            user.addresses = user.addresses.map(addr =>
+                addr.isDefault
+                    ? { ...addr.toObject(), ...newAddress }
+                    : addr
+            );
+        } else {
+            user.addresses = [newAddress];
+        }
 
         await user.save();
+
         await logActivity({
             content: `${user.name} đã Cập nhật thông tin của mình`,
             userName: user.name,
@@ -260,4 +289,5 @@ export const updateUser = async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
     }
 };
+
 
