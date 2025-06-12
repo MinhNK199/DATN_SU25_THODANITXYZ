@@ -1,25 +1,41 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useRoutes } from "react-router-dom";
+
+import Dashboard from "./components/Dashboard";
+import PrivateRouteAdmin from "./components/privateRouteAdmin";
+import AdminLayout from "./layout/admin";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import Dashboard from "./components/Dashboard";
-import ProductEdit from "./admin/components/ProductEdit";
-import ProductAdd from "./admin/components/ProductAdd";
-import Admin from "./admin/pages/Admin";
+import ProductList from "./components/admin/products/ProductList";
+import ProductAdd from "./components/admin/products/ProductAdd";
+import ProductEdit from "./components/admin/products/ProductEdit";
+import { Toaster } from "react-hot-toast";
 
-function App() {
+  
+
+type Props = {}
+
+const App = (props: Props) => {
+  const routes = useRoutes([
+    
+      { path: "/", element: <Dashboard/>, },
+        { path: "register", element: <Register/> },
+        { path: "login", element: <Login/> }
+         ,
+    
+    //Admin
+    { path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
+      { path: "", element: <Dashboard /> },
+        { path: "product-list", element: <ProductList/> },
+        { path: "product-add", element: <ProductAdd/> },
+        { path: "product-edit", element: <ProductEdit/> },
+      ]}
+       
+  ])
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/admin/product/add" element={<ProductAdd />} />
-<Route path="/admin/product/edit/:id" element={<ProductEdit />} />
-<Route path="/admin/product/delete/:id" element={<Admin />} />
-<Route path="/admin" element={<Admin />} />
-        <Route path="*" element={<div>404 - Not Found</div>} />
-      </Routes>
-    </BrowserRouter>
+    <div>
+      {routes}
+      <Toaster />
+    </div>
   );
 }
 

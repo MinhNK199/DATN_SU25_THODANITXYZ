@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Product } from "../../interfaces/Product";
+import type { Product } from "../../../interfaces/Product";
 
 const API_URL = "http://localhost:5000/api/products";
 
-const Admin: React.FC = () => {
+const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -75,4 +75,4 @@ const Admin: React.FC = () => {
   );
 };
 
-export default Admin;
+export default ProductList;
