@@ -24,8 +24,13 @@ export default function Login() {
       );
       setSuccess(res.data.message || "Đăng nhập thành công!");
       localStorage.setItem("token", res.data.token);
+
+      const user = res.data.user;
+      // Sau khi gọi API đăng nhập thành công
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      const role = res.data.user?.role;
+
+
+      const role = user?.role;
       setTimeout(() => {
         if (role === "admin" || role === "superadmin") {
           navigate("/admin");
@@ -43,21 +48,11 @@ export default function Login() {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-300 to-yellow-100"
-      
-    >
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-300 to-yellow-100">
       <form
         onSubmit={handleSubmit}
         className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md"
       >
-        <div className="flex justify-center mb-4">
-          {/* <img
-            src="https://upload.wikimedia.org/wikipedia/commons/2/24/Mangools_logo_icon.svg"
-            alt="Logo"
-            className="w-10 h-10"
-          /> */}
-        </div>
         <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Chào mừng bạn !
         </h2>
@@ -75,7 +70,7 @@ export default function Login() {
 
         {/* Email */}
         <div className="mb-4">
-          <label className="block text-gray-700 mb-1"> Email</label>
+          <label className="block text-gray-700 mb-1">Email</label>
           <div className="flex items-center border rounded px-3 py-2">
             <FaUser className="text-gray-400 mr-2" />
             <input
@@ -101,7 +96,7 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               required
-              placeholder="nhập mât khẩu của bạn"
+              placeholder="Nhập mật khẩu của bạn"
               className="w-full outline-none"
             />
           </div>

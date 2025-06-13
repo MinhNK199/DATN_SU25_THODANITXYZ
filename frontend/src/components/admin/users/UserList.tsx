@@ -52,37 +52,22 @@ const UserList: React.FC = () => {
     if (currentUser) fetchUsers();
   }, [currentUser]);
 
-  // Toggle active status
-  const handleToggleActive = async (id?: string, active?: boolean) => {
-    if (!id) return;
-    const token = localStorage.getItem("token");
-    try {
-      const res = await fetch(`${API_URL}/${id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ active: !active }),
-      });
-      if (res.ok) {
-        setMessage("Cập nhật trạng thái thành công!");
-        setMessageType("success");
-        fetchUsers();
-      } else {
-        setMessage("Cập nhật trạng thái thất bại!");
-        setMessageType("error");
-      }
-    } catch {
-      setMessage("Cập nhật trạng thái thất bại!");
-      setMessageType("error");
-    }
-  };
+  const canViewEmail = (viewer: User | null, target: User) => {
+    if (!viewer) return false;
 
-  // Chỉ admin/superadmin mới được thao tác
-  const canToggle =
-    currentUser &&
-    (currentUser.role === "admin" || currentUser.role === "superadmin");
+    // Superadmin thấy tất cả
+    if (viewer.role === "superadmin") return true;
+
+    // Admin thấy tất cả trừ admin/superadmin, nhưng vẫn thấy chính mình
+    if (viewer.role === "admin") {
+      const isSelf = viewer._id === target._id;
+      const isHigherOrSame = ["admin", "superadmin"].includes(target.role);
+      return isSelf || !isHigherOrSame;
+    }
+
+    // Những role khác không thấy ai
+    return false;
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
@@ -126,7 +111,16 @@ const UserList: React.FC = () => {
               >
                 <td className="py-3 px-4 text-center">{index + 1}</td>
                 <td className="py-3 px-4 text-center">{u.name}</td>
-                <td className="py-3 px-4 text-center">{u.email}</td>
+                <td className="py-3 px-4 text-center">
+                  {canViewEmail(currentUser, u) ? (
+                    u.email
+                  ) : (
+                    <span className="text-orange-500 italic font-semibold">
+                      Không thể xem
+                    </span>
+                  )}
+                </td>
+
                 <td className="py-3 px-4 text-center">
                   <span
                     className={`px-2 py-1 rounded-md font-semibold border
@@ -150,7 +144,7 @@ const UserList: React.FC = () => {
                     <span className="text-red-500 font-semibold">Khóa</span>
                   )}
                 </td>
-                
+
                 <td className="py-3 px-4 text-center">
                   <button
                     onClick={() => navigate(`/admin/user-detail/${u._id}`)}
