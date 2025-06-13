@@ -119,7 +119,7 @@ export default function Register() {
         </form>
 
         <div className="mt-4 text-center text-sm text-blue-700 font-medium">
-          <Link to="/login" className="hover:underline">Đã có tài khoản? Đăng nhập</Link>
+          <Link to="/" className="hover:underline">Đã có tài khoản? Đăng nhập</Link>
         </div>
       </div>
     </div>
