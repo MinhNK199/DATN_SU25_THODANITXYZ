@@ -174,7 +174,7 @@ export const updateBillStatus = async (req, res) => {
 };
 
 // Tạo PDF hóa đơn
-const generateBillPDF = async (bill) => {
+export const generateBillPDF = async (bill) => {
     return new Promise((resolve, reject) => {
         try {
             const doc = new PDFDocument();
