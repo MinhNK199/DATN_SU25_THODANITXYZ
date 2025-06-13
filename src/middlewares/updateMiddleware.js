@@ -11,7 +11,6 @@ const storage = multer.diskStorage({
     }
 });
 
-// Kiểm tra file type
 const fileFilter = (req, file, cb) => {
     if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
         file.mimetype === 'application/vnd.ms-excel') {
@@ -21,7 +20,6 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-// Cấu hình upload
 const upload = multer({
     storage: storage,
     fileFilter: fileFilter,

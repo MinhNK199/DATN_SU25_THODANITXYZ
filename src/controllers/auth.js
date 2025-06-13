@@ -77,7 +77,7 @@ export const dangNhap = async (req, res) => {
             message: "Đăng nhập thành công",
             token,
             user: {
-                id: user._id,
+                _id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
@@ -153,7 +153,7 @@ export const getAllUsers = async (req, res) => {
         if (req.user.role === "admin") {
             result = users.map(u => {
                 if (u.role === "superadmin") {
-                    return { _id: u._id, name: u.name, role: u.role };
+                    return { _id: u._id, name: u.name, role: u.role, active: u.active, email: "Không thể xem" };
                 }
                 return u;
             });
@@ -236,6 +236,12 @@ export const toggleUserStatus = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Kiểm tra quyền: chỉ cho phép người dùng cập nhật chính họ
+        if (req.user._id.toString() !== id) {
+            return res.status(403).json({ message: "Bạn không có quyền cập nhật thông tin người dùng này" });
+        }
+
         const {
             role, active, email, name, phone, avatar,
             province_code, district_code, ward_code, street,
@@ -258,11 +264,9 @@ export const updateUser = async (req, res) => {
             province_code,
             district_code,
             ward_code,
-            street,
-            isDefault: true, // Đặt là mặc định
+            isDefault: true,
         };
 
-        // Nếu user đã có addresses, cập nhật phần tử mặc định
         if (user.addresses && user.addresses.length > 0) {
             user.addresses = user.addresses.map(addr =>
                 addr.isDefault
@@ -276,7 +280,7 @@ export const updateUser = async (req, res) => {
         await user.save();
 
         await logActivity({
-            content: `${user.name} đã Cập nhật thông tin của mình`,
+            content: `${user.name} đã cập nhật thông tin của mình`,
             userName: user.name,
             userId: user._id,
         });
@@ -289,5 +293,3 @@ export const updateUser = async (req, res) => {
         res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
     }
 };
-
-
