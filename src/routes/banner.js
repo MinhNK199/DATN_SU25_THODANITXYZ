@@ -1,13 +1,12 @@
 import express from 'express';
 import {createBanner,getBanners,getActiveBanners,updateBanner,deleteBanner} from '../controllers/banner.js';
+import {protect} from '../middlewares/authMiddleware.js'
 
-const router = express.Router();
+const routerBanner = express.Router();
+routerBanner.get('/:id/active', getActiveBanners);
+routerBanner.post('/', protect,createBanner);
+routerBanner.get('/', getBanners);
+routerBanner.put('/:id',protect, updateBanner);
+routerBanner.delete('/:id',protect, deleteBanner);
 
-// Public route để lấy banners
-router.get('/banners/active', getActiveBanners);
-router.post('/banners', createBanner);
-router.get('/banners', getBanners);
-router.put('/banners/:id', updateBanner);
-router.delete('/banners/:id', deleteBanner);
-
-export default router;
+export default routerBanner;
