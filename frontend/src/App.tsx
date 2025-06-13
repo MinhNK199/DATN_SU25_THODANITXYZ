@@ -6,6 +6,9 @@ import Register from "./components/Register";
 import ProductList from "./components/admin/products/ProductList";
 import ProductAdd from "./components/admin/products/ProductAdd";
 import ProductEdit from "./components/admin/products/ProductEdit";
+import CategoryList from "./components/admin/categories/CategoryList";
+import CategoryAdd from "./components/admin/categories/CategoryAdd";
+import CategoryEdit from "./components/admin/categories/CategoryEdit";
 import { Toaster } from "react-hot-toast";
 import Hello from "./components/Hello";
 import Dashboard from "./components/admin/dashboard";
@@ -34,10 +37,12 @@ const App = (props: Props) => {
         { path: "product-list", element: <ProductList /> },
         { path: "product-add", element: <ProductAdd /> },
         { path: "product-edit/:id", element: <ProductEdit /> },
+        { path: "category-list", element: <CategoryList /> },
+        { path: "category-add", element: <CategoryAdd /> },
+        { path: "category-edit/:id", element: <CategoryEdit /> },
         { path: "bill-list", element: <BillList /> }
       ]
     }
-
   ])
   return (
     <div>
