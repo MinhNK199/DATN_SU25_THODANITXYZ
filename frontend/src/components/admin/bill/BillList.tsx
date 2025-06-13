@@ -31,52 +31,54 @@ const BillList: React.FC = () => {
     }, []);
 
     const handleExportPDF = async (id: string) => {
-        try {
-            const res = await fetch(`${API_URL}/${id}/export-pdf`, {
-                method: "POST",
-            });
+    try {
+        const res = await fetch(`${API_URL}/${id}/pdf`, {
+            method: "GET"
+        });
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bill-${id}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
 
-            if (res.ok) {
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `bill-${id}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-
-                setMessage("Xuất PDF thành công!");
-                setMessageType("success");
-            } else {
-                setMessage("Xuất PDF thất bại!");
-                setMessageType("error");
-            }
-        } catch (error) {
-            setMessage("Lỗi khi xuất PDF!");
+            setMessage("Xuất PDF thành công!");
+            setMessageType("success");
+        } else {
+            setMessage("Xuất PDF thất bại!");
             setMessageType("error");
         }
-    };
+    } catch (error) {
+        setMessage("Lỗi khi xuất PDF!");
+        setMessageType("error");
+    }
+};
 
     const handleSendEmail = async (id: string) => {
-        try {
-            const res = await fetch(`${API_URL}/${id}/send-email`, {
-                method: "POST",
-            });
+    try {
+        const res = await fetch(`${API_URL}/${id}/export`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}) // hoặc { to: "email@khac.com" } nếu muốn gửi cho email khác
+        });
 
-            if (res.ok) {
-                setMessage("Gửi email thành công!");
-                setMessageType("success");
-            } else {
-                setMessage("Gửi email thất bại!");
-                setMessageType("error");
-            }
-        } catch (error) {
-            setMessage("Lỗi khi gửi email!");
+        const data = await res.json();
+        if (res.ok && data.success) {
+            setMessage("Gửi email thành công!");
+            setMessageType("success");
+        } else {
+            setMessage(data.error || "Gửi email thất bại!");
             setMessageType("error");
         }
-    };
+    } catch (error) {
+        setMessage("Lỗi khi gửi email!");
+        setMessageType("error");
+    }
+};
 
     const getStatusColor = (status: string) => {
         switch (status) {

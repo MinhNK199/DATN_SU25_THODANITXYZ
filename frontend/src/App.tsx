@@ -17,8 +17,6 @@ import UserDetail from "./components/admin/users/userDetail";
 import UserEdit from "./components/admin/users/userEdit";
 import BillList from "./components/admin/bill/BillList";
 import BrandList from "./components/admin/brands/BrandList";
-import BrandAdd from "./components/admin/brands/BrandAdd";
-import BrandEdit from "./components/admin/brands/BrandEdit";
 
 type Props = {}
 
@@ -45,8 +43,6 @@ const App = (props: Props) => {
         { path: "category-edit/:id", element: <CategoryEdit /> },
         { path: "bill-list", element: <BillList /> },
         { path: "brand", element: <BrandList /> },
-        { path: "brand-add", element: <BrandAdd /> },
-        { path: "brand-edit/:id", element: <BrandEdit /> }
       ]
     }
   ])
