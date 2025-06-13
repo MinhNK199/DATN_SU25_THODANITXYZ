@@ -12,6 +12,9 @@ const UserList: React.FC = () => {
   const [messageType, setMessageType] = useState<"success" | "error" | "">("");
   const [message, setMessage] = useState("");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [searchType, setSearchType] = useState<"name" | "email" | "role">("name");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const navigate = useNavigate();
 
   // Lấy user hiện tại
@@ -52,6 +55,31 @@ const UserList: React.FC = () => {
     if (currentUser) fetchUsers();
   }, [currentUser]);
 
+  // Add search functionality
+  useEffect(() => {
+    if (users.length > 0) {
+      const filtered = users.filter((user) => {
+        const keyword = searchKeyword.toLowerCase();
+        switch (searchType) {
+          case "name":
+            return user.name.toLowerCase().includes(keyword);
+          case "email":
+            return user.email.toLowerCase().includes(keyword);
+          case "role":
+            return user.role.toLowerCase().includes(keyword);
+          default:
+            return true;
+        }
+      });
+      setFilteredUsers(filtered);
+    }
+  }, [searchKeyword, searchType, users]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Search is handled by the useEffect above
+  };
+
   const canViewEmail = (viewer: User | null, target: User) => {
     if (!viewer) return false;
 
@@ -74,14 +102,34 @@ const UserList: React.FC = () => {
       <h1 className="text-2xl font-bold text-gray-700 text-center mb-4">
         Danh sách Người dùng
       </h1>
+
+      {/* Search form without button */}
+      <div className="mb-6 flex gap-4 items-center justify-center">
+        <select
+          value={searchType}
+          onChange={(e) => setSearchType(e.target.value as "name" | "email" | "role")}
+          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="name">Tìm theo tên</option>
+          <option value="email">Tìm theo email</option>
+          <option value="role">Tìm theo vai trò</option>
+        </select>
+        <input
+          type="text"
+          value={searchKeyword}
+          onChange={(e) => setSearchKeyword(e.target.value)}
+          placeholder="Nhập từ khóa tìm kiếm..."
+          className="px-4 py-2 border rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
       {message && (
         <div
           className={`mb-4 px-4 py-2 rounded-md italic text-center shadow-md font-medium
-      ${
-        messageType === "success"
-          ? "text-green-700 bg-green-100"
-          : "text-red-700 bg-red-100"
-      }`}
+      ${messageType === "success"
+              ? "text-green-700 bg-green-100"
+              : "text-red-700 bg-red-100"
+            }`}
         >
           {message}
         </div>
@@ -104,7 +152,7 @@ const UserList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((u, index) => (
+            {filteredUsers.map((u, index) => (
               <tr
                 key={u._id}
                 className="border-b text-gray-700 hover:bg-gray-100"
@@ -124,13 +172,12 @@ const UserList: React.FC = () => {
                 <td className="py-3 px-4 text-center">
                   <span
                     className={`px-2 py-1 rounded-md font-semibold border
-      ${
-        u.role === "customer"
-          ? "border-blue-500 text-blue-600 bg-blue-50"
-          : u.role === "admin"
-          ? "border-orange-400 text-orange-500 bg-orange-50"
-          : "border-red-500 text-red-600 bg-red-50"
-      }`}
+      ${u.role === "customer"
+                        ? "border-blue-500 text-blue-600 bg-blue-50"
+                        : u.role === "admin"
+                          ? "border-orange-400 text-orange-500 bg-orange-50"
+                          : "border-red-500 text-red-600 bg-red-50"
+                      }`}
                   >
                     {u.role}
                   </span>
