@@ -33,7 +33,7 @@ const BillList: React.FC = () => {
     const handleExportPDF = async (id: string) => {
         try {
             const res = await fetch(`${API_URL}/${id}/export-pdf`, {
-                method: "GET",
+                method: "POST",
             });
 
             if (res.ok) {
