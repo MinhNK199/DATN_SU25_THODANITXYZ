@@ -317,3 +317,40 @@ export const exportAndSendBill = async (req, res) => {
         });
     }
 }; 
+export const exportBillPDF = async (req, res) => {
+    try {
+        const bill = await Bill.findById(req.params.id)
+            .populate('customer', 'name email')
+            .populate('items.product', 'name price');
+
+        if (!bill) {
+            return res.status(404).json({
+                success: false,
+                error: 'Không tìm thấy hóa đơn'
+            });
+        }
+
+        const pdfPath = await generateBillPDF(bill);
+
+        res.download(pdfPath, `hoadon_${bill._id}.pdf`, (err) => {
+            if (err) {
+                console.error('Error sending file:', err);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Lỗi khi gửi file PDF'
+                });
+            }
+            // Xóa file tạm sau khi gửi
+            fs.unlink(pdfPath, (unlinkErr) => {
+                if (unlinkErr) {
+                    console.error('Error deleting temporary file:', unlinkErr);
+                }
+            });
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};

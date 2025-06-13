@@ -7,10 +7,9 @@ import {
     deleteBill,
     getBillsByCustomer,
     updateBillStatus,
-    generateBillPDF
+    exportBillPDF,
+    exportAndSendBill
 } from '../controllers/bill.js';
-import fs from 'fs';
-import Bill from '../models/bill.js';
 
 const routerBill = express.Router();
 
@@ -35,40 +34,10 @@ routerBill.patch('/:id/status', updateBillStatus);
 // Delete bill
 routerBill.delete('/:id', deleteBill);
 
-// Xuất và gửi hóa đơn qua email
-routerBill.post('/:id/export-pdf', async (req, res) => {
-    try {
-        const bill = await Bill.findById(req.params.id)
-            .populate('customer', 'name email')
-            .populate('items.product', 'name price');
+// Xuất PDF hóa đơn (tải về máy)
+routerBill.get('/:id/pdf', exportBillPDF);
 
-        if (!bill) {
-            return res.status(404).json({
-                success: false,
-                error: 'Không tìm thấy hóa đơn'
-            });
-        }
+// Gửi hóa đơn qua email
+routerBill.post('/:id/export', exportAndSendBill);
 
-        const pdfPath = await generateBillPDF(bill);
-
-        // Send the PDF file
-        res.download(pdfPath, `hoadon_${bill._id}.pdf`, (err) => {
-            if (err) {
-                console.error('Error sending file:', err);
-            }
-            // Delete the temporary file after sending
-            fs.unlink(pdfPath, (unlinkErr) => {
-                if (unlinkErr) {
-                    console.error('Error deleting temporary file:', unlinkErr);
-                }
-            });
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-export default routerBill; 
+export default routerBill;
