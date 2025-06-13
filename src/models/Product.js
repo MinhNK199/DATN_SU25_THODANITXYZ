@@ -5,6 +5,7 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Vui lòng nhập tên sản phẩm'],
         trim: true,
+        index: true,
     },
     slug: {
         type: String,
@@ -18,6 +19,7 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Vui lòng nhập giá sản phẩm'],
         min: [0, 'Giá sản phẩm không được nhỏ hơn 0'],
+        index: true,
     },
     salePrice: {
         type: Number,
@@ -31,17 +33,20 @@ const productSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
         required: [true, 'Vui lòng chọn danh mục sản phẩm'],
+        index: true,
     },
     brand: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Brand',
         required: [true, 'Vui lòng chọn thương hiệu'],
+        index: true,
     },
     stock: {
         type: Number,
         required: [true, 'Vui lòng nhập số lượng tồn kho'],
         min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
         default: 0,
+        index: true,
     },
     specifications: {
         type: Map,
@@ -67,6 +72,7 @@ const productSchema = new mongoose.Schema({
     averageRating: {
         type: Number,
         default: 0,
+        index: true,
     },
     numReviews: {
         type: Number,
@@ -75,11 +81,43 @@ const productSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true,
+        index: true,
     },
     isFeatured: {
         type: Boolean,
         default: false,
     },
+    tags: [{
+        type: String,
+        trim: true,
+    }],
+    sku: {
+        type: String,
+        unique: true,
+        sparse: true,
+    },
+    weight: {
+        type: Number,
+        min: 0,
+    },
+    dimensions: {
+        length: Number,
+        width: Number,
+        height: Number,
+    },
+    warranty: {
+        type: Number,
+        min: 0,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        index: true,
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now,
+    }
 }, {
     timestamps: true,
     versionKey: false,
@@ -92,6 +130,13 @@ productSchema.pre('save', function(next) {
         .replace(/[^a-zA-Z0-9]/g, '-')
         .replace(/-+/g, '-');
     next();
+});
+
+// Tạo compound index cho tìm kiếm nâng cao
+productSchema.index({ 
+    name: 'text', 
+    description: 'text',
+    tags: 'text'
 });
 
 const Product = mongoose.model("Product", productSchema);

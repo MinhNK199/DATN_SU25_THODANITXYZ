@@ -2,33 +2,108 @@ import Product from "../models/product";
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
+import Category from "../models/category";
+import Brand from "../models/brand";
 
 export const getProducts = async (req, res) => {
     try {
-        const pageSize = 10;
+        const pageSize = Number(req.query.pageSize) || 10;
         const page = Number(req.query.page) || 1;
+        const sort = req.query.sort || '-createdAt';
+        const order = req.query.order || 'desc';
 
-        const keyword = req.query.keyword
-            ? {
-                  name: {
-                      $regex: req.query.keyword,
-                      $options: 'i',
-                  },
-              }
-            : {};
+        // Xây dựng query filter
+        const filter = {};
 
-        const count = await Product.countDocuments({ ...keyword });
-        const products = await Product.find({ ...keyword })
+        // Tìm kiếm theo text
+        if (req.query.keyword) {
+            filter.$text = { $search: req.query.keyword };
+        }
+
+        // Lọc theo danh mục
+        if (req.query.category) {
+            filter.category = req.query.category;
+        }
+
+        // Lọc theo thương hiệu
+        if (req.query.brand) {
+            filter.brand = req.query.brand;
+        }
+
+        // Lọc theo khoảng giá
+        if (req.query.minPrice || req.query.maxPrice) {
+            filter.price = {};
+            if (req.query.minPrice) filter.price.$gte = Number(req.query.minPrice);
+            if (req.query.maxPrice) filter.price.$lte = Number(req.query.maxPrice);
+        }
+
+        // Lọc theo khoảng thời gian
+        if (req.query.startDate || req.query.endDate) {
+            filter.createdAt = {};
+            if (req.query.startDate) filter.createdAt.$gte = new Date(req.query.startDate);
+            if (req.query.endDate) filter.createdAt.$lte = new Date(req.query.endDate);
+        }
+
+        // Lọc theo đánh giá
+        if (req.query.minRating) {
+            filter.averageRating = { $gte: Number(req.query.minRating) };
+        }
+
+        // Lọc theo số lượng tồn kho
+        if (req.query.inStock === 'true') {
+            filter.stock = { $gt: 0 };
+        }
+
+        // Lọc theo trạng thái
+        if (req.query.isActive !== undefined) {
+            filter.isActive = req.query.isActive === 'true';
+        }
+
+        // Lọc theo tags
+        if (req.query.tags) {
+            const tags = req.query.tags.split(',');
+            filter.tags = { $in: tags };
+        }
+
+        // Lọc theo đặc điểm kỹ thuật
+        if (req.query.specs) {
+            const specs = JSON.parse(req.query.specs);
+            Object.keys(specs).forEach(key => {
+                filter[`specifications.${key}`] = specs[key];
+            });
+        }
+
+        // Thực hiện query với populate và sort
+        const count = await Product.countDocuments(filter);
+        const products = await Product.find(filter)
             .populate('category', 'name')
             .populate('brand', 'name')
+            .sort({ [sort]: order === 'desc' ? -1 : 1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
+
+        // Tính toán các thống kê
+        const stats = {
+            total: count,
+            minPrice: await Product.findOne(filter).sort({ price: 1 }).select('price'),
+            maxPrice: await Product.findOne(filter).sort({ price: -1 }).select('price'),
+            avgRating: await Product.aggregate([
+                { $match: filter },
+                { $group: { _id: null, avgRating: { $avg: '$averageRating' } } }
+            ])
+        };
 
         res.json({
             products,
             page,
             pages: Math.ceil(count / pageSize),
             total: count,
+            stats: {
+                total: stats.total,
+                minPrice: stats.minPrice?.price || 0,
+                maxPrice: stats.maxPrice?.price || 0,
+                avgRating: stats.avgRating[0]?.avgRating || 0
+            }
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -215,6 +290,11 @@ export const importProductsFromExcel = async (req, res) => {
         const worksheet = workbook.Sheets[sheetName];
         const data = xlsx.utils.sheet_to_json(worksheet);
 
+        // Validate cấu trúc file Excel
+        const requiredFields = ['name', 'price', 'category', 'brand', 'stock'];
+        const optionalFields = ['description', 'specifications', 'features', 'tags', 'sku', 'weight', 'warranty', 'images'];
+        const allFields = [...requiredFields, ...optionalFields];
+
         const results = {
             total: data.length,
             success: 0,
@@ -222,37 +302,91 @@ export const importProductsFromExcel = async (req, res) => {
             errors: []
         };
 
-        for (const row of data) {
+        // Validate từng dòng dữ liệu
+        for (const [index, row] of data.entries()) {
             try {
-                // Validate dữ liệu
-                if (!row.name || !row.price || !row.category || !row.brand) {
-                    throw new Error('Thiếu thông tin bắt buộc');
+                // Kiểm tra các trường bắt buộc
+                const missingFields = requiredFields.filter(field => !row[field]);
+                if (missingFields.length > 0) {
+                    throw new Error(`Thiếu các trường bắt buộc: ${missingFields.join(', ')}`);
+                }
+
+                // Validate kiểu dữ liệu
+                if (isNaN(Number(row.price)) || Number(row.price) < 0) {
+                    throw new Error('Giá sản phẩm không hợp lệ');
+                }
+
+                if (isNaN(Number(row.stock)) || Number(row.stock) < 0) {
+                    throw new Error('Số lượng tồn kho không hợp lệ');
+                }
+
+                // Validate category và brand
+                const category = await Category.findById(row.category);
+                if (!category) {
+                    throw new Error('Danh mục không tồn tại');
+                }
+
+                const brand = await Brand.findById(row.brand);
+                if (!brand) {
+                    throw new Error('Thương hiệu không tồn tại');
+                }
+
+                // Xử lý specifications
+                let specifications = {};
+                if (row.specifications) {
+                    try {
+                        specifications = typeof row.specifications === 'string' 
+                            ? JSON.parse(row.specifications)
+                            : row.specifications;
+                    } catch (e) {
+                        throw new Error('Định dạng specifications không hợp lệ');
+                    }
+                }
+
+                // Xử lý features
+                let features = [];
+                if (row.features) {
+                    features = typeof row.features === 'string'
+                        ? row.features.split(',').map(f => f.trim())
+                        : row.features;
+                }
+
+                // Xử lý tags
+                let tags = [];
+                if (row.tags) {
+                    tags = typeof row.tags === 'string'
+                        ? row.tags.split(',').map(t => t.trim())
+                        : row.tags;
+                }
+
+                // Xử lý ảnh
+                let images = [];
+                if (row.images) {
+                    const imageUrls = typeof row.images === 'string'
+                        ? row.images.split(',').map(url => url.trim())
+                        : row.images;
+
+                    // Validate URL ảnh
+                    for (const url of imageUrls) {
+                        try {
+                            new URL(url);
+                            images.push(url);
+                        } catch (e) {
+                            throw new Error(`URL ảnh không hợp lệ: ${url}`);
+                        }
+                    }
                 }
 
                 // Kiểm tra sản phẩm đã tồn tại
-                const existingProduct = await Product.findOne({ name: row.name });
+                const existingProduct = await Product.findOne({ 
+                    $or: [
+                        { name: row.name },
+                        { sku: row.sku }
+                    ]
+                });
+
                 if (existingProduct) {
-                    throw new Error('Sản phẩm đã tồn tại');
-                }
-
-                // Parse specifications và features nếu là string
-                let specifications = row.specifications;
-                let features = row.features;
-
-                if (typeof specifications === 'string') {
-                    try {
-                        specifications = JSON.parse(specifications);
-                    } catch (e) {
-                        specifications = {};
-                    }
-                }
-
-                if (typeof features === 'string') {
-                    try {
-                        features = JSON.parse(features);
-                    } catch (e) {
-                        features = [];
-                    }
+                    throw new Error('Sản phẩm đã tồn tại (tên hoặc SKU trùng)');
                 }
 
                 // Tạo sản phẩm mới
@@ -262,9 +396,14 @@ export const importProductsFromExcel = async (req, res) => {
                     description: row.description || '',
                     category: row.category,
                     brand: row.brand,
-                    stock: Number(row.stock) || 0,
-                    specifications: specifications || {},
-                    features: features || [],
+                    stock: Number(row.stock),
+                    specifications,
+                    features,
+                    tags,
+                    sku: row.sku,
+                    weight: row.weight ? Number(row.weight) : undefined,
+                    warranty: row.warranty ? Number(row.warranty) : undefined,
+                    images,
                     isActive: true
                 });
 
@@ -273,7 +412,8 @@ export const importProductsFromExcel = async (req, res) => {
             } catch (error) {
                 results.failed++;
                 results.errors.push({
-                    row,
+                    row: index + 2, // +2 vì Excel bắt đầu từ 1 và có header
+                    data: row,
                     error: error.message
                 });
             }
@@ -284,7 +424,26 @@ export const importProductsFromExcel = async (req, res) => {
 
         res.json({
             message: "Import hoàn tất",
-            results
+            results,
+            template: {
+                requiredFields,
+                optionalFields,
+                example: {
+                    name: "Tên sản phẩm",
+                    price: "1000000",
+                    category: "ID của danh mục",
+                    brand: "ID của thương hiệu",
+                    stock: "100",
+                    description: "Mô tả sản phẩm",
+                    specifications: '{"color": "Đen", "size": "128GB"}',
+                    features: "Tính năng 1, Tính năng 2",
+                    tags: "tag1, tag2",
+                    sku: "SKU123",
+                    weight: "500",
+                    warranty: "12",
+                    images: "url1, url2"
+                }
+            }
         });
     } catch (error) {
         // Xóa file nếu có lỗi

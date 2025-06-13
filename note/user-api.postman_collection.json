@@ -1,117 +1,692 @@
 {
   "info": {
-    "name": "User Auth API Collection",
+    "name": "TechTrend API Collection",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "Đăng ký",
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Super Admin Login",
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"123456\",\n  \"phone\": \"0123456789\"\n}"
+              "raw": "{\n    \"email\": \"admindatn@gmail.com\",\n    \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Đăng nhập với tài khoản Super Admin"
+          }
         },
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [],
         "url": {
-          "raw": "http://localhost:5000/api/auth/register",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "5000",
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
           "path": ["api", "auth", "register"]
-        }
-      }
-    },
-    {
-      "name": "Đăng nhập",
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"123456\",\n    \"phone\": \"0123456789\",\n    \"address\": \"123 Test Street\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Đăng ký tài khoản user thường (role: user)"
+          }
+        },
+        {
+          "name": "User Login",
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"123456\"\n}"
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Đăng nhập với tài khoản user thường"
+          }
         },
+        {
+          "name": "Get User List",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users"]
+            },
+            "description": "Lấy danh sách user (yêu cầu quyền admin)"
+          }
+        },
+        {
+          "name": "Change User Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
         "url": {
-          "raw": "http://localhost:5000/api/auth/login",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "5000",
-          "path": ["api", "auth", "login"]
-        }
-      }
-    },
-    {
-      "name": "Lấy danh sách user",
+              "raw": "{{baseUrl}}/api/auth/users/:id/role",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users", ":id", "role"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{userId}}",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Thay đổi role của user (chỉ super admin mới có quyền)"
+          }
+        },
+        {
+          "name": "Toggle User Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/:id/toggle-status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users", ":id", "toggle-status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{userId}}",
+                  "description": "User ID"
+                }
+              ]
+            },
+            "description": "Bật/tắt trạng thái hoạt động của user (yêu cầu quyền admin)"
+          }
+        },
+        {
+          "name": "Get Activity Log",
       "request": {
         "method": "GET",
         "header": [
           { "key": "Authorization", "value": "Bearer {{token}}" }
         ],
         "url": {
-          "raw": "http://localhost:5000/api/auth/users",
-          "protocol": "http",
-          "host": ["localhost"],
-          "port": "5000",
-          "path": ["api", "auth", "users"]
+              "raw": "{{baseUrl}}/api/auth/activity-log",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "activity-log"]
+            },
+            "description": "Lấy lịch sử hoạt động (yêu cầu quyền admin)"
+          }
         }
-      }
+      ]
     },
     {
-      "name": "Đổi vai trò user",
+      "name": "Products",
+      "item": [
+        {
+          "name": "Get Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "10",
+                  "description": "Số sản phẩm mỗi trang"
+                },
+                {
+                  "key": "keyword",
+                  "value": "",
+                  "description": "Từ khóa tìm kiếm"
+                },
+                {
+                  "key": "category",
+                  "value": "{{categoryId}}",
+                  "description": "ID danh mục"
+                },
+                {
+                  "key": "brand",
+                  "value": "{{brandId}}",
+                  "description": "ID thương hiệu"
+                },
+                {
+                  "key": "minPrice",
+                  "value": "",
+                  "description": "Giá tối thiểu"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "",
+                  "description": "Giá tối đa"
+                },
+                {
+                  "key": "sort",
+                  "value": "-createdAt",
+                  "description": "Sắp xếp theo trường"
+                },
+                {
+                  "key": "order",
+                  "value": "desc",
+                  "description": "Thứ tự sắp xếp (asc/desc)"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "products"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"iPhone 15 Pro Max\",\n    \"description\": \"iPhone 15 Pro Max 256GB\",\n    \"price\": 29990000,\n    \"salePrice\": 28990000,\n    \"images\": [\n        \"https://example.com/iphone15-1.jpg\",\n        \"https://example.com/iphone15-2.jpg\"\n    ],\n    \"category\": \"{{categoryId}}\",\n    \"brand\": \"{{brandId}}\",\n    \"stock\": 100,\n    \"specifications\": {\n        \"screen\": \"6.7 inch Super Retina XDR\",\n        \"processor\": \"A17 Pro\",\n        \"ram\": \"8GB\",\n        \"storage\": \"256GB\",\n        \"camera\": \"48MP + 12MP + 12MP\",\n        \"battery\": \"4422 mAh\"\n    },\n    \"features\": [\n        \"Dynamic Island\",\n        \"USB-C\",\n        \"5G\",\n        \"Face ID\"\n    ],\n    \"tags\": [\n        \"iphone\",\n        \"apple\",\n        \"smartphone\"\n    ],\n    \"sku\": \"IP15PM256\",\n    \"weight\": 221,\n    \"dimensions\": {\n        \"length\": 160.7,\n        \"width\": 77.6,\n        \"height\": 7.85\n    },\n    \"warranty\": 12,\n    \"isActive\": true,\n    \"isFeatured\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cập nhật sản phẩm",
       "request": {
-        "method": "PATCH",
+            "method": "PUT",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
           { "key": "Authorization", "value": "Bearer {{token}}" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"role\": \"admin\"\n}"
+              "raw": "{\n  \"name\": \"iPhone 15 Pro Max (Updated)\",\n  \"price\": 28990000,\n  \"stock\": 150,\n  \"specifications\": {\n    \"color\": \"Titanium Black\",\n    \"storage\": \"512GB\",\n    \"ram\": \"8GB\",\n    \"screen\": \"6.7 inch\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/products/{{productId}}",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "products", "{{productId}}"]
+            }
+          }
         },
+        {
+          "name": "Xóa mềm sản phẩm",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
         "url": {
-          "raw": "http://localhost:5000/api/auth/users/{{userId}}/role",
+              "raw": "http://localhost:5000/api/products/{{productId}}/soft-delete",
           "protocol": "http",
           "host": ["localhost"],
           "port": "5000",
-          "path": ["api", "auth", "users", "{{userId}}", "role"]
+              "path": ["api", "products", "{{productId}}", "soft-delete"]
         }
       }
     },
     {
-      "name": "Kích hoạt/Vô hiệu hóa user",
+          "name": "Khôi phục sản phẩm",
       "request": {
-        "method": "PATCH",
+            "method": "PUT",
         "header": [
           { "key": "Authorization", "value": "Bearer {{token}}" }
         ],
         "url": {
-          "raw": "http://localhost:5000/api/auth/users/{{userId}}/status",
+              "raw": "http://localhost:5000/api/products/{{productId}}/restore",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "products", "{{productId}}", "restore"]
+            }
+          }
+        },
+        {
+          "name": "Import sản phẩm từ Excel",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/products.xlsx"
+                }
+              ]
+            },
+            "url": {
+              "raw": "http://localhost:5000/api/products/import",
           "protocol": "http",
           "host": ["localhost"],
           "port": "5000",
-          "path": ["api", "auth", "users", "{{userId}}", "status"]
+              "path": ["api", "products", "import"]
         }
       }
     },
     {
-      "name": "Xem nhật ký hoạt động (chỉ superadmin)",
+          "name": "Lấy thống kê sản phẩm",
       "request": {
         "method": "GET",
         "header": [
           { "key": "Authorization", "value": "Bearer {{token}}" }
         ],
         "url": {
-          "raw": "http://localhost:5000/api/auth/nhatKy",
+              "raw": "http://localhost:5000/api/products/stats",
           "protocol": "http",
           "host": ["localhost"],
           "port": "5000",
-          "path": ["api", "auth", "nhatKy"]
+              "path": ["api", "products", "stats"]
+            }
+          }
         }
-      }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/category",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category"]
+            }
+          }
+        },
+        {
+          "name": "Get Category Tree",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/category/tree",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category", "tree"]
+            }
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/category/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{categoryId}}",
+                  "description": "Category ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/category",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Laptop\",\n    \"description\": \"Danh mục laptop và máy tính xách tay\",\n    \"image\": \"https://example.com/laptop.jpg\",\n    \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/category/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{categoryId}}",
+                  "description": "Category ID"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Laptop Updated\",\n    \"description\": \"Danh mục laptop và máy tính xách tay (đã cập nhật)\",\n    \"image\": \"https://example.com/laptop-updated.jpg\",\n    \"order\": 2,\n    \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Deactivate Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/category/:id/deactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category", ":id", "deactivate"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{categoryId}}",
+                  "description": "Category ID"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/category/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "category", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{categoryId}}",
+                  "description": "Category ID"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brands",
+      "item": [
+        {
+          "name": "Get Brands",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brand",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "brand"]
+            },
+            "description": "Lấy danh sách thương hiệu (yêu cầu authentication)"
+          }
+        },
+        {
+          "name": "Get Brand by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brand/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "brand", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{brandId}}",
+                  "description": "Brand ID"
+                }
+              ]
+            },
+            "description": "Lấy chi tiết thương hiệu theo ID (yêu cầu authentication)"
+          }
+        },
+        {
+          "name": "Create Brand",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brand",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "brand"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Apple\",\n    \"description\": \"Apple Inc. là một công ty công nghệ đa quốc gia của Mỹ\",\n    \"logo\": \"https://example.com/apple-logo.png\",\n    \"website\": \"https://www.apple.com\",\n    \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Tạo thương hiệu mới (yêu cầu authentication)"
+          }
+        },
+        {
+          "name": "Update Brand",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brand/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "brand", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{brandId}}",
+                  "description": "Brand ID"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Apple Inc.\",\n    \"description\": \"Apple Inc. là một công ty công nghệ đa quốc gia của Mỹ (đã cập nhật)\",\n    \"logo\": \"https://example.com/apple-logo-updated.png\",\n    \"website\": \"https://www.apple.com\",\n    \"order\": 2,\n    \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Cập nhật thông tin thương hiệu (yêu cầu authentication)"
+          }
+        },
+        {
+          "name": "Delete Brand",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brand/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "brand", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{brandId}}",
+                  "description": "Brand ID"
+                }
+              ]
+            },
+            "description": "Xóa thương hiệu (yêu cầu authentication)"
+          }
+        },
+        {
+          "name": "Get Brand Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/brand/:id/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "brand", ":id", "products"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{brandId}}",
+                  "description": "Brand ID"
+                }
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Trang số"
+                }
+              ]
+            },
+            "description": "Lấy danh sách sản phẩm theo thương hiệu (yêu cầu authentication)"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": "your_jwt_token_here"
+    },
+    {
+      "key": "userId",
+      "value": "user_id_here",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "product_id_here",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "category_id_here"
+    },
+    {
+      "key": "brandId",
+      "value": "brand_id_here"
     }
   ]
 }

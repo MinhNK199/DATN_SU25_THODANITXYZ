@@ -45,5 +45,6 @@ brandSchema.pre('save', function(next) {
     next();
 });
 
-const Brand = mongoose.model("Brand", brandSchema);
+// Kiểm tra xem model đã tồn tại chưa trước khi tạo mới
+const Brand = mongoose.models.Brand || mongoose.model("Brand", brandSchema);
 export default Brand;
