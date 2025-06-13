@@ -1,35 +1,25 @@
 import React from "react";
 import toast from "react-hot-toast";
-import { FaBox, FaList, FaSignOutAlt, FaUser, FaFileInvoiceDollar } from "react-icons/fa";
+import { FaBox, FaList, FaSignOutAlt, FaUser, FaFileInvoiceDollar, FaTrademark } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-      localStorage.removeItem("userToken");
-      navigate("/");
-      toast.success("Đăng xuất thành công!");
-    }
+    localStorage.removeItem("token");
+    toast.success("Đăng xuất thành công!");
+    navigate("/login");
   };
 
   return (
-    <aside className="w-72 h-screen bg-gray-700 text-white flex flex-col p-6">
-      <h2 className="text-2xl font-semibold mb-10 text-center">Trang Quản Trị</h2>
+    <div className="w-64 h-screen bg-gray-800 text-white p-4">
+      <div className="text-2xl font-bold mb-8 text-center">Admin Panel</div>
 
-      <nav className="flex flex-col gap-0">
+      <div className="space-y-2">
         <button
-          onClick={() => navigate("/admin/user-list")}
-          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
-        >
-          <FaUser className="text-xl" />
-          <span>Người Dùng</span>
-        </button>
-
-        <button
-          onClick={() => navigate("/admin/product-list")}
-          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
+          onClick={() => navigate("/admin")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaBox className="text-xl" />
           <span>Sản phẩm</span>
@@ -37,29 +27,45 @@ const AdminSidebar = () => {
 
         <button
           onClick={() => navigate("/admin/category-list")}
-          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaList className="text-xl" />
           <span>Danh mục</span>
         </button>
 
         <button
+          onClick={() => navigate("/admin/user-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
+        >
+          <FaUser className="text-xl" />
+          <span>Người dùng</span>
+        </button>
+
+        <button
           onClick={() => navigate("/admin/bill-list")}
-          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition"
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaFileInvoiceDollar className="text-xl" />
           <span>Hóa đơn</span>
         </button>
 
         <button
+          onClick={() => navigate("/admin/brand")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
+        >
+          <FaTrademark className="text-xl" />
+          <span>Thương hiệu</span>
+        </button>
+
+        <button
           onClick={handleLogout}
-          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 transition mt-auto"
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaSignOutAlt className="text-xl" />
           <span>Đăng xuất</span>
         </button>
-      </nav>
-    </aside>
+      </div>
+    </div>
   );
 };
 
