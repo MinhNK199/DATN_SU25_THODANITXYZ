@@ -21,7 +21,6 @@ const Activity: React.FC = () => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Bộ lọc
   const [searchType, setSearchType] = useState<"content" | "actorName">("content");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
@@ -46,11 +45,9 @@ const Activity: React.FC = () => {
     }
   };
 
-  // Lọc dữ liệu phía client
   useEffect(() => {
     let filtered = logs;
 
-    // Lọc theo từ khóa
     if (searchKeyword.trim()) {
       const keyword = searchKeyword.toLowerCase();
       filtered = filtered.filter((log) => {
@@ -64,7 +61,6 @@ const Activity: React.FC = () => {
       });
     }
 
-    // Lọc theo ngày
     if (dateRange[0] && dateRange[1]) {
       const from = dateRange[0].startOf("day").toDate().getTime();
       const to = dateRange[1].endOf("day").toDate().getTime();
@@ -79,20 +75,20 @@ const Activity: React.FC = () => {
 
   const columns = [
     {
-      title: "Thời gian",
+      title: "🕒 Thời gian",
       dataIndex: "createdAt",
       key: "createdAt",
       render: (text: string) => new Date(text).toLocaleString("vi-VN"),
       width: 180,
     },
     {
-      title: "Nội dung",
+      title: "📄 Nội dung",
       dataIndex: "content",
       key: "content",
       width: 350,
     },
     {
-      title: "Người thực hiện",
+      title: "👤 Người thực hiện",
       dataIndex: "actorName",
       key: "actorName",
       width: 180,
@@ -106,39 +102,48 @@ const Activity: React.FC = () => {
   };
 
   return (
-    <div>
-      <h2 className="mb-4 text-xl font-bold">Nhật ký hoạt động</h2>
+    <div className="p-6 bg-white shadow-md rounded-2xl">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6">📋 Nhật ký hoạt động</h2>
+
       {/* Bộ lọc */}
-      <div className="flex flex-wrap gap-4 mb-6 items-center">
+      <div className="grid md:grid-cols-5 gap-4 mb-6">
         <Select
           value={searchType}
           onChange={(v) => setSearchType(v)}
-          style={{ width: 160 }}
+          className="w-full"
         >
-          <Option value="content">Lọc theo nội dung</Option>
-          <Option value="actorName">Lọc theo người thực hiện</Option>
+          <Option value="content">🔍 Theo nội dung</Option>
+          <Option value="actorName">👤 Theo người thực hiện</Option>
         </Select>
         <Input
           placeholder="Nhập từ khóa..."
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
-          style={{ width: 220 }}
+          className="w-full"
         />
         <RangePicker
           value={dateRange}
           onChange={(dates) => setDateRange(dates as [dayjs.Dayjs | null, dayjs.Dayjs | null])}
           format="DD/MM/YYYY"
-          allowClear
+          className="w-full"
         />
-        <Button onClick={handleReset}>Đặt lại</Button>
+        <Button onClick={handleReset} className="w-full bg-gray-100 hover:bg-gray-200">
+          Đặt lại
+        </Button>
+        <Button type="primary" onClick={fetchLogs} className="w-full">
+          Tải lại
+        </Button>
       </div>
+
       <Spin spinning={loading}>
-        <Table
-          dataSource={filteredLogs}
-          columns={columns}
-          rowKey="_id"
-          pagination={{ pageSize: 10 }}
-        />
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <Table
+            dataSource={filteredLogs}
+            columns={columns}
+            rowKey="_id"
+            pagination={{ pageSize: 10 }}
+          />
+        </div>
       </Spin>
     </div>
   );
