@@ -37,7 +37,7 @@ export default function Login() {
         } else {
           navigate("/client");
         }
-      }, 1000);
+      }, );
     } catch (err: any) {
       setError(
         err.response?.data?.details?.join(", ") ||
