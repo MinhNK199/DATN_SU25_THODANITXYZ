@@ -10,6 +10,8 @@ const BillList: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState("");
     const [messageType, setMessageType] = useState<"success" | "error" | "">("");
+    const [sendingId, setSendingId] = useState<string | null>(null);
+
 
     const fetchBills = async () => {
         setLoading(true);
@@ -59,11 +61,12 @@ const BillList: React.FC = () => {
 };
 
     const handleSendEmail = async (id: string) => {
+    setSendingId(id);
     try {
         const res = await fetch(`${API_URL}/${id}/export`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}) // hoặc { to: "email@khac.com" } nếu muốn gửi cho email khác
+            body: JSON.stringify({})
         });
 
         const data = await res.json();
@@ -77,6 +80,8 @@ const BillList: React.FC = () => {
     } catch (error) {
         setMessage("Lỗi khi gửi email!");
         setMessageType("error");
+    } finally {
+        setSendingId(null);
     }
 };
 
@@ -173,11 +178,30 @@ const BillList: React.FC = () => {
                                         <FaFilePdf /> PDF
                                     </button>
                                     <button
-                                        onClick={() => handleSendEmail(bill._id!)}
-                                        className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition flex items-center gap-1"
-                                    >
-                                        <FaEnvelope /> Email
-                                    </button>
+    onClick={() => handleSendEmail(bill._id!)}
+    className={`px-3 py-1 rounded-md transition flex items-center gap-1 
+        ${sendingId === bill._id
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-green-500 hover:bg-green-600 text-white'}`}
+    disabled={sendingId === bill._id}
+>
+    {sendingId === bill._id ? (
+        <>
+            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            Đang gửi...
+        </>
+    ) : (
+        <>
+            <FaEnvelope /> Email
+        </>
+    )}
+</button>
+
                                 </td>
                             </tr>
                         ))}
