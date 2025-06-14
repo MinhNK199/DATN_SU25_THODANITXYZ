@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Product from '../models/product';
+import Order from '../models/order'; 
 import { Rating } from '../models/Rating';
 import { containsBadWords, filterBadWords } from '../utils/BadWords';
 
@@ -37,6 +38,8 @@ export const getRatings = async (req, res) => {
 };
 
 // Tạo đánh giá mới
+// ...existing code...
+// Tạo đánh giá mới
 export const createRating = async (req, res) => {
   try {
     const { productId, rating, comment, images } = req.body;
@@ -58,6 +61,21 @@ export const createRating = async (req, res) => {
         error: {
           code: 'PRODUCT_NOT_FOUND',
           message: 'Sản phẩm không tồn tại'
+        }
+      });
+    }
+
+    // Kiểm tra user đã mua sản phẩm chưa
+    const hasPurchased = await Order.exists({
+      userId,
+      'items.productId': productId,
+      status: { $in: ['completed', 'delivered'] } // chỉ tính đơn đã hoàn thành/giao hàng
+    });
+    if (!hasPurchased) {
+      return res.status(403).json({
+        error: {
+          code: 'NOT_PURCHASED',
+          message: 'Bạn chỉ có thể đánh giá sản phẩm đã mua'
         }
       });
     }
@@ -123,6 +141,7 @@ export const createRating = async (req, res) => {
     });
   }
 };
+// ...existing code...
 
 // Cập nhật đánh giá
 export const updateRating = async (req, res) => {
