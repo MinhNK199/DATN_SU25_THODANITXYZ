@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { protect } from "../middlewares/authMiddleware";
-import { createRating, deleteRating, getRatings, updateRating } from "../controllers/Rating";
+import { createRating, deleteRating, getRatings, updateRating } from "../controllers/rating";
 
 const router = Router();
 
