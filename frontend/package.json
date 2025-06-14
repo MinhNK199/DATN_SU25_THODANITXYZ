@@ -13,7 +13,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.67.3",
     "antd": "^5.26.0",
-    "axios": "^1.7.2",
+    "axios": "^1.10.0",
     "dayjs": "^1.11.13",
     "json-server": "^0.17.4",
     "jwt-decode": "^4.0.0",

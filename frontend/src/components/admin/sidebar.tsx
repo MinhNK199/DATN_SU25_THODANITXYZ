@@ -58,7 +58,13 @@ const AdminSidebar = () => {
           <FaTrademark className="text-xl" />
           <span>Thương hiệu</span>
         </button>
-
+         <button
+          onClick={() => navigate("/admin/rating-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
+        >
+          <FaTrademark className="text-xl" />
+          <span>Đánh giá</span>
+        </button>
         {/* Chỉ hiển thị nếu là admin hoặc superadmin */}
         {( user?.role === "superadmin") && (
           <button
