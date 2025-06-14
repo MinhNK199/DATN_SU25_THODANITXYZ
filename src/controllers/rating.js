@@ -67,8 +67,9 @@ export const createRating = async (req, res) => {
 
     // Kiểm tra user đã mua sản phẩm chưa
     const hasPurchased = await Order.exists({
-      userId,
-      'items.productId': productId,
+      user: userId,
+'orderItems.product': productId,
+
       status: { $in: ['completed', 'delivered'] } // chỉ tính đơn đã hoàn thành/giao hàng
     });
     if (!hasPurchased) {
