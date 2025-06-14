@@ -92,6 +92,7 @@ const CategoryList: React.FC = () => {
               <th className="py-3 px-4 border">STT</th>
               <th className="py-3 px-4 border">Tên danh mục</th>
               <th className="py-3 px-4 border">Mô tả</th>
+              <th className="py-3 px-4 border">Hình ảnh</th>
               <th className="py-3 px-4 border">Trạng thái</th>
               <th className="py-3 px-4 border">Thao tác</th>
             </tr>
@@ -105,6 +106,8 @@ const CategoryList: React.FC = () => {
                 <td className="py-3 px-4 text-center">{index + 1}</td>
                 <td className="py-3 px-4 text-center">{category.name}</td>
                 <td className="py-3 px-4 text-center">{category.description || "-"}</td>
+                <td className="py-3 px-4 text-center align-middle">
+                <img src={category.image} alt=" " width={90} className="mx-auto object-cover rounded-md"/></td>
                 <td className="py-3 px-4 text-center">
                   <span
                     className={`px-2 py-1 rounded-full text-sm ${
