@@ -1,20 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import type { Category } from "../../../interfaces/Category";
 
 const API_URL = "http://localhost:5000/api/category";
 
 const CategoryEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [form, setForm] = useState<Category>({
-    name: "",
-    description: "",
-    image: "",
-    isActive: true,
-  });
-
-  const [message, setMessage] = useState("");
   const navigate = useNavigate();
+  const [message, setMessage] = useState("");
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<Category>({
+    defaultValues: {
+      name: "",
+      description: "",
+      image: "",
+      isActive: true,
+    },
+  });
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -32,7 +40,7 @@ const CategoryEdit: React.FC = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          setForm(data);
+          reset(data); // Cập nhật lại giá trị vào form
         } else {
           setMessage("❌ Không tìm thấy danh mục!");
         }
@@ -42,25 +50,14 @@ const CategoryEdit: React.FC = () => {
     };
 
     fetchCategory();
-  }, [id]);
+  }, [id, reset]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: Category) => {
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: getAuthHeader(),
-        body: JSON.stringify(form),
+        body: JSON.stringify(data),
       });
       if (res.ok) {
         setMessage("✅ Cập nhật danh mục thành công!");
@@ -92,19 +89,19 @@ const CategoryEdit: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Tên danh mục
           </label>
           <input
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            required
+            {...register("name", { required: "Tên danh mục không được để trống" })}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             placeholder="Nhập tên danh mục"
           />
+          {errors.name && (
+            <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+          )}
         </div>
 
         <div>
@@ -112,9 +109,7 @@ const CategoryEdit: React.FC = () => {
             Mô tả
           </label>
           <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
+            {...register("description")}
             rows={3}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             placeholder="Nhập mô tả danh mục"
@@ -126,20 +121,19 @@ const CategoryEdit: React.FC = () => {
             Hình ảnh
           </label>
           <input
-            name="image"
-            value={form.image}
-            onChange={handleChange}
+            {...register("image", { required: "Hình ảnh không được để trống"})}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             placeholder="Nhập URL hình ảnh"
           />
+            {errors.image && (
+            <p className="text-red-600 text-sm mt-1">{errors.image.message}</p>
+          )}
         </div>
 
         <div className="flex items-center">
           <input
             type="checkbox"
-            name="isActive"
-            checked={form.isActive}
-            onChange={handleChange}
+            {...register("isActive")}
             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
           <label className="ml-2 block text-sm text-gray-700">
@@ -158,4 +152,4 @@ const CategoryEdit: React.FC = () => {
   );
 };
 
-export default CategoryEdit; 
+export default CategoryEdit;
