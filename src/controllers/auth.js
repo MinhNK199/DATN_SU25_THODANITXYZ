@@ -34,10 +34,10 @@ export const dangKy = async (req, res) => {
     user.password = undefined;
     await logActivity({
       content: `Đăng ký tài khoản`,
-      userName: user.name,
-      userId: user._id,
-      actorName: req.user.name,
-      actorId: req.user._id,
+  userName: user.name,
+  userId: user._id,
+  actorName: user.name, // chính user vừa đăng ký
+  actorId: user._id,
     });
     return res.status(201).json({
       message: `Đăng ký thành công với vai trò ${role}`,
@@ -76,10 +76,10 @@ export const dangNhap = async (req, res) => {
     });
     await logActivity({
       content: `Đăng nhập hệ thống`,
-      userName: user.name,
-      userId: user._id,
-      actorName: req.user.name,
-      actorId: req.user._id,
+  userName: user.name,
+  userId: user._id,
+  actorName: user.name, // chính user vừa đăng nhập
+  actorId: user._id,
     });
     return res.status(200).json({
       message: "Đăng nhập thành công",
@@ -251,10 +251,10 @@ export const toggleUserStatus = async (req, res) => {
       content: `Tài khoản ${targetUser.email} đã ${
         targetUser.active ? "được kích hoạt" : "bị vô hiệu hóa"
       }`,
-      userName: user.name,
-      userId: user._id,
-      actorName: req.user.name,
-      actorId: req.user._id,
+      userName: targetUser.name,
+  userId: targetUser._id,
+  actorName: req.user.name,
+  actorId: req.user._id,
     });
     res.status(200).json({
       message: `Tài khoản đã ${
