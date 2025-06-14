@@ -17,8 +17,9 @@ import UserDetail from "./components/admin/users/userDetail";
 import UserEdit from "./components/admin/users/userEdit";
 import BillList from "./components/admin/bill/BillList";
 import BrandList from "./components/admin/brands/BrandList";
-import Activity from "./components/admin/activity/activity";
-import RatingList from "./components/admin/rating/ratinglist";
+import BannerList from "./components/admin/Banner/BannerList";
+import BannerAdd from "./components/admin/Banner/BannerAdd";
+import BannerEdit from "./components/admin/Banner/BannerEdit";
 
 type Props = {}
 
@@ -45,9 +46,9 @@ const App = (props: Props) => {
         { path: "category-edit/:id", element: <CategoryEdit /> },
         { path: "bill-list", element: <BillList /> },
         { path: "brand", element: <BrandList /> },
-        { path: "activity-list", element: <Activity /> },
-        { path: "rating-list", element: <RatingList /> },
-
+        { path: "banner-list", element: <BannerList /> },
+        { path: "banner-add", element: <BannerAdd /> },
+        { path: "banner-edit/:id", element: <BannerEdit /> },
       ]
     }
   ])
