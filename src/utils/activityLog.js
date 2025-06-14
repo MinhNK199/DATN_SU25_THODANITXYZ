@@ -35,9 +35,9 @@ export const getActivityLogs = async (req, res) => {
   }
 };
 
-export const logActivity = async ({ content, userName, userId }) => {
+export const logActivity = async ({ content, userName, userId, actorName, actorId }) => {
   try {
-    await ActivityLog.create({ content, userName, userId });
+    await ActivityLog.create({ content, userName, userId, actorName, actorId });
   } catch (err) {
     console.error("Lỗi ghi nhật ký hoạt động:", err.message);
   }
