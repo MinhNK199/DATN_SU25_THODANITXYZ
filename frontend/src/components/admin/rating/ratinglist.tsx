@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Table, Tag, Space, Typography, Spin, message, Input, Button, Form, Select, DatePicker } from "antd";
+import {
+  Table,
+  Tag,
+  Typography,
+  Spin,
+  message,
+  Input,
+  Button,
+  Form,
+  Select,
+  DatePicker,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -48,8 +59,8 @@ const RatingList: React.FC = () => {
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [replyValue, setReplyValue] = useState<string>("");
   const [replyLoading, setReplyLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  // Bộ lọc
   const [filter, setFilter] = useState<FilterOptions>({
     star: null,
     productId: null,
@@ -57,8 +68,10 @@ const RatingList: React.FC = () => {
     replyStatus: "all",
   });
 
-  // Danh sách sản phẩm để lọc (giả sử bạn có API lấy danh sách sản phẩm)
-  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+    fetchRatings(pagination.current, pagination.pageSize);
+    fetchProducts();
+  }, []);
 
   const fetchProducts = async () => {
     try {
@@ -81,18 +94,12 @@ const RatingList: React.FC = () => {
         pageSize,
         total: res.data.pagination.total,
       });
-    } catch (err) {
+    } catch {
       message.error("Không thể tải danh sách đánh giá");
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchRatings(pagination.current, pagination.pageSize);
-    fetchProducts();
-    // eslint-disable-next-line
-  }, []);
 
   const handleTableChange = (pagination: any) => {
     fetchRatings(pagination.current, pagination.pageSize);
@@ -100,7 +107,7 @@ const RatingList: React.FC = () => {
 
   const handleReply = async (id: string) => {
     if (!replyValue.trim()) {
-      message.warning("Vui lòng nhập nội dung phản hồi!");
+      message.warning("Vui lòng nhập phản hồi");
       return;
     }
     setReplyLoading(true);
@@ -121,14 +128,10 @@ const RatingList: React.FC = () => {
     }
   };
 
-  // Hàm lọc đánh giá
   const filterRatings = (ratings: Rating[]) => {
     return ratings.filter((item) => {
-      // Lọc theo số sao
       if (filter.star && item.rating !== filter.star) return false;
-      // Lọc theo sản phẩm
       if (filter.productId && item.productId._id !== filter.productId) return false;
-      // Lọc theo ngày đánh giá
       if (filter.dateRange && filter.dateRange[0] && filter.dateRange[1]) {
         const created = dayjs(item.createdAt);
         if (
@@ -137,7 +140,6 @@ const RatingList: React.FC = () => {
         )
           return false;
       }
-      // Lọc theo trạng thái trả lời
       if (filter.replyStatus === "replied" && (!item.reply || item.reply.trim() === "")) return false;
       if (filter.replyStatus === "not_replied" && item.reply && item.reply.trim() !== "") return false;
       return true;
@@ -147,30 +149,27 @@ const RatingList: React.FC = () => {
   const columns: ColumnsType<Rating> = [
     {
       title: "Người đánh giá",
-      key: "user",
       render: (_, record) => (
-        <span>
-          <Text strong>{record.userId?.name}</Text>
-          <br />
-          <Text type="secondary">{record.userId?.email}</Text>
-        </span>
+        <div className="flex flex-col">
+          <span className="font-medium text-gray-800">{record.userId?.name}</span>
+          <span className="text-gray-500 text-sm">{record.userId?.email}</span>
+        </div>
       ),
     },
     {
       title: "Sản phẩm",
-      key: "product",
       render: (_, record) => (
-        <span>
-          <Text>{record.productId?.name}</Text>
-          <br />
-          <Text type="secondary">{record.productId?.price?.toLocaleString()}₫</Text>
-        </span>
+        <div>
+          <div className="text-gray-900">{record.productId?.name}</div>
+          <div className="text-gray-500 text-sm">
+            {record.productId?.price?.toLocaleString()}₫
+          </div>
+        </div>
       ),
     },
     {
       title: "Số sao",
       dataIndex: "rating",
-      key: "rating",
       render: (rating: number) => (
         <Tag color={rating >= 4 ? "green" : rating === 3 ? "orange" : "red"}>
           {rating} ★
@@ -180,38 +179,30 @@ const RatingList: React.FC = () => {
     {
       title: "Bình luận",
       dataIndex: "comment",
-      key: "comment",
-      render: (comment: string) => <Text>{comment || <i>Không có</i>}</Text>,
+      render: (comment: string) => <span>{comment || <i>Không có</i>}</span>,
     },
     {
       title: "Ảnh",
       dataIndex: "images",
-      key: "images",
       render: (images?: string[]) =>
         images && images.length > 0 ? (
-          <Space>
+          <div className="flex gap-2">
             {images.map((img, idx) => (
               <img
                 key={idx}
                 src={img}
-                alt="rating"
-                style={{
-                  width: 40,
-                  height: 40,
-                  objectFit: "cover",
-                  borderRadius: 4,
-                }}
+                alt="img"
+                className="w-10 h-10 rounded object-cover border"
               />
             ))}
-          </Space>
+          </div>
         ) : (
-          <Text type="secondary">Không có</Text>
+          <span className="text-gray-400">Không có</span>
         ),
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
-      key: "createdAt",
       render: (date: string) =>
         new Date(date).toLocaleString("vi-VN", {
           dateStyle: "short",
@@ -221,19 +212,18 @@ const RatingList: React.FC = () => {
     {
       title: "Phản hồi",
       dataIndex: "reply",
-      key: "reply",
       render: (reply: string, record) =>
-        // Nếu đã có phản hồi thì chỉ hiển thị, không cho sửa
         reply && reply.trim() !== "" ? (
-          <Text>{reply}</Text>
+          <div className="text-gray-700">{reply}</div>
         ) : replyingId === record._id ? (
           <Form
             onFinish={() => handleReply(record._id)}
-            style={{ display: "flex", gap: 8 }}
+            className="flex gap-2"
           >
             <Input
               value={replyValue}
               onChange={(e) => setReplyValue(e.target.value)}
+              className="w-60"
               placeholder="Nhập phản hồi"
               disabled={replyLoading}
             />
@@ -265,31 +255,31 @@ const RatingList: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+    <div className="p-4">
+      <div className="flex flex-wrap gap-4 mb-4">
         <Select
           allowClear
           placeholder="Số sao"
-          style={{ width: 120 }}
+          className="w-32"
           value={filter.star}
           onChange={(v) => setFilter((f) => ({ ...f, star: v ?? null }))}
         >
-          <Select.Option value={5}>5 sao</Select.Option>
-          <Select.Option value={4}>4 sao</Select.Option>
-          <Select.Option value={3}>3 sao</Select.Option>
-          <Select.Option value={2}>2 sao</Select.Option>
-          <Select.Option value={1}>1 sao</Select.Option>
+          {[5, 4, 3, 2, 1].map((star) => (
+            <Select.Option key={star} value={star}>
+              {star} sao
+            </Select.Option>
+          ))}
         </Select>
         <Select
           allowClear
           placeholder="Sản phẩm"
-          style={{ width: 180 }}
+          className="w-48"
           value={filter.productId}
           onChange={(v) => setFilter((f) => ({ ...f, productId: v ?? null }))}
         >
-          {products.map((product) => (
-            <Select.Option key={product._id} value={product._id}>
-              {product.name}
+          {products.map((p) => (
+            <Select.Option key={p._id} value={p._id}>
+              {p.name}
             </Select.Option>
           ))}
         </Select>
@@ -304,35 +294,41 @@ const RatingList: React.FC = () => {
           format="DD/MM/YYYY"
         />
         <Select
+          className="w-40"
           value={filter.replyStatus}
-          style={{ width: 150 }}
           onChange={(v) => setFilter((f) => ({ ...f, replyStatus: v }))}
         >
           <Select.Option value="all">Tất cả</Select.Option>
           <Select.Option value="replied">Đã trả lời</Select.Option>
           <Select.Option value="not_replied">Chưa trả lời</Select.Option>
         </Select>
-        <Button onClick={() => setFilter({
-          star: null,
-          productId: null,
-          dateRange: [null, null],
-          replyStatus: "all"
-        })}>
+        <Button
+          onClick={() =>
+            setFilter({
+              star: null,
+              productId: null,
+              dateRange: [null, null],
+              replyStatus: "all",
+            })
+          }
+        >
           Đặt lại
         </Button>
       </div>
       <Spin spinning={loading}>
-        <Table
-          columns={columns}
-          dataSource={filterRatings(data)}
-          rowKey="_id"
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-          }}
-          onChange={handleTableChange}
-        />
+        <div className="bg-white rounded-xl shadow p-4">
+          <Table
+            columns={columns}
+            dataSource={filterRatings(data)}
+            rowKey="_id"
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+            }}
+            onChange={handleTableChange}
+          />
+        </div>
       </Spin>
     </div>
   );
