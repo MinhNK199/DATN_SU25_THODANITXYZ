@@ -129,12 +129,12 @@ export const createProduct = async (req, res) => {
             name: req.body.name,
             price: req.body.price,
             user: req.user._id,
-            images: req.body.images,
+            image: req.body.image,
             brand: req.body.brand,
             category: req.body.category,
-            stock: req.body.stock,
+            countInStock: req.body.countInStock,
+            numReviews: 0,
             description: req.body.description,
-            specifications: req.body.specifications,
         });
         const createdProduct = await product.save();
         res.status(201).json(createdProduct);
@@ -146,52 +146,31 @@ export const createProduct = async (req, res) => {
 // Cập nhật sản phẩm
 export const updateProduct = async (req, res) => {
     try {
-        console.log('Received update request:', req.body); // Debug log
-
         const {
             name,
             price,
             description,
-            images,
+            image,
             brand,
             category,
-            stock,
-            specifications,
+            countInStock,
         } = req.body;
 
-        // Validate required fields
-        if (!name || !price || !description || !brand || !category || stock === undefined) {
-            return res.status(400).json({ 
-                message: "Thiếu thông tin bắt buộc",
-                required: { name, price, description, brand, category, stock }
-            });
-        }
-
         const product = await Product.findById(req.params.id);
-        if (!product) {
-            return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
-        }
+        if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
 
-        // Update fields
         product.name = name;
-        product.price = Number(price);
+        product.price = price;
         product.description = description;
-        product.images = Array.isArray(images) ? images.filter(img => img.trim() !== "") : [];
+        product.image = image;
         product.brand = brand;
         product.category = category;
-        product.stock = Number(stock);
-        product.specifications = specifications || {};
-
-        console.log('Updating product with data:', product); // Debug log
+        product.countInStock = countInStock;
 
         const updatedProduct = await product.save();
         res.json(updatedProduct);
     } catch (error) {
-        console.error('Update product error:', error); // Debug log
-        res.status(400).json({ 
-            message: error.message || "Có lỗi xảy ra khi cập nhật sản phẩm",
-            error: error.toString()
-        });
+        res.status(400).json({ message: error.message });
     }
 };
 
