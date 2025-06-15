@@ -5,6 +5,7 @@ import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter } from "react-icons/
 import { Input, Card, Badge, Tooltip, Modal, message, Table, Tag, Space, Select, Button, Popover, Checkbox } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { SearchProps } from "antd/es/input";
+import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
 const API_URL = "http://localhost:5000/api/product";
 
@@ -28,16 +29,28 @@ const ProductList: React.FC = () => {
   const [deletedProducts, setDeletedProducts] = useState<Product[]>([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [selectedRestore, setSelectedRestore] = useState<string[]>([]);
+  const [deletedCount, setDeletedCount] = useState(0);
   const navigate = useNavigate();
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL);
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await res.json();
-      setProducts(data.products || []);
+      if (res.ok) {
+        // Chỉ lấy các sản phẩm chưa bị xóa mềm
+        const activeProducts = data.products.filter((product: Product) => product.isActive);
+        setProducts(activeProducts);
+      } else {
+        message.error(data.message || "Lỗi khi tải sản phẩm!");
+      }
     } catch (error) {
-      message.error("Lỗi khi tải sản phẩm!");
+      message.error("Lỗi kết nối máy chủ!");
     }
     setLoading(false);
   };
@@ -76,21 +89,27 @@ const ProductList: React.FC = () => {
   const fetchDeletedProducts = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/product?isActive=false", {
+      const res = await fetch("http://localhost:5000/api/product/deleted", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       const data = await res.json();
-      setDeletedProducts(data.products || []);
+      if (res.ok) {
+        setDeletedProducts(data || []);
+        setDeletedCount(data.length);
+      } else {
+        message.error(data.message || "Lỗi khi tải sản phẩm đã xóa!");
+      }
     } catch (error) {
-      message.error("Lỗi khi tải sản phẩm đã xóa!");
+      message.error("Lỗi kết nối máy chủ!");
     }
   };
 
   useEffect(() => {
     fetchProducts();
     fetchBrands();
+    fetchDeletedProducts(); // Fetch số lượng sản phẩm đã xóa khi component mount
   }, []);
 
   const handleSoftDelete = async (id: string) => {
@@ -101,8 +120,8 @@ const ProductList: React.FC = () => {
         navigate("/login");
         return;
       }
-      const res = await fetch(`http://localhost:5000/api/product/${id}/soft-delete`, {
-        method: "PUT",
+      const res = await fetch(`http://localhost:5000/api/product/${id}`, {
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -110,6 +129,7 @@ const ProductList: React.FC = () => {
       if (res.ok) {
         message.success("Đã chuyển sản phẩm vào thùng rác!");
         fetchProducts();
+        fetchDeletedProducts(); // Cập nhật số lượng sản phẩm đã xóa
       } else if (res.status === 401) {
         message.error("Phiên đăng nhập hết hạn!");
         localStorage.removeItem("token");
@@ -126,19 +146,30 @@ const ProductList: React.FC = () => {
   const handleRestore = async (ids: string[]) => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        message.error("Vui lòng đăng nhập lại!");
+        navigate("/login");
+        return;
+      }
+
       for (const id of ids) {
-        await fetch(`http://localhost:5000/api/product/${id}/restore`, {
+        const res = await fetch(`http://localhost:5000/api/product/${id}/restore`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || "Khôi phục sản phẩm thất bại!");
+        }
       }
       message.success("Khôi phục thành công!");
       setShowDeletedModal(false);
       fetchProducts();
+      fetchDeletedProducts(); // Cập nhật số lượng sản phẩm đã xóa
     } catch (error) {
-      message.error("Lỗi khi khôi phục sản phẩm!");
+      message.error(error.message || "Lỗi khi khôi phục sản phẩm!");
     }
   };
 
@@ -251,24 +282,23 @@ const ProductList: React.FC = () => {
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
             <Button
-              type="text"
-              icon={<FaEye className="text-blue-600" />}
-              onClick={() => showProductDetail(record)}
+              type="primary"
+              icon={<FaEye />}
+              onClick={() => navigate(`/admin/products/detail/${record._id}`)}
             />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
-            <Link to={`/admin/products/edit/${record._id}`}>
-              <Button
-                type="text"
-                icon={<FaEdit className="text-yellow-600" />}
-              />
-            </Link>
+            <Button
+              type="primary"
+              icon={<FaEdit />}
+              onClick={() => navigate(`/admin/products/edit/${record._id}`)}
+            />
           </Tooltip>
           <Tooltip title="Xóa">
             <Button
-              type="text"
-              icon={<FaTrash className="text-red-600" />}
-              onClick={() => handleSoftDelete(record._id!)}
+              danger
+              icon={<FaTrash />}
+              onClick={() => handleSoftDelete(record._id)}
             />
           </Tooltip>
         </Space>
@@ -357,24 +387,25 @@ const ProductList: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Quản lý Sản phẩm</h1>
-        <div className="flex items-center gap-4">
-          <Popover
-            content={searchContent}
-            title="Tìm kiếm nâng cao"
-            trigger="click"
-            placement="bottomRight"
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Quản lý sản phẩm</h1>
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => navigate('/admin/products/add')}
+            icon={<PlusOutlined />}
           >
-            <Button icon={<FaFilter />}>Bộ lọc</Button>
-          </Popover>
-          <Link
-            to="/admin/products/add"
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            <FaPlus /> Thêm sản phẩm mới
-          </Link>
-        </div>
+            Thêm sản phẩm
+          </Button>
+          <Badge count={deletedCount} size="small">
+            <Button
+              onClick={() => setShowDeletedModal(true)}
+              icon={<DeleteOutlined />}
+            >
+              Sản phẩm đã xóa
+            </Button>
+          </Badge>
+        </Space>
       </div>
 
       <Card className="shadow-lg">
@@ -463,7 +494,6 @@ const ProductList: React.FC = () => {
         )}
       </Modal>
 
-      <Button onClick={() => { setShowDeletedModal(true); fetchDeletedProducts(); }} type="default" className="mb-4">Sản phẩm đã xóa</Button>
       <Modal
         open={showDeletedModal}
         onCancel={() => setShowDeletedModal(false)}

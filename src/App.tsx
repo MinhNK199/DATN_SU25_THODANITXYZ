@@ -21,30 +21,40 @@ import BrandList from "./components/admin/brands/BrandList";
 import BannerList from "./components/admin/Banner/BannerList";
 import BannerAdd from "./components/admin/Banner/BannerAdd";
 import BannerEdit from "./components/admin/Banner/BannerEdit";
-import RatingList from "./components/admin/rating/ratinglist";
+import RatingList from "./components/admin/rating/RatingList";
 import Activity from "./components/admin/activity/activity";
 
 type Props = {}
 
 const App = (props: Props) => {
   const routes = useRoutes([
-    { path: "/", element: <Login />, },
-    { path: "register", element: <Register /> },
+    // Auth routes
+    { path: "/login", element: <Login /> },
+    { path: "/register", element: <Register /> },
 
-    //client
-    { path: "/client", element: <Hello /> },
-
-    //Admin
+    // Client routes
+    { 
+      path: "/", 
+      element: <Hello />,
+      children: [
+        { path: "products", element: <ProductList /> },
+        { path: "products/:id", element: <ProductDetail /> },
+      ]
+    },
+    
+    // Admin routes
     {
-      path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
+      path: "/admin", 
+      element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, 
+      children: [
         { path: "", element: <Dashboard /> },
         { path: "users", element: <UserList /> },
         { path: "users/edit/:id", element: <UserEdit /> },
         { path: "users/:id", element: <UserDetail /> },
         { path: "products", element: <ProductList /> },
         { path: "products/add", element: <ProductAdd /> },
+        { path: "products/detail/:id", element: <ProductDetail /> },
         { path: "products/edit/:id", element: <ProductEdit /> },
-        { path: "products/:id", element: <ProductDetail /> },
         { path: "categories", element: <CategoryList /> },
         { path: "categories/add", element: <CategoryAdd /> },
         { path: "categories/edit/:id", element: <CategoryEdit /> },

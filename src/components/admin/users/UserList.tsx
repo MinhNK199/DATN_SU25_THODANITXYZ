@@ -194,7 +194,7 @@ const UserList: React.FC = () => {
 
                 <td className="py-3 px-4 text-center">
                   <button
-                    onClick={() => navigate(`/admin/user-detail/${u._id}`)}
+                    onClick={() => navigate(`/admin/users/${u._id}`)}
                     className="text-gray-600 hover:text-red-500 transition text-2xl"
                     title="Xem chi tiết"
                   >

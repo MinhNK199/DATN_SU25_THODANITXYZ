@@ -61,7 +61,7 @@ const CategoryEdit: React.FC = () => {
       });
       if (res.ok) {
         setMessage("✅ Cập nhật danh mục thành công!");
-        setTimeout(() => navigate("/admin/category-list"), 1000);
+        setTimeout(() => navigate("/admin/categories"), 1000);
       } else {
         const err = await res.json();
         setMessage(`❌ Cập nhật thất bại: ${err.message || "Lỗi máy chủ"}`);

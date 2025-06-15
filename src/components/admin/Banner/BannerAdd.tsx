@@ -43,7 +43,7 @@ const BannerAdd: React.FC = () => {
 
       if (res.ok) {
         setMessage("✅ Thêm banner thành công!");
-        setTimeout(() => navigate("/admin/banner-list"), 1000);
+        setTimeout(() => navigate("/admin/banners"), 1000);
       } else {
         const err = await res.json();
         setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);

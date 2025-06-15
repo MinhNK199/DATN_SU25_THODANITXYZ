@@ -69,7 +69,7 @@ const BannerEdit: React.FC = () => {
       });
       if (res.ok) {
         setMessage("✅ Cập nhật banner thành công!");
-        setTimeout(() => navigate("/admin/banner-list"), 1000);
+        setTimeout(() => navigate("/admin/banners"), 1000);
       } else {
         const err = await res.json();
         setMessage(`❌ Cập nhật thất bại: ${err.message || "Lỗi máy chủ"}`);

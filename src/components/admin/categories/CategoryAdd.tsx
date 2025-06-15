@@ -40,7 +40,7 @@ const CategoryAdd: React.FC = () => {
 
       if (res.ok) {
         setMessage("✅ Thêm danh mục thành công!");
-        setTimeout(() => navigate("/admin/category-list"), 1000);
+        setTimeout(() => navigate("/admin/categories"), 1000);
       } else {
         const err = await res.json();
         setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
