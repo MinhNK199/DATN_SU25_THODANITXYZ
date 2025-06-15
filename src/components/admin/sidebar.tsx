@@ -27,7 +27,7 @@ const AdminSidebar = () => {
 
       <div className="space-y-2">
         <button
-          onClick={() => navigate("/admin/product-list")}
+          onClick={() => navigate("/admin/products")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaBox className="text-xl" />
@@ -35,7 +35,7 @@ const AdminSidebar = () => {
         </button>
 
         <button
-          onClick={() => navigate("/admin/category-list")}
+          onClick={() => navigate("/admin/categories")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaList className="text-xl" />
@@ -43,7 +43,7 @@ const AdminSidebar = () => {
         </button>
 
         <button
-          onClick={() => navigate("/admin/banner-list")}
+          onClick={() => navigate("/admin/banners")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaImage className="text-xl" />
@@ -51,7 +51,7 @@ const AdminSidebar = () => {
         </button>
 
         <button
-          onClick={() => navigate("/admin/user-list")}
+          onClick={() => navigate("/admin/users")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaUser className="text-xl" />
@@ -59,7 +59,7 @@ const AdminSidebar = () => {
         </button>
 
         <button
-          onClick={() => navigate("/admin/bill-list")}
+          onClick={() => navigate("/admin/bills")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaFileInvoiceDollar className="text-xl" />
@@ -67,23 +67,25 @@ const AdminSidebar = () => {
         </button>
 
         <button
-          onClick={() => navigate("/admin/brand")}
+          onClick={() => navigate("/admin/brands")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaTrademark className="text-xl" />
           <span>Thương hiệu</span>
         </button>
+
         <button
-          onClick={() => navigate("/admin/rating-list")}
+          onClick={() => navigate("/admin/ratings")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaTrademark className="text-xl" />
           <span>Đánh giá</span>
         </button>
+
         {/* Chỉ hiển thị nếu là admin hoặc superadmin */}
-        {( user?.role === "superadmin") && (
+        {(user?.role === "superadmin") && (
           <button
-            onClick={() => navigate("/admin/activity-list")}
+            onClick={() => navigate("/admin/activities")}
             className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
           >
             <FaHistory className="text-xl" />

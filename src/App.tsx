@@ -6,6 +6,7 @@ import Register from "./components/Register";
 import ProductList from "./components/admin/products/ProductList";
 import ProductAdd from "./components/admin/products/ProductAdd";
 import ProductEdit from "./components/admin/products/ProductEdit";
+import ProductDetail from "./components/admin/products/ProductDetail";
 import CategoryList from "./components/admin/categories/CategoryList";
 import CategoryAdd from "./components/admin/categories/CategoryAdd";
 import CategoryEdit from "./components/admin/categories/CategoryEdit";
@@ -37,22 +38,23 @@ const App = (props: Props) => {
     {
       path: "/admin", element: <PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>, children: [
         { path: "", element: <Dashboard /> },
-        { path: "user-list", element: <UserList /> },
-        { path: "user-edit/:id", element: <UserEdit /> },
-        { path: "user-detail/:id", element: <UserDetail /> },
-        { path: "product-list", element: <ProductList /> },
-        { path: "product-add", element: <ProductAdd /> },
-        { path: "product-edit/:id", element: <ProductEdit /> },
-        { path: "category-list", element: <CategoryList /> },
-        { path: "category-add", element: <CategoryAdd /> },
-        { path: "category-edit/:id", element: <CategoryEdit /> },
-        { path: "bill-list", element: <BillList /> },
-        { path: "brand", element: <BrandList /> },
-        { path: "banner-list", element: <BannerList /> },
-        { path: "banner-add", element: <BannerAdd /> },
-        { path: "banner-edit/:id", element: <BannerEdit /> },
-        { path: "activity-list", element: <Activity /> },
-        { path: "rating-list", element: <RatingList /> },
+        { path: "users", element: <UserList /> },
+        { path: "users/edit/:id", element: <UserEdit /> },
+        { path: "users/:id", element: <UserDetail /> },
+        { path: "products", element: <ProductList /> },
+        { path: "products/add", element: <ProductAdd /> },
+        { path: "products/edit/:id", element: <ProductEdit /> },
+        { path: "products/:id", element: <ProductDetail /> },
+        { path: "categories", element: <CategoryList /> },
+        { path: "categories/add", element: <CategoryAdd /> },
+        { path: "categories/edit/:id", element: <CategoryEdit /> },
+        { path: "bills", element: <BillList /> },
+        { path: "brands", element: <BrandList /> },
+        { path: "banners", element: <BannerList /> },
+        { path: "banners/add", element: <BannerAdd /> },
+        { path: "banners/edit/:id", element: <BannerEdit /> },
+        { path: "activities", element: <Activity /> },
+        { path: "ratings", element: <RatingList /> },
       ]
     }
   ])
