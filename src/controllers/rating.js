@@ -284,3 +284,58 @@ export const deleteRating = async (req, res) => {
     });
   }
 };
+// ...existing code...
+
+// ...existing code...
+
+// Trả lời bình luận đánh giá (chỉ được trả lời 1 lần, không cho sửa)
+export const replyRating = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reply } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_RATING_ID',
+          message: 'ID đánh giá không hợp lệ'
+        }
+      });
+    }
+
+    const rating = await Rating.findById(id);
+    if (!rating) {
+      return res.status(404).json({
+        error: {
+          code: 'RATING_NOT_FOUND',
+          message: 'Đánh giá không tồn tại'
+        }
+      });
+    }
+
+    // Nếu đã có trả lời thì không cho sửa
+    if (rating.reply && rating.reply.trim() !== "") {
+      return res.status(403).json({
+        error: {
+          code: 'ALREADY_REPLIED',
+          message: 'Đánh giá này đã được trả lời và không thể sửa'
+        }
+      });
+    }
+
+    rating.reply = reply;
+    await rating.save();
+
+    res.status(200).json({
+      data: rating,
+      message: 'Trả lời bình luận thành công'
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: error.message
+      }
+    });
+  }
+};

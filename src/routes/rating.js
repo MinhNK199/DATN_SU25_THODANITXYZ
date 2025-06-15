@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { protect } from "../middlewares/authMiddleware";
-import { createRating, deleteRating, getRatings, updateRating } from "../controllers/rating";
+import { createRating, deleteRating, getRatings, replyRating, updateRating } from "../controllers/rating";
 
 const router = Router();
 
@@ -15,5 +15,7 @@ router.put("/:id", protect, updateRating);
 
 // Xóa đánh giá (yêu cầu đăng nhập)
 router.delete("/:id", protect, deleteRating);
+
+router.post("/:id/reply", protect, replyRating);
 
 export default router;
