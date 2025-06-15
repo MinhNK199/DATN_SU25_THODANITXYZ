@@ -20,6 +20,8 @@ import BrandList from "./components/admin/brands/BrandList";
 import BannerList from "./components/admin/Banner/BannerList";
 import BannerAdd from "./components/admin/Banner/BannerAdd";
 import BannerEdit from "./components/admin/Banner/BannerEdit";
+import RatingList from "./components/admin/rating/ratinglist";
+import Activity from "./components/admin/activity/activity";
 
 type Props = {}
 
@@ -49,6 +51,8 @@ const App = (props: Props) => {
         { path: "banner-list", element: <BannerList /> },
         { path: "banner-add", element: <BannerAdd /> },
         { path: "banner-edit/:id", element: <BannerEdit /> },
+        { path: "activity-list", element: <Activity /> },
+        { path: "rating-list", element: <RatingList /> },
       ]
     }
   ])

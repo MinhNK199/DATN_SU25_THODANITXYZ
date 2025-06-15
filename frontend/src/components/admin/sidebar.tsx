@@ -8,16 +8,17 @@ import {
   FaFileInvoiceDollar,
   FaTrademark,
   FaImage,
+  FaHistory,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
-
+  const user = JSON.parse(localStorage.getItem("user") || "null");
   const handleLogout = () => {
     localStorage.removeItem("token");
     toast.success("Đăng xuất thành công!");
-    navigate("/login");
+    navigate("/");
   };
 
   return (
@@ -26,7 +27,7 @@ const AdminSidebar = () => {
 
       <div className="space-y-2">
         <button
-          onClick={() => navigate("/admin")}
+          onClick={() => navigate("/admin/product-list")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
           <FaBox className="text-xl" />
@@ -72,7 +73,23 @@ const AdminSidebar = () => {
           <FaTrademark className="text-xl" />
           <span>Thương hiệu</span>
         </button>
-
+        <button
+          onClick={() => navigate("/admin/rating-list")}
+          className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
+        >
+          <FaTrademark className="text-xl" />
+          <span>Đánh giá</span>
+        </button>
+        {/* Chỉ hiển thị nếu là admin hoặc superadmin */}
+        {( user?.role === "superadmin") && (
+          <button
+            onClick={() => navigate("/admin/activity-list")}
+            className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
+          >
+            <FaHistory className="text-xl" />
+            <span>Nhật Ký</span>
+          </button>
+        )}
         <button
           onClick={handleLogout}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
