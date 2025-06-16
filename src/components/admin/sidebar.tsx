@@ -9,6 +9,7 @@ import {
   FaTrademark,
   FaImage,
   FaHistory,
+  FaStar,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
@@ -78,7 +79,7 @@ const AdminSidebar = () => {
           onClick={() => navigate("/admin/ratings")}
           className="flex items-center gap-4 px-5 py-4 text-lg border-b border-gray-500 hover:bg-gray-500 hover:text-white transition"
         >
-          <FaTrademark className="text-xl" />
+          <FaStar className="text-xl" />
           <span>Đánh giá</span>
         </button>
 
