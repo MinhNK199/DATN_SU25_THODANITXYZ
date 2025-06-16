@@ -7,7 +7,12 @@ export default function Hello() {
         <h2 className="text-2xl font-bold text-gray-800 mb-3">Chào mừng bạn đến Trang mua sắm!</h2>
         <p className="text-gray-600 mb-6">Trang client</p>
         <div className="flex justify-center space-x-4">
-         
+          <Link
+            to="/login"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition"
+          >
+            Đăng nhập
+          </Link>
         </div>
       </div>
     </div>

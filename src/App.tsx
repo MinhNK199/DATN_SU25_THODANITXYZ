@@ -21,8 +21,8 @@ import BrandList from "./components/admin/brands/BrandList";
 import BannerList from "./components/admin/Banner/BannerList";
 import BannerAdd from "./components/admin/Banner/BannerAdd";
 import BannerEdit from "./components/admin/Banner/BannerEdit";
-import RatingList from "./components/admin/rating/RatingList";
 import Activity from "./components/admin/activity/activity";
+import RatingList from "./components/admin/rating/ratinglist";
 
 type Props = {}
 

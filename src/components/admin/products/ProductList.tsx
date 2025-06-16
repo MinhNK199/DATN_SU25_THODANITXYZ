@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Product } from "../../../interfaces/Product";
-import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter } from "react-icons/fa";
-import { Input, Card, Badge, Tooltip, Modal, message, Table, Tag, Space, Select, Button, Popover, Checkbox } from "antd";
+import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch } from "react-icons/fa";
+import { Input, Card, Badge, Tooltip, Modal, message, Table, Tag, Space, Select, Button, Checkbox } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { SearchProps } from "antd/es/input";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
 const API_URL = "http://localhost:5000/api/product";
@@ -43,7 +42,6 @@ const ProductList: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        // Chỉ lấy các sản phẩm chưa bị xóa mềm
         const activeProducts = data.products.filter((product: Product) => product.isActive);
         setProducts(activeProducts);
       } else {
@@ -96,8 +94,16 @@ const ProductList: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        setDeletedProducts(data || []);
-        setDeletedCount(data.length);
+        if (Array.isArray(data)) {
+          setDeletedProducts(data);
+          setDeletedCount(data.length);
+        } else if (Array.isArray(data.products)) {
+          setDeletedProducts(data.products);
+          setDeletedCount(data.products.length);
+        } else {
+          setDeletedProducts([]);
+          setDeletedCount(0);
+        }
       } else {
         message.error(data.message || "Lỗi khi tải sản phẩm đã xóa!");
       }
@@ -109,10 +115,44 @@ const ProductList: React.FC = () => {
   useEffect(() => {
     fetchProducts();
     fetchBrands();
-    fetchDeletedProducts(); // Fetch số lượng sản phẩm đã xóa khi component mount
+    fetchDeletedProducts();
   }, []);
 
+  // XÓA MỀM
   const handleSoftDelete = async (id: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        message.error("Vui lòng đăng nhập lại!");
+        navigate("/login");
+        return;
+      }
+      // Xóa mềm: gọi PUT /product/:id/soft-delete
+      const res = await fetch(`http://localhost:5000/api/product/${id}/soft-delete`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        message.success("Đã chuyển sản phẩm vào thùng rác!");
+        fetchProducts();
+        fetchDeletedProducts();
+      } else if (res.status === 401) {
+        message.error("Phiên đăng nhập hết hạn!");
+        localStorage.removeItem("token");
+        navigate("/login");
+      } else {
+        const err = await res.json();
+        message.error(err.message || "Xóa sản phẩm thất bại!");
+      }
+    } catch (error) {
+      message.error("Lỗi kết nối máy chủ!");
+    }
+  };
+
+  // XÓA CỨNG
+  const handleHardDelete = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -127,13 +167,8 @@ const ProductList: React.FC = () => {
         },
       });
       if (res.ok) {
-        message.success("Đã chuyển sản phẩm vào thùng rác!");
-        fetchProducts();
-        fetchDeletedProducts(); // Cập nhật số lượng sản phẩm đã xóa
-      } else if (res.status === 401) {
-        message.error("Phiên đăng nhập hết hạn!");
-        localStorage.removeItem("token");
-        navigate("/login");
+        message.success("Đã xóa sản phẩm vĩnh viễn!");
+        fetchDeletedProducts();
       } else {
         const err = await res.json();
         message.error(err.message || "Xóa sản phẩm thất bại!");
@@ -167,9 +202,13 @@ const ProductList: React.FC = () => {
       message.success("Khôi phục thành công!");
       setShowDeletedModal(false);
       fetchProducts();
-      fetchDeletedProducts(); // Cập nhật số lượng sản phẩm đã xóa
+      fetchDeletedProducts();
     } catch (error) {
-      message.error(error.message || "Lỗi khi khôi phục sản phẩm!");
+      if (error instanceof Error) {
+        message.error(error.message);
+      } else {
+        message.error("Lỗi không xác định!");
+      }
     }
   };
 
@@ -200,12 +239,12 @@ const ProductList: React.FC = () => {
   const filteredProducts = products.filter(product => {
     const nameMatch = product.name.toLowerCase().includes(searchParams.name.toLowerCase());
     const brandMatch = searchParams.brand ? product.brand === searchParams.brand : true;
-    const stockMatch = searchParams.stockStatus === "all" 
-      ? true 
-      : searchParams.stockStatus === "inStock" 
-        ? product.stock > 0 
+    const stockMatch = searchParams.stockStatus === "all"
+      ? true
+      : searchParams.stockStatus === "inStock"
+        ? product.stock > 0
         : product.stock === 0;
-    
+
     return nameMatch && brandMatch && stockMatch;
   });
 
@@ -298,7 +337,7 @@ const ProductList: React.FC = () => {
             <Button
               danger
               icon={<FaTrash />}
-              onClick={() => handleSoftDelete(record._id)}
+              onClick={() => handleSoftDelete(record._id!)}
             />
           </Tooltip>
         </Space>
@@ -306,36 +345,48 @@ const ProductList: React.FC = () => {
     },
   ];
 
-  const columnsDeleted = [
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+const role = user.role;
+
+const columnsDeleted = [
+  {
+    title: "Chọn",
+    dataIndex: "_id",
+    render: (_: any, record: Product) => (
+      <Checkbox
+        checked={selectedRestore.includes(record._id!)}
+        onChange={e => {
+          if (e.target.checked) {
+            setSelectedRestore([...selectedRestore, record._id!]);
+          } else {
+            setSelectedRestore(selectedRestore.filter(id => id !== record._id));
+          }
+        }}
+      />
+    ),
+    width: 60,
+  },
+  { title: "Tên sản phẩm", dataIndex: "name" },
+  { title: "Giá", dataIndex: "price" },
+  { title: "Thương hiệu", dataIndex: ["brand", "name"] },
+  { title: "Danh mục", dataIndex: ["category", "name"] },
+  {
+    title: "Khôi phục",
+    dataIndex: "_id",
+    render: (_: any, record: Product) => (
+      <Button type="link" onClick={() => handleRestore([record._id!])}>Khôi phục</Button>
+    ),
+  },
+  ...(role === 'superadmin' ? [
     {
-      title: "Chọn",
+      title: "Xóa",
       dataIndex: "_id",
       render: (_: any, record: Product) => (
-        <Checkbox
-          checked={selectedRestore.includes(record._id!)}
-          onChange={e => {
-            if (e.target.checked) {
-              setSelectedRestore([...selectedRestore, record._id!]);
-            } else {
-              setSelectedRestore(selectedRestore.filter(id => id !== record._id));
-            }
-          }}
-        />
+        <Button danger type="link" onClick={() => handleHardDelete(record._id!)}>Xóa</Button>
       ),
-      width: 60,
-    },
-    { title: "Tên sản phẩm", dataIndex: "name" },
-    { title: "Giá", dataIndex: "price" },
-    { title: "Thương hiệu", dataIndex: ["brand", "name"] },
-    { title: "Danh mục", dataIndex: ["category", "name"] },
-    {
-      title: "Khôi phục",
-      dataIndex: "_id",
-      render: (_: any, record: Product) => (
-        <Button type="link" onClick={() => handleRestore([record._id!])}>Khôi phục</Button>
-      ),
-    },
-  ];
+    }
+  ] : [])
+];
 
   const searchContent = (
     <div className="p-4 space-y-4 w-80">
