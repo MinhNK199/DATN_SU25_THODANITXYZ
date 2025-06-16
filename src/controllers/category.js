@@ -87,24 +87,6 @@ export const updateCategory = async (req, res) => {
     }
 };
 
-// Ẩn danh mục 
-export const deactivateCategory = async (req, res) => {
-    try {
-        const category = await Category.findById(req.params.id);
-        if (!category) {
-            return res.status(404).json({ message: "Không tìm thấy danh mục" });
-        }
-
-        category.isActive = false;
-        await category.save();
-
-        res.json({ message: "Đã ẩn danh mục thành công", category });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-
 // Xóa danh mục
 export const deleteCategory = async (req, res) => {
     try {
@@ -159,6 +141,53 @@ export const getCategoryProducts = async (req, res) => {
             pages: Math.ceil(count / pageSize),
             total: count,
         });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+// Lấy danh mục đã xóa
+export const getDeletedCategories = async (req, res) => {
+    try {
+        const categories = await Category.find({ isActive: false })
+            .populate('parent', 'name')
+            .sort('order');
+        res.json(categories);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+//ẩn danh mục
+export const softDeleteCategory = async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.id);
+        if (!category) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+        if (!category.isActive) {
+            return res.status(400).json({ message: "Danh mục đã bị ẩn trước đó" });
+        }
+        category.isActive = false;
+        await category.save();
+        res.json({ message: "Đã chuyển danh mục vào thùng rác (xóa mềm)", category });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+//khôi phục
+export const restoreCategory = async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.id);
+        if (!category) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+        if (category.isActive) {
+            return res.status(400).json({ message: "Danh mục đang hoạt động, không cần khôi phục" });
+        }
+        category.isActive = true;
+        await category.save();
+        res.json({ message: "Khôi phục danh mục thành công", category });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
