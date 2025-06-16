@@ -129,11 +129,19 @@ export const getProductById = async (req, res) => {
 
 export const createProduct = async (req, res) => {
     try {
+        // Đảm bảo images là mảng
+        let images = [];
+        if (Array.isArray(req.body.images)) {
+            images = req.body.images;
+        } else if (req.body.image) {
+            images = [req.body.image];
+        }
+
         const product = new Product({
             name: req.body.name,
             price: req.body.price,
             user: req.user._id,
-            image: req.body.image,
+            images, // dùng images chuẩn hóa
             brand: req.body.brand,
             category: req.body.category,
             countInStock: req.body.countInStock,
@@ -146,7 +154,6 @@ export const createProduct = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
-
 // Cập nhật sản phẩm
 export const updateProduct = async (req, res) => {
     try {
@@ -154,6 +161,7 @@ export const updateProduct = async (req, res) => {
             name,
             price,
             description,
+            images,
             image,
             brand,
             category,
@@ -166,7 +174,12 @@ export const updateProduct = async (req, res) => {
         product.name = name;
         product.price = price;
         product.description = description;
-        product.image = image;
+        // Ưu tiên images (mảng), nếu không có thì lấy image (chuỗi)
+        if (Array.isArray(images)) {
+            product.images = images;
+        } else if (image) {
+            product.images = [image];
+        }
         product.brand = brand;
         product.category = category;
         product.countInStock = countInStock;
@@ -177,7 +190,6 @@ export const updateProduct = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
-
 // Xóa sản phẩm
 export const deleteProduct = async (req, res) => {
     try {
