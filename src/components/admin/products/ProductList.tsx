@@ -153,30 +153,39 @@ const ProductList: React.FC = () => {
 
   // XÓA CỨNG
   const handleHardDelete = async (id: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        message.error("Vui lòng đăng nhập lại!");
-        navigate("/login");
-        return;
+  Modal.confirm({
+    title: "Xác nhận xóa vĩnh viễn?",
+    content: "Sản phẩm sẽ bị xóa hoàn toàn khỏi hệ thống.",
+    okText: "Xóa",
+    okType: "danger",
+    cancelText: "Hủy",
+    onOk: async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          message.error("Vui lòng đăng nhập lại!");
+          navigate("/login");
+          return;
+        }
+        const res = await fetch(`http://localhost:5000/api/product/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          message.success("Đã xóa sản phẩm vĩnh viễn!");
+          fetchDeletedProducts();
+        } else {
+          const err = await res.json();
+          message.error(err.message || "Xóa sản phẩm thất bại!");
+        }
+      } catch (error) {
+        message.error("Lỗi kết nối máy chủ!");
       }
-      const res = await fetch(`http://localhost:5000/api/product/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        message.success("Đã xóa sản phẩm vĩnh viễn!");
-        fetchDeletedProducts();
-      } else {
-        const err = await res.json();
-        message.error(err.message || "Xóa sản phẩm thất bại!");
-      }
-    } catch (error) {
-      message.error("Lỗi kết nối máy chủ!");
     }
-  };
+  });
+};
 
   const handleRestore = async (ids: string[]) => {
     try {

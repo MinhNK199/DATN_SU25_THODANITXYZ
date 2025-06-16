@@ -1,13 +1,36 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Category } from "../../../interfaces/Category";
-import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch, FaFilter, FaBox } from "react-icons/fa";
-import { Input, Card, Badge, Tooltip, Modal, message, Table, Tag, Space, Select, Button, Popover, Checkbox, Statistic, Row, Col } from "antd";
+import {
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaEye,
+  FaSearch,
+  FaBox,
+} from "react-icons/fa";
+import {
+  Input,
+  Card,
+  Badge,
+  Tooltip,
+  Modal,
+  message,
+  Table,
+  Tag,
+  Space,
+  Select,
+  Button,
+  Popover,
+  Checkbox,
+  Statistic,
+  Row,
+  Col,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { SearchProps } from "antd/es/input";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
-const API_URL = "http://localhost:5000/api/category?isActive=all";
+const API_URL = "http://localhost:5000/api/category";
 
 interface SearchParams {
   name: string;
@@ -27,19 +50,26 @@ const CategoryList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useState<SearchParams>({
     name: "",
-    status: "all"
+    status: "all",
   });
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
+    null
+  );
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [deletedCategories, setDeletedCategories] = useState<Category[]>([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [selectedRestore, setSelectedRestore] = useState<string[]>([]);
   const [deletedCount, setDeletedCount] = useState(0);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
   const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productsModalVisible, setProductsModalVisible] = useState(false);
   const navigate = useNavigate();
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user.role;
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -86,14 +116,17 @@ const CategoryList: React.FC = () => {
     setLoadingProducts(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(`http://localhost:5000/api/product?category=${categoryId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/category/${categoryId}/products`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const data = await res.json();
       if (res.ok) {
-        setCategoryProducts(data);
+        setCategoryProducts(data.products || []);
       } else {
         message.error(data.message || "Lỗi khi tải sản phẩm!");
       }
@@ -114,6 +147,7 @@ const CategoryList: React.FC = () => {
     fetchDeletedCategories();
   }, []);
 
+  // XÓA MỀM
   const handleSoftDelete = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -122,12 +156,15 @@ const CategoryList: React.FC = () => {
         navigate("/login");
         return;
       }
-      const res = await fetch(`http://localhost:5000/api/category/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/category/${id}/soft-delete`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const data = await res.json();
       if (res.ok) {
         message.success("Đã chuyển danh mục vào thùng rác!");
@@ -145,6 +182,43 @@ const CategoryList: React.FC = () => {
     }
   };
 
+  // XÓA CỨNG (chỉ superadmin)
+  const handleHardDelete = async (id: string) => {
+    Modal.confirm({
+      title: "Xác nhận xóa vĩnh viễn?",
+      content: "Danh mục sẽ bị xóa hoàn toàn khỏi hệ thống.",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            message.error("Vui lòng đăng nhập lại!");
+            navigate("/login");
+            return;
+          }
+          const res = await fetch(`http://localhost:5000/api/category/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const data = await res.json();
+          if (res.ok) {
+            message.success("Đã xóa vĩnh viễn danh mục!");
+            fetchDeletedCategories();
+          } else {
+            message.error(data.message || "Xóa danh mục thất bại!");
+          }
+        } catch (error) {
+          message.error("Lỗi kết nối máy chủ!");
+        }
+      },
+    });
+  };
+
+  // KHÔI PHỤC (nếu có route /:id/deactivate thì sửa lại cho đúng)
   const handleRestore = async (ids: string[]) => {
     try {
       const token = localStorage.getItem("token");
@@ -153,14 +227,16 @@ const CategoryList: React.FC = () => {
         navigate("/login");
         return;
       }
-
       for (const id of ids) {
-        const res = await fetch(`http://localhost:5000/api/category/${id}/restore`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          `http://localhost:5000/api/category/${id}/restore`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
         if (!res.ok) {
           const err = await res.json();
           throw new Error(err.message || "Khôi phục danh mục thất bại!");
@@ -169,6 +245,7 @@ const CategoryList: React.FC = () => {
       message.success("Khôi phục thành công!");
       setShowDeletedModal(false);
       fetchCategories();
+      fetchDeletedCategories();
     } catch (error) {
       message.error((error as Error).message || "Lỗi khi khôi phục danh mục!");
     }
@@ -180,26 +257,28 @@ const CategoryList: React.FC = () => {
   };
 
   const handleSearch = (value: string) => {
-    setSearchParams(prev => ({ ...prev, name: value }));
+    setSearchParams((prev) => ({ ...prev, name: value }));
   };
 
   const handleStatusChange = (value: "all" | "active" | "inactive") => {
-    setSearchParams(prev => ({ ...prev, status: value }));
+    setSearchParams((prev) => ({ ...prev, status: value }));
   };
 
-  const filteredCategories = categories.filter(category => {
-    const nameMatch = category.name.toLowerCase().includes(searchParams.name.toLowerCase());
-    const statusMatch = searchParams.status === "all" 
-      ? true 
-      : searchParams.status === "active" 
-        ? category.isActive 
+  const filteredCategories = categories.filter((category) => {
+    const nameMatch = category.name
+      .toLowerCase()
+      .includes(searchParams.name.toLowerCase());
+    const statusMatch =
+      searchParams.status === "all"
+        ? true
+        : searchParams.status === "active"
+        ? category.isActive
         : !category.isActive;
-    
     return nameMatch && statusMatch;
   });
 
-  const activeCategories = categories.filter(cat => cat.isActive).length;
-  const inactiveCategories = categories.filter(cat => !cat.isActive).length;
+  const activeCategories = categories.filter((cat) => cat.isActive).length;
+  const inactiveCategories = deletedCategories.length;
 
   const productColumns: ColumnsType<Product> = [
     {
@@ -207,7 +286,11 @@ const CategoryList: React.FC = () => {
       dataIndex: "image",
       key: "image",
       render: (image: string) => (
-        <img src={image} alt="Product" className="w-16 h-16 object-cover rounded" />
+        <img
+          src={image}
+          alt="Product"
+          className="w-16 h-16 object-cover rounded"
+        />
       ),
     },
     {
@@ -219,9 +302,7 @@ const CategoryList: React.FC = () => {
       title: "Giá",
       dataIndex: "price",
       key: "price",
-      render: (price: number) => (
-        <span>{price.toLocaleString('vi-VN')}đ</span>
-      ),
+      render: (price: number) => <span>{price.toLocaleString("vi-VN")}đ</span>,
     },
     {
       title: "Trạng thái",
@@ -267,9 +348,7 @@ const CategoryList: React.FC = () => {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
-      render: (text: string) => (
-        <div className="max-w-xs truncate">{text}</div>
-      ),
+      render: (text: string) => <div className="max-w-xs truncate">{text}</div>,
     },
     {
       title: "Hình ảnh",
@@ -277,9 +356,9 @@ const CategoryList: React.FC = () => {
       key: "image",
       render: (image: string) => (
         <div className="w-20 h-20">
-          <img 
-            src={image} 
-            alt="Category" 
+          <img
+            src={image}
+            alt="Category"
             className="w-full h-full object-cover rounded-md"
           />
         </div>
@@ -320,7 +399,7 @@ const CategoryList: React.FC = () => {
               <Button type="text" icon={<FaEdit />} />
             </Link>
           </Tooltip>
-          <Tooltip title="Xóa">
+          <Tooltip title="Ẩn">
             <Button
               type="text"
               danger
@@ -333,6 +412,7 @@ const CategoryList: React.FC = () => {
     },
   ];
 
+  // Chỉ superadmin mới thấy nút xóa cứng ở thùng rác
   const deletedColumns: ColumnsType<Category> = [
     {
       title: "Tên danh mục",
@@ -351,17 +431,31 @@ const CategoryList: React.FC = () => {
       render: (parent: any) => parent?.name || "-",
     },
     {
-      title: "Người xóa",
-      dataIndex: "deletedBy",
-      key: "deletedBy",
-      render: (deletedBy: any) => deletedBy ? `${deletedBy.name} (${deletedBy.email})` : "-",
+      title: "Khôi phục",
+      dataIndex: "_id",
+      render: (_: any, record: Category) => (
+        <Button type="link" onClick={() => handleRestore([record._id!])}>
+          Khôi phục
+        </Button>
+      ),
     },
-    {
-      title: "Ngày xóa",
-      dataIndex: "deletedAt",
-      key: "deletedAt",
-      render: (date: string) => date ? new Date(date).toLocaleString('vi-VN') : "-",
-    },
+    ...(role === "superadmin"
+      ? [
+          {
+            title: "Xóa",
+            dataIndex: "_id",
+            render: (_: any, record: Category) => (
+              <Button
+                danger
+                type="link"
+                onClick={() => handleHardDelete(record._id!)}
+              >
+                Xóa
+              </Button>
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -372,7 +466,7 @@ const CategoryList: React.FC = () => {
           <Space>
             <Button
               type="primary"
-              onClick={() => navigate('/admin/categories/add')}
+              onClick={() => navigate("/admin/categories/add")}
               icon={<PlusOutlined />}
             >
               Thêm danh mục
@@ -382,7 +476,7 @@ const CategoryList: React.FC = () => {
                 onClick={() => setShowDeletedModal(true)}
                 icon={<DeleteOutlined />}
               >
-                Danh mục đã xóa
+                Danh mục đã ẩn
               </Button>
             </Badge>
           </Space>
@@ -403,7 +497,7 @@ const CategoryList: React.FC = () => {
               <Statistic
                 title="Danh mục đang hoạt động"
                 value={activeCategories}
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: "#3f8600" }}
               />
             </Card>
           </Col>
@@ -412,7 +506,7 @@ const CategoryList: React.FC = () => {
               <Statistic
                 title="Danh mục đã ẩn"
                 value={inactiveCategories}
-                valueStyle={{ color: '#cf1322' }}
+                valueStyle={{ color: "#cf1322" }}
               />
             </Card>
           </Col>
@@ -473,7 +567,8 @@ const CategoryList: React.FC = () => {
         <Table
           rowSelection={{
             type: "checkbox",
-            onChange: (selectedRowKeys) => setSelectedRestore(selectedRowKeys as string[]),
+            onChange: (selectedRowKeys) =>
+              setSelectedRestore(selectedRowKeys as string[]),
           }}
           columns={deletedColumns}
           dataSource={deletedCategories}
@@ -512,4 +607,4 @@ const CategoryList: React.FC = () => {
   );
 };
 
-export default CategoryList; 
+export default CategoryList;
