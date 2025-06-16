@@ -153,39 +153,39 @@ const ProductList: React.FC = () => {
 
   // XÓA CỨNG
   const handleHardDelete = async (id: string) => {
-  Modal.confirm({
-    title: "Xác nhận xóa vĩnh viễn?",
-    content: "Sản phẩm sẽ bị xóa hoàn toàn khỏi hệ thống.",
-    okText: "Xóa",
-    okType: "danger",
-    cancelText: "Hủy",
-    onOk: async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          message.error("Vui lòng đăng nhập lại!");
-          navigate("/login");
-          return;
+    Modal.confirm({
+      title: "Xác nhận xóa vĩnh viễn?",
+      content: "Sản phẩm sẽ bị xóa hoàn toàn khỏi hệ thống.",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            message.error("Vui lòng đăng nhập lại!");
+            navigate("/login");
+            return;
+          }
+          const res = await fetch(`http://localhost:5000/api/product/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          if (res.ok) {
+            message.success("Đã xóa sản phẩm vĩnh viễn!");
+            fetchDeletedProducts();
+          } else {
+            const err = await res.json();
+            message.error(err.message || "Xóa sản phẩm thất bại!");
+          }
+        } catch (error) {
+          message.error("Lỗi kết nối máy chủ!");
         }
-        const res = await fetch(`http://localhost:5000/api/product/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res.ok) {
-          message.success("Đã xóa sản phẩm vĩnh viễn!");
-          fetchDeletedProducts();
-        } else {
-          const err = await res.json();
-          message.error(err.message || "Xóa sản phẩm thất bại!");
-        }
-      } catch (error) {
-        message.error("Lỗi kết nối máy chủ!");
       }
-    }
-  });
-};
+    });
+  };
 
   const handleRestore = async (ids: string[]) => {
     try {
@@ -257,19 +257,28 @@ const ProductList: React.FC = () => {
     return nameMatch && brandMatch && stockMatch;
   });
 
+  // SỬA PHẦN HIỂN THỊ HÌNH ẢNH: Ưu tiên images (mảng), fallback sang image (chuỗi)
   const columns: ColumnsType<Product> = [
     {
       title: "Hình ảnh",
       dataIndex: "images",
       key: "images",
       width: 100,
-      render: (images: string[]) => (
-        <img
-          src={images[0] || '/placeholder.png'}
-          alt="Product"
-          className="w-16 h-16 object-cover rounded"
-        />
-      ),
+      render: (_: any, record: Product) => {
+        const imgArr =
+  Array.isArray(record.images) && record.images.length > 0
+    ? record.images
+    : [];
+
+return (
+  <img
+    src={imgArr[0] || '/placeholder.png'}
+    alt="Product"
+    className="w-16 h-16 object-cover rounded"
+  />
+);
+
+      },
     },
     {
       title: "Tên sản phẩm",
@@ -355,47 +364,47 @@ const ProductList: React.FC = () => {
   ];
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-const role = user.role;
+  const role = user.role;
 
-const columnsDeleted = [
-  {
-    title: "Chọn",
-    dataIndex: "_id",
-    render: (_: any, record: Product) => (
-      <Checkbox
-        checked={selectedRestore.includes(record._id!)}
-        onChange={e => {
-          if (e.target.checked) {
-            setSelectedRestore([...selectedRestore, record._id!]);
-          } else {
-            setSelectedRestore(selectedRestore.filter(id => id !== record._id));
-          }
-        }}
-      />
-    ),
-    width: 60,
-  },
-  { title: "Tên sản phẩm", dataIndex: "name" },
-  { title: "Giá", dataIndex: "price" },
-  { title: "Thương hiệu", dataIndex: ["brand", "name"] },
-  { title: "Danh mục", dataIndex: ["category", "name"] },
-  {
-    title: "Khôi phục",
-    dataIndex: "_id",
-    render: (_: any, record: Product) => (
-      <Button type="link" onClick={() => handleRestore([record._id!])}>Khôi phục</Button>
-    ),
-  },
-  ...(role === 'superadmin' ? [
+  const columnsDeleted = [
     {
-      title: "Xóa",
+      title: "Chọn",
       dataIndex: "_id",
       render: (_: any, record: Product) => (
-        <Button danger type="link" onClick={() => handleHardDelete(record._id!)}>Xóa</Button>
+        <Checkbox
+          checked={selectedRestore.includes(record._id!)}
+          onChange={e => {
+            if (e.target.checked) {
+              setSelectedRestore([...selectedRestore, record._id!]);
+            } else {
+              setSelectedRestore(selectedRestore.filter(id => id !== record._id));
+            }
+          }}
+        />
       ),
-    }
-  ] : [])
-];
+      width: 60,
+    },
+    { title: "Tên sản phẩm", dataIndex: "name" },
+    { title: "Giá", dataIndex: "price" },
+    { title: "Thương hiệu", dataIndex: ["brand", "name"] },
+    { title: "Danh mục", dataIndex: ["category", "name"] },
+    {
+      title: "Khôi phục",
+      dataIndex: "_id",
+      render: (_: any, record: Product) => (
+        <Button type="link" onClick={() => handleRestore([record._id!])}>Khôi phục</Button>
+      ),
+    },
+    ...(role === 'superadmin' ? [
+      {
+        title: "Xóa",
+        dataIndex: "_id",
+        render: (_: any, record: Product) => (
+          <Button danger type="link" onClick={() => handleHardDelete(record._id!)}>Xóa</Button>
+        ),
+      }
+    ] : [])
+  ];
 
   const searchContent = (
     <div className="p-4 space-y-4 w-80">
@@ -515,14 +524,13 @@ const columnsDeleted = [
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Hình ảnh</h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {selectedProduct.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={`${selectedProduct.name} - ${index + 1}`}
-                        className="w-full h-32 object-cover rounded"
-                      />
-                    ))}
+                    {(selectedProduct.images && selectedProduct.images.length > 0
+  ? selectedProduct.images
+  : []
+).map((image, index) => (
+  <img key={index} src={image} alt={`Ảnh ${index + 1}`} />
+))
+}
                   </div>
                 </div>
                 {selectedProduct.specifications && Object.keys(selectedProduct.specifications).length > 0 && (
@@ -559,11 +567,18 @@ const columnsDeleted = [
         onCancel={() => setShowDeletedModal(false)}
         title="Sản phẩm đã xóa mềm"
         footer={[
-          <Button key="all" onClick={() => setSelectedRestore(deletedProducts.map(p => p._id!))}>Chọn tất cả</Button>,
-          <Button key="clear" onClick={() => setSelectedRestore([])}>Bỏ chọn</Button>,
-          <Button key="restore" type="primary" disabled={selectedRestore.length === 0} onClick={() => handleRestore(selectedRestore)}>Khôi phục đã chọn</Button>,
-          <Button key="close" onClick={() => setShowDeletedModal(false)}>Đóng</Button>,
-        ]}
+  <Button key="all" onClick={() => setSelectedRestore(deletedProducts.map(p => p._id!))}>Chọn tất cả</Button>,
+  <Button key="clear" onClick={() => setSelectedRestore([])}>Bỏ chọn</Button>,
+  <Button
+    key="restore"
+    type="primary"
+    onClick={() => handleRestore(selectedRestore)}
+    disabled={selectedRestore.length === 0}
+  >
+    Khôi phục đã chọn
+  </Button>,
+]}
+
         width={800}
       >
         <Table
