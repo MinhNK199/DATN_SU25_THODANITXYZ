@@ -62,3 +62,10 @@ export const checkAdmin = (requiredCheck = []) => {
         next();
     };
 };
+
+export const requireSuperadmin = (req, res, next) => {
+    if (!req.user || req.user.role !== "superadmin") {
+        return res.status(403).json({ message: "Chỉ superadmin mới được phép xóa cứng sản phẩm" });
+    }
+    next();
+};

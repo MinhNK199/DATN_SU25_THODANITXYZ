@@ -55,9 +55,13 @@ export const getProducts = async (req, res) => {
         }
 
         // Lọc theo trạng thái
-        if (req.query.isActive !== undefined) {
-            filter.isActive = req.query.isActive === 'true';
-        }
+        // Nếu client truyền isActive thì dùng, ngược lại mặc định chỉ lấy sản phẩm chưa xóa
+if (req.query.isActive !== undefined) {
+    filter.isActive = req.query.isActive === 'true';
+} else {
+    filter.isActive = true; // Mặc định: chỉ lấy sản phẩm đang hoạt động
+}
+
 
         // Lọc theo tags
         if (req.query.tags) {
@@ -177,9 +181,9 @@ export const updateProduct = async (req, res) => {
 // Xóa sản phẩm
 export const deleteProduct = async (req, res) => {
     try {
-       const product = await Product.findByIdAndDelete(req.params.id);
-        if (!product) return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
-        res.json({ success: true });
+        const product = await Product.findByIdAndDelete(req.params.id);
+        if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+        res.json({ message: "Đã xóa sản phẩm vĩnh viễn (xóa cứng)" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -235,13 +239,27 @@ export const softDeleteProduct = async (req, res) => {
         const product = await Product.findById(req.params.id);
         if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
 
+        if (!product.isActive) {
+            return res.status(400).json({ message: "Sản phẩm đã bị xóa mềm trước đó" });
+        }
+
         product.isActive = false;
         await product.save();
-        res.json({ message: "Đã xóa sản phẩm thành công" });
+        res.json({ message: "Đã chuyển sản phẩm vào thùng rác (xóa mềm)" });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const getDeletedProducts = async (req, res) => {
+    try {
+        const deletedProducts = await Product.find({ isActive: false });
+        res.json(deletedProducts);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 
 // Khôi phục sản phẩm đã xóa
 export const restoreProduct = async (req, res) => {
