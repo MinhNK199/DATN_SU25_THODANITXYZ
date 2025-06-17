@@ -35,7 +35,7 @@ export default function Login() {
         if (role === "admin" || role === "superadmin") {
           navigate("/admin");
         } else {
-          navigate("/client");
+          navigate("/");
         }
       }, );
     } catch (err: any) {
