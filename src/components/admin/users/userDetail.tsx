@@ -402,7 +402,7 @@ const UserDetail: React.FC = () => {
           {currentUser && currentUser._id === user._id && (
             <button
               className="mt-4 px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition"
-              onClick={() => nav(`/admin/user-edit/${user._id}`)}
+              onClick={() => nav(`/admin/users/edit/${user._id}`)}
             >
               Sửa thông tin
             </button>

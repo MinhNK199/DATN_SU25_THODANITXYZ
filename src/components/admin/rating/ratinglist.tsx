@@ -106,27 +106,45 @@ const RatingList: React.FC = () => {
   };
 
   const handleReply = async (id: string) => {
-    if (!replyValue.trim()) {
-      message.warning("Vui lòng nhập phản hồi");
-      return;
-    }
-    setReplyLoading(true);
-    try {
-      await axios.post(`http://localhost:5000/api/rating/${id}/reply`, { reply: replyValue });
-      message.success("Phản hồi thành công");
-      setReplyingId(null);
-      setReplyValue("");
-      fetchRatings(pagination.current, pagination.pageSize);
-    } catch (err: any) {
-      if (err?.response?.data?.error?.code === "ALREADY_REPLIED") {
-        message.error("Đánh giá này đã được trả lời và không thể sửa");
-      } else {
-        message.error("Phản hồi thất bại");
+  if (!replyValue.trim()) {
+    message.warning("Vui lòng nhập phản hồi");
+    return;
+  }
+  const token = localStorage.getItem("token");
+  if (!token) {
+    message.error("Bạn chưa đăng nhập");
+    return;
+  }
+  setReplyLoading(true);
+  try {
+    await axios.post(
+      `http://localhost:5000/api/rating/${id}/reply`,
+      { reply: replyValue },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       }
-    } finally {
-      setReplyLoading(false);
+    );
+    message.success("Phản hồi thành công");
+    setReplyingId(null);
+    setReplyValue("");
+    fetchRatings(pagination.current, pagination.pageSize);
+  } catch (err: any) {
+    if (err.response?.status === 401) {
+      message.error("Phiên hết hạn, vui lòng đăng nhập lại");
+      // nếu cần: navigate("/login");
+    } else if (err.response?.data?.error?.code === "ALREADY_REPLIED") {
+      message.error("Đánh giá này đã được trả lời và không thể sửa");
+    } else {
+      message.error("Phản hồi thất bại");
     }
-  };
+  } finally {
+    setReplyLoading(false);
+  }
+};
+
 
   const filterRatings = (ratings: Rating[]) => {
     return ratings.filter((item) => {
