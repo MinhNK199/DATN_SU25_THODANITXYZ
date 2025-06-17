@@ -10,7 +10,7 @@ const AdminLayout = () => {
 
       <div className="flex-1 flex flex-col">
         <AdminHeader />
-        <div className="flex-1 overflow-y-auto bg-[#f6f9ff] p-6">
+        <div className="flex-1 overflow-y-auto bg-gradient-to-r from-purple-50 to-blue-50 p-6">
           <div className="bg-white w-full p-5 rounded-xl shadow">
             <Outlet />
           </div>

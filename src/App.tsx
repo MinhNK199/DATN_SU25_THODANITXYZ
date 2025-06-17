@@ -24,6 +24,7 @@ import BannerEdit from "./components/admin/Banner/BannerEdit";
 import Activity from "./components/admin/activity/activity";
 import RatingList from "./components/admin/rating/ratinglist";
 import Listadmin from "./components/admin/users/ListAdmin";
+import RegisterAdmin from "./components/DkyAdmin";
 
 type Props = {}
 
@@ -32,6 +33,8 @@ const App = (props: Props) => {
     // Auth routes
     { path: "/login", element: <Login /> },
     { path: "/register", element: <Register /> },
+    { path: "/admin-dky", element: <RegisterAdmin /> },
+
 
     // Client routes
     { 

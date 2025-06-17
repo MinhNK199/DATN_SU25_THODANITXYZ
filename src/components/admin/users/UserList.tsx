@@ -175,7 +175,7 @@ const UserList: React.FC = () => {
     <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
       Danh sách Người dùng
     </Title>
-    <div className="flex items-center justify-between mb-6">
+     <div className="flex items-center justify-between mb-6">
       <Space direction="horizontal">
         <Select
           value={searchType}
@@ -195,14 +195,16 @@ const UserList: React.FC = () => {
           style={{ width: 300 }}
         />
       </Space>
-      {/* Nút chuyển sang danh sách đăng ký admin ở bên phải, cùng hàng với filter */}
-      <Button
-        type="primary"
-        onClick={() => navigate("admin-list")}
-        style={{ background: "blue-400", borderColor: "#faad14", marginLeft: 16 }}
-      >
-        Danh sách đăng ký admin
-      </Button>
+      {/* Chỉ superadmin mới thấy nút này */}
+      {currentUser?.role === "superadmin" && (
+        <Button
+          type="primary"
+          onClick={() => navigate("admin-list")}
+          style={{ background: "blue-400", borderColor: "gray", marginLeft: 16 }}
+        >
+          Danh sách đăng ký admin
+        </Button>
+      )}
     </div>
 
     {message && (

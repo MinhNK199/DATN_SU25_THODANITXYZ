@@ -1,9 +1,14 @@
-import { useState } from "react";
-import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
-import { FaUser, FaEnvelope, FaLock, FaPhone, FaImage } from "react-icons/fa";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaUser,
+  FaEnvelope,
+  FaLock,
+  FaPhone,
+  FaImage,
+} from "react-icons/fa";
 
-export default function Register() {
+const Register = () => {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -11,8 +16,9 @@ export default function Register() {
     phone: "",
     avatar: "",
   });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,28 +27,11 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", form);
-      setSuccess(res.data.message || "Đăng ký thành công!");
-      setTimeout(() => {
-        navigate("/");
-      }, 1000);
-    } catch (err: any) {
-      setError(
-        err.response?.data?.details?.join(", ") ||
-        err.response?.data?.message ||
-        "Đăng ký thất bại!"
-      );
-    }
+    // Xử lý đăng ký người dùng thường
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-100 to-blue-100"
-      
-    >
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-100 to-blue-100">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
         <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">Tạo tài khoản mới</h2>
 
@@ -116,6 +105,15 @@ export default function Register() {
           >
             Đăng ký
           </button>
+
+          {/* Nút chuyển sang đăng ký admin */}
+          <button
+            type="button"
+            onClick={() => navigate("/admin-dky")}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-md"
+          >
+            Đăng ký làm Admin
+          </button>
         </form>
 
         <div className="mt-4 text-center text-sm text-blue-700 font-medium">
@@ -124,4 +122,6 @@ export default function Register() {
       </div>
     </div>
   );
-}
+};
+
+export default Register;
