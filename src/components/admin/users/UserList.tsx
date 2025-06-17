@@ -2,7 +2,22 @@ import React, { useEffect, useState } from "react";
 import type { User } from "../../../interfaces/User";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import {
+  Table,
+  Input,
+  Select,
+  Typography,
+  Tag,
+  Button,
+  Spin,
+  Alert,
+  Space,
+} from "antd";
+import { EyeOutlined } from "@ant-design/icons";
 import { FaEye } from "react-icons/fa";
+
+const { Title } = Typography;
+const { Option } = Select;
 
 const API_URL = "http://localhost:5000/api/auth/users";
 
@@ -17,7 +32,6 @@ const UserList: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const navigate = useNavigate();
 
-  // Lấy user hiện tại
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
@@ -34,7 +48,6 @@ const UserList: React.FC = () => {
     fetchCurrentUser();
   }, []);
 
-  // Lấy danh sách user
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -55,7 +68,6 @@ const UserList: React.FC = () => {
     if (currentUser) fetchUsers();
   }, [currentUser]);
 
-  // Add search functionality
   useEffect(() => {
     if (users.length > 0) {
       const filtered = users.filter((user) => {
@@ -75,136 +87,135 @@ const UserList: React.FC = () => {
     }
   }, [searchKeyword, searchType, users]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Search is handled by the useEffect above
-  };
-
   const canViewEmail = (viewer: User | null, target: User) => {
     if (!viewer) return false;
-
-    // Superadmin thấy tất cả
     if (viewer.role === "superadmin") return true;
-
-    // Admin thấy tất cả trừ admin/superadmin, nhưng vẫn thấy chính mình
     if (viewer.role === "admin") {
       const isSelf = viewer._id === target._id;
       const isHigherOrSame = ["admin", "superadmin"].includes(target.role);
       return isSelf || !isHigherOrSame;
     }
-
-    // Những role khác không thấy ai
     return false;
   };
 
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold text-gray-700 text-center mb-4">
-        Danh sách Người dùng
-      </h1>
+  const columns = [
+    {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_: any, __: any, index: number) => index + 1,
+      width: 60,
+    },
+    {
+      title: "Tên",
+      dataIndex: "name",
+      key: "name",
+      render: (name: string) => <strong>{name}</strong>,
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+      render: (_: string, record: User) =>
+        canViewEmail(currentUser, record) ? (
+          <span>{record.email}</span>
+        ) : (
+          <span style={{ fontStyle: "italic", color: "#fa8c16" }}>
+            Không thể xem
+          </span>
+        ),
+    },
+    {
+      title: "Vai trò",
+      dataIndex: "role",
+      key: "role",
+      render: (role: string) => {
+        let color: string = "";
+        switch (role) {
+          case "customer":
+            color = "blue";
+            break;
+          case "admin":
+            color = "orange";
+            break;
+          case "superadmin":
+            color = "red";
+            break;
+        }
+        return <Tag color={color}>{role}</Tag>;
+      },
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "active",
+      key: "active",
+      render: (active: boolean) =>
+        active ? (
+          <Tag color="green">Hoạt động</Tag>
+        ) : (
+          <Tag color="red">Khóa</Tag>
+        ),
+    },
+    {
+  title: "Thao tác",
+  key: "actions",
+  render: (_: any, record: User) => (
+    <Button
+      type="primary" // Nền xanh, chữ/icon trắng
+      icon={<FaEye style={{ color: "#fff" }} />} // Đảm bảo icon trắng
+      onClick={() => navigate(`/admin/users/${record._id}`)}
+    />
+  ),
+}
 
-      {/* Search form without button */}
-      <div className="mb-6 flex gap-4 items-center justify-center">
-        <select
+  ];
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow">
+      <Title level={3} style={{ textAlign: "center" }}>
+        Danh sách Người dùng
+      </Title>
+
+      <Space direction="horizontal" style={{ marginBottom: 24 }}>
+        <Select
           value={searchType}
-          onChange={(e) => setSearchType(e.target.value as "name" | "email" | "role")}
-          className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={(value) =>
+            setSearchType(value as "name" | "email" | "role")
+          }
+          style={{ width: 160 }}
         >
-          <option value="name">Tìm theo tên</option>
-          <option value="email">Tìm theo email</option>
-          <option value="role">Tìm theo vai trò</option>
-        </select>
-        <input
-          type="text"
+          <Option value="name">Tìm theo tên</Option>
+          <Option value="email">Tìm theo email</Option>
+          <Option value="role">Tìm theo vai trò</Option>
+        </Select>
+        <Input
+          placeholder="Nhập từ khóa tìm kiếm..."
           value={searchKeyword}
           onChange={(e) => setSearchKeyword(e.target.value)}
-          placeholder="Nhập từ khóa tìm kiếm..."
-          className="px-4 py-2 border rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          style={{ width: 300 }}
         />
-      </div>
+      </Space>
 
       {message && (
-        <div
-          className={`mb-4 px-4 py-2 rounded-md italic text-center shadow-md font-medium
-      ${messageType === "success"
-              ? "text-green-700 bg-green-100"
-              : "text-red-700 bg-red-100"
-            }`}
-        >
-          {message}
-        </div>
+       <Alert
+  message={message}
+  type={messageType as "success" | "error" | "info" | "warning"}
+  showIcon
+/>
+
       )}
 
       {loading ? (
-        <div className="flex justify-center items-center h-20 text-gray-600 text-lg">
-          Đang tải...
+        <div className="flex justify-center items-center h-40">
+          <Spin size="large" />
         </div>
       ) : (
-        <table className="w-full border-collapse bg-white">
-          <thead>
-            <tr className="bg-gray-200 text-gray-700">
-              <th className="py-3 px-4 border">STT</th>
-              <th className="py-3 px-4 border">Tên</th>
-              <th className="py-3 px-4 border">Email</th>
-              <th className="py-3 px-4 border">Vai trò</th>
-              <th className="py-3 px-4 border">Trạng thái</th>
-              <th className="py-3 px-4 border">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((u, index) => (
-              <tr
-                key={u._id}
-                className="border-b text-gray-700 hover:bg-gray-100"
-              >
-                <td className="py-3 px-4 text-center">{index + 1}</td>
-                <td className="py-3 px-4 text-center">{u.name}</td>
-                <td className="py-3 px-4 text-center">
-                  {canViewEmail(currentUser, u) ? (
-                    u.email
-                  ) : (
-                    <span className="text-orange-500 italic font-semibold">
-                      Không thể xem
-                    </span>
-                  )}
-                </td>
-
-                <td className="py-3 px-4 text-center">
-                  <span
-                    className={`px-2 py-1 rounded-md font-semibold border
-      ${u.role === "customer"
-                        ? "border-blue-500 text-blue-600 bg-blue-50"
-                        : u.role === "admin"
-                          ? "border-orange-400 text-orange-500 bg-orange-50"
-                          : "border-red-500 text-red-600 bg-red-50"
-                      }`}
-                  >
-                    {u.role}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-center">
-                  {u.active ? (
-                    <span className="text-green-600 font-semibold">
-                      Hoạt động
-                    </span>
-                  ) : (
-                    <span className="text-red-500 font-semibold">Khóa</span>
-                  )}
-                </td>
-
-                <td className="py-3 px-4 text-center">
-                  <button
-                    onClick={() => navigate(`/admin/users/${u._id}`)}
-                    className="text-gray-600 hover:text-red-500 transition text-2xl"
-                    title="Xem chi tiết"
-                  >
-                    <FaEye />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table
+          dataSource={filteredUsers}
+          columns={columns}
+          rowKey="_id"
+          pagination={{ pageSize: 8 }}
+        />
       )}
     </div>
   );

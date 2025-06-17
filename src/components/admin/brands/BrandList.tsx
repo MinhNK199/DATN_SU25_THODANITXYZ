@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Table, Button, Modal, Form, Input, Checkbox, message, Tag, Space, Typography, Spin } from "antd";
 import type { Brand } from "../../../interfaces/Brand";
+import { FaEdit, FaTrash } from "react-icons/fa";
 
 const API_URL = "http://localhost:5000/api/brand";
 
 const BrandList: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error" | "">("");
+  const [messageApi, contextHolder] = message.useMessage();
   const [newBrand, setNewBrand] = useState<Partial<Brand>>({
     name: "",
     description: "",
@@ -17,6 +17,8 @@ const BrandList: React.FC = () => {
   });
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -29,20 +31,13 @@ const BrandList: React.FC = () => {
   const fetchBrands = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL, {
-        headers: getAuthHeader(),
-      });
-      if (!res.ok) {
-        throw new Error("Failed to fetch brands");
-      }
+      const res = await fetch(API_URL, { headers: getAuthHeader() });
+      if (!res.ok) throw new Error("Failed to fetch brands");
       const data = await res.json();
-      // Ensure data is an array
       setBrands(Array.isArray(data) ? data : []);
     } catch (error) {
-      console.error("Error fetching brands:", error);
-      setMessage("Lỗi khi tải thương hiệu!");
-      setMessageType("error");
-      setBrands([]); // Set empty array on error
+      messageApi.error("Lỗi khi tải thương hiệu!");
+      setBrands([]);
     } finally {
       setLoading(false);
     }
@@ -53,364 +48,231 @@ const BrandList: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Bạn có chắc muốn xóa thương hiệu này?")) {
-      try {
-        const res = await fetch(`${API_URL}/${id}`, {
-          method: "DELETE",
-          headers: getAuthHeader(),
-        });
-        if (res.ok) {
-          setMessage("Xóa thành công!");
-          setMessageType("success");
-          fetchBrands();
-        } else {
-          throw new Error("Failed to delete brand");
+    Modal.confirm({
+      title: "Bạn có chắc muốn xóa thương hiệu này?",
+      onOk: async () => {
+        try {
+          const res = await fetch(`${API_URL}/${id}`, {
+            method: "DELETE",
+            headers: getAuthHeader(),
+          });
+          if (res.ok) {
+            messageApi.success("Xóa thành công!");
+            fetchBrands();
+          } else {
+            throw new Error("Failed to delete brand");
+          }
+        } catch (error) {
+          messageApi.error("Xóa thất bại!");
         }
-      } catch (error) {
-        console.error("Error deleting brand:", error);
-        setMessage("Xóa thất bại!");
-        setMessageType("error");
-      }
-    }
+      },
+    });
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAdd = async (values: any) => {
     try {
-      // Format data to match API requirements
-      const brandData = {
-        name: newBrand.name,
-        description: newBrand.description || "",
-        logo: newBrand.logo,
-        isActive: newBrand.isActive,
-      };
-
       const res = await fetch(API_URL, {
         method: "POST",
         headers: getAuthHeader(),
-        body: JSON.stringify(brandData),
+        body: JSON.stringify(values),
       });
 
       if (res.ok) {
-        setMessage("Thêm thương hiệu thành công!");
-        setMessageType("success");
+        messageApi.success("Thêm thương hiệu thành công!");
         setIsAdding(false);
-        setNewBrand({
-          name: "",
-          description: "",
-          logo: "",
-          isActive: true,
-        });
+        form.resetFields();
         fetchBrands();
       } else {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to add brand");
       }
     } catch (error) {
-      console.error("Error adding brand:", error);
-      setMessage(error instanceof Error ? error.message : "Thêm thương hiệu thất bại!");
-      setMessageType("error");
+      messageApi.error(error instanceof Error ? error.message : "Thêm thất bại!");
     }
   };
 
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEdit = async (values: any) => {
     if (!editingBrand?._id) return;
 
     try {
       const res = await fetch(`${API_URL}/${editingBrand._id}`, {
         method: "PUT",
         headers: getAuthHeader(),
-        body: JSON.stringify(editingBrand),
+        body: JSON.stringify(values),
       });
+
       if (res.ok) {
-        setMessage("Cập nhật thương hiệu thành công!");
-        setMessageType("success");
+        messageApi.success("Cập nhật thương hiệu thành công!");
         setEditingBrand(null);
         fetchBrands();
       } else {
         throw new Error("Failed to update brand");
       }
     } catch (error) {
-      console.error("Error updating brand:", error);
-      setMessage("Cập nhật thương hiệu thất bại!");
-      setMessageType("error");
+      messageApi.error("Cập nhật thương hiệu thất bại!");
     }
   };
 
+  const columns = [
+    {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_: any, __: any, index: number) => index + 1,
+    },
+    {
+      title: "Logo",
+      dataIndex: "logo",
+      key: "logo",
+      render: (logo: string) => (
+        <img src={logo} alt="Logo" style={{ width: 40, height: 40, objectFit: "contain" }} />
+      ),
+    },
+    {
+      title: "Tên thương hiệu",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+      render: (text: string) => text || "-",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
+      render: (isActive: boolean) =>
+        isActive ? (
+          <Tag color="green">Đang hiển thị</Tag>
+        ) : (
+          <Tag color="default">Đang ẩn</Tag>
+        ),
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_: any, record: Brand) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<FaEdit />}
+            onClick={() => {
+              setEditingBrand(record);
+              editForm.setFieldsValue(record);
+            }}
+          >
+            
+          </Button>
+          <Button danger icon={<FaTrash />} onClick={() => handleDelete(record._id!)}>
+            
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div>
+      {contextHolder}
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold text-gray-700 text-center flex-grow">
-          Danh sách Thương hiệu
-        </h1>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="px-8 py-3 bg-green-400 text-white text-xl font-semibold rounded-md hover:bg-green-600 transition"
-        >
+        <Typography.Title level={3}>Danh sách Thương hiệu</Typography.Title>
+        <Button type="primary" onClick={() => setIsAdding(true)}>
           + Thêm mới
-        </button>
+        </Button>
       </div>
 
-      {message && (
-        <div
-          className={`mb-4 px-4 py-2 rounded-md italic text-center shadow-md font-medium
-      ${
-        messageType === "success"
-          ? "text-green-700 bg-green-100"
-          : "text-red-700 bg-red-100"
-      }`}
-        >
-          {message}
-        </div>
-      )}
-
-      {isAdding && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-xl font-bold mb-4">Thêm thương hiệu mới</h2>
-            <form onSubmit={handleAdd}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Tên thương hiệu
-                </label>
-                <input
-                  type="text"
-                  value={newBrand.name}
-                  onChange={(e) =>
-                    setNewBrand({ ...newBrand, name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Mô tả
-                </label>
-                <textarea
-                  value={newBrand.description}
-                  onChange={(e) =>
-                    setNewBrand({ ...newBrand, description: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Link logo
-                </label>
-                <input
-                  type="url"
-                  value={newBrand.logo}
-                  onChange={(e) =>
-                    setNewBrand({ ...newBrand, logo: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={newBrand.isActive}
-                    onChange={(e) =>
-                      setNewBrand({ ...newBrand, isActive: e.target.checked })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-gray-700 text-sm font-bold">
-                    Hiển thị thương hiệu
-                  </span>
-                </label>
-                <p className="text-sm text-gray-500 mt-1">
-                  {newBrand.isActive
-                    ? "Thương hiệu sẽ được hiển thị cho khách hàng"
-                    : "Thương hiệu sẽ bị ẩn khỏi giao diện khách hàng"}
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsAdding(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Thêm
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {editingBrand && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-xl font-bold mb-4">Sửa thương hiệu</h2>
-            <form onSubmit={handleEdit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Tên thương hiệu
-                </label>
-                <input
-                  type="text"
-                  value={editingBrand.name}
-                  onChange={(e) =>
-                    setEditingBrand({ ...editingBrand, name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Mô tả
-                </label>
-                <textarea
-                  value={editingBrand.description}
-                  onChange={(e) =>
-                    setEditingBrand({
-                      ...editingBrand,
-                      description: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border rounded-md"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Link logo
-                </label>
-                <input
-                  type="url"
-                  value={editingBrand.logo}
-                  onChange={(e) =>
-                    setEditingBrand({ ...editingBrand, logo: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editingBrand.isActive}
-                    onChange={(e) =>
-                      setEditingBrand({
-                        ...editingBrand,
-                        isActive: e.target.checked,
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <span className="text-gray-700 text-sm font-bold">
-                    Hiển thị thương hiệu
-                  </span>
-                </label>
-                <p className="text-sm text-gray-500 mt-1">
-                  {editingBrand.isActive
-                    ? "Thương hiệu sẽ được hiển thị cho khách hàng"
-                    : "Thương hiệu sẽ bị ẩn khỏi giao diện khách hàng"}
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingBrand(null)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                >
-                  Cập nhật
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {loading ? (
-        <div className="flex justify-center items-center h-20 text-gray-600 text-lg">
-          Đang tải...
-        </div>
-      ) : brands.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">
-          Không có thương hiệu nào
-        </div>
+        <Spin tip="Đang tải..." size="large" />
       ) : (
-        <table className="w-full border-collapse bg-white">
-          <thead>
-            <tr className="bg-gray-200 text-gray-700">
-              <th className="py-3 px-4 border">STT</th>
-              <th className="py-3 px-4 border">Logo</th>
-              <th className="py-3 px-4 border">Tên thương hiệu</th>
-              <th className="py-3 px-4 border">Mô tả</th>
-              <th className="py-3 px-4 border">Trạng thái</th>
-              <th className="py-3 px-4 border">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {brands.map((brand, index) => (
-              <tr
-                key={brand._id}
-                className={`border-b text-gray-700 hover:bg-gray-100 ${
-                  !brand.isActive ? "bg-gray-50" : ""
-                }`}
-              >
-                <td className="py-3 px-4 text-center">{index + 1}</td>
-                <td className="py-3 px-4 text-center">
-                  <img
-                    src={brand.logo}
-                    alt={brand.name}
-                    className="h-10 w-10 object-contain mx-auto"
-                  />
-                </td>
-                <td className="py-3 px-4 text-center">{brand.name}</td>
-                <td className="py-3 px-4 text-center">{brand.description || "-"}</td>
-                <td className="py-3 px-4 text-center">
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm ${
-                      brand.isActive
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {brand.isActive ? "Đang hiển thị" : "Đang ẩn"}
-                  </span>
-                </td>
-                <td className="py-3 px-4 flex gap-2 justify-center">
-                  <button
-                    onClick={() => setEditingBrand(brand)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
-                  >
-                    Sửa
-                  </button>
-                  <button
-                    onClick={() => handleDelete(brand._id!)}
-                    className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                  >
-                    Xóa
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Table
+          dataSource={brands}
+          columns={columns}
+          rowKey="_id"
+          pagination={{ pageSize: 10 }}
+        />
       )}
+
+      {/* Modal Add */}
+      <Modal
+        open={isAdding}
+        title="Thêm thương hiệu mới"
+        onCancel={() => setIsAdding(false)}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleAdd} initialValues={newBrand}>
+          <Form.Item
+            label="Tên thương hiệu"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item label="Mô tả" name="description">
+            <Input.TextArea />
+          </Form.Item>
+          <Form.Item
+            label="Link logo"
+            name="logo"
+            rules={[{ required: true, message: "Vui lòng nhập URL logo!" }]}
+          >
+            <Input type="url" />
+          </Form.Item>
+          <Form.Item name="isActive" valuePropName="checked">
+            <Checkbox>Hiển thị thương hiệu</Checkbox>
+          </Form.Item>
+          <Form.Item>
+            <Space className="flex justify-end">
+              <Button onClick={() => setIsAdding(false)}>Hủy</Button>
+              <Button type="primary" htmlType="submit">
+                Thêm
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Edit */}
+      <Modal
+        open={!!editingBrand}
+        title="Cập nhật thương hiệu"
+        onCancel={() => setEditingBrand(null)}
+        footer={null}
+      >
+        <Form form={editForm} layout="vertical" onFinish={handleEdit}>
+          <Form.Item
+            label="Tên thương hiệu"
+            name="name"
+            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item label="Mô tả" name="description">
+            <Input.TextArea />
+          </Form.Item>
+          <Form.Item
+            label="Link logo"
+            name="logo"
+            rules={[{ required: true, message: "Vui lòng nhập URL logo!" }]}
+          >
+            <Input type="url" />
+          </Form.Item>
+          <Form.Item name="isActive" valuePropName="checked">
+            <Checkbox>Hiển thị thương hiệu</Checkbox>
+          </Form.Item>
+          <Form.Item>
+            <Space className="flex justify-end">
+              <Button onClick={() => setEditingBrand(null)}>Hủy</Button>
+              <Button type="primary" htmlType="submit">
+                Cập nhật
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
 
-export default BrandList; 
+export default BrandList;

@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { Category } from "../../../interfaces/Category";
-import {
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaEye,
-  FaSearch,
-  FaBox,
-} from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaEye, FaSearch } from "react-icons/fa";
 import {
   Input,
   Card,
@@ -21,11 +14,7 @@ import {
   Space,
   Select,
   Button,
-  Popover,
   Checkbox,
-  Statistic,
-  Row,
-  Col,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
@@ -35,14 +24,6 @@ const API_URL = "http://localhost:5000/api/category";
 interface SearchParams {
   name: string;
   status: "all" | "active" | "inactive";
-}
-
-interface Product {
-  _id: string;
-  name: string;
-  price: number;
-  isActive: boolean;
-  image: string;
 }
 
 const CategoryList: React.FC = () => {
@@ -60,25 +41,15 @@ const CategoryList: React.FC = () => {
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [selectedRestore, setSelectedRestore] = useState<string[]>([]);
   const [deletedCount, setDeletedCount] = useState(0);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null
-  );
-  const [categoryProducts, setCategoryProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [productsModalVisible, setProductsModalVisible] = useState(false);
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const role = user.role;
-
+  // Fetch categories
   const fetchCategories = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(API_URL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) {
@@ -92,18 +63,17 @@ const CategoryList: React.FC = () => {
     setLoading(false);
   };
 
+  // Fetch deleted categories
   const fetchDeletedCategories = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/category/deleted", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${API_URL}/deleted`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (res.ok) {
         setDeletedCategories(data || []);
-        setDeletedCount(data.length);
+        setDeletedCount(data.length || 0);
       } else {
         message.error(data.message || "Lỗi khi tải danh mục đã xóa!");
       }
@@ -112,42 +82,12 @@ const CategoryList: React.FC = () => {
     }
   };
 
-  const fetchCategoryProducts = async (categoryId: string) => {
-    setLoadingProducts(true);
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        `http://localhost:5000/api/category/${categoryId}/products`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        setCategoryProducts(data.products || []);
-      } else {
-        message.error(data.message || "Lỗi khi tải sản phẩm!");
-      }
-    } catch (error) {
-      message.error("Lỗi kết nối máy chủ!");
-    }
-    setLoadingProducts(false);
-  };
-
-  const handleProductCountClick = async (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    setProductsModalVisible(true);
-    await fetchCategoryProducts(categoryId);
-  };
-
   useEffect(() => {
     fetchCategories();
     fetchDeletedCategories();
   }, []);
 
-  // XÓA MỀM
+  // Soft delete
   const handleSoftDelete = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
@@ -156,33 +96,24 @@ const CategoryList: React.FC = () => {
         navigate("/login");
         return;
       }
-      const res = await fetch(
-        `http://localhost:5000/api/category/${id}/soft-delete`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await res.json();
+      const res = await fetch(`${API_URL}/${id}/soft-delete`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         message.success("Đã chuyển danh mục vào thùng rác!");
         fetchCategories();
         fetchDeletedCategories();
-      } else if (res.status === 401) {
-        message.error("Phiên đăng nhập hết hạn!");
-        localStorage.removeItem("token");
-        navigate("/login");
       } else {
-        message.error(data.message || "Xóa danh mục thất bại!");
+        const err = await res.json();
+        message.error(err.message || "Xóa danh mục thất bại!");
       }
     } catch (error) {
       message.error("Lỗi kết nối máy chủ!");
     }
   };
 
-  // XÓA CỨNG (chỉ superadmin)
+  // Hard delete
   const handleHardDelete = async (id: string) => {
     Modal.confirm({
       title: "Xác nhận xóa vĩnh viễn?",
@@ -198,18 +129,16 @@ const CategoryList: React.FC = () => {
             navigate("/login");
             return;
           }
-          const res = await fetch(`http://localhost:5000/api/category/${id}`, {
+          const res = await fetch(`${API_URL}/${id}`, {
             method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           });
-          const data = await res.json();
           if (res.ok) {
             message.success("Đã xóa vĩnh viễn danh mục!");
             fetchDeletedCategories();
           } else {
-            message.error(data.message || "Xóa danh mục thất bại!");
+            const err = await res.json();
+            message.error(err.message || "Xóa danh mục thất bại!");
           }
         } catch (error) {
           message.error("Lỗi kết nối máy chủ!");
@@ -218,7 +147,7 @@ const CategoryList: React.FC = () => {
     });
   };
 
-  // KHÔI PHỤC (nếu có route /:id/deactivate thì sửa lại cho đúng)
+  // Restore
   const handleRestore = async (ids: string[]) => {
     try {
       const token = localStorage.getItem("token");
@@ -228,15 +157,10 @@ const CategoryList: React.FC = () => {
         return;
       }
       for (const id of ids) {
-        const res = await fetch(
-          `http://localhost:5000/api/category/${id}/restore`,
-          {
-            method: "PUT",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await fetch(`${API_URL}/${id}/restore`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) {
           const err = await res.json();
           throw new Error(err.message || "Khôi phục danh mục thất bại!");
@@ -246,6 +170,7 @@ const CategoryList: React.FC = () => {
       setShowDeletedModal(false);
       fetchCategories();
       fetchDeletedCategories();
+      setSelectedRestore([]);
     } catch (error) {
       message.error((error as Error).message || "Lỗi khi khôi phục danh mục!");
     }
@@ -277,62 +202,24 @@ const CategoryList: React.FC = () => {
     return nameMatch && statusMatch;
   });
 
-  const activeCategories = categories.filter((cat) => cat.isActive).length;
-  const inactiveCategories = deletedCategories.length;
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = user.role;
 
-  const productColumns: ColumnsType<Product> = [
+  // Table columns giống ProductList
+  const columns: ColumnsType<Category> = [
     {
       title: "Hình ảnh",
       dataIndex: "image",
       key: "image",
-      render: (image: string) => (
+      width: 100,
+      render: (image: string, record: Category) => (
         <img
-          src={image}
-          alt="Product"
+          src={image || "/placeholder.png"}
+          alt="Category"
           className="w-16 h-16 object-cover rounded"
         />
       ),
     },
-    {
-      title: "Tên sản phẩm",
-      dataIndex: "name",
-      key: "name",
-    },
-    {
-      title: "Giá",
-      dataIndex: "price",
-      key: "price",
-      render: (price: number) => <span>{price.toLocaleString("vi-VN")}đ</span>,
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (isActive: boolean) => (
-        <Badge
-          status={isActive ? "success" : "error"}
-          text={isActive ? "Đang hoạt động" : "Đã ẩn"}
-        />
-      ),
-    },
-    {
-      title: "Thao tác",
-      key: "action",
-      render: (_, record: Product) => (
-        <Space size="middle">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="text"
-              icon={<FaEye />}
-              onClick={() => navigate(`/admin/products/${record._id}`)}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
-  const columns: ColumnsType<Category> = [
     {
       title: "Tên danh mục",
       dataIndex: "name",
@@ -340,7 +227,9 @@ const CategoryList: React.FC = () => {
       render: (text: string, record: Category) => (
         <div className="space-y-1">
           <div className="font-medium">{text}</div>
-          <div className="text-sm text-gray-500">ID: {record._id}</div>
+          {/* {record.isFeatured && (
+            <Tag color="green">Nổi bật</Tag>
+          )} */}
         </div>
       ),
     },
@@ -348,45 +237,22 @@ const CategoryList: React.FC = () => {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
-      render: (text: string) => <div className="max-w-xs truncate">{text}</div>,
+      render: (desc: string) => {
+        const words = desc?.split(" ");
+        const shortDesc =
+          words?.length > 10 ? words.slice(0, 10).join(" ") + "..." : desc;
+        return <span className="text-gray-700">{shortDesc}</span>;
+      },
     },
-    {
-      title: "Hình ảnh",
-      dataIndex: "image",
-      key: "image",
-      render: (image: string) => (
-        <div className="w-20 h-20">
-          <img
-            src={image}
-            alt="Category"
-            className="w-full h-full object-cover rounded-md"
-          />
-        </div>
-      ),
-    },
+
     {
       title: "Trạng thái",
       dataIndex: "isActive",
       key: "isActive",
       render: (isActive: boolean) => (
-        <Badge
-          status={isActive ? "success" : "error"}
-          text={isActive ? "Đang hoạt động" : "Đã ẩn"}
-        />
-      ),
-    },
-    {
-      title: "Số lượng sản phẩm",
-      key: "productCount",
-      render: (_, record: Category) => (
-        <Button
-          type="primary"
-          className="rounded font-semibold shadow"
-          style={{ minWidth: 120 }}
-          onClick={() => handleProductCountClick(record._id)}
-        >
-          {record.productCount || 0} sản phẩm
-        </Button>
+        <Tag color={isActive ? "success" : "error"}>
+          {isActive ? "Đang hoạt động" : "Đã ẩn"}
+        </Tag>
       ),
     },
     {
@@ -394,17 +260,25 @@ const CategoryList: React.FC = () => {
       key: "action",
       render: (_, record: Category) => (
         <Space size="middle">
-          <Tooltip title="Chỉnh sửa">
-            <Link to={`/admin/categories/edit/${record._id}`}>
-              <Button type="text" icon={<FaEdit />} />
-            </Link>
-          </Tooltip>
-          <Tooltip title="Ẩn">
+          <Tooltip title="Xem chi tiết">
             <Button
-              type="text"
+              type="primary"
+              icon={<FaEye />}
+              onClick={() => showCategoryDetail(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="primary"
+              icon={<FaEdit />}
+              onClick={() => navigate(`/admin/categories/edit/${record._id}`)}
+            />
+          </Tooltip>
+          <Tooltip title="Xóa">
+            <Button
               danger
               icon={<FaTrash />}
-              onClick={() => handleSoftDelete(record._id)}
+              onClick={() => handleSoftDelete(record._id!)}
             />
           </Tooltip>
         </Space>
@@ -412,24 +286,28 @@ const CategoryList: React.FC = () => {
     },
   ];
 
-  // Chỉ superadmin mới thấy nút xóa cứng ở thùng rác
-  const deletedColumns: ColumnsType<Category> = [
+  const columnsDeleted = [
     {
-      title: "Tên danh mục",
-      dataIndex: "name",
-      key: "name",
+      title: "Chọn",
+      dataIndex: "_id",
+      render: (_: any, record: Category) => (
+        <Checkbox
+          checked={selectedRestore.includes(record._id!)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedRestore([...selectedRestore, record._id!]);
+            } else {
+              setSelectedRestore(
+                selectedRestore.filter((id) => id !== record._id)
+              );
+            }
+          }}
+        />
+      ),
+      width: 60,
     },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-    },
-    {
-      title: "Danh mục cha",
-      dataIndex: "parent",
-      key: "parent",
-      render: (parent: any) => parent?.name || "-",
-    },
+    { title: "Tên danh mục", dataIndex: "name" },
+    { title: "Mô tả", dataIndex: "description" },
     {
       title: "Khôi phục",
       dataIndex: "_id",
@@ -459,59 +337,29 @@ const CategoryList: React.FC = () => {
   ];
 
   return (
-    <div className="p-6">
-      <Card className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Quản lý danh mục</h1>
-          <Space>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Quản lý danh mục</h1>
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => navigate("/admin/categories/add")}
+            icon={<PlusOutlined />}
+          >
+            Thêm danh mục
+          </Button>
+          <Badge count={deletedCount} size="small">
             <Button
-              type="primary"
-              onClick={() => navigate("/admin/categories/add")}
-              icon={<PlusOutlined />}
+              onClick={() => setShowDeletedModal(true)}
+              icon={<DeleteOutlined />}
             >
-              Thêm danh mục
+              Danh mục đã xóa
             </Button>
-            <Badge count={deletedCount} size="small">
-              <Button
-                onClick={() => setShowDeletedModal(true)}
-                icon={<DeleteOutlined />}
-              >
-                Danh mục đã ẩn
-              </Button>
-            </Badge>
-          </Space>
-        </div>
+          </Badge>
+        </Space>
+      </div>
 
-        <Row gutter={16} className="mb-6">
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="Tổng số danh mục"
-                value={categories.length}
-                prefix={<FaBox />}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="Danh mục đang hoạt động"
-                value={activeCategories}
-                valueStyle={{ color: "#3f8600" }}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card>
-              <Statistic
-                title="Danh mục đã ẩn"
-                value={inactiveCategories}
-                valueStyle={{ color: "#cf1322" }}
-              />
-            </Card>
-          </Col>
-        </Row>
-
+      <Card className="shadow-lg">
         <div className="flex gap-4 mb-4">
           <Input
             placeholder="Tìm kiếm theo tên..."
@@ -530,14 +378,12 @@ const CategoryList: React.FC = () => {
             ]}
           />
         </div>
-
         <Table
           columns={columns}
           dataSource={filteredCategories}
           rowKey="_id"
           loading={loading}
           pagination={{
-            total: filteredCategories.length,
             pageSize: 10,
             showSizeChanger: true,
             showTotal: (total) => `Tổng số ${total} danh mục`,
@@ -546,62 +392,89 @@ const CategoryList: React.FC = () => {
       </Card>
 
       <Modal
-        title="Thùng rác"
+        title="Chi tiết danh mục"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {selectedCategory && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Thông tin cơ bản
+                  </h3>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-medium">Tên danh mục:</span>{" "}
+                      {selectedCategory.name}
+                    </p>
+                    <p>
+                      <span className="font-medium">Mô tả:</span>{" "}
+                      {selectedCategory.description}
+                    </p>
+                    <p>
+                      <span className="font-medium">Trạng thái:</span>{" "}
+                      {selectedCategory.isActive ? "Đang hoạt động" : "Đã ẩn"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Hình ảnh</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <img
+                      src={selectedCategory.image || "/placeholder.png"}
+                      alt={selectedCategory.name}
+                      className="w-full h-32 object-cover rounded"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
         open={showDeletedModal}
         onCancel={() => setShowDeletedModal(false)}
-        width={800}
+        title="Danh mục đã xóa mềm"
         footer={[
-          <Button key="close" onClick={() => setShowDeletedModal(false)}>
-            Đóng
+          <Button
+            key="all"
+            onClick={() =>
+              setSelectedRestore(deletedCategories.map((c) => c._id!))
+            }
+          >
+            Chọn tất cả
+          </Button>,
+          <Button key="clear" onClick={() => setSelectedRestore([])}>
+            Bỏ chọn
           </Button>,
           <Button
             key="restore"
             type="primary"
-            onClick={() => handleRestore(selectedRestore)}
             disabled={selectedRestore.length === 0}
+            onClick={() => handleRestore(selectedRestore)}
           >
             Khôi phục đã chọn
           </Button>,
+          <Button key="close" onClick={() => setShowDeletedModal(false)}>
+            Đóng
+          </Button>,
         ]}
+        width={800}
       >
         <Table
-          rowSelection={{
-            type: "checkbox",
-            onChange: (selectedRowKeys) =>
-              setSelectedRestore(selectedRowKeys as string[]),
-          }}
-          columns={deletedColumns}
           dataSource={deletedCategories}
+          columns={columnsDeleted}
           rowKey="_id"
+          pagination={false}
         />
-      </Modal>
-
-      <Modal
-        title={
-          <div className="flex items-center gap-2">
-            <FaBox className="text-blue-500" />
-            <span>Sản phẩm trong danh mục</span>
-          </div>
-        }
-        open={productsModalVisible}
-        onCancel={() => setProductsModalVisible(false)}
-        footer={null}
-        width={1000}
-        className="products-modal"
-      >
-        <div className="mb-4">
-          <Table
-            columns={productColumns}
-            dataSource={categoryProducts}
-            loading={loadingProducts}
-            rowKey="_id"
-            pagination={{
-              pageSize: 5,
-              showSizeChanger: true,
-              showTotal: (total) => `Tổng số ${total} sản phẩm`,
-            }}
-          />
-        </div>
       </Modal>
     </div>
   );

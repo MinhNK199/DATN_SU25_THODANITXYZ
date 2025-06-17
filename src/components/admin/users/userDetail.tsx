@@ -361,8 +361,8 @@ const UserDetail: React.FC = () => {
             <button
               className={`mt-2 px-4 py-2 rounded font-semibold transition ${
                 user.active
-                  ? "bg-yellow-500 text-white hover:bg-yellow-600"
-                  : "bg-green-500 text-white hover:bg-green-600"
+                  ? "bg-blue-600 text-white hover:bg-blue-500"
+                  : "bg-green-600 text-white hover:bg-green-500"
               }`}
               onClick={handleToggleStatus}
             >

@@ -243,6 +243,7 @@ const RatingList: React.FC = () => {
         ) : (
           <Button
             size="small"
+            type="primary"
             onClick={() => {
               setReplyingId(record._id);
               setReplyValue("");
@@ -303,6 +304,7 @@ const RatingList: React.FC = () => {
           <Select.Option value="not_replied">Chưa trả lời</Select.Option>
         </Select>
         <Button
+        type="primary"
           onClick={() =>
             setFilter({
               star: null,

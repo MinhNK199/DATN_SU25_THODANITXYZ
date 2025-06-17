@@ -1,8 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Banner } from "../../../interfaces/Banner";
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaFilter } from "react-icons/fa";
-import { Input, Card, Badge, Tooltip, Modal, message, Table, Tag, Space, Select, Button, Popover, Checkbox } from "antd";
+import {
+  FaPlus,
+  FaEdit,
+  FaTrash,
+  FaSearch,
+  FaFilter,
+  FaEye,
+} from "react-icons/fa";
+import {
+  Input,
+  Card,
+  Badge,
+  Tooltip,
+  Modal,
+  message,
+  Table,
+  Tag,
+  Space,
+  Select,
+  Button,
+  Popover,
+  Checkbox,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { SearchProps } from "antd/es/input";
 
@@ -18,7 +39,7 @@ const BannerList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useState<SearchParams>({
     title: "",
-    status: "all"
+    status: "all",
   });
   const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -42,11 +63,14 @@ const BannerList: React.FC = () => {
   const fetchDeletedBanners = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:5000/api/banner?isActive=false", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        "http://localhost:5000/api/banner?isActive=false",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const data = await res.json();
       setDeletedBanners(data.banners || []);
     } catch (error) {
@@ -66,12 +90,15 @@ const BannerList: React.FC = () => {
         navigate("/login");
         return;
       }
-      const res = await fetch(`http://localhost:5000/api/banner/${id}/soft-delete`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/banner/${id}/soft-delete`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (res.ok) {
         message.success("Đã chuyển banner vào thùng rác!");
         fetchBanners();
@@ -113,21 +140,24 @@ const BannerList: React.FC = () => {
   };
 
   const handleSearch = (value: string) => {
-    setSearchParams(prev => ({ ...prev, title: value }));
+    setSearchParams((prev) => ({ ...prev, title: value }));
   };
 
   const handleStatusChange = (value: "all" | "active" | "inactive") => {
-    setSearchParams(prev => ({ ...prev, status: value }));
+    setSearchParams((prev) => ({ ...prev, status: value }));
   };
 
-  const filteredBanners = banners.filter(banner => {
-    const titleMatch = banner.title.toLowerCase().includes(searchParams.title.toLowerCase());
-    const statusMatch = searchParams.status === "all" 
-      ? true 
-      : searchParams.status === "active" 
-        ? banner.isActive 
+  const filteredBanners = banners.filter((banner) => {
+    const titleMatch = banner.title
+      .toLowerCase()
+      .includes(searchParams.title.toLowerCase());
+    const statusMatch =
+      searchParams.status === "all"
+        ? true
+        : searchParams.status === "active"
+        ? banner.isActive
         : !banner.isActive;
-    
+
     return titleMatch && statusMatch;
   });
 
@@ -139,7 +169,7 @@ const BannerList: React.FC = () => {
       width: 100,
       render: (image: string) => (
         <img
-          src={image || '/placeholder.png'}
+          src={image || "/placeholder.png"}
           alt="Banner"
           className="w-16 h-16 object-cover rounded"
         />
@@ -162,23 +192,28 @@ const BannerList: React.FC = () => {
       key: "link",
       render: (text: string) => (
         <div className="max-w-xs truncate">
-          <a href={text} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+          <a
+            href={text}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:underline"
+          >
             {text}
           </a>
         </div>
       ),
     },
     {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (isActive: boolean) => (
-        <Badge
-          status={isActive ? "success" : "error"}
-          text={isActive ? "Đang hiển thị" : "Đã ẩn"}
-        />
-      ),
-    },
+  title: "Trạng thái",
+  dataIndex: "isActive",
+  key: "isActive",
+  render: (isActive: boolean) => (
+    <Tag color={isActive ? "green" : "red"}>
+      {isActive ? "Đang hiển thị" : "Đã ẩn"}
+    </Tag>
+  ),
+},
+
     {
       title: "Thao tác",
       key: "action",
@@ -186,22 +221,21 @@ const BannerList: React.FC = () => {
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
             <Button
-              type="text"
+              type="primary"
               icon={<FaEye />}
               onClick={() => showBannerDetail(record)}
             />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Link to={`/admin/banner/edit/${record._id}`}>
-              <Button type="text" icon={<FaEdit />} />
+              <Button type="primary" icon={<FaEdit />} />
             </Link>
           </Tooltip>
           <Tooltip title="Xóa">
             <Button
-              type="text"
               danger
               icon={<FaTrash />}
-              onClick={() => handleSoftDelete(record._id)}
+              onClick={() => handleSoftDelete(record._id!)}
             />
           </Tooltip>
         </Space>
@@ -237,7 +271,7 @@ const BannerList: React.FC = () => {
             <Button
               type="primary"
               icon={<FaPlus />}
-              onClick={() => navigate("/admin/banner/add")}
+              onClick={() => navigate("/admin/banners/add")}
             >
               Thêm banner
             </Button>
@@ -297,8 +331,8 @@ const BannerList: React.FC = () => {
             <div>
               <h3 className="font-semibold">Hình ảnh</h3>
               <img
-                src={selectedBanner.image}
-                alt={selectedBanner.title}
+                src={selectedBanner.image?.url || ""}
+                alt={selectedBanner.image?.alt || selectedBanner.title}
                 className="w-full h-48 object-cover rounded"
               />
             </div>
@@ -308,7 +342,12 @@ const BannerList: React.FC = () => {
             </div>
             <div>
               <h3 className="font-semibold">Link</h3>
-              <a href={selectedBanner.link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+              <a
+                href={selectedBanner.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
+              >
                 {selectedBanner.link}
               </a>
             </div>
@@ -345,7 +384,8 @@ const BannerList: React.FC = () => {
         <Table
           rowSelection={{
             type: "checkbox",
-            onChange: (selectedRowKeys) => setSelectedRestore(selectedRowKeys as string[]),
+            onChange: (selectedRowKeys) =>
+              setSelectedRestore(selectedRowKeys as string[]),
           }}
           columns={deletedColumns}
           dataSource={deletedBanners}
