@@ -58,6 +58,10 @@ const userSchema = new mongoose.Schema(
       default: true,
       // select: false,
     },
+    adminRequest: { type: Boolean, default: false },
+    adminRequestStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    adminRequestContent: { type: String },
+    adminRequestImage: { type: String },
   },
   {
     timestamps: true,

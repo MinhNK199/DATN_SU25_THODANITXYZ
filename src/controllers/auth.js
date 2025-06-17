@@ -51,6 +51,48 @@ export const dangKy = async (req, res) => {
   }
 };
 
+export const dangKyAdmin = async (req, res) => {
+  try {
+    const { name, email, password, avatar, adminRequestImage, adminRequestContent } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email đã tồn tại" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      avatar,
+      adminRequest: true,
+      adminRequestStatus: "pending",
+      adminRequestContent,
+      adminRequestImage,
+      role: "customer", // Không phải admin ngay lập tức
+    });
+
+    user.password = undefined;
+
+   await logActivity({
+  content: `Người dùng ${user.name} (${user.email}) đã đăng ký xin làm admin`,
+  userName: user.name,
+  userId: user._id,
+  actorName: user.name,
+  actorId: user._id,
+});
+
+    res.status(201).json({
+      message: "Đăng ký xin làm admin thành công, vui lòng chờ xác nhận từ superadmin.",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Đăng ký thất bại", error: error.message });
+  }
+};
+
 export const dangNhap = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -95,56 +137,6 @@ export const dangNhap = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Đăng nhập thất bại", error: error.message });
-  }
-};
-
-export const updateUserRole = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    if (req.user._id.toString() === id) {
-      return res
-        .status(400)
-        .json({ message: "Không thể thay đổi quyền của chính mình" });
-    }
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ message: "Người dùng không tồn tại" });
-    }
-    if (user.active === false) {
-      return res
-        .status(400)
-        .json({
-          message: "Không thể đổi quyền cho tài khoản đang bị vô hiệu hóa",
-        });
-    }
-    if (role === "superadmin") {
-      const existingSuperadmin = await User.findOne({ role: "superadmin" });
-      if (existingSuperadmin && existingSuperadmin._id.toString() !== id) {
-        return res
-          .status(400)
-          .json({
-            message: "Chỉ có duy nhất một superadmin được phép tồn tại",
-          });
-      }
-    }
-    user.role = role;
-    await user.save();
-    await logActivity({
-      content: ` Đã đổi vai trò ${user.name} thành ${role}`,
-      userName: user.name,
-      userId: user._id,
-      actorName: req.user.name,
-      actorId: req.user._id,
-    });
-    res.status(200).json({
-      message: "Cập nhật vai trò thành công",
-      userId: user._id,
-      newRole: user.role,
-    });
-  } catch (err) {
-    res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
   }
 };
 
@@ -204,6 +196,49 @@ export const getUserById = async (req, res) => {
 };
 export const getCurrentUser = (req, res) => {
   res.json({ user: req.user });
+};
+
+export const getAdminRequests = async (req, res) => {
+  try {
+    const requests = await User.find({ adminRequest: true, adminRequestStatus: "pending" }).select("-password");
+    res.json({ requests });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  }
+};
+
+export const approveAdminRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { approve } = req.body; // approve: true/false
+
+    const user = await User.findById(id);
+    if (!user || !user.adminRequest) {
+      return res.status(404).json({ message: "Không tìm thấy yêu cầu" });
+    }
+
+    if (approve) {
+      user.role = "admin";
+      user.adminRequestStatus = "approved";
+    } else {
+      user.adminRequestStatus = "rejected";
+    }
+    await user.save();
+
+    await logActivity({
+      content: approve
+        ? `Superadmin đã duyệt quyền admin cho ${user.name}`
+        : `Superadmin đã từ chối quyền admin cho ${user.name}`,
+      userName: user.name,
+      userId: user._id,
+      actorName: req.user.name,
+      actorId: req.user._id,
+    });
+
+    res.json({ message: approve ? "Đã duyệt quyền admin" : "Đã từ chối quyền admin", user });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  }
 };
 
 export const toggleUserStatus = async (req, res) => {

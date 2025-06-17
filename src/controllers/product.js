@@ -3,7 +3,7 @@ import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
 import Category from "../models/category";
-import Brand from "../models/brand";
+import Brand from "../models/Brand";
 
 export const getProducts = async (req, res) => {
     try {
