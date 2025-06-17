@@ -201,7 +201,8 @@ export const getCurrentUser = (req, res) => {
 export const getAdminRequests = async (req, res) => {
   try {
     // BỎ điều kiện adminRequestStatus: "pending"
-    const requests = await User.find({ adminRequest: true }).select("-password");
+    const requests = await User.find({ adminRequest: true }).select("-password")
+    .sort({ createdAt: -1 });
     res.json({ requests });
   } catch (error) {
     res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
