@@ -34,7 +34,6 @@ const UserDetail: React.FC = () => {
   const [wardMap, setWardMap] = useState<Record<number, string>>({});
   const [actionMsg, setActionMsg] = useState<string>("");
   const [actionType, setActionType] = useState<"success" | "error" | "">("");
-  const [changingRole, setChangingRole] = useState<boolean>(false);
 
   const currentUser = getCurrentUser();
 
@@ -126,15 +125,6 @@ const UserDetail: React.FC = () => {
     return false;
   };
 
-  // Phân quyền: chỉ superadmin mới được đổi role
-  const canChangeRole = () => {
-    if (!currentUser || !user) return false;
-    if (currentUser.role !== "superadmin") return false;
-    if (currentUser._id === user._id) return false; // Không đổi quyền chính mình
-    return true;
-  };
-
-  // Đổi trạng thái active
   const handleToggleStatus = async () => {
     if (!user) return;
     try {
@@ -153,31 +143,6 @@ const UserDetail: React.FC = () => {
         err.response?.data?.message || "Cập nhật trạng thái thất bại!"
       );
       setActionType("error");
-    }
-  };
-
-  // Đổi quyền
-  const handleChangeRole = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (!user) return;
-    const newRole = e.target.value as UserRole;
-    if (newRole === user.role) return;
-    setChangingRole(true);
-    setActionMsg("");
-    setActionType("");
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.patch(
-        `${API_URL}/${user._id}/role`,
-        { role: newRole },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setActionMsg(res.data.message || "Cập nhật quyền thành công!");
-      setActionType("success");
-    } catch (err: any) {
-      setActionMsg(err.response?.data?.message || "Cập nhật quyền thất bại!");
-      setActionType("error");
-    } finally {
-      setChangingRole(false);
     }
   };
 
@@ -368,34 +333,6 @@ const UserDetail: React.FC = () => {
             >
               {user.active ? "Vô hiệu hóa" : "Kích hoạt"}
             </button>
-          )}
-
-          {/* Select đổi quyền */}
-          {canChangeRole() && (
-            <div className="mt-4">
-              <label className="block font-medium mb-1 text-blue-600">
-                Đổi quyền:
-              </label>
-              <select
-                value={user.role}
-                onChange={handleChangeRole}
-                disabled={changingRole}
-                className={`
-        w-full px-4 py-2 rounded-lg border-2
-        text-gray-700 font-semibold transition
-        focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400
-        disabled:bg-gray-100 disabled:text-gray-400
-        hover:cursor-pointer hover:border-blue-300
-        shadow-sm
-        bg-white
-      `}
-              >
-                <option value="customer">🧍 Khách hàng</option>
-                <option value="staff">👨‍💼 Nhân viên</option>
-                <option value="admin">🛠️ Quản trị viên</option>
-                <option value="superadmin">👑 Super Admin</option>
-              </select>
-            </div>
           )}
 
           {/* Chỉ chính chủ mới được sửa thông tin */}

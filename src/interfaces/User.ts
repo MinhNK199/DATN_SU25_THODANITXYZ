@@ -2,13 +2,10 @@ export interface Address {
   street: string;
   city: string;
   isDefault?: boolean;
-
-  // ➕ Thêm vào các trường mã địa lý
   province_code?: number;
   district_code?: number;
   ward_code?: number;
 }
-
 
 export type UserRole = "customer" | "staff" | "admin" | "superadmin";
 
@@ -26,18 +23,25 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
 
-  // 👉 Thêm tạm nếu bạn dùng trực tiếp trong form
+  // Địa chỉ mặc định cho form
   province_code?: number;
   district_code?: number;
   ward_code?: number;
-  street?: string; 
-}
+  street?: string;
 
+  // Thêm các trường cho yêu cầu admin
+  adminRequest?: boolean;
+  adminRequestStatus?: "pending" | "approved" | "rejected";
+  adminRequestContent?: string;
+  adminRequestImage?: string;
+
+  // Trường dùng cho danh sách đã xóa mềm (nếu có)
+  deleted?: boolean;
+}
 
 export interface UserForm extends Partial<User> {
   province_code?: number;
   district_code?: number;
   ward_code?: number;
-  street?: string; 
+  street?: string;
 }
-

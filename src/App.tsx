@@ -23,6 +23,7 @@ import BannerAdd from "./components/admin/Banner/BannerAdd";
 import BannerEdit from "./components/admin/Banner/BannerEdit";
 import Activity from "./components/admin/activity/activity";
 import RatingList from "./components/admin/rating/ratinglist";
+import Listadmin from "./components/admin/users/ListAdmin";
 
 type Props = {}
 
@@ -51,6 +52,7 @@ const App = (props: Props) => {
         { path: "users", element: <UserList /> },
         { path: "users/edit/:id", element: <UserEdit /> },
         { path: "users/:id", element: <UserDetail /> },
+        { path: "users/admin-list", element: <Listadmin /> },
         { path: "products", element: <ProductList /> },
         { path: "products/add", element: <ProductAdd /> },
         { path: "products/detail/:id", element: <ProductDetail /> },

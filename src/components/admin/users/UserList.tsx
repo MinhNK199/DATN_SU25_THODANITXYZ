@@ -171,12 +171,12 @@ const UserList: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow">
-      <Title level={3} style={{ textAlign: "center" }}>
-        Danh sách Người dùng
-      </Title>
-
-      <Space direction="horizontal" style={{ marginBottom: 24 }}>
+   <div className="p-6 bg-white rounded-lg shadow">
+    <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
+      Danh sách Người dùng
+    </Title>
+    <div className="flex items-center justify-between mb-6">
+      <Space direction="horizontal">
         <Select
           value={searchType}
           onChange={(value) =>
@@ -195,29 +195,37 @@ const UserList: React.FC = () => {
           style={{ width: 300 }}
         />
       </Space>
-
-      {message && (
-       <Alert
-  message={message}
-  type={messageType as "success" | "error" | "info" | "warning"}
-  showIcon
-/>
-
-      )}
-
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <Spin size="large" />
-        </div>
-      ) : (
-        <Table
-          dataSource={filteredUsers}
-          columns={columns}
-          rowKey="_id"
-          pagination={{ pageSize: 8 }}
-        />
-      )}
+      {/* Nút chuyển sang danh sách đăng ký admin ở bên phải, cùng hàng với filter */}
+      <Button
+        type="primary"
+        onClick={() => navigate("admin-list")}
+        style={{ background: "blue-400", borderColor: "#faad14", marginLeft: 16 }}
+      >
+        Danh sách đăng ký admin
+      </Button>
     </div>
+
+    {message && (
+      <Alert
+        message={message}
+        type={messageType as "success" | "error" | "info" | "warning"}
+        showIcon
+      />
+    )}
+
+    {loading ? (
+      <div className="flex justify-center items-center h-40">
+        <Spin size="large" />
+      </div>
+    ) : (
+      <Table
+        dataSource={filteredUsers}
+        columns={columns}
+        rowKey="_id"
+        pagination={{ pageSize: 8 }}
+      />
+    )}
+  </div>
   );
 };
 
