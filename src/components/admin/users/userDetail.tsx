@@ -32,6 +32,7 @@ const UserDetail: React.FC = () => {
   const [provinceMap, setProvinceMap] = useState<Record<number, string>>({});
   const [districtMap, setDistrictMap] = useState<Record<number, string>>({});
   const [wardMap, setWardMap] = useState<Record<number, string>>({});
+  const [avatarError, setAvatarError] = useState(false);
   const [actionMsg, setActionMsg] = useState<string>("");
   const [actionType, setActionType] = useState<"success" | "error" | "">("");
 
@@ -203,17 +204,23 @@ const UserDetail: React.FC = () => {
       )}
 
       <div className="flex flex-col items-center mb-6">
-        {user.avatar ? (
+        {user.avatar &&
+        user.avatar.trim() !== "" &&
+        user.avatar !== "null" &&
+        user.avatar !== "undefined" &&
+        !avatarError ? (
           <img
             src={user.avatar}
-            alt={user.name}
             className="w-32 h-32 rounded-full object-cover mb-4"
+            alt="Avatar"
+            onError={() => setAvatarError(true)}
           />
         ) : (
           <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-4">
             <span className="text-gray-500 text-xl">No Avatar</span>
           </div>
         )}
+
         <h2 className="text-2xl font-bold">{user.name}</h2>
         <span
           className={`mt-2 px-3 py-1 rounded-full border ${borderByRole(
