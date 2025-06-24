@@ -7,6 +7,7 @@ import {
   FaPhone,
   FaImage,
 } from "react-icons/fa";
+import axios from "axios";
 
 const Register = () => {
   const [form, setForm] = useState({
@@ -14,7 +15,6 @@ const Register = () => {
     email: "",
     password: "",
     phone: "",
-    avatar: "",
   });
 
   const [error, setError] = useState("");
@@ -27,8 +27,21 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Xử lý đăng ký người dùng thường
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/register", form);
+      setSuccess(res.data.message || "Đăng ký thành công!");
+      setTimeout(() => {
+        navigate("/login");
+      },);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.details?.join(", ") ||
+        err.response?.data?.message ||
+        "Đăng ký thất bại!"
+      );
+    }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-100 to-blue-100">
@@ -84,17 +97,6 @@ const Register = () => {
               value={form.phone}
               onChange={handleChange}
               placeholder="Số điện thoại"
-              className="w-full border rounded-md pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
-
-          <div className="relative">
-            <FaImage className="absolute left-3 top-3.5 text-gray-400" />
-            <input
-              name="avatar"
-              value={form.avatar}
-              onChange={handleChange}
-              placeholder="URL ảnh đại diện"
               className="w-full border rounded-md pl-10 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
           </div>

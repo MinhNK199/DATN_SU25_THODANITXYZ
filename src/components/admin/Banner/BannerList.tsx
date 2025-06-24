@@ -227,7 +227,7 @@ const BannerList: React.FC = () => {
             />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
-            <Link to={`/admin/banner/edit/${record._id}`}>
+            <Link to={`/admin/banners/edit/${record._id}`}>
               <Button type="primary" icon={<FaEdit />} />
             </Link>
           </Tooltip>
