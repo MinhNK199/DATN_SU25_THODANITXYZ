@@ -141,6 +141,7 @@ export const dangNhap = async (req, res) => {
 };
 
 export const getAllUsers = async (req, res) => {
+  
   try {
     const { keyword = "", role, active, page = 1, limit = 10 } = req.query;
 
@@ -260,11 +261,9 @@ export const toggleUserStatus = async (req, res) => {
         });
     }
 
-    // superadmin có thể thao tác với tất cả
     if (currentUser.role === "superadmin") {
       targetUser.active = !targetUser.active;
     }
-    // admin chỉ được thao tác với user không phải admin hoặc superadmin
     else if (currentUser.role === "admin") {
       if (["admin", "superadmin"].includes(targetUser.role)) {
         return res
