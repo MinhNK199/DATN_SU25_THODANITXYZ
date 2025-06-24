@@ -10,7 +10,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white shadow rounded-xl p-4">
             <h3 className="text-lg font-semibold mb-2">Tổng doanh thu</h3>
-            <p className="text-2xl font-bold text-green-600">₫12,000,000</p>
+            <p className="text-2xl font-bold text-green-600">12,000,000 đ</p>
           </div>
           <div className="bg-white shadow rounded-xl p-4">
             <h3 className="text-lg font-semibold mb-2">Sản phẩm đã bán</h3>

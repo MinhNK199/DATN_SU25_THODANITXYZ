@@ -19,10 +19,12 @@ const AdminSidebar = () => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    toast.success("Đăng xuất thành công!");
-    navigate("/");
-  };
+  localStorage.removeItem("token");
+  localStorage.removeItem("user"); // Xoá thông tin người dùng
+  toast.success("Đăng xuất thành công!");
+  navigate("/");
+};
+
 
   const navItem = (label: string, icon: JSX.Element, path: string) => {
     const isActive = location.pathname.includes(path);
