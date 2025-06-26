@@ -1,4 +1,4 @@
-import Bill from '../models/bill.js';
+import Bill from '../models/Bill.js';
 import PDFDocument from 'pdfkit';
 import nodemailer from 'nodemailer';
 import fs from 'fs';

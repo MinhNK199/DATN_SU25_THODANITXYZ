@@ -1,10 +1,16 @@
-import Category from "../models/category.js";
-import Product from "../models/product.js";
+import Category from "../models/Category.js";
+import Product from "../models/Product.js";
 
 // Lấy tất cả danh mục
 export const getCategories = async (req, res) => {
     try {
-        const categories = await Category.find({ isActive: true })
+        // Lấy tất cả danh mục (cả active và inactive) nhưng không bao gồm những danh mục đã xóa mềm
+        const categories = await Category.find({
+            $or: [
+                { isActive: true },
+                { isActive: false, deletedAt: null }
+            ]
+        })
             .populate('parent', 'name')
             .sort('order');
         res.json(categories);
@@ -51,13 +57,32 @@ export const getCategoryById = async (req, res) => {
 // Tạo danh mục mới
 export const createCategory = async (req, res) => {
     try {
-        const { name, description, parent, image, order } = req.body;
+        const { 
+            name, 
+            slug, 
+            description, 
+            parent, 
+            image, 
+            icon, 
+            color, 
+            order, 
+            isActive, 
+            metaTitle, 
+            metaDescription 
+        } = req.body;
+        
         const category = new Category({
             name,
+            slug,
             description,
             parent,
             image,
+            icon,
+            color,
             order,
+            isActive,
+            metaTitle,
+            metaDescription,
         });
         const createdCategory = await category.save();
         res.status(201).json(createdCategory);
@@ -69,16 +94,34 @@ export const createCategory = async (req, res) => {
 // Cập nhật danh mục
 export const updateCategory = async (req, res) => {
     try {
-        const { name, description, parent, image, order, isActive } = req.body;
+        const { 
+            name, 
+            slug, 
+            description, 
+            parent, 
+            image, 
+            icon, 
+            color, 
+            order, 
+            isActive, 
+            metaTitle, 
+            metaDescription 
+        } = req.body;
+        
         const category = await Category.findById(req.params.id);
         if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
 
         category.name = name;
+        category.slug = slug;
         category.description = description;
         category.parent = parent;
         category.image = image;
+        category.icon = icon;
+        category.color = color;
         category.order = order;
         category.isActive = isActive;
+        category.metaTitle = metaTitle;
+        category.metaDescription = metaDescription;
 
         const updatedCategory = await category.save();
         res.json(updatedCategory);
@@ -104,7 +147,6 @@ export const deactivateCategory = async (req, res) => {
     }
 };
 
-
 // Xóa danh mục
 export const deleteCategory = async (req, res) => {
     try {
@@ -123,6 +165,67 @@ export const deleteCategory = async (req, res) => {
     }
 };
 
+// Xóa mềm danh mục
+export const softDeleteCategory = async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.id);
+        if (!category) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+        category.isActive = false;
+        category.deletedAt = new Date();
+        category.deletedBy = req.user._id;
+        await category.save();
+        res.json({ message: "Đã chuyển danh mục vào thùng rác thành công" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Khôi phục danh mục đã xóa
+export const restoreCategory = async (req, res) => {
+    try {
+        const category = await Category.findById(req.params.id);
+        if (!category) {
+            return res.status(404).json({ message: "Không tìm thấy danh mục" });
+        }
+        category.isActive = true;
+        category.deletedAt = null;
+        category.deletedBy = null;
+        await category.save();
+        res.json({ message: "Đã khôi phục danh mục thành công" });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Lấy danh sách danh mục đã xóa mềm
+export const getDeletedCategories = async (req, res) => {
+    try {
+        const categories = await Category.find({ 
+            isActive: false,
+            deletedAt: { $ne: null }
+        })
+        .populate('parent', 'name')
+        .populate('deletedBy', 'name email');
+        res.json(categories);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Đếm số lượng danh mục đã xóa mềm
+export const getDeletedCategoriesCount = async (req, res) => {
+    try {
+        const count = await Category.countDocuments({ 
+            isActive: false,
+            deletedAt: { $ne: null }
+        });
+        res.json({ count });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 // Lấy sản phẩm theo danh mục
 export const getCategoryProducts = async (req, res) => {

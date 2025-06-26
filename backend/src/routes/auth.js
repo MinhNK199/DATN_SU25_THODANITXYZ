@@ -1,13 +1,13 @@
 import express from "express";
-import { validateRequest } from "../middlewares/validateRequest";
+import { validateRequestJoi } from "../middlewares/validateRequest";
 import { loginSchema, registerSchema } from "../validation/user";
 import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole } from "../controllers/auth";
 import { checkAdmin, protect } from "../middlewares/authMiddleware";
 import { getActivityLogs } from "../utils/activityLog";
 
 const routerAuth = express.Router();
-routerAuth.post("/register", validateRequest(registerSchema), dangKy);
-routerAuth.post("/login", validateRequest(loginSchema), dangNhap);
+routerAuth.post("/register", validateRequestJoi(registerSchema), dangKy);
+routerAuth.post("/login", validateRequestJoi(loginSchema), dangNhap);
 
 routerAuth.patch("/users/:id/role", protect, checkAdmin(["capQuyen"]), updateUserRole);
 routerAuth.get("/users", protect, checkAdmin(["view_user"]), getAllUsers);

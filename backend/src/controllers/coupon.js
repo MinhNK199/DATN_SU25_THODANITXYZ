@@ -1,4 +1,4 @@
-import Coupon from "../models/coupon";
+import Coupon from "../models/Coupon";
 
 // Lấy tất cả coupon (phân trang)
 export const getCoupons = async (req, res) => {

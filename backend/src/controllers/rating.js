@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import Product from '../models/product';
-import Order from '../models/order'; 
-import { Rating } from '../models/Rating';
+import Product from '../models/Product';
+import Order from '../models/Order'; 
+import Rating from '../models/Rating';
 import { containsBadWords, filterBadWords } from '../utils/BadWords';
 
 // Lấy danh sách đánh giá

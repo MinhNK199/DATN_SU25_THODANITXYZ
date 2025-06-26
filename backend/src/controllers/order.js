@@ -1,4 +1,4 @@
-import Order from "../models/order";
+import Order from "../models/Order";
 
 // Tạo đơn hàng mới
 export const createOrder = async (req, res) => {

@@ -1,4 +1,4 @@
-import Notification from "../models/notification";
+import Notification from "../models/Notification";
 
 // Lấy thông báo của user (phân trang)
 export const getNotifications = async (req, res) => {

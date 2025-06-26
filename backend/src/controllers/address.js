@@ -1,4 +1,4 @@
-import Address from "../models/address";
+import Address from "../models/Address";
 
 // Lấy tất cả địa chỉ của user
 export const getUserAddresses = async (req, res) => {

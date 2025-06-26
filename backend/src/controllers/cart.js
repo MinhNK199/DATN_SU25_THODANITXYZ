@@ -1,6 +1,6 @@
-import Cart from "../models/cart";
-import Coupon from "../models/coupon";
-import Product from "../models/product";
+import Cart from "../models/Cart";
+import Coupon from "../models/Coupon";
+import Product from "../models/Product";
 
 // Lấy giỏ hàng của user
 export const getCart = async (req, res) => {
