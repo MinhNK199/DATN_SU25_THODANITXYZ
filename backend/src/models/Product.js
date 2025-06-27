@@ -87,6 +87,9 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Vui lòng thêm ảnh sản phẩm'],
     }],
+    videos: [{
+        type: String, // link YouTube, mp4, v.v.
+    }],
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
@@ -149,6 +152,33 @@ const productSchema = new mongoose.Schema({
     tags: [{
         type: String,
         trim: true,
+    }],
+    meta: {
+        metaTitle: String,
+        metaDescription: String,
+        metaImage: String,
+    },
+    questions: [{
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        question: String,
+        answer: String,
+        createdAt: { type: Date, default: Date.now },
+        answeredAt: Date,
+    }],
+    relatedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    flashSale: {
+        price: Number,
+        start: Date,
+        end: Date,
+    },
+    discounts: [{
+        type: {
+            type: String, // percentage, fixed, voucher...
+        },
+        value: Number,
+        description: String,
+        start: Date,
+        end: Date,
     }],
     sku: {
         type: String,

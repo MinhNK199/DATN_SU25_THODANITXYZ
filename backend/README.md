@@ -65,6 +65,19 @@ Một nền tảng e-commerce hiện đại được xây dựng với **React.j
 - ✅ **Mobile responsive** design
 - ✅ **PWA support** - Progressive Web App
 
+### 🆕 Tính năng mới được thêm vào (2024)
+- ✅ **Hệ thống Q&A sản phẩm** - Khách hàng đặt câu hỏi, Admin trả lời
+- ✅ **Sản phẩm liên quan** - Quản lý sản phẩm gợi ý
+- ✅ **Flash Sale** - Khuyến mãi giới hạn thời gian
+- ✅ **Hệ thống khuyến mãi đa dạng** - Percentage, Fixed, Voucher
+- ✅ **Sản phẩm yêu thích** - Favorites system
+- ✅ **AI Recommendation Engine** - Gợi ý sản phẩm thông minh
+- ✅ **Hệ thống điểm thưởng** - Reward points tích lũy và sử dụng
+- ✅ **Phân quyền nâng cao** - Admin và Superadmin roles
+- ✅ **Email verification** - Xác thực email khi đăng ký
+- ✅ **CAPTCHA integration** - Bảo mật chống bot
+- ✅ **Social login** - Đăng nhập bằng Google
+
 ## 🛠️ Công nghệ sử dụng
 
 ### Backend
@@ -511,6 +524,165 @@ GET    /api/admin/orders           # Quản lý orders
 PUT    /api/admin/settings         # Cài đặt hệ thống
 \`\`\`
 
+### 🆕 API Endpoints mới (2024)
+
+#### Product Q&A System
+\`\`\`http
+GET    /api/products/:id/questions           # Lấy danh sách câu hỏi sản phẩm
+POST   /api/products/:id/questions           # Đặt câu hỏi về sản phẩm
+POST   /api/products/:id/questions/:questionId/answer  # Trả lời câu hỏi (Admin/Superadmin)
+DELETE /api/products/:id/questions/:questionId         # Xóa câu hỏi
+\`\`\`
+
+#### Related Products Management
+\`\`\`http
+GET    /api/products/:id/related             # Lấy sản phẩm liên quan
+POST   /api/products/:id/related             # Thêm sản phẩm liên quan (Admin/Superadmin)
+DELETE /api/products/:id/related/:relatedId  # Xóa sản phẩm liên quan (Admin/Superadmin)
+\`\`\`
+
+#### Flash Sale Management
+\`\`\`http
+POST   /api/products/:id/flash-sale          # Tạo flash sale (Admin/Superadmin)
+PUT    /api/products/:id/flash-sale          # Cập nhật flash sale (Admin/Superadmin)
+DELETE /api/products/:id/flash-sale          # Xóa flash sale (Admin/Superadmin)
+GET    /api/products/:id/flash-sale          # Lấy thông tin flash sale
+\`\`\`
+
+#### Product Discounts
+\`\`\`http
+GET    /api/products/:id/discounts           # Lấy danh sách khuyến mãi
+POST   /api/products/:id/discounts           # Thêm khuyến mãi (Admin/Superadmin)
+PUT    /api/products/:id/discounts/:discountId # Cập nhật khuyến mãi (Admin/Superadmin)
+DELETE /api/products/:id/discounts/:discountId # Xóa khuyến mãi (Admin/Superadmin)
+\`\`\`
+
+#### Product Favorites
+\`\`\`http
+GET    /api/favorites                          # Lấy danh sách yêu thích
+POST   /api/favorites/:productId               # Thêm vào yêu thích
+DELETE /api/favorites/:productId               # Xóa khỏi yêu thích
+GET    /api/favorites/:productId/check         # Kiểm tra trạng thái yêu thích
+GET    /api/favorites/count                    # Đếm số sản phẩm yêu thích
+\`\`\`
+
+#### AI Recommendations
+\`\`\`http
+GET    /api/recommendations/product/:productId # Gợi ý dựa trên sản phẩm
+GET    /api/recommendations/user               # Gợi ý dựa trên lịch sử mua hàng
+GET    /api/recommendations/favorites          # Gợi ý dựa trên sản phẩm yêu thích
+\`\`\`
+
+#### Reward Points System
+\`\`\`http
+GET    /api/reward-points                      # Lấy điểm thưởng hiện tại
+GET    /api/reward-points/history              # Lấy lịch sử điểm thưởng
+POST   /api/reward-points/:userId/add          # Thêm điểm thưởng (Admin/Superadmin)
+POST   /api/reward-points/use                  # Sử dụng điểm thưởng
+\`\`\`
+
+#### Enhanced Authentication
+\`\`\`http
+POST   /api/auth/register-with-verification    # Đăng ký với xác thực email
+POST   /api/auth/verify-email                  # Xác thực email
+POST   /api/auth/google                        # Đăng nhập bằng Google
+POST   /api/auth/forgot-password-with-captcha  # Quên mật khẩu với CAPTCHA
+\`\`\`
+
+## 🔐 Phân Quyền và Bảo Mật
+
+### Hệ thống Role-Based Access Control (RBAC)
+
+#### 1. Guest (Khách)
+- Xem danh sách sản phẩm
+- Xem chi tiết sản phẩm
+- Tìm kiếm sản phẩm
+- Xem danh mục, thương hiệu
+- Xem đánh giá và câu hỏi sản phẩm
+
+#### 2. User (Người dùng đã đăng ký)
+- Tất cả quyền của Guest
+- Đặt hàng và quản lý giỏ hàng
+- Đánh giá sản phẩm
+- Đặt câu hỏi về sản phẩm
+- Xóa câu hỏi của chính mình
+- Quản lý địa chỉ giao hàng
+- Thêm/xóa sản phẩm yêu thích
+- Sử dụng điểm thưởng
+- Xem lịch sử đơn hàng và điểm thưởng
+
+#### 3. Admin
+- Tất cả quyền của User
+- **Quản lý sản phẩm:** CRUD, biến thể, import Excel
+- **Quản lý câu hỏi:** Trả lời và xóa bất kỳ câu hỏi nào
+- **Quản lý sản phẩm liên quan:** Thêm/xóa sản phẩm gợi ý
+- **Quản lý khuyến mãi:** Flash sale, discount, coupon
+- **Quản lý điểm thưởng:** Thêm điểm cho user
+- **Quản lý hệ thống:** Danh mục, thương hiệu, banner, đơn hàng
+
+#### 4. Superadmin
+- **Tất cả quyền của Admin**
+- Quyền cao nhất trong hệ thống
+- Có thể quản lý admin khác
+- Có thể thực hiện mọi thao tác quản trị
+
+### Bảo mật nâng cao
+
+#### Authentication & Authorization
+- **JWT Token** với refresh token mechanism
+- **Role-based middleware** cho từng endpoint
+- **Session management** với Redis (optional)
+- **Rate limiting** chống brute force attack
+
+#### Data Protection
+- **Password hashing** với bcrypt (salt rounds: 12)
+- **Input validation** và sanitization
+- **SQL injection protection** (MongoDB NoSQL injection)
+- **XSS protection** với helmet middleware
+- **CORS configuration** cho cross-origin requests
+
+#### Email Security
+- **Email verification** khi đăng ký
+- **CAPTCHA integration** cho form đăng ký/quên mật khẩu
+- **Secure password reset** với time-limited tokens
+- **Email templates** với HTML sanitization
+
+#### Social Authentication
+- **Google OAuth 2.0** integration
+- **Secure callback handling**
+- **Profile data validation**
+
+### Middleware Security Stack
+```javascript
+// Security middleware chain
+app.use(helmet());                    // Security headers
+app.use(cors(corsOptions));          // CORS configuration
+app.use(rateLimit(rateLimitConfig)); // Rate limiting
+app.use(express.json({ limit: '10mb' })); // Request size limit
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+```
+
+### Environment Security Variables
+```env
+# JWT Configuration
+JWT_SECRET=your_super_secret_jwt_key_here_minimum_32_characters
+JWT_EXPIRE=7d
+JWT_REFRESH_SECRET=your_refresh_secret_key_here
+JWT_REFRESH_EXPIRE=30d
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# CAPTCHA Configuration
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000  # 15 minutes
+RATE_LIMIT_MAX_REQUESTS=100  # 100 requests per window
+```
+
 ## 🔧 Hướng dẫn phát triển
 
 ### Coding Standards
@@ -742,4 +914,197 @@ chore: cập nhật build tools
 **Đồ án tốt nghiệp**: Hệ thống Thương mại Đồ Điện Tử TechTrendTechTrend
 ---
 
+## 📋 Tài liệu bổ sung
+
+### API Testing
+- **Postman Collection:** `backend/note/DATN Backend Full API.postman_collection.json`
+  - Bao gồm tất cả 27 API endpoints mới
+  - Pre-configured variables và authentication
+  - Request examples cho từng endpoint
+  - Environment variables setup
+
+### Phân quyền chi tiết
+- **Role Permissions:** `backend/ROLE_PERMISSIONS.md`
+  - Chi tiết quyền hạn của từng role
+  - Hướng dẫn implement middleware
+  - Security best practices
+
+### Database Schema
+- **Product Model:** Embedded Q&A, related products, flash sale, discounts
+- **User Model:** Favorites, reward points, authentication fields
+- **Order Model:** Reward points calculation integration
+
+### Environment Variables mới
+```env
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# CAPTCHA
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+
+# Email Verification
+EMAIL_VERIFICATION_ENABLED=true
+EMAIL_VERIFICATION_EXPIRE=24h
+
+# Reward Points
+REWARD_POINTS_RATE=0.01  # 1% of order value
+MIN_POINTS_REDEMPTION=100
+MAX_POINTS_REDEMPTION=1000
+```
+
+### Quick Start cho tính năng mới
+```bash
+# 1. Cài đặt dependencies
+npm install
+
+# 2. Cấu hình environment variables
+cp .env.example .env
+# Cập nhật các biến môi trường cần thiết
+
+# 3. Khởi động database
+npm run db:start
+
+# 4. Chạy migrations (nếu cần)
+npm run migrate
+
+# 5. Seed data mẫu
+npm run seed
+
+# 6. Khởi động server
+npm run dev
+
+# 7. Import Postman collection
+# Mở file: backend/note/DATN Backend Full API.postman_collection.json
+```
+
+### Troubleshooting
+- **MongoDB Connection:** Kiểm tra MONGODB_URI trong .env
+- **JWT Issues:** Đảm bảo JWT_SECRET đủ 32 ký tự
+- **Email Service:** Cấu hình SMTP cho email verification
+- **Google OAuth:** Setup Google Cloud Console credentials
+- **CAPTCHA:** Đăng ký reCAPTCHA keys
+
+---
+
 ⭐ **Nếu dự án này hữu ích, hãy cho một star trên GitHub!** ⭐
+
+## 🆕 Tính năng mới - Chi tiết triển khai
+
+### 1. Hệ thống Q&A sản phẩm
+**Mục đích:** Cho phép khách hàng đặt câu hỏi về sản phẩm và admin trả lời
+- **User:** Đặt câu hỏi, xóa câu hỏi của chính mình
+- **Admin/Superadmin:** Trả lời câu hỏi, xóa bất kỳ câu hỏi nào
+- **Validation:** Câu hỏi 5-500 ký tự, câu trả lời 5-1000 ký tự
+- **Database:** Embedded trong Product model
+
+### 2. Sản phẩm liên quan
+**Mục đích:** Quản lý sản phẩm gợi ý cho từng sản phẩm
+- **Admin/Superadmin:** Thêm/xóa sản phẩm liên quan
+- **User:** Xem sản phẩm liên quan được gợi ý
+- **Logic:** Chỉ hiển thị sản phẩm đang hoạt động
+- **Database:** Array of ObjectId trong Product model
+
+### 3. Flash Sale
+**Mục đích:** Khuyến mãi giới hạn thời gian với giá cố định
+- **Admin/Superadmin:** Tạo/cập nhật/xóa flash sale
+- **Validation:** Giá flash sale < giá gốc, thời gian hợp lệ
+- **Logic:** Tự động tính toán giá hiển thị dựa trên thời gian
+- **Database:** Embedded object trong Product model
+
+### 4. Hệ thống khuyến mãi đa dạng
+**Mục đích:** Hỗ trợ nhiều loại khuyến mãi khác nhau
+- **Types:** Percentage (%), Fixed amount, Voucher
+- **Admin/Superadmin:** Quản lý CRUD khuyến mãi
+- **Validation:** Giá trị hợp lệ theo từng loại
+- **Database:** Array of discount objects trong Product model
+
+### 5. Sản phẩm yêu thích (Favorites)
+**Mục đích:** Cho phép user lưu sản phẩm yêu thích
+- **User:** Thêm/xóa sản phẩm yêu thích
+- **Features:** Kiểm tra trạng thái, đếm số lượng
+- **Database:** Array of product IDs trong User model
+
+### 6. AI Recommendation Engine
+**Mục đích:** Gợi ý sản phẩm thông minh dựa trên nhiều tiêu chí
+- **Product-based:** Gợi ý dựa trên sản phẩm hiện tại
+- **User-based:** Gợi ý dựa trên lịch sử mua hàng
+- **Favorites-based:** Gợi ý dựa trên sản phẩm yêu thích
+- **Algorithm:** Collaborative filtering + Content-based
+
+### 7. Hệ thống điểm thưởng
+**Mục đích:** Tích lũy và sử dụng điểm thưởng
+- **Earning:** Tự động tính từ đơn hàng (1% giá trị)
+- **Usage:** Sử dụng điểm để giảm giá đơn hàng
+- **Admin/Superadmin:** Thêm điểm thưởng cho user
+- **Database:** Embedded object trong User model với history
+
+### 8. Phân quyền nâng cao
+**Mục đích:** Quản lý quyền hạn chi tiết cho từng role
+- **Roles:** Guest, User, Admin, Superadmin
+- **Middleware:** Role-based access control
+- **Security:** JWT token với role information
+- **Documentation:** Chi tiết trong `ROLE_PERMISSIONS.md`
+
+### 9. Bảo mật nâng cao
+**Mục đích:** Tăng cường bảo mật cho hệ thống
+- **Email verification:** Xác thực email khi đăng ký
+- **CAPTCHA:** Chống bot cho form quan trọng
+- **Social login:** Đăng nhập bằng Google OAuth
+- **Rate limiting:** Chống brute force attack
+
+### Testing các tính năng mới
+
+#### Postman Collection
+- **File:** `backend/note/DATN Backend Full API.postman_collection.json`
+- **Coverage:** 27 API endpoints mới
+- **Variables:** Pre-configured cho testing
+- **Authentication:** JWT token setup
+
+#### Test Cases cần thiết
+```bash
+# Test Q&A System
+npm run test:qa
+
+# Test Flash Sale
+npm run test:flash-sale
+
+# Test Reward Points
+npm run test:reward-points
+
+# Test Recommendations
+npm run test:recommendations
+
+# Test Favorites
+npm run test:favorites
+
+# Test Role Permissions
+npm run test:permissions
+```
+
+#### Database Migrations
+```bash
+# Cập nhật schema cho tính năng mới
+npm run migrate:new-features
+
+# Seed data cho testing
+npm run seed:new-features
+
+# Backup trước khi update
+npm run db:backup
+```
+
+### Performance Considerations
+- **Indexing:** Tạo indexes cho các field thường query
+- **Caching:** Redis cache cho recommendations
+- **Pagination:** Phân trang cho danh sách dài
+- **Optimization:** Lazy loading cho related data
+
+### Monitoring & Analytics
+- **Q&A Analytics:** Số câu hỏi, thời gian trả lời
+- **Flash Sale Performance:** Conversion rate, revenue
+- **Recommendation Accuracy:** Click-through rate
+- **Reward Points Usage:** Redemption rate, user engagement
+
+## 🚀 Deployment

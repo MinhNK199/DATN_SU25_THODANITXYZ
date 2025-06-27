@@ -4,10 +4,14 @@ import { loginSchema, registerSchema } from "../validation/user";
 import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole } from "../controllers/auth";
 import { checkAdmin, protect } from "../middlewares/authMiddleware";
 import { getActivityLogs } from "../utils/activityLog";
+import { verifyEmail } from "../controllers/auth";
+import { googleLogin } from "../controllers/auth";
 
 const routerAuth = express.Router();
 routerAuth.post("/register", validateRequestJoi(registerSchema), dangKy);
 routerAuth.post("/login", validateRequestJoi(loginSchema), dangNhap);
+routerAuth.post("/verify-email", verifyEmail);
+routerAuth.post("/google", googleLogin);
 
 routerAuth.patch("/users/:id/role", protect, checkAdmin(["capQuyen"]), updateUserRole);
 routerAuth.get("/users", protect, checkAdmin(["view_user"]), getAllUsers);

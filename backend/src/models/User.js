@@ -53,6 +53,48 @@ const userSchema = new mongoose.Schema(
     ],
 
     avatar: String,
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: String,
+    emailVerificationExpires: Date,
+    favorites: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    }],
+    rewardPoints: {
+      current: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      total: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      history: [{
+        type: {
+          type: String,
+          enum: ['earned', 'spent', 'expired', 'bonus'],
+          required: true
+        },
+        amount: {
+          type: Number,
+          required: true
+        },
+        description: String,
+        orderId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Order'
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      }]
+    },
     active: {
       type: Boolean,
       default: true,

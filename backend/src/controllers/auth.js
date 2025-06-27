@@ -2,10 +2,25 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { logActivity } from "../utils/activityLog";
+import crypto from "crypto";
+import { sendMail } from "../utils/mailer";
+import axios from "axios";
+import { OAuth2Client } from "google-auth-library";
 
 export const dangKy = async (req, res) => {
   try {
-    const { name, email, password, phone, addresses, avatar } = req.body;
+    const { name, email, password, phone, addresses, avatar, recaptchaToken } = req.body;
+
+    // Kiểm tra reCAPTCHA
+    if (!recaptchaToken) {
+      return res.status(400).json({ message: "Thiếu mã xác thực reCAPTCHA." });
+    }
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+    const captchaRes = await axios.post(recaptchaVerifyUrl);
+    if (!captchaRes.data.success) {
+      return res.status(400).json({ message: "Xác thực reCAPTCHA thất bại." });
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -21,6 +36,10 @@ export const dangKy = async (req, res) => {
     }
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Sinh token xác thực email
+    const emailVerificationToken = crypto.randomBytes(32).toString("hex");
+    const emailVerificationExpires = Date.now() + 24 * 60 * 60 * 1000; // 24h
+
     const user = await User.create({
       name,
       email,
@@ -29,18 +48,29 @@ export const dangKy = async (req, res) => {
       phone,
       addresses,
       avatar,
+      emailVerificationToken,
+      emailVerificationExpires,
+    });
+
+    // Gửi email xác thực
+    const verifyUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/verify-email?token=${emailVerificationToken}&email=${encodeURIComponent(email)}`;
+    const html = `<h2>Xác thực email TechTrend</h2><p>Chào ${name},</p><p>Vui lòng xác thực email bằng cách nhấn vào link sau:</p><a href="${verifyUrl}">${verifyUrl}</a><p>Link có hiệu lực trong 24h.</p>`;
+    await sendMail({
+      to: email,
+      subject: "Xác thực email TechTrend",
+      html,
     });
 
     user.password = undefined;
     await logActivity({
       content: `Đăng ký tài khoản`,
-  userName: user.name,
-  userId: user._id,
-  actorName: user.name, // chính user vừa đăng ký
-  actorId: user._id,
+      userName: user.name,
+      userId: user._id,
+      actorName: user.name, // chính user vừa đăng ký
+      actorId: user._id,
     });
     return res.status(201).json({
-      message: `Đăng ký thành công với vai trò ${role}`,
+      message: `Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản!`,
       user,
     });
   } catch (error) {
@@ -340,5 +370,80 @@ export const updateUser = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
+  }
+};
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const { email, token } = req.body;
+    if (!email || !token) {
+      return res.status(400).json({ message: "Thiếu email hoặc token xác thực." });
+    }
+    const user = await User.findOne({ email, emailVerificationToken: token });
+    if (!user) {
+      return res.status(400).json({ message: "Token hoặc email không hợp lệ." });
+    }
+    if (user.emailVerified) {
+      return res.status(400).json({ message: "Email đã được xác thực trước đó." });
+    }
+    if (!user.emailVerificationExpires || user.emailVerificationExpires < Date.now()) {
+      return res.status(400).json({ message: "Token xác thực đã hết hạn." });
+    }
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+    return res.status(200).json({ message: "Xác thực email thành công!" });
+  } catch (error) {
+    return res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  }
+};
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { id_token } = req.body;
+    if (!id_token) {
+      return res.status(400).json({ message: "Thiếu id_token từ Google." });
+    }
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+      idToken: id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+    if (!email) {
+      return res.status(400).json({ message: "Không lấy được email từ Google." });
+    }
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        name: name || email,
+        email,
+        avatar: picture,
+        emailVerified: true,
+        password: Math.random().toString(36).slice(-8), // random password
+        role: "customer",
+      });
+    }
+    if (!user.active) {
+      return res.status(403).json({ message: "Tài khoản đang bị khóa." });
+    }
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1d",
+    });
+    return res.status(200).json({
+      message: "Đăng nhập Google thành công!",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Đăng nhập Google thất bại", error: error.message });
   }
 };
