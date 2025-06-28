@@ -2,30 +2,56 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { User, UserForm } from "../../../interfaces/User";
+import {
+  Row,
+  Col,
+  Card,
+  Form,
+  Input,
+  Button,
+  Spin,
+  Select,
+  Typography,
+  message,
+  Image,
+  Space,
+} from "antd";
+import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 const API_URL = "http://localhost:5000/api/auth/users";
 
-interface Province { code: number; name: string; }
-interface District { code: number; name: string; }
-interface Ward { code: number; name: string; }
+interface Province {
+  code: number;
+  name: string;
+}
+interface District {
+  code: number;
+  name: string;
+}
+interface Ward {
+  code: number;
+  name: string;
+}
 
 const UserEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
 
   const [user, setUser] = useState<User | null>(null);
-  const [form, setForm] = useState<UserForm>({});
+  const [form] = Form.useForm<UserForm>();
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
-  const [success, setSuccess] = useState<string>("");
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        setLoading(true);
         const token = localStorage.getItem("token");
         const res = await axios.get(`${API_URL}/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -35,7 +61,7 @@ const UserEdit: React.FC = () => {
 
         const defaultAddress = u.addresses?.find((a: any) => a.isDefault) || {};
 
-        setForm({
+        form.setFieldsValue({
           name: u.name,
           phone: u.phone,
           avatar: u.avatar,
@@ -45,172 +71,297 @@ const UserEdit: React.FC = () => {
           street: defaultAddress.street || "",
         });
       } catch (err: any) {
-        setError(err.response?.data?.message || "Lỗi khi tải user");
+        message.error(err.response?.data?.message || "Lỗi khi tải user");
       } finally {
         setLoading(false);
       }
     };
     fetchUser();
+    // eslint-disable-next-line
   }, [id]);
 
   useEffect(() => {
-    axios.get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
-      .then(r => setProvinces(r.data))
-      .catch(() => setError("Không tải được danh sách tỉnh"));
+    axios
+      .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
+      .then((r) => setProvinces(r.data))
+      .catch(() => message.error("Không tải được danh sách tỉnh"));
   }, []);
 
   useEffect(() => {
-    if (form.province_code) {
+    const province_code = form.getFieldValue("province_code");
+    if (province_code) {
       axios
         .get<{ districts: District[] }>(
-          `https://provinces.open-api.vn/api/p/${form.province_code}?depth=2`
+          `https://provinces.open-api.vn/api/p/${province_code}?depth=2`
         )
-        .then(r => setDistricts(r.data.districts))
+        .then((r) => setDistricts(r.data.districts))
         .catch(() => {});
+    } else {
+      setDistricts([]);
+      form.setFieldsValue({ district_code: undefined, ward_code: undefined });
     }
-  }, [form.province_code]);
+    // eslint-disable-next-line
+  }, [form.getFieldValue("province_code")]);
 
   useEffect(() => {
-    if (form.district_code) {
+    const district_code = form.getFieldValue("district_code");
+    if (district_code) {
       axios
         .get<{ wards: Ward[] }>(
-          `https://provinces.open-api.vn/api/d/${form.district_code}?depth=2`
+          `https://provinces.open-api.vn/api/d/${district_code}?depth=2`
         )
-        .then(r => setWards(r.data.wards))
+        .then((r) => setWards(r.data.wards))
         .catch(() => {});
+    } else {
+      setWards([]);
+      form.setFieldsValue({ ward_code: undefined });
     }
-  }, [form.district_code]);
+    // eslint-disable-next-line
+  }, [form.getFieldValue("district_code")]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSelect = (name: string) => (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = +e.target.value;
-    setForm((f) => ({
-      ...f,
-      [name]: value,
-      ...(name === "province_code" ? { district_code: undefined, ward_code: undefined } : {})
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: UserForm) => {
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      await axios.put(`${API_URL}/${id}`, form, {
+      await axios.put(`${API_URL}/${id}`, values, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSuccess("Cập nhật thông tin thành công!");
+      message.success("Cập nhật thông tin thành công!");
       setTimeout(() => nav(-1), 1200);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Cập nhật thất bại!");
+      message.error(err.response?.data?.message || "Cập nhật thất bại!");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="p-6">Đang tải...</div>;
-  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  if (loading) {
+    return (
+      <div className="p-6 bg-gray-100 min-h-screen flex justify-center items-center">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-xl mx-auto bg-white shadow-md rounded-lg p-6">
-      <button onClick={() => nav(-1)} className="mb-4 text-gray-600 hover:text-gray-800">
-        ← Quay lại
-      </button>
-      <h2 className="text-xl font-bold mb-4">Chỉnh sửa thông tin người dùng</h2>
-      {success && <div className="mb-4 text-green-600 bg-green-100 px-4 py-2 rounded">{success}</div>}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block font-medium mb-1">Tên</label>
-          <input
-            name="name"
-            value={form.name || ""}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Số điện thoại</label>
-          <input
-            name="phone"
-            value={form.phone || ""}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1">Avatar (URL)</label>
-          <input
-            name="avatar"
-            value={form.avatar || ""}
-            onChange={handleChange}
-            className="w-full border rounded px-3 py-2"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <label className="block font-medium mb-1">Địa chỉ:</label>
-          <div className="flex gap-2 flex-wrap">
-            <select
-              className="border rounded px-2 py-1 flex-1"
-              onChange={handleSelect("province_code")}
-              value={form.province_code || ""}
-              required
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        className="h-full"
+      >
+        <Row gutter={24} align="stretch">
+          {/* Left Column: Avatar + Actions */}
+          <Col xs={24} lg={8}>
+            <Card
+              className="shadow-lg rounded-xl h-full flex flex-col items-center justify-center"
+              style={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              bodyStyle={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                height: "100%",
+                padding: 32,
+              }}
             >
-              <option value="">Chọn tỉnh/thành</option>
-              {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
-            </select>
+              <Title level={4} style={{ textAlign: "center", width: "100%" }}>
+                Ảnh đại diện
+              </Title>
+              {form.getFieldValue("avatar") ? (
+                <Image
+                  src={form.getFieldValue("avatar")}
+                  width={140}
+                  height={140}
+                  style={{
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    marginBottom: 24,
+                    border: "2px solid #f0f0f0",
+                    boxShadow: "0 2px 8px #eee",
+                  }}
+                  alt="Avatar"
+                  fallback="https://ui-avatars.com/api/?name=User"
+                  preview
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 140,
+                    height: 140,
+                    borderRadius: "50%",
+                    background: "#f0f0f0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 24,
+                    fontSize: 32,
+                    color: "#bbb",
+                    border: "2px solid #f0f0f0",
+                  }}
+                >
+                  <span>No Avatar</span>
+                </div>
+              )}
+              <Space
+                direction="vertical"
+                className="w-full"
+                style={{ marginTop: 24 }}
+              >
+                <Button
+                  block
+                  icon={<ArrowLeftOutlined />}
+                  onClick={() => nav(-1)}
+                >
+                  Quay lại
+                </Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  icon={<SaveOutlined />}
+                  loading={submitting}
+                >
+                  Lưu thay đổi
+                </Button>
+              </Space>
+            </Card>
+          </Col>
 
-            <select
-              className="border rounded px-2 py-1 flex-1"
-              onChange={handleSelect("district_code")}
-              value={form.district_code || ""}
-              disabled={!districts.length}
-              required
-            >
-              <option value="">Chọn quận/huyện</option>
-              {districts.map((d) => <option key={d.code} value={d.code}>{d.name}</option>)}
-            </select>
-
-            <select
-              className="border rounded px-2 py-1 flex-1"
-              onChange={handleSelect("ward_code")}
-              value={form.ward_code || ""}
-              disabled={!wards.length}
-              required
-            >
-              <option value="">Chọn phường/xã</option>
-              {wards.map((w) => <option key={w.code} value={w.code}>{w.name}</option>)}
-            </select>
-          </div>
-
-          {form.ward_code && (
-            <input
-              type="text"
-              name="street"
-              placeholder="Số nhà, tên đường..."
-              value={form.street || ""}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-              required
-            />
-          )}
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold transition"
-          disabled={submitting}
-        >
-          {submitting ? "Đang cập nhật..." : "Lưu thay đổi"}
-        </button>
-      </form>
+          {/* Right Column: Form */}
+          <Col xs={24} lg={16}>
+            <Card className="shadow-lg rounded-xl h-full">
+              <Title level={3} style={{ marginBottom: 24 }}>
+                Chỉnh sửa thông tin người dùng
+              </Title>
+              <Form.Item
+                name="name"
+                label="Tên"
+                rules={[{ required: true, message: "Vui lòng nhập tên" }]}
+              >
+                <Input placeholder="Nhập tên người dùng" />
+              </Form.Item>
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  {
+                    pattern: /^[0-9]{8,15}$/,
+                    message: "Số điện thoại không hợp lệ",
+                  },
+                ]}
+              >
+                <Input placeholder="Nhập số điện thoại" />
+              </Form.Item>
+              <Form.Item
+                name="avatar"
+                label="Avatar (URL)"
+                rules={[
+                  {
+                    type: "url",
+                    message: "Đường dẫn ảnh không hợp lệ",
+                    warningOnly: true,
+                  },
+                ]}
+              >
+                <Input placeholder="Dán link ảnh đại diện..." />
+              </Form.Item>
+              <Title level={5} style={{ marginTop: 24 }}>
+                Địa chỉ
+              </Title>
+              <Row gutter={12}>
+                <Col span={8}>
+                  <Form.Item
+                    name="province_code"
+                    label="Tỉnh/Thành"
+                    rules={[{ required: true, message: "Chọn tỉnh/thành" }]}
+                  >
+                    <Select
+                      placeholder="Chọn tỉnh/thành"
+                      showSearch
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        String(option?.children)
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                    >
+                      {provinces.map((p) => (
+                        <Option key={p.code} value={p.code}>
+                          {p.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="district_code"
+                    label="Quận/Huyện"
+                    rules={[{ required: true, message: "Chọn quận/huyện" }]}
+                  >
+                    <Select
+                      placeholder="Chọn quận/huyện"
+                      disabled={!districts.length}
+                      showSearch
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        String(option?.children)
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                    >
+                      {districts.map((d) => (
+                        <Option key={d.code} value={d.code}>
+                          {d.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="ward_code"
+                    label="Phường/Xã"
+                    rules={[{ required: true, message: "Chọn phường/xã" }]}
+                  >
+                    <Select
+                      placeholder="Chọn phường/xã"
+                      disabled={!wards.length}
+                      showSearch
+                      optionFilterProp="children"
+                      filterOption={(input, option) =>
+                        String(option?.children)
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                    >
+                      {wards.map((w) => (
+                        <Option key={w.code} value={w.code}>
+                          {w.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item
+                name="street"
+                label="Số nhà, tên đường"
+                rules={[{ required: true, message: "Nhập số nhà, tên đường" }]}
+              >
+                <Input placeholder="Số nhà, tên đường..." />
+              </Form.Item>
+            </Card>
+          </Col>
+        </Row>
+      </Form>
     </div>
   );
 };
