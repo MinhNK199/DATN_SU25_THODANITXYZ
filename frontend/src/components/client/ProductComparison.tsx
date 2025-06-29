@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaTimes, FaCheck, FaMinus, FaStar, FaHeart, FaShoppingCart } from 'react-icons/fa';
-// import { useCart } from '../../contexts/CartContext';
+import { useCart } from '../../contexts/CartContext';
 // import { useWishlist } from '../../contexts/WishlistContext';
 
 interface Product {
@@ -80,7 +80,7 @@ const ProductComparison: React.FC = () => {
     }
   ]);
 
-  // const { addToCart } = useCart();
+  const { addToCart } = useCart();
   // const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
 
   const formatPrice = (price: number) => {
@@ -118,14 +118,13 @@ const ProductComparison: React.FC = () => {
   };
 
   const handleAddToCart = (product: Product) => {
-    console.log('Add to cart:', product.name);
-    // addToCart({
-    //   id: product.id,
-    //   name: product.name,
-    //   price: product.price,
-    //   image: product.image,
-    //   brand: product.brand
-    // });
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      brand: product.brand
+    });
   };
 
   const handleWishlistToggle = (product: Product) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaFilter, FaSort, FaTh, FaList, FaStar, FaHeart, FaShoppingCart } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
 
@@ -10,98 +10,37 @@ const ProductList: React.FC = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Mock data
-  const products = [
-    {
-      id: '1',
-      name: 'iPhone 15 Pro Max - Titanium',
-      price: 1199,
-      originalPrice: 1299,
-      image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80',
-      rating: 4.8,
-      reviewCount: 124,
-      stock: 15,
-      isNew: true,
-      brand: 'Apple',
-      category: 'Mobile',
-      colors: ['#000000', '#FFFFFF', '#FFD700'],
-      features: ['A17 Pro Chip', '48MP Camera', 'USB-C']
-    },
-    {
-      id: '2',
-      name: 'MacBook Pro 16" M3 Max',
-      price: 2499,
-      originalPrice: 2699,
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80',
-      rating: 4.9,
-      reviewCount: 89,
-      stock: 8,
-      isSale: true,
-      discount: 15,
-      brand: 'Apple',
-      category: 'Laptop',
-      colors: ['#000000', '#C0C0C0'],
-      features: ['M3 Max Chip', '32GB RAM', '1TB SSD']
-    },
-    {
-      id: '3',
-      name: 'Samsung Galaxy S24 Ultra',
-      price: 1299,
-      image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80',
-      rating: 4.7,
-      reviewCount: 156,
-      stock: 22,
-      brand: 'Samsung',
-      category: 'Mobile',
-      colors: ['#000000', '#FFFFFF', '#FF6B35'],
-      features: ['Snapdragon 8 Gen 3', '200MP Camera', 'S Pen']
-    },
-    {
-      id: '4',
-      name: 'AirPods Pro 2nd Generation',
-      price: 249,
-      originalPrice: 299,
-      image: 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80',
-      rating: 4.6,
-      reviewCount: 203,
-      stock: 45,
-      isSale: true,
-      discount: 20,
-      brand: 'Apple',
-      category: 'Accessories',
-      colors: ['#FFFFFF'],
-      features: ['Active Noise Cancellation', 'Spatial Audio', 'USB-C']
-    },
-    {
-      id: '5',
-      name: 'iPad Pro 12.9" M2 Chip',
-      price: 1099,
-      image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1011&q=80',
-      rating: 4.8,
-      reviewCount: 78,
-      stock: 12,
-      brand: 'Apple',
-      category: 'Tablets',
-      colors: ['#000000', '#FFFFFF', '#FFD700'],
-      features: ['M2 Chip', 'Liquid Retina XDR', 'ProMotion 120Hz']
-    },
-    {
-      id: '6',
-      name: 'Apple Watch Series 9 GPS',
-      price: 399,
-      originalPrice: 449,
-      image: 'https://images.unsplash.com/photo-1434493789847-2f02dc6ca359?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80',
-      rating: 4.7,
-      reviewCount: 134,
-      stock: 28,
-      isSale: true,
-      discount: 12,
-      brand: 'Apple',
-      category: 'Watches',
-      colors: ['#000000', '#FFFFFF', '#FF6B35', '#4ECDC4'],
-      features: ['S9 Chip', 'Double Tap', 'Always-On Display']
-    }
-  ];
+  // Thay mock data bằng state thực tế
+  const [products, setProducts] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    // Xây dựng query string cho filter/sort nếu cần
+    let query = `/api/product?page=${page}`;
+    // Có thể bổ sung thêm filter/sort vào query ở đây
+    fetch(query)
+      .then(res => {
+        if (!res.ok) throw new Error('Lỗi khi fetch sản phẩm');
+        return res.json();
+      })
+      .then(data => {
+        setProducts(data.products || []);
+        setPage(data.page || 1);
+        setPages(data.pages || 1);
+        setTotal(data.total || 0);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [page]);
 
   const categories = [
     { id: 'mobile', name: 'Điện thoại', count: 156 },
@@ -132,7 +71,9 @@ const ProductList: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Tất cả sản phẩm</h1>
-          <p className="text-gray-600">Khám phá bộ sưu tập đầy đủ các thiết bị điện tử cao cấp của chúng tôi</p>
+          <p className="text-gray-600">
+            Hiển thị {products.length}/{total} sản phẩm | Trang {page}/{pages}
+          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
@@ -286,28 +227,60 @@ const ProductList: React.FC = () => {
             </div>
 
             {/* Products Grid */}
-            <div className={`grid gap-6 ${
-              viewMode === 'grid' 
-                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-                : 'grid-cols-1'
-            }`}>
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="text-center py-12 text-gray-500">Đang tải sản phẩm...</div>
+            ) : error ? (
+              <div className="text-center py-12 text-red-500">{error}</div>
+            ) : (
+              <div className={`grid gap-6 ${
+                viewMode === 'grid' 
+                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                  : 'grid-cols-1'
+              }`}>
+                {products.map((product) => {
+                  // Map dữ liệu từ API sang props ProductCard
+                  const mappedProduct = {
+                    id: product._id || product.id,
+                    name: product.name,
+                    price: product.salePrice || product.price,
+                    originalPrice: product.salePrice ? product.price : undefined,
+                    image: product.images && product.images.length > 0 ? product.images[0] : '',
+                    brand: typeof product.brand === 'object' ? product.brand.name : product.brand,
+                    rating: product.averageRating || 0,
+                    reviewCount: product.numReviews || 0,
+                    discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
+                    isNew: product.isFeatured || false,
+                    isHot: product.isActive || false,
+                  };
+                  return <ProductCard key={mappedProduct.id} product={mappedProduct} />;
+                })}
+              </div>
+            )}
 
             {/* Pagination */}
             <div className="mt-12 flex justify-center">
               <nav className="flex items-center space-x-2">
-                <button className="px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50">
+                <button
+                  className="px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                >
                   Trước
                 </button>
-                <button className="px-3 py-2 bg-blue-600 text-white rounded-lg">1</button>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">2</button>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">3</button>
-                <span className="px-3 py-2 text-gray-500">...</span>
-                <button className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg">10</button>
-                <button className="px-3 py-2 text-gray-500 hover:text-gray-700">
+                {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    className={`px-3 py-2 rounded-lg ${p === page ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  className="px-3 py-2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === pages}
+                >
                   Sau
                 </button>
               </nav>

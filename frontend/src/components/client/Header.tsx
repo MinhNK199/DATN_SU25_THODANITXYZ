@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes, FaPhone, FaEnvelope, FaMapMarkerAlt, FaChevronDown } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
@@ -9,6 +9,8 @@ const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [showMiniCart, setShowMiniCart] = useState(false);
+  const miniCartRef = useRef<HTMLDivElement>(null);
   
   const { state: cartState } = useCart();
   const { state: wishlistState } = useWishlist();
@@ -20,6 +22,17 @@ const Header: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!showMiniCart) return;
+    const handleClick = (e: MouseEvent) => {
+      if (miniCartRef.current && !miniCartRef.current.contains(e.target as Node)) {
+        setShowMiniCart(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showMiniCart]);
 
   const categories = [
     { name: 'Điện thoại', href: '/products?category=mobile' },
@@ -212,15 +225,63 @@ const Header: React.FC = () => {
                 )}
               </Link>
 
-              {/* Cart */}
-              <Link to="/cart" className="relative text-gray-700 hover:text-blue-600 transition-colors">
-                <FaShoppingCart className="w-5 h-5" />
-                {cartState.itemCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {cartState.itemCount}
-                  </span>
-                )}
-              </Link>
+              {/* Cart with mini cart */}
+              <div
+                className="relative group"
+                onMouseEnter={() => setShowMiniCart(true)}
+                onMouseLeave={() => setShowMiniCart(false)}
+              >
+                <Link to="/cart" className="relative text-gray-700 hover:text-blue-600 transition-colors">
+                  <FaShoppingCart className="w-5 h-5" />
+                  {cartState.itemCount > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {cartState.itemCount}
+                    </span>
+                  )}
+                </Link>
+                {/* Mini Cart Popup */}
+                <div
+                  ref={miniCartRef}
+                  className={`absolute right-0 mt-3 w-96 max-w-[95vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-300 ${showMiniCart ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'} p-4`}
+                  style={{ minWidth: 320 }}
+                >
+                  <h3 className="font-bold text-lg mb-3 text-gray-900">Giỏ hàng</h3>
+                  {cartState.items.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">
+                      <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
+                      Giỏ hàng của bạn trống
+                    </div>
+                  ) : (
+                    <>
+                      <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 mb-3">
+                        {cartState.items.slice(0, 2).map(item => (
+                          <div key={item.id} className="flex items-center py-2 gap-3">
+                            <img src={item.image} alt={item.name} className="w-14 h-14 object-contain rounded-lg border" />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 line-clamp-1">{item.name}</div>
+                              <div className="text-sm text-gray-500">Số lượng: {item.quantity}</div>
+                            </div>
+                            <div className="font-semibold text-blue-600 whitespace-nowrap">{item.price.toLocaleString('vi-VN')}₫</div>
+                          </div>
+                        ))}
+                        {cartState.items.length > 2 && (
+                          <div className="text-center text-gray-500 py-2 text-sm">... và {cartState.items.length - 2} sản phẩm khác</div>
+                        )}
+                      </div>
+                      <div className="flex justify-between items-center font-semibold text-gray-900 mb-3">
+                        <span>Tổng cộng:</span>
+                        <span className="text-blue-600 text-lg">
+                          {cartState.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString('vi-VN')}₫
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Link to="/cart" className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-center font-medium text-gray-700 transition">Xem giỏ hàng</Link>
+                        <Link to="/checkout" className="flex-1 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center font-medium transition">Thanh toán</Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
 
               {/* User Menu */}
               <div className="relative group">

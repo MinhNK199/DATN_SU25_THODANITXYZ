@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaShoppingCart, FaEye, FaStar, FaTruck, FaShieldAlt, FaClock, FaCheck, FaBalanceScale } from 'react-icons/fa';
-// import { useCart } from '../../contexts/CartContext';
+import { useCart } from '../../contexts/CartContext';
 // import { useWishlist } from '../../contexts/WishlistContext';
 // import { useToast } from '../../components/client/ToastNotification';
 
@@ -23,7 +23,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isLoading, setIsLoading] = useState(false);
-  // const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart } = useCart();
   // const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   // const { showToast } = useToast();
 
@@ -37,15 +37,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const handleAddToCart = async () => {
     setIsLoading(true);
     try {
-      console.log('Add to cart:', product.name);
-      // await addToCart({
-      //   id: product.id,
-      //   name: product.name,
-      //   price: product.price,
-      //   image: product.image,
-      //   brand: product.brand
-      // });
-      // showToast('Đã thêm vào giỏ hàng!', 'success');
+      await addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        brand: product.brand
+      });
     } catch (error) {
       console.error('Error adding to cart:', error);
     } finally {

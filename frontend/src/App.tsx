@@ -44,12 +44,14 @@ import { ToastContainer } from './components/client/ToastNotification';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <CartProvider>
       <WishlistProvider>
         <div className="App">
+          <ScrollToTop />
           <Routes>
             {/* Auth routes */}
             <Route path="/admin/login" element={<Login />} />

@@ -1,44 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaTrash, FaMinus, FaPlus, FaArrowLeft, FaLock, FaTruck, FaShieldAlt, FaCreditCard } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
+import { useCart } from '../../contexts/CartContext';
 
 const Cart: React.FC = () => {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: '1',
-      name: 'iPhone 15 Pro Max - Titanium',
-      price: 1199,
-      originalPrice: 1299,
-      image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80',
-      quantity: 1,
-      color: '#000000',
-      size: '256GB',
-      stock: 15
-    },
-    {
-      id: '2',
-      name: 'MacBook Pro 16" M3 Max',
-      price: 2499,
-      originalPrice: 2699,
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80',
-      quantity: 1,
-      color: '#C0C0C0',
-      size: '1TB',
-      stock: 8
-    },
-    {
-      id: '3',
-      name: 'AirPods Pro 2nd Generation',
-      price: 249,
-      originalPrice: 299,
-      image: 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80',
-      quantity: 2,
-      color: '#FFFFFF',
-      size: 'Standard',
-      stock: 45
-    }
-  ]);
+  const { state, updateQuantity, removeFromCart, clearCart } = useCart();
+  const cartItems = state.items;
 
   const recommendedProducts = [
     {
@@ -74,22 +42,10 @@ const Cart: React.FC = () => {
     }).format(price);
   };
 
-  const updateQuantity = (id: string, newQuantity: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, quantity: Math.max(1, Math.min(newQuantity, item.stock)) } : item
-      )
-    );
-  };
-
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
-  };
-
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const savings = cartItems.reduce((sum, item) => sum + ((item.originalPrice - item.price) * item.quantity), 0);
-  const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = subtotal * 0.08; // 8% tax
+  const savings = cartItems.reduce((sum, item) => sum + ((item.originalPrice ? item.originalPrice : item.price) - item.price) * item.quantity, 0);
+  const shipping = subtotal > 500000 ? 0 : 30000;
+  const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
 
   return (
@@ -152,7 +108,7 @@ const Cart: React.FC = () => {
                               </div>
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm text-gray-600">Dung lượng:</span>
-                                <span className="text-sm font-medium">{item.size}</span>
+                                <span className="text-sm font-medium">{item.size || 'Không có'}</span>
                               </div>
                             </div>
 
@@ -161,12 +117,12 @@ const Cart: React.FC = () => {
                               <span className="text-2xl font-bold text-gray-900">
                                 {formatPrice(item.price)}
                               </span>
-                              {item.originalPrice > item.price && (
+                              {item.originalPrice && item.originalPrice > item.price && (
                                 <span className="text-lg text-gray-500 line-through">
                                   {formatPrice(item.originalPrice)}
                                 </span>
                               )}
-                              {item.originalPrice > item.price && (
+                              {item.originalPrice && item.originalPrice > item.price && (
                                 <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-semibold">
                                   Tiết kiệm {formatPrice(item.originalPrice - item.price)}
                                 </span>
@@ -187,7 +143,7 @@ const Cart: React.FC = () => {
                               <span className="text-lg font-semibold w-12 text-center">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                disabled={item.quantity >= item.stock}
+                                disabled={item.quantity >= (item.stock || 99)}
                                 className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
                                 <FaPlus className="w-3 h-3" />
@@ -196,7 +152,7 @@ const Cart: React.FC = () => {
 
                             {/* Remove Button */}
                             <button
-                              onClick={() => removeItem(item.id)}
+                              onClick={() => removeFromCart(item.id)}
                               className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
                             >
                               <FaTrash className="w-4 h-4" />

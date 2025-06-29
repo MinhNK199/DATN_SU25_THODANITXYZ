@@ -7,6 +7,7 @@ import slugify from 'slugify';
 import { Category } from '../../../interfaces/Category';
 import { Brand } from '../../../interfaces/Brand';
 import VariantManager from './VariantManager';
+import SpecificationEditor from './SpecificationEditor';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -57,6 +58,7 @@ const ProductAddPage: React.FC = () => {
                 images: images.filter(img => img.trim() !== ""),
                 variants: variants,
                 slug: slugify(values.name, { lower: true, strict: true }),
+                specifications: values.specifications || {},
             };
             const token = localStorage.getItem('token');
             const response = await fetch(API_URL, {
@@ -201,6 +203,11 @@ const ProductAddPage: React.FC = () => {
                             <Form.Item name="tags" label="Tags (phân cách bởi dấu phẩy)">
                                <Select mode="tags" style={{ width: '100%' }} placeholder="VD: iphone, apple" />
                            </Form.Item>
+                        </Card>
+
+                        <Card className="shadow-lg rounded-xl mb-6">
+                            <Title level={4}>Thông số kỹ thuật</Title>
+                            <SpecificationEditor value={form.getFieldValue('specifications') || {}} onChange={specs => form.setFieldsValue({ specifications: specs })} />
                         </Card>
 
                         <Card className="shadow-lg rounded-xl mb-6">

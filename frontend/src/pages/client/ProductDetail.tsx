@@ -2,99 +2,59 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { FaStar, FaHeart, FaShare, FaTruck, FaShieldAlt, FaClock, FaCheck, FaMinus, FaPlus, FaShoppingCart, FaEye } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
+import { useCart } from '../../contexts/CartContext';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
+  const { addToCart } = useCart();
+  const [product, setProduct] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeTab, setActiveTab] = useState('description');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
 
-  // Mock product data
-  const product = {
-    id: '1',
-    name: 'iPhone 15 Pro Max - Titanium',
-    price: 1199,
-    originalPrice: 1299,
-    images: [
-      'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80',
-      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80',
-      'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1011&q=80',
-      'https://images.unsplash.com/photo-1434493789847-2f02dc6ca359?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80'
-    ],
-    rating: 4.8,
-    reviewCount: 124,
-    stock: 15,
-    isNew: true,
-    brand: 'Apple',
-    colors: ['#000000', '#FFFFFF', '#FFD700', '#C0C0C0'],
-    sizes: ['128GB', '256GB', '512GB', '1TB'],
-    features: [
-      'A17 Pro Chip với GPU 6 nhân',
-      'Camera chính 48MP với Telephoto 2x',
-      'Cổng kết nối USB-C',
-      'Thiết kế Titanium',
-      'Màn hình Always-On',
-      'SOS khẩn cấp qua vệ tinh'
-    ],
-    description: 'iPhone 15 Pro Max đại diện cho đỉnh cao công nghệ smartphone, với chip A17 Pro tiên tiến nhất từng có trong smartphone, hệ thống camera tinh vi và thiết kế titanium đẹp mắt.',
-    specifications: {
-      'Màn hình': 'Màn hình Super Retina XDR 6.7 inch',
-      'Bộ xử lý': 'Chip A17 Pro với GPU 6 nhân',
-      'Bộ nhớ': '128GB, 256GB, 512GB, 1TB',
-      'Camera': '48MP Chính + 12MP Ultra Wide + 12MP Telephoto',
-      'Pin': 'Lên đến 29 giờ phát video',
-      'Kết nối': '5G, Wi-Fi 6E, Bluetooth 5.3'
-    },
-    reviews: [
-      {
-        id: 1,
-        user: 'Nguyễn Văn A',
-        rating: 5,
-        date: '2024-01-15',
-        comment: 'Điện thoại tuyệt vời! Chất lượng camera xuất sắc và hiệu suất đáng kinh ngạc.'
-      },
-      {
-        id: 2,
-        user: 'Trần Thị B',
-        rating: 4,
-        date: '2024-01-10',
-        comment: 'Điện thoại tốt tổng thể, nhưng pin có thể tốt hơn. Camera thì tuyệt vời.'
-      }
-    ]
-  };
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch(`/api/product/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Không tìm thấy sản phẩm');
+        return res.json();
+      })
+      .then(data => {
+        setProduct(data);
+        // Ưu tiên chọn màu/size đầu tiên nếu có
+        let colorList = [];
+        if (Array.isArray(data.variants)) {
+          colorList = data.variants.map((v: any) => v.color).filter((c: any) => !!c);
+        }
+        if (colorList.length > 0) setSelectedColor(colorList[0]);
+        if (data.sizes && data.sizes.length > 0) setSelectedSize(data.sizes[0]);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, [id]);
 
-  const relatedProducts = [
-    {
-      id: '2',
-      name: 'MacBook Pro 16" M3 Max',
-      price: 2499,
-      originalPrice: 2699,
-      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80',
-      rating: 4.9,
-      reviewCount: 89,
-      stock: 8,
-      isSale: true,
-      discount: 15,
-      brand: 'Apple',
-      colors: ['#000000', '#C0C0C0'],
-      features: ['Chip M3 Max', '32GB RAM', '1TB SSD']
-    },
-    {
-      id: '3',
-      name: 'Samsung Galaxy S24 Ultra',
-      price: 1299,
-      image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=870&q=80',
-      rating: 4.7,
-      reviewCount: 156,
-      stock: 22,
-      brand: 'Samsung',
-      colors: ['#000000', '#FFFFFF', '#FF6B35'],
-      features: ['Snapdragon 8 Gen 3', 'Camera 200MP', 'S Pen']
-    }
-  ];
+  // Fetch sản phẩm liên quan (nếu có API, nếu không thì bỏ qua)
+  useEffect(() => {
+    if (!id) return;
+    fetch(`/api/product/${id}/related`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) setRelatedProducts(data);
+        else if (Array.isArray(data?.products)) setRelatedProducts(data.products);
+        else setRelatedProducts([]);
+      })
+      .catch(() => setRelatedProducts([]));
+  }, [id]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -104,8 +64,39 @@ const ProductDetail: React.FC = () => {
   };
 
   const calculateDiscount = () => {
+    if (!product || !product.originalPrice || !product.price) return 0;
     return Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
   };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    addToCart({
+      id: product._id || product.id,
+      name: product.name,
+      price: product.salePrice || product.price,
+      image: product.images && product.images.length > 0 ? product.images[0] : '',
+      brand: typeof product.brand === 'object' ? product.brand.name : product.brand,
+      color: selectedColor,
+      size: selectedSize,
+    });
+  };
+
+  if (loading) return <div className="text-center py-20 text-gray-500">Đang tải sản phẩm...</div>;
+  if (error || !product) return <div className="text-center py-20 text-red-500">{error || 'Không tìm thấy sản phẩm'}</div>;
+
+  const colorList = Array.isArray(product?.variants) && product.variants.length > 0
+    ? product.variants.map((v: any) => v.color).filter((c: any) => !!c)
+    : (Array.isArray(product?.colors)
+        ? product.colors.map((c: any) => typeof c === 'string' ? c : (c?.color || ''))
+        : []);
+
+  // Tạo mapping từ mã màu sang tên màu (nếu có)
+  const colorNameMap: Record<string, string> = (Array.isArray(product?.variants) && product.variants.length > 0)
+    ? product.variants.reduce((acc: any, v: any) => {
+        if (v.color) acc[v.color] = v.name || v.colorName || v.color;
+        return acc;
+      }, {})
+    : {};
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -120,7 +111,9 @@ const ProductDetail: React.FC = () => {
               <li>
                 <div className="flex items-center">
                   <span className="mx-2 text-gray-400">/</span>
-                  <a href="/category/mobile" className="text-gray-700 hover:text-blue-600">Điện thoại</a>
+                  <a href="#" className="text-gray-700 hover:text-blue-600">
+                    {typeof product.category === 'object' ? product.category.name : product.category}
+                  </a>
                 </div>
               </li>
               <li>
@@ -138,11 +131,13 @@ const ProductDetail: React.FC = () => {
           <div className="space-y-4">
             {/* Main Image */}
             <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg">
-              <img
-                src={product.images[selectedImage]}
-                alt={product.name}
-                className="w-full h-96 object-cover"
-              />
+              <div className="w-full h-96 flex items-center justify-center bg-white">
+                <img
+                  src={product.images && product.images[selectedImage]}
+                  alt={product.name}
+                  className="w-4/5 h-4/5 object-contain mx-auto my-auto"
+                />
+              </div>
               {/* Product Labels */}
               <div className="absolute top-4 left-4 flex flex-col gap-2">
                 {product.isNew && (
@@ -158,7 +153,7 @@ const ProductDetail: React.FC = () => {
 
             {/* Thumbnail Images */}
             <div className="grid grid-cols-4 gap-4">
-              {product.images.map((image, index) => (
+              {(product.images || []).map((image: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
@@ -171,7 +166,7 @@ const ProductDetail: React.FC = () => {
                   <img
                     src={image}
                     alt={`${product.name} ${index + 1}`}
-                    className="w-full h-24 object-cover"
+                    className="w-4/5 h-4/5 object-contain mx-auto my-auto"
                   />
                 </button>
               ))}
@@ -183,7 +178,7 @@ const ProductDetail: React.FC = () => {
             {/* Brand */}
             <div className="flex items-center space-x-2">
               <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-                {product.brand}
+                {typeof product.brand === 'object' ? product.brand.name : product.brand}
               </span>
             </div>
 
@@ -210,17 +205,17 @@ const ProductDetail: React.FC = () => {
 
             {/* Price */}
             <div className="flex items-center space-x-4">
-              <span className="text-3xl font-bold text-gray-900">
-                {formatPrice(product.price)}
+              <span className="text-3xl font-bold text-red-600">
+                {product.salePrice ? formatPrice(product.salePrice) : formatPrice(product.price)}
               </span>
-              {product.originalPrice > product.price && (
+              {product.salePrice && (
                 <span className="text-xl text-gray-500 line-through">
-                  {formatPrice(product.originalPrice)}
+                  {formatPrice(product.price)}
                 </span>
               )}
-              {product.originalPrice > product.price && (
+              {product.salePrice && (
                 <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-semibold">
-                  Tiết kiệm {formatPrice(product.originalPrice - product.price)}
+                  Tiết kiệm {formatPrice(product.price - product.salePrice)}
                 </span>
               )}
             </div>
@@ -236,19 +231,29 @@ const ProductDetail: React.FC = () => {
             {/* Color Selection */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Màu sắc</h3>
-              <div className="flex space-x-3">
-                {product.colors.map((color, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-10 h-10 rounded-full border-2 transition-all duration-300 ${
-                      selectedColor === color
-                        ? 'border-blue-500 scale-110'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+              <div className="flex space-x-3 items-center">
+                {colorList.length > 0 ? (
+                  <>
+                    {colorList.map((color: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedColor(color)}
+                        className={`w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                          selectedColor === color
+                            ? 'border-blue-500 scale-110'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                    <span className="ml-4 text-base font-semibold text-blue-700 min-w-[80px]">
+                      {selectedColor ? `Đã chọn: ${colorNameMap[selectedColor] || selectedColor}` : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-gray-500 italic">Không có</span>
+                )}
               </div>
             </div>
 
@@ -256,19 +261,23 @@ const ProductDetail: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Dung lượng</h3>
               <div className="flex space-x-3">
-                {product.sizes.map((size, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedSize(size)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-all duration-300 ${
-                      selectedSize === size
-                        ? 'border-blue-500 bg-blue-50 text-blue-600'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
+                {(product.sizes && product.sizes.length > 0) ? (
+                  product.sizes.map((size: string, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedSize(size)}
+                      className={`px-4 py-2 rounded-lg border-2 transition-all duration-300 ${
+                        selectedSize === size
+                          ? 'border-blue-500 bg-blue-50 text-blue-600'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-gray-500 italic">Không có</span>
+                )}
               </div>
             </div>
 
@@ -294,7 +303,10 @@ const ProductDetail: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex space-x-4">
-              <button className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2">
+              <button
+                onClick={handleAddToCart}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2"
+              >
                 <FaShoppingCart className="w-5 h-5" />
                 <span>Thêm vào giỏ hàng</span>
               </button>
@@ -317,7 +329,7 @@ const ProductDetail: React.FC = () => {
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Tính năng nổi bật</h3>
               <ul className="space-y-2">
-                {product.features.map((feature, index) => (
+                {(product.features || []).map((feature: string, index: number) => (
                   <li key={index} className="flex items-center space-x-2">
                     <FaCheck className="w-4 h-4 text-green-500" />
                     <span className="text-gray-700">{feature}</span>
@@ -382,13 +394,87 @@ const ProductDetail: React.FC = () => {
             )}
 
             {activeTab === 'specifications' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Object.entries(product.specifications).map(([key, value]) => (
-                  <div key={key} className="flex justify-between py-3 border-b border-gray-200">
-                    <span className="font-medium text-gray-900">{key}</span>
-                    <span className="text-gray-700">{value}</span>
-                  </div>
-                ))}
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+                <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+                  <h2 className="text-2xl font-bold text-blue-800 tracking-wide">Bảng thông số kỹ thuật</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-base font-medium text-gray-800">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-blue-100 to-purple-100">
+                        <th className="py-4 px-6 text-left font-semibold text-blue-900 w-56 text-lg">Thông số</th>
+                        <th className="py-4 px-6 text-center font-semibold text-blue-900 text-lg">{product.name || ''}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Thương hiệu */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Thương hiệu</td>
+                        <td className="py-3 px-6 text-center">{typeof product.brand === 'object' ? product.brand?.name : product.brand || ''}</td>
+                      </tr>
+                      {/* Màn hình */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Màn hình</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.screen || ''}</td>
+                      </tr>
+                      {/* Chip xử lý */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Chip xử lý</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.processor || ''}</td>
+                      </tr>
+                      {/* RAM */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">RAM</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.ram || ''}</td>
+                      </tr>
+                      {/* Bộ nhớ */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Bộ nhớ</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.storage || ''}</td>
+                      </tr>
+                      {/* Pin */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Pin</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.battery || ''}</td>
+                      </tr>
+                      {/* Camera */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Camera</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.camera || ''}</td>
+                      </tr>
+                      {/* Hệ điều hành */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Hệ điều hành</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.os || ''}</td>
+                      </tr>
+                      {/* Trọng lượng */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Trọng lượng</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.weight || ''}</td>
+                      </tr>
+                      {/* Kích thước */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Kích thước</td>
+                        <td className="py-3 px-6 text-center">{product.specifications?.dimensions || ''}</td>
+                      </tr>
+                      {/* Tính năng */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Tính năng</td>
+                        <td className="py-3 px-6 text-center">{product.features && product.features.length > 0 ? product.features.join(', ') : ''}</td>
+                      </tr>
+                      {/* Ưu điểm */}
+                      <tr className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Ưu điểm</td>
+                        <td className="py-3 px-6 text-center text-green-700">{product.pros && product.pros.length > 0 ? product.pros.join(', ') : ''}</td>
+                      </tr>
+                      {/* Nhược điểm */}
+                      <tr className="hover:bg-blue-50 transition-colors">
+                        <td className="py-3 px-6 bg-gray-50 font-medium text-gray-700">Nhược điểm</td>
+                        <td className="py-3 px-6 text-center text-red-600">{product.cons && product.cons.length > 0 ? product.cons.join(', ') : ''}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -404,7 +490,7 @@ const ProductDetail: React.FC = () => {
                 </div>
                 
                 <div className="space-y-4">
-                  {product.reviews.map((review) => (
+                  {(product.reviews || []).map((review: any) => (
                     <div key={review.id} className="bg-white rounded-lg p-6 shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-3">
@@ -442,8 +528,8 @@ const ProductDetail: React.FC = () => {
         <div className="mt-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">Sản phẩm liên quan</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {Array.isArray(relatedProducts) && relatedProducts.map((product: any) => (
+              <ProductCard key={product.id || product._id} product={product} />
             ))}
           </div>
         </div>

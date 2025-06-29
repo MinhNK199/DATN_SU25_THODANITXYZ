@@ -241,13 +241,24 @@ const ProductDetail: React.FC = () => {
                             <Col span={12}>
                                 <Title level={5}>Thông số kỹ thuật</Title>
                                 {product.specifications && Object.keys(product.specifications).length > 0 ? (
-                                    <Descriptions bordered column={1} size="small">
-                                    {Object.entries(product.specifications).map(([key, value]) => (
-                                        <Descriptions.Item key={key} label={key}>{value}</Descriptions.Item>
-                                    ))}
-                                    </Descriptions>
+                                    <table className="w-full border rounded-lg overflow-hidden mb-4">
+                                        <thead>
+                                            <tr className="bg-gradient-to-r from-blue-100 to-purple-100">
+                                                <th className="py-2 px-4 text-left font-semibold text-blue-900 w-56">Thông số</th>
+                                                <th className="py-2 px-4 text-center font-semibold text-blue-900">Giá trị</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(product.specifications).map(([key, value]) => (
+                                                <tr key={key} className="border-b border-gray-100 hover:bg-blue-50 transition-colors">
+                                                    <td className="py-2 px-4 bg-gray-50 font-medium text-gray-700">{key}</td>
+                                                    <td className="py-2 px-4 text-center">{value}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 ) : <Text type="secondary">Không có thông số kỹ thuật.</Text>}
-                        </Col>
+                            </Col>
                             <Col span={12}>
                                 <Title level={5}>Tính năng nổi bật</Title>
                                 {product.features && product.features.length > 0 ? (
@@ -256,8 +267,8 @@ const ProductDetail: React.FC = () => {
                                         renderItem={item => <List.Item>- {item}</List.Item>}
                                     />
                                 ) : <Text type="secondary">Không có tính năng nổi bật.</Text>}
-                        </Col>
-                      </Row>
+                            </Col>
+                        </Row>
                     </Tabs.TabPane>
                     <Tabs.TabPane tab={`Biến thể (${product.variants?.length || 0})`} key="3">
                         <Table

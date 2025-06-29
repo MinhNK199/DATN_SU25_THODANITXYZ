@@ -29,6 +29,7 @@ import slugify from 'slugify';
 import { getCategories, getBrands, getProductById, updateProduct } from './api';
 import { Category } from '../../../interfaces/Category';
 import { Brand } from '../../../interfaces/Brand';
+import SpecificationEditor from './SpecificationEditor';
 
 const { TextArea } = Input;
 const { Panel } = Collapse;
@@ -95,10 +96,12 @@ const ProductEdit: React.FC = () => {
           getBrands()
         ]);
 
+        setSpecifications(productData.specifications || {});
         form.setFieldsValue({
           ...productData,
           category: productData.category?._id,
           brand: productData.brand?._id,
+          specifications: productData.specifications || {},
         });
 
         const imagesAsUploadFile = (productData.images || []).map((img, index) => ({
@@ -146,6 +149,7 @@ const ProductEdit: React.FC = () => {
         images: uploadedImageUrls,
         variants: variants,
         slug: slugify(values.name, { lower: true, strict: true }),
+        specifications: specifications || {},
       };
       await updateProduct(id, productData);
       message.success("Cập nhật sản phẩm thành công!");
@@ -286,6 +290,11 @@ const ProductEdit: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
+            </Card>
+
+            <Card className="shadow-lg rounded-xl mb-6">
+              <Title level={4}>Thông số kỹ thuật</Title>
+              <SpecificationEditor value={specifications} onChange={setSpecifications} />
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
