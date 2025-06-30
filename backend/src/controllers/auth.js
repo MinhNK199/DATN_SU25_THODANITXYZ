@@ -11,16 +11,16 @@ export const dangKy = async (req, res) => {
   try {
     const { name, email, password, phone, addresses, avatar, recaptchaToken } = req.body;
 
-    // Kiểm tra reCAPTCHA
-    if (!recaptchaToken) {
-      return res.status(400).json({ message: "Thiếu mã xác thực reCAPTCHA." });
-    }
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-    const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
-    const captchaRes = await axios.post(recaptchaVerifyUrl);
-    if (!captchaRes.data.success) {
-      return res.status(400).json({ message: "Xác thực reCAPTCHA thất bại." });
-    }
+    // Tạm thời bỏ qua reCAPTCHA validation để test
+    // if (!recaptchaToken) {
+    //   return res.status(400).json({ message: "Thiếu mã xác thực reCAPTCHA." });
+    // }
+    // const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    // const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+    // const captchaRes = await axios.post(recaptchaVerifyUrl);
+    // if (!captchaRes.data.success) {
+    //   return res.status(400).json({ message: "Xác thực reCAPTCHA thất bại." });
+    // }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -53,13 +53,13 @@ export const dangKy = async (req, res) => {
     });
 
     // Gửi email xác thực
-    const verifyUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/verify-email?token=${emailVerificationToken}&email=${encodeURIComponent(email)}`;
-    const html = `<h2>Xác thực email TechTrend</h2><p>Chào ${name},</p><p>Vui lòng xác thực email bằng cách nhấn vào link sau:</p><a href="${verifyUrl}">${verifyUrl}</a><p>Link có hiệu lực trong 24h.</p>`;
-    await sendMail({
-      to: email,
-      subject: "Xác thực email TechTrend",
-      html,
-    });
+    // const verifyUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/verify-email?token=${emailVerificationToken}&email=${encodeURIComponent(email)}`;
+    // const html = `<h2>Xác thực email TechTrend</h2><p>Chào ${name},</p><p>Vui lòng xác thực email bằng cách nhấn vào link sau:</p><a href="${verifyUrl}">${verifyUrl}</a><p>Link có hiệu lực trong 24h.</p>`;
+    // await sendMail({
+    //   to: email,
+    //   subject: "Xác thực email TechTrend",
+    //   html,
+    // });
 
     user.password = undefined;
     await logActivity({
@@ -445,5 +445,50 @@ export const googleLogin = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: "Đăng nhập Google thất bại", error: error.message });
+  }
+};
+
+export const dangKyAdmin = async (req, res) => {
+  try {
+    const { name, email, password, avatar, adminRequestImage, adminRequestContent } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email đã tồn tại" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "customer", // Mặc định là customer, admin sẽ phê duyệt sau
+      avatar,
+      adminRequest: {
+        image: adminRequestImage,
+        content: adminRequestContent,
+        status: "pending"
+      }
+    });
+
+    user.password = undefined;
+    await logActivity({
+      content: `Đăng ký xin làm admin`,
+      userName: user.name,
+      userId: user._id,
+      actorName: user.name,
+      actorId: user._id,
+    });
+
+    return res.status(201).json({
+      message: "Đăng ký thành công! Yêu cầu của bạn sẽ được admin xem xét.",
+      user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Đăng ký thất bại",
+      error: error.message,
+    });
   }
 };

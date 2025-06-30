@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import router from "./routes";
 import connectDB from "./config/database";
+import { setupCleanupCron } from "./utils/cleanupJob";
 
 dotenv.config();
 const app = express();
@@ -13,6 +14,9 @@ app.use(cors({
 }));
 app.use("/api", router);
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server Đã Được Chạy Ở Cổng ${process.env.PORT || 3000}🚀`);
+// Setup cleanup cron job
+setupCleanupCron();
+
+app.listen(process.env.PORT || 5000, () => {
+  console.log(`Server Đã Được Chạy Ở Cổng ${process.env.PORT || 5000}🚀`);
 });

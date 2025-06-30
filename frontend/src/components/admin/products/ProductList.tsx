@@ -16,6 +16,16 @@ const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 };
 
+const getTotalStock = (product: Product) => {
+    let total = product.stock || 0;
+    if (product.variants && product.variants.length > 0) {
+        for (const v of product.variants) {
+            total += v.stock || 0;
+        }
+    }
+    return total;
+};
+
 const ProductListPage: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [brands, setBrands] = useState<IBrand[]>([]);
@@ -159,11 +169,14 @@ const ProductListPage: React.FC = () => {
             key: 'stock',
             align: 'center',
             width: '12%',
-            render: (stock) => (
-                <Tag color={stock > 0 ? 'green' : 'red'}>
-                    {stock > 0 ? `Còn hàng (${stock})` : 'Hết hàng'}
-                </Tag>
-            ),
+            render: (_, record) => {
+                const totalStock = getTotalStock(record);
+                return (
+                    <Tag color={totalStock > 0 ? 'green' : 'red'}>
+                        {totalStock > 0 ? `Còn hàng (${totalStock})` : 'Hết hàng'}
+                    </Tag>
+                );
+            },
         },
         {
             title: 'Danh mục',

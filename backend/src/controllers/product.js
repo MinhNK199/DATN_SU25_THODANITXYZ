@@ -80,9 +80,19 @@ export const getProducts = async (req, res) => {
         const products = await Product.find(filter)
             .populate('category', 'name')
             .populate('brand', 'name')
+            .select('+variants') // Đảm bảo include variants field
             .sort({ [sort]: order === 'desc' ? -1 : 1 })
             .limit(pageSize)
             .skip(pageSize * (page - 1));
+
+        // Đảm bảo variants field luôn có trong response
+        const productsWithVariants = products.map(product => {
+            const productObj = product.toObject();
+            if (!productObj.hasOwnProperty('variants')) {
+                productObj.variants = [];
+            }
+            return productObj;
+        });
 
         // Tính toán các thống kê
         const stats = {
@@ -96,7 +106,7 @@ export const getProducts = async (req, res) => {
         };
 
         res.json({
-            products,
+            products: productsWithVariants,
             page,
             pages: Math.ceil(count / pageSize),
             total: count,
@@ -2308,5 +2318,53 @@ export const calculateOrderRewardPoints = async (orderId) => {
     } catch (error) {
         console.error("Error calculating order reward points:", error);
         throw error;
+    }
+};
+
+// Tổng sản phẩm gồm sản phẩm gốc (mỗi tên chỉ tính 1 lần) + tổng biến thể của tất cả sản phẩm trùng tên
+export const getTotalProductWithVariantsByName = async (req, res) => {
+    try {
+        // Lấy tất cả tên sản phẩm duy nhất
+        const uniqueNames = await Product.distinct('name');
+        let total = 0;
+        for (const name of uniqueNames) {
+            // Lấy tất cả sản phẩm trùng tên này
+            const products = await Product.find({ name });
+            // Tính tổng biến thể của tất cả sản phẩm trùng tên
+            let variantCount = 0;
+            for (const p of products) {
+                variantCount += (p.variants ? p.variants.length : 0);
+            }
+            // Cộng 1 sản phẩm gốc + tổng biến thể
+            total += 1 + variantCount;
+        }
+        res.json({ totalProductWithVariantsByName: total });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Tổng số lượng sản phẩm (gộp theo tên, gồm stock sản phẩm gốc và biến thể, mỗi tên chỉ tính 1 lần)
+export const getTotalProductQuantityByName = async (req, res) => {
+    try {
+        const uniqueNames = await Product.distinct('name');
+        let totalQuantity = 0;
+        for (const name of uniqueNames) {
+            // Lấy tất cả sản phẩm trùng tên này
+            const products = await Product.find({ name });
+            let nameQuantity = 0;
+            for (const p of products) {
+                nameQuantity += (p.stock || 0);
+                if (p.variants && p.variants.length > 0) {
+                    for (const v of p.variants) {
+                        nameQuantity += (v.stock || 0);
+                    }
+                }
+            }
+            totalQuantity += nameQuantity;
+        }
+        res.json({ totalProductQuantityByName: totalQuantity });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };

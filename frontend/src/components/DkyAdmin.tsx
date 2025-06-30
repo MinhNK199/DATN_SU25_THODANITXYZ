@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { FaUser, FaLock, FaImage, FaRegFileAlt, FaSignature } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { FaUser, FaLock, FaImage, FaRegFileAlt, FaSignature, FaHome, FaSignInAlt, FaUserPlus } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useToast } from "./client/ToastNotification";
 
 const RegisterAdmin = () => {
   const [form, setForm] = useState({
@@ -15,6 +16,9 @@ const RegisterAdmin = () => {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -24,9 +28,14 @@ const RegisterAdmin = () => {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setIsLoading(true);
 
     try {
       const res = await axios.post("http://localhost:5000/api/auth/register-admin", form);
+      
+      // Hiển thị toast thành công
+      showToast("Đăng ký thành công! Yêu cầu của bạn sẽ được admin xem xét.", "success");
+      
       setSuccess(res.data.message);
       setForm({
         name: "",
@@ -36,9 +45,29 @@ const RegisterAdmin = () => {
         adminRequestImage: "",
         adminRequestContent: "",
       });
+      
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng ký thất bại");
+      const errorMessage = err.response?.data?.message || "Đăng ký thất bại";
+      setError(errorMessage);
+      showToast(errorMessage, "error");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleNavigateHome = () => {
+    navigate("/");
+  };
+
+  const handleNavigateLogin = () => {
+    navigate("/login");
+  };
+
+  const handleNavigateRegister = () => {
+    navigate("/register");
   };
 
   return (
@@ -75,6 +104,7 @@ const RegisterAdmin = () => {
               required
               placeholder="Nhập họ tên"
               className="w-full outline-none"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -92,6 +122,7 @@ const RegisterAdmin = () => {
               required
               placeholder="@gmail.com"
               className="w-full outline-none"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -109,6 +140,7 @@ const RegisterAdmin = () => {
               required
               placeholder="Nhập mật khẩu"
               className="w-full outline-none"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -125,6 +157,7 @@ const RegisterAdmin = () => {
               onChange={handleChange}
               placeholder="https://..."
               className="w-full outline-none"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -141,6 +174,7 @@ const RegisterAdmin = () => {
               onChange={handleChange}
               placeholder="https://..."
               className="w-full outline-none"
+              disabled={isLoading}
             />
           </div>
         </div>
@@ -158,20 +192,50 @@ const RegisterAdmin = () => {
               className="w-full outline-none resize-none"
               rows={3}
               required
+              disabled={isLoading}
             ></textarea>
           </div>
         </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-semibold transition"
+          disabled={isLoading}
+          className={`w-full py-2 rounded-lg font-semibold transition ${
+            isLoading 
+              ? "bg-gray-400 cursor-not-allowed text-white" 
+              : "bg-blue-500 hover:bg-blue-600 text-white"
+          }`}
         >
-          Gửi yêu cầu đăng ký
+          {isLoading ? "Đang gửi yêu cầu..." : "Gửi yêu cầu đăng ký"}
         </button>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-4 space-x-2">
+          <button
+            type="button"
+            onClick={handleNavigateHome}
+            className="flex items-center justify-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex-1"
+          >
+            <FaHome className="mr-2" />
+            Trang chủ
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleNavigateLogin}
+            className="flex items-center justify-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition flex-1"
+          >
+            <FaSignInAlt className="mr-2" />
+            Đăng nhập
+          </button>
+        </div>
 
         <div className="flex justify-between mt-4 text-sm text-blue-700 font-medium">
           <Link to="/login" className="hover:underline">
             Đã có tài khoản?
+          </Link>
+          <Link to="/register" className="hover:underline">
+            Đăng ký thường
           </Link>
         </div>
       </form>

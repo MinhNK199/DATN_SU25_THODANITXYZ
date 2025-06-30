@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaFilter, FaSort, FaTh, FaList, FaStar, FaHeart, FaShoppingCart } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
+import axios from 'axios';
 
 const ProductList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -10,53 +11,64 @@ const ProductList: React.FC = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Thay mock data bằng state thực tế
+  // State cho bộ lọc
+  const [categories, setCategories] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterBrand, setFilterBrand] = useState('');
+  const [filterPriceRange, setFilterPriceRange] = useState([0, 50000000]);
+  const [filterInStock, setFilterInStock] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  // Fetch categories & brands từ API thực
   useEffect(() => {
+    axios.get('http://localhost:5000/api/category')
+      .then(res => setCategories(res.data))
+      .catch(() => setCategories([]));
+    axios.get('http://localhost:5000/api/brand')
+      .then(res => setBrands(res.data))
+      .catch(() => setBrands([]));
+  }, []);
+
+  // Hàm fetch sản phẩm theo filter
+  const fetchProducts = async (pageNum = 1) => {
     setLoading(true);
     setError(null);
-    // Xây dựng query string cho filter/sort nếu cần
-    let query = `/api/product?page=${page}`;
-    // Có thể bổ sung thêm filter/sort vào query ở đây
-    fetch(query)
-      .then(res => {
-        if (!res.ok) throw new Error('Lỗi khi fetch sản phẩm');
-        return res.json();
-      })
-      .then(data => {
-        setProducts(data.products || []);
-        setPage(data.page || 1);
-        setPages(data.pages || 1);
-        setTotal(data.total || 0);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
-      });
+    let url = `http://localhost:5000/api/product?page=${pageNum}`;
+    if (filterCategory) url += `&category=${filterCategory}`;
+    if (filterBrand) url += `&brand=${filterBrand}`;
+    if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
+    if (filterPriceRange[1]) url += `&maxPrice=${filterPriceRange[1]}`;
+    if (filterInStock) url += '&inStock=true';
+    try {
+      const res = await axios.get(url);
+      setProducts(res.data.products || []);
+      setPage(res.data.page || 1);
+      setPages(res.data.pages || 1);
+      setTotal(res.data.total || 0);
+    } catch (err: any) {
+      setError(err.message || 'Lỗi khi fetch sản phẩm');
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch sản phẩm lần đầu
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // Khi chuyển trang
+  useEffect(() => {
+    fetchProducts(page);
+    // eslint-disable-next-line
   }, [page]);
-
-  const categories = [
-    { id: 'mobile', name: 'Điện thoại', count: 156 },
-    { id: 'laptop', name: 'Laptop', count: 89 },
-    { id: 'tablets', name: 'Máy tính bảng', count: 67 },
-    { id: 'watches', name: 'Đồng hồ thông minh', count: 43 },
-    { id: 'accessories', name: 'Phụ kiện', count: 234 }
-  ];
-
-  const brands = [
-    { id: 'apple', name: 'Apple', count: 45 },
-    { id: 'samsung', name: 'Samsung', count: 38 },
-    { id: 'sony', name: 'Sony', count: 23 },
-    { id: 'huawei', name: 'Huawei', count: 19 },
-    { id: 'xiaomi', name: 'Xiaomi', count: 27 }
-  ];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -77,98 +89,81 @@ const ProductList: React.FC = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <div className={`lg:w-80 ${showFilters ? 'block' : 'hidden lg:block'}`}>
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">Bộ lọc</h2>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="lg:hidden text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Categories */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Danh mục</h3>
-                <div className="space-y-2">
-                  {categories.map((category) => (
-                    <label key={category.id} className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCategories.includes(category.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedCategories([...selectedCategories, category.id]);
-                          } else {
-                            setSelectedCategories(selectedCategories.filter(id => id !== category.id));
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700">{category.name}</span>
-                      <span className="text-gray-500 text-sm">({category.count})</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Brands */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Thương hiệu</h3>
-                <div className="space-y-2">
-                  {brands.map((brand) => (
-                    <label key={brand.id} className="flex items-center space-x-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedBrands.includes(brand.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedBrands([...selectedBrands, brand.id]);
-                          } else {
-                            setSelectedBrands(selectedBrands.filter(id => id !== brand.id));
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-gray-700">{brand.name}</span>
-                      <span className="text-gray-500 text-sm">({brand.count})</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Range */}
-              <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Khoảng giá</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-4">
-                    <input
-                      type="number"
-                      placeholder="Tối thiểu"
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <span className="text-gray-500">-</span>
-                    <input
-                      type="number"
-                      placeholder="Tối đa"
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
-                    Áp dụng
-                  </button>
-                </div>
-              </div>
-
-              {/* Clear Filters */}
-              <button className="w-full text-gray-600 hover:text-gray-800 transition-colors">
-                Xóa tất cả bộ lọc
-              </button>
+          {/* Sidebar Bộ lọc hiện đại */}
+          <aside className="lg:w-72 w-full bg-white rounded-2xl shadow-lg p-6 mb-8 lg:mb-0 flex-shrink-0">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Bộ lọc sản phẩm</h2>
+            {/* Danh mục (dropdown) */}
+            <div className="mb-6">
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Danh mục</h3>
+              <select
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                value={filterCategory}
+                onChange={e => setFilterCategory(e.target.value)}
+              >
+                <option value="">Tất cả danh mục</option>
+                {categories.map((cat: any) => (
+                  <option key={cat._id} value={cat.slug}>{cat.name}</option>
+                ))}
+              </select>
             </div>
-          </div>
+            {/* Thương hiệu (dropdown) */}
+            <div className="mb-6">
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Thương hiệu</h3>
+              <select
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                value={filterBrand}
+                onChange={e => setFilterBrand(e.target.value)}
+              >
+                <option value="">Tất cả thương hiệu</option>
+                {brands.map((brand: any) => (
+                  <option key={brand._id} value={brand.slug}>{brand.name}</option>
+                ))}
+              </select>
+            </div>
+            {/* Giá */}
+            <div className="mb-6">
+              <h3 className="text-base font-semibold text-gray-700 mb-2">Khoảng giá</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={filterPriceRange[1]}
+                  value={filterPriceRange[0]}
+                  onChange={e => setFilterPriceRange([Number(e.target.value), filterPriceRange[1]])}
+                  className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="Từ"
+                />
+                <span>-</span>
+                <input
+                  type="number"
+                  min={filterPriceRange[0]}
+                  value={filterPriceRange[1]}
+                  onChange={e => setFilterPriceRange([filterPriceRange[0], Number(e.target.value)])}
+                  className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  placeholder="Đến"
+                />
+              </div>
+            </div>
+            {/* Trạng thái kho */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={filterInStock}
+                  onChange={e => setFilterInStock(e.target.checked)}
+                  className="form-checkbox h-4 w-4 text-blue-600"
+                />
+                <span className="text-gray-700 text-sm">Chỉ hiển thị còn hàng</span>
+              </label>
+            </div>
+            {/* Nút lọc */}
+            <button
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors mb-4"
+              onClick={() => fetchProducts(1)}
+            >
+              Lọc
+            </button>
+          </aside>
 
           {/* Products Section */}
           <div className="flex-1">
@@ -240,7 +235,7 @@ const ProductList: React.FC = () => {
                 {products.map((product) => {
                   // Map dữ liệu từ API sang props ProductCard
                   const mappedProduct = {
-                    id: product._id || product.id,
+                    _id: product._id || product.id,
                     name: product.name,
                     price: product.salePrice || product.price,
                     originalPrice: product.salePrice ? product.price : undefined,
@@ -251,8 +246,10 @@ const ProductList: React.FC = () => {
                     discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
                     isNew: product.isFeatured || false,
                     isHot: product.isActive || false,
+                    stock: product.stock || 0,
+                    variants: product.variants || [],
                   };
-                  return <ProductCard key={mappedProduct.id} product={mappedProduct} />;
+                  return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
                 })}
               </div>
             )}

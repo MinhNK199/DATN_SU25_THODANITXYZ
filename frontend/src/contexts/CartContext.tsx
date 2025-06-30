@@ -1,68 +1,72 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import { useToast } from '../components/client/ToastContainer';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  brand?: string;
-  color?: string;
-  size?: string;
-}
+import toast from 'react-hot-toast';
+import cartApi, { Cart, CartItem } from '../services/cartApi';
 
 interface CartState {
   items: CartItem[];
   total: number;
   itemCount: number;
+  loading: boolean;
+  error: string | null;
 }
 
 type CartAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'LOAD_CART'; payload: Cart }
   | { type: 'ADD_ITEM'; payload: CartItem }
   | { type: 'REMOVE_ITEM'; payload: string }
-  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
-  | { type: 'CLEAR_CART' }
-  | { type: 'LOAD_CART'; payload: CartItem[] };
+  | { type: 'UPDATE_QUANTITY'; payload: { productId: string; quantity: number } }
+  | { type: 'CLEAR_CART' };
 
 const CartContext = createContext<{
   state: CartState;
-  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
-  removeFromCart: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
-  isInCart: (id: string) => boolean;
+  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  removeFromCart: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
+  isInCart: (productId: string) => boolean;
+  loadCart: () => Promise<void>;
 } | null>(null);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload };
+    case 'LOAD_CART':
+      return {
+        ...state,
+        items: action.payload.items || [],
+        total: action.payload.totalPrice || 0,
+        itemCount: action.payload.totalItems || 0,
+        loading: false,
+        error: null
+      };
     case 'ADD_ITEM': {
-      const existingItem = state.items.find(item => item.id === action.payload.id);
-      if (existingItem) {
-        const updatedItems = state.items.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: item.quantity + 1 }
+      const existingItemIndex = state.items.findIndex(item => item.product._id === action.payload.product._id);
+      let updatedItems;
+      
+      if (existingItemIndex > -1) {
+        updatedItems = state.items.map((item, index) =>
+          index === existingItemIndex
+            ? { ...item, quantity: item.quantity + action.payload.quantity }
             : item
         );
-        return {
-          ...state,
-          items: updatedItems,
-          total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-          itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
-        };
       } else {
-        const newItem = { ...action.payload, quantity: 1 };
-        const updatedItems = [...state.items, newItem];
-        return {
-          ...state,
-          items: updatedItems,
-          total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-          itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
-        };
+        updatedItems = [...state.items, action.payload];
       }
+      
+      return {
+        ...state,
+        items: updatedItems,
+        total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+      };
     }
     case 'REMOVE_ITEM': {
-      const updatedItems = state.items.filter(item => item.id !== action.payload);
+      const updatedItems = state.items.filter(item => item.product._id !== action.payload);
       return {
         ...state,
         items: updatedItems,
@@ -72,7 +76,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
     case 'UPDATE_QUANTITY': {
       const updatedItems = state.items.map(item =>
-        item.id === action.payload.id
+        item.product._id === action.payload.productId
           ? { ...item, quantity: Math.max(1, action.payload.quantity) }
           : item
       );
@@ -90,13 +94,6 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         total: 0,
         itemCount: 0
       };
-    case 'LOAD_CART':
-      return {
-        ...state,
-        items: action.payload,
-        total: action.payload.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        itemCount: action.payload.reduce((sum, item) => sum + item.quantity, 0)
-      };
     default:
       return state;
   }
@@ -106,73 +103,163 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     total: 0,
-    itemCount: 0
+    itemCount: 0,
+    loading: false,
+    error: null
   });
 
-  const { showSuccess, showInfo } = useToast();
+  // Load cart from backend on mount
+  const loadCart = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Nếu chưa đăng nhập, load từ localStorage
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        try {
+          const cartItems = JSON.parse(savedCart);
+          dispatch({ type: 'LOAD_CART', payload: { items: cartItems, totalPrice: 0, totalItems: 0 } });
+        } catch (error) {
+          console.error('Error loading cart from localStorage:', error);
+        }
+      }
+      return;
+    }
 
-  // Load cart from localStorage on mount
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const cart = await cartApi.getCart();
+      dispatch({ type: 'LOAD_CART', payload: cart });
+    } catch (error: any) {
+      console.error('Error loading cart:', error);
+      dispatch({ type: 'SET_ERROR', payload: error.message });
+      
+      // Fallback to localStorage if API fails
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart) {
+        try {
+          const cartItems = JSON.parse(savedCart);
+          dispatch({ type: 'LOAD_CART', payload: { items: cartItems, totalPrice: 0, totalItems: 0 } });
+        } catch (localError) {
+          console.error('Error loading cart from localStorage:', localError);
+        }
+      }
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, []);
+
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
+    loadCart();
+  }, [loadCart]);
+
+  const addToCart = useCallback(async (productId: string, quantity: number = 1) => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      // Nếu chưa đăng nhập, lưu vào localStorage
+      toast.error('Vui lòng đăng nhập để thêm vào giỏ hàng');
+      return;
+    }
+
+    // Kiểm tra role của user
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
       try {
-        const cartItems = JSON.parse(savedCart);
-        dispatch({ type: 'LOAD_CART', payload: cartItems });
+        const user = JSON.parse(userStr);
+        if (user.role !== 'customer') {
+          toast.error('Chỉ khách hàng mới được thêm sản phẩm vào giỏ hàng');
+          return;
+        }
       } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+        console.error('Error parsing user data:', error);
+        toast.error('Lỗi xác thực người dùng');
+        return;
       }
     }
+
+    try {
+      const cart = await cartApi.addToCart(productId, quantity);
+      dispatch({ type: 'LOAD_CART', payload: cart });
+      
+      const product = cart.items.find(item => item.product._id === productId);
+      if (product) {
+        toast.success(`Đã thêm "${product.product.name}" vào giỏ hàng`);
+      }
+    } catch (error: any) {
+      console.error('Error adding to cart:', error);
+      toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
+    }
   }, []);
 
-  // Save cart to localStorage with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      localStorage.setItem('cart', JSON.stringify(state.items));
-    }, 500); // 500ms debounce
+  const removeFromCart = useCallback(async (itemId: string) => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
+      return;
+    }
 
-    return () => clearTimeout(timeoutId);
+    // Tìm item trong cart để lấy productId
+    const item = state.items.find(item => item._id === itemId);
+    if (!item) {
+      toast.error('Không tìm thấy sản phẩm trong giỏ hàng');
+      return;
+    }
+
+    try {
+      const cart = await cartApi.removeFromCart(item.product._id);
+      dispatch({ type: 'LOAD_CART', payload: cart });
+      toast.success('Đã xóa sản phẩm khỏi giỏ hàng');
+    } catch (error: any) {
+      console.error('Error removing from cart:', error);
+      toast.error(error.response?.data?.message || 'Không thể xóa sản phẩm');
+    }
   }, [state.items]);
 
-  const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
-    dispatch({ type: 'ADD_ITEM', payload: { ...item, quantity: 1 } });
+  const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
+    const token = localStorage.getItem('token');
     
-    const existingItem = state.items.find(cartItem => cartItem.id === item.id);
-    if (existingItem) {
-      showInfo(
-        'Đã cập nhật giỏ hàng',
-        `Số lượng "${item.name}" đã được tăng lên ${existingItem.quantity + 1}`
-      );
-    } else {
-      showSuccess(
-        'Đã thêm vào giỏ hàng',
-        `"${item.name}" đã được thêm vào giỏ hàng thành công!`
-      );
+    if (!token) {
+      toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
+      return;
     }
-  }, [state.items, showSuccess, showInfo]);
 
-  const removeFromCart = useCallback((id: string) => {
-    const item = state.items.find(item => item.id === id);
-    dispatch({ type: 'REMOVE_ITEM', payload: id });
+    // Tìm item trong cart để lấy productId
+    const item = state.items.find(item => item._id === itemId);
+    if (!item) {
+      toast.error('Không tìm thấy sản phẩm trong giỏ hàng');
+      return;
+    }
+
+    try {
+      const cart = await cartApi.updateCartItem(item.product._id, quantity);
+      dispatch({ type: 'LOAD_CART', payload: cart });
+    } catch (error: any) {
+      console.error('Error updating cart:', error);
+      toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng');
+    }
+  }, [state.items]);
+
+  const clearCart = useCallback(async () => {
+    const token = localStorage.getItem('token');
     
-    if (item) {
-      showInfo(
-        'Đã xóa khỏi giỏ hàng',
-        `"${item.name}" đã được xóa khỏi giỏ hàng`
-      );
+    if (!token) {
+      toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
+      return;
     }
-  }, [state.items, showInfo]);
 
-  const updateQuantity = useCallback((id: string, quantity: number) => {
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
+    try {
+      await cartApi.clearCart();
+      dispatch({ type: 'CLEAR_CART' });
+      toast.success('Đã xóa toàn bộ giỏ hàng');
+    } catch (error: any) {
+      console.error('Error clearing cart:', error);
+      toast.error(error.response?.data?.message || 'Không thể xóa giỏ hàng');
+    }
   }, []);
 
-  const clearCart = useCallback(() => {
-    dispatch({ type: 'CLEAR_CART' });
-    showInfo('Đã xóa giỏ hàng', 'Tất cả sản phẩm đã được xóa khỏi giỏ hàng');
-  }, [showInfo]);
-
-  const isInCart = useCallback((id: string) => {
-    return state.items.some(item => item.id === id);
+  const isInCart = useCallback((productId: string) => {
+    return state.items.some(item => item.product._id === productId);
   }, [state.items]);
 
   const value = {
@@ -181,7 +268,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removeFromCart,
     updateQuantity,
     clearCart,
-    isInCart
+    isInCart,
+    loadCart
   };
 
   return (

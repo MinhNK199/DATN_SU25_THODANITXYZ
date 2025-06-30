@@ -138,3 +138,55 @@ export const updateOrderStatus = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
+
+// Thống kê doanh thu theo ngày và tháng
+export const getRevenueStats = async (req, res) => {
+    try {
+        // Doanh thu theo ngày (30 ngày gần nhất)
+        const daily = await Order.aggregate([
+            {
+                $match: { isPaid: true }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" },
+                        day: { $dayOfMonth: "$createdAt" }
+                    },
+                    totalRevenue: { $sum: "$totalPrice" },
+                    orderCount: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { "_id.year": -1, "_id.month": -1, "_id.day": -1 }
+            },
+            { $limit: 30 }
+        ]);
+
+        // Doanh thu theo tháng (12 tháng gần nhất)
+        const monthly = await Order.aggregate([
+            {
+                $match: { isPaid: true }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$createdAt" },
+                        month: { $month: "$createdAt" }
+                    },
+                    totalRevenue: { $sum: "$totalPrice" },
+                    orderCount: { $sum: 1 }
+                }
+            },
+            {
+                $sort: { "_id.year": -1, "_id.month": -1 }
+            },
+            { $limit: 12 }
+        ]);
+
+        res.json({ daily, monthly });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

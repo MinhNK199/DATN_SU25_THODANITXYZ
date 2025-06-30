@@ -1,7 +1,7 @@
 import express from "express";
 import { validateRequestJoi } from "../middlewares/validateRequest";
 import { loginSchema, registerSchema } from "../validation/user";
-import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole } from "../controllers/auth";
+import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole, dangKyAdmin } from "../controllers/auth";
 import { checkAdmin, protect } from "../middlewares/authMiddleware";
 import { getActivityLogs } from "../utils/activityLog";
 import { verifyEmail } from "../controllers/auth";
@@ -9,6 +9,7 @@ import { googleLogin } from "../controllers/auth";
 
 const routerAuth = express.Router();
 routerAuth.post("/register", validateRequestJoi(registerSchema), dangKy);
+routerAuth.post("/register-admin", dangKyAdmin);
 routerAuth.post("/login", validateRequestJoi(loginSchema), dangNhap);
 routerAuth.post("/verify-email", verifyEmail);
 routerAuth.post("/google", googleLogin);

@@ -6,14 +6,16 @@ import {
     updateOrderToDelivered,
     getMyOrders,
     getOrders,
-    updateOrderStatus
+    updateOrderStatus,
+    getRevenueStats
 } from "../controllers/order";
 import { protect } from "../middlewares/authMiddleware";
 
 const routerOrder = express.Router();
 
 routerOrder.post("/", protect, createOrder);
-routerOrder.get("/my", protect, getMyOrders);
+routerOrder.get("/myorders", protect, getMyOrders);
+routerOrder.get("/admin/revenue-stats", protect, getRevenueStats);
 routerOrder.get("/", protect, getOrders);
 routerOrder.get("/:id", protect, getOrderById);
 routerOrder.put("/:id/pay", protect, updateOrderToPaid);

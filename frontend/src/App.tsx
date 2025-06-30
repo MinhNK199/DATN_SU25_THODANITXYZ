@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
 import ClientLayout from './layout/ClientLayout';
@@ -28,9 +27,11 @@ import BannerEdit from "./components/admin/Banner/BannerEdit";
 import Activity from "./components/admin/activity/activity";
 import RatingList from "./components/admin/rating/ratinglist";
 import Dashboard from "./components/admin/dashboard";
+import VariantList from "./components/admin/variants/VariantList";
+import VariantAdd from "./components/admin/variants/VariantAdd";
+import VariantEdit from "./components/admin/variants/VariantEdit";
 import { Toaster } from "react-hot-toast";
 import Cart from './pages/client/Cart';
-import LoginClient from './pages/client/Login';
 import Profile from './pages/client/Profile';
 import ProductListClient from './pages/client/ProductList';
 import ProductDetailClient from './pages/client/ProductDetail';
@@ -40,21 +41,28 @@ import FAQ from './pages/client/FAQ';
 import Checkout from './pages/client/Checkout';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
-import { ToastContainer } from './components/client/ToastNotification';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
 import ScrollToTop from './components/ScrollToTop';
+import TestAPI from './components/client/TestAPI';
+import TestLogin from './components/client/TestLogin';
+import TestProductAPI from './components/client/TestProductAPI';
 
 function App() {
   return (
-    <CartProvider>
-      <WishlistProvider>
-        <div className="App">
+    <div className="App">
+      <CartProvider>
+        <WishlistProvider>
           <ScrollToTop />
           <Routes>
+            {/* Test routes */}
+            <Route path="/test-api" element={<TestAPI />} />
+            <Route path="/test-login" element={<TestLogin />} />
+            <Route path="/test-product-api" element={<TestProductAPI />} />
+            
             {/* Auth routes */}
-            <Route path="/admin/login" element={<Login />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin-dky" element={<RegisterAdmin />} />
 
@@ -65,7 +73,6 @@ function App() {
               <Route path="product/:id" element={<ProductDetailClient />} />
               <Route path="cart" element={<Cart />} />
               <Route path="checkout" element={<Checkout />} />
-              <Route path="login" element={<LoginClient />} />
               <Route path="profile" element={<Profile />} />
               <Route path="about" element={<About />} />
               <Route path="contact" element={<Contact />} />
@@ -88,6 +95,9 @@ function App() {
               <Route path="products/add" element={<ProductAdd />} />
               <Route path="products/detail/:id" element={<ProductDetail />} />
               <Route path="products/edit/:id" element={<ProductEdit />} />
+              <Route path="variants" element={<VariantList />} />
+              <Route path="variants/add" element={<VariantAdd />} />
+              <Route path="variants/edit/:id" element={<VariantEdit />} />
               <Route path="categories" element={<CategoryList />} />
               <Route path="categories/add" element={<CategoryAdd />} />
               <Route path="categories/edit/:id" element={<CategoryEdit />} />
@@ -104,11 +114,10 @@ function App() {
           
           {/* Global Components */}
           <PromotionBanner />
-          <ToastContainer />
           <Toaster />
-        </div>
-      </WishlistProvider>
-    </CartProvider>
+        </WishlistProvider>
+      </CartProvider>
+    </div>
   );
 }
 

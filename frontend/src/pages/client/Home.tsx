@@ -164,7 +164,7 @@ const Home: React.FC = () => {
               featuredProducts.map((product: any) => {
                 // Map dữ liệu sang props ProductCard
                 const mappedProduct = {
-                  id: product._id || product.id,
+                  _id: product._id || product.id,
                   name: product.name,
                   price: product.salePrice || product.price,
                   originalPrice: product.salePrice ? product.price : undefined,
@@ -175,8 +175,9 @@ const Home: React.FC = () => {
                   discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
                   isNew: product.isFeatured || false,
                   isHot: product.isActive || false,
+                  stock: product.stock || 0,
                 };
-                return <ProductCard key={mappedProduct.id} product={mappedProduct} />;
+                return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
               })
             )}
           </div>

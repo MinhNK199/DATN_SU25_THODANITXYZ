@@ -120,7 +120,7 @@ const ToastNotification: React.FC<ToastNotificationProps> = ({ toast, onRemove }
   );
 };
 
-export const ToastContainer: React.FC = () => {
+export const ToastContainer: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastProps[]>([]);
 
   const addToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
@@ -146,6 +146,7 @@ export const ToastContainer: React.FC = () => {
 
   return (
     <ToastContext.Provider value={contextValue}>
+      {children}
       <div className="fixed top-4 right-4 z-50 space-y-2">
         {toasts.map((toast) => (
           <ToastNotification

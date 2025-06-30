@@ -10,8 +10,13 @@ import {
   FaImage,
   FaHistory,
   FaStar,
+  FaCubes,
+  FaChartBar,
+  FaCog,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
+
+const iconClass = "text-[20px] min-w-[24px]";
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
@@ -19,150 +24,203 @@ const AdminSidebar = () => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   const handleLogout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user"); // Xoá thông tin người dùng
-  toast.success("Đăng xuất thành công!");
-  navigate("/");
-};
-
-
-  const navItem = (label: string, icon: JSX.Element, path: string) => {
-    const isActive = location.pathname.includes(path);
-    return (
-      <button
-        onClick={() => navigate(path)}
-        className={`flex items-center gap-4 w-full px-4 py-3 text-base rounded-xl transition
-          ${
-            isActive
-              ? "bg-blue-50 text-blue-600 font-semibold"
-              : "text-gray-600 hover:bg-gray-100"
-          }`}
-      >
-        <span className="text-lg">{icon}</span>
-        {label}
-      </button>
-    );
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("userRole");
+    toast.success("Đăng xuất thành công!");
+    navigate("/login");
   };
 
   return (
-    <div className="w-64 h-screen bg-white border-r border-gray-200 p-5">
+    <div className="w-64 min-w-[256px] h-screen bg-white border-r border-gray-200 p-5 overflow-y-auto">
+      {/* Logo */}
       <div className="text-center text-3xl font-extrabold tracking-wide mb-8 uppercase text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-500 filter drop-shadow-[4px_4px_6px_rgba(0,0,0,0.5)]">
         TECHTREND
       </div>
 
-      <div className="space-y-2 text-[17px] font-medium text-gray-800">
+      {/* User Info */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+            {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">{user?.name || 'Admin'}</p>
+            <p className="text-sm text-gray-600 capitalize">{user?.role || 'admin'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="space-y-2">
+        {/* Dashboard */}
+        <button
+          onClick={() => navigate("/admin")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname === "/admin"
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaChartBar className={iconClass} />
+          <span className="truncate">Dashboard</span>
+        </button>
+
+        {/* Products */}
         <button
           onClick={() => navigate("/admin/products")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
           ${
             location.pathname.includes("/admin/products")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
           }`}
         >
-          <FaBox className="text-[20px]" />
-          Sản phẩm
+          <FaBox className={iconClass} />
+          <span className="truncate">Sản phẩm</span>
         </button>
 
+        {/* Variants */}
+        <button
+          onClick={() => navigate("/admin/variants")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/variants")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaCubes className={iconClass} />
+          <span className="truncate">Biến thể</span>
+        </button>
+
+        {/* Categories */}
         <button
           onClick={() => navigate("/admin/categories")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
           ${
             location.pathname.includes("/admin/categories")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
           }`}
         >
-          <FaList className="text-[20px]" />
-          Danh mục
+          <FaList className={iconClass} />
+          <span className="truncate">Danh mục</span>
         </button>
 
-        <button
-          onClick={() => navigate("/admin/banners")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
-          ${
-            location.pathname.includes("/admin/banners")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
-          }`}
-        >
-          <FaImage className="text-[20px]" />
-          Banner
-        </button>
-
-        <button
-          onClick={() => navigate("/admin/users")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
-          ${
-            location.pathname.includes("/admin/users")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
-          }`}
-        >
-          <FaUser className="text-[20px]" />
-          Người dùng
-        </button>
-
-        <button
-          onClick={() => navigate("/admin/bills")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
-          ${
-            location.pathname.includes("/admin/bills")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
-          }`}
-        >
-          <FaFileInvoiceDollar className="text-[20px]" />
-          Hóa đơn
-        </button>
-
+        {/* Brands */}
         <button
           onClick={() => navigate("/admin/brands")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
           ${
             location.pathname.includes("/admin/brands")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
           }`}
         >
-          <FaTrademark className="text-[20px]" />
-          Thương hiệu
+          <FaTrademark className={iconClass} />
+          <span className="truncate">Thương hiệu</span>
         </button>
 
+        {/* Banners */}
+        <button
+          onClick={() => navigate("/admin/banners")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/banners")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaImage className={iconClass} />
+          <span className="truncate">Banner</span>
+        </button>
+
+        {/* Users */}
+        <button
+          onClick={() => navigate("/admin/users")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/users")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaUser className={iconClass} />
+          <span className="truncate">Người dùng</span>
+        </button>
+
+        {/* Bills */}
+        <button
+          onClick={() => navigate("/admin/bills")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/bills")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaFileInvoiceDollar className={iconClass} />
+          <span className="truncate">Hóa đơn</span>
+        </button>
+
+        {/* Ratings */}
         <button
           onClick={() => navigate("/admin/ratings")}
-          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
           ${
             location.pathname.includes("/admin/ratings")
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
           }`}
         >
-          <FaStar className="text-[20px]" />
-          Đánh giá
+          <FaStar className={iconClass} />
+          <span className="truncate">Đánh giá</span>
         </button>
 
+        {/* Activities - Superadmin only */}
         {user?.role === "superadmin" && (
           <button
             onClick={() => navigate("/admin/activities")}
-            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition 
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
             ${
               location.pathname.includes("/admin/activities")
-                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-                : "hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white"
+                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+                : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
             }`}
           >
-            <FaHistory className="text-[20px]" />
-            Nhật Ký
+            <FaHistory className={iconClass} />
+            <span className="truncate">Nhật Ký</span>
           </button>
         )}
 
+        {/* Settings - Superadmin only */}
+        {user?.role === "superadmin" && (
+          <button
+            onClick={() => navigate("/admin/settings")}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+            ${
+              location.pathname.includes("/admin/settings")
+                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+                : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+            }`}
+          >
+            <FaCog className={iconClass} />
+            <span className="truncate">Cài đặt</span>
+          </button>
+        )}
+
+        {/* Divider */}
+        <div className="border-t border-gray-200 my-4"></div>
+
+        {/* Logout */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 transition hover:text-white hover:bg-gradient-to-r hover:from-purple-400 hover:to-red-500"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-600 transition-all duration-200 hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white hover:shadow-md"
         >
-          <FaSignOutAlt className="text-[20px]" />
-          Đăng xuất
+          <FaSignOutAlt className={iconClass} />
+          <span className="truncate">Đăng xuất</span>
         </button>
       </div>
     </div>

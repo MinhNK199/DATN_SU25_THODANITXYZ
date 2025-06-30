@@ -1,19 +1,154 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes, FaPhone, FaEnvelope, FaMapMarkerAlt, FaChevronDown } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import SearchBar from './SearchBar';
+import axios from 'axios';
+import { toast } from 'react-hot-toast';
+
+interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  parent?: string | Category;
+  isActive: boolean;
+}
+
+interface Brand {
+  _id: string;
+  name: string;
+  description?: string;
+  logo?: string;
+  isActive: boolean;
+}
 
 const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showMiniCart, setShowMiniCart] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [isLoadingBrands, setIsLoadingBrands] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const miniCartRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
-  const { state: cartState } = useCart();
+  const { state: cartState, loadCart } = useCart();
   const { state: wishlistState } = useWishlist();
+
+  // Check login status
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    
+    setIsLoggedIn(!!token);
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserRole(user.role);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        setUserRole(null);
+      }
+    } else {
+      setUserRole(null);
+    }
+    
+    if (token) {
+      loadCart();
+    }
+  }, [loadCart]);
+
+  // Listen for login/logout events
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      
+      setIsLoggedIn(!!token);
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          setUserRole(user.role);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+      
+      if (token) {
+        loadCart();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [loadCart]);
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        console.log('Fetching categories...');
+        const response = await axios.get('http://localhost:5000/api/category');
+        console.log('Categories response:', response.data);
+        const activeCategories = response.data.filter((cat: Category) => cat.isActive);
+        console.log('Active categories:', activeCategories);
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        // Fallback to default categories if API fails
+        setCategories([
+          { _id: '1', name: 'Điện thoại', slug: 'mobile', isActive: true },
+          { _id: '2', name: 'Laptop', slug: 'laptop', isActive: true },
+          { _id: '3', name: 'Máy tính bảng', slug: 'tablets', isActive: true },
+          { _id: '4', name: 'Đồng hồ thông minh', slug: 'watches', isActive: true },
+          { _id: '5', name: 'Phụ kiện', slug: 'accessories', isActive: true }
+        ]);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Fetch brands
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        console.log('Fetching brands...');
+        const response = await axios.get('http://localhost:5000/api/brand');
+        console.log('Brands response:', response.data);
+        const activeBrands = response.data.filter((brand: Brand) => brand.isActive);
+        console.log('Active brands:', activeBrands);
+        setBrands(activeBrands);
+      } catch (error) {
+        console.error('Error fetching brands:', error);
+        // Fallback to default brands if API fails
+        setBrands([
+          { _id: '1', name: 'Apple', isActive: true },
+          { _id: '2', name: 'Samsung', isActive: true },
+          { _id: '3', name: 'Sony', isActive: true },
+          { _id: '4', name: 'Huawei', isActive: true },
+          { _id: '5', name: 'Xiaomi', isActive: true }
+        ]);
+      } finally {
+        setIsLoadingBrands(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -34,21 +169,22 @@ const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showMiniCart]);
 
-  const categories = [
-    { name: 'Điện thoại', href: '/products?category=mobile' },
-    { name: 'Laptop', href: '/products?category=laptop' },
-    { name: 'Máy tính bảng', href: '/products?category=tablets' },
-    { name: 'Đồng hồ thông minh', href: '/products?category=watches' },
-    { name: 'Phụ kiện', href: '/products?category=accessories' }
-  ];
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price);
+  };
 
-  const brands = [
-    { name: 'Apple', href: '/products?brand=apple' },
-    { name: 'Samsung', href: '/products?brand=samsung' },
-    { name: 'Sony', href: '/products?brand=sony' },
-    { name: 'Huawei', href: '/products?brand=huawei' },
-    { name: 'Xiaomi', href: '/products?brand=xiaomi' }
-  ];
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
+    setIsLoggedIn(false);
+    setUserRole(null);
+    toast.success('Đăng xuất thành công');
+    navigate('/login');
+  };
 
   return (
     <>
@@ -111,17 +247,21 @@ const Header: React.FC = () => {
                 <div className="absolute top-full left-0 mt-2 w-64 bg-white shadow-xl rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-3">Mua sắm theo danh mục</h3>
+                    {isLoadingCategories ? (
+                      <div className="text-gray-500 text-sm">Đang tải...</div>
+                    ) : (
                     <div className="space-y-2">
                       {categories.map((category) => (
                         <Link
-                          key={category.name}
-                          to={category.href}
+                            key={category._id}
+                            to={`/products?category=${category.slug}`}
                           className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
                         >
                           {category.name}
                         </Link>
                       ))}
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -135,17 +275,21 @@ const Header: React.FC = () => {
                 <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-3">Thương hiệu nổi bật</h3>
+                    {isLoadingBrands ? (
+                      <div className="text-gray-500 text-sm">Đang tải...</div>
+                    ) : (
                     <div className="space-y-2">
                       {brands.map((brand) => (
                         <Link
-                          key={brand.name}
-                          to={brand.href}
+                            key={brand._id}
+                            to={`/products?brand=${brand.name.toLowerCase()}`}
                           className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
                         >
                           {brand.name}
                         </Link>
                       ))}
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -226,6 +370,7 @@ const Header: React.FC = () => {
               </Link>
 
               {/* Cart with mini cart */}
+              {userRole === 'customer' && (
               <div
                 className="relative group"
                 onMouseEnter={() => setShowMiniCart(true)}
@@ -246,7 +391,24 @@ const Header: React.FC = () => {
                   style={{ minWidth: 320 }}
                 >
                   <h3 className="font-bold text-lg mb-3 text-gray-900">Giỏ hàng</h3>
-                  {cartState.items.length === 0 ? (
+                    
+                    {!isLoggedIn ? (
+                      <div className="text-center text-gray-500 py-8">
+                        <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
+                        <p className="mb-4">Vui lòng đăng nhập để xem giỏ hàng</p>
+                        <Link 
+                          to="/login"
+                          className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Đăng nhập
+                        </Link>
+                      </div>
+                    ) : cartState.loading ? (
+                      <div className="text-center text-gray-500 py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p>Đang tải giỏ hàng...</p>
+                      </div>
+                    ) : cartState.items.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">
                       <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
                       Giỏ hàng của bạn trống
@@ -255,13 +417,13 @@ const Header: React.FC = () => {
                     <>
                       <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 mb-3">
                         {cartState.items.slice(0, 2).map(item => (
-                          <div key={item.id} className="flex items-center py-2 gap-3">
-                            <img src={item.image} alt={item.name} className="w-14 h-14 object-contain rounded-lg border" />
+                            <div key={item._id} className="flex items-center py-2 gap-3">
+                              <img src={item.product.images && item.product.images[0] ? item.product.images[0] : '/placeholder-image.jpg'} alt={item.product.name} className="w-14 h-14 object-contain rounded-lg border" />
                             <div className="flex-1">
-                              <div className="font-medium text-gray-900 line-clamp-1">{item.name}</div>
+                                <div className="font-medium text-gray-900 line-clamp-1">{item.product.name}</div>
                               <div className="text-sm text-gray-500">Số lượng: {item.quantity}</div>
                             </div>
-                            <div className="font-semibold text-blue-600 whitespace-nowrap">{item.price.toLocaleString('vi-VN')}₫</div>
+                              <div className="font-semibold text-blue-600 whitespace-nowrap">{formatPrice(item.product.salePrice || item.product.price)}</div>
                           </div>
                         ))}
                         {cartState.items.length > 2 && (
@@ -271,7 +433,7 @@ const Header: React.FC = () => {
                       <div className="flex justify-between items-center font-semibold text-gray-900 mb-3">
                         <span>Tổng cộng:</span>
                         <span className="text-blue-600 text-lg">
-                          {cartState.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toLocaleString('vi-VN')}₫
+                            {formatPrice(cartState.total)}
                         </span>
                       </div>
                       <div className="flex gap-2">
@@ -282,6 +444,25 @@ const Header: React.FC = () => {
                   )}
                 </div>
               </div>
+              )}
+
+              {/* Admin/Superadmin notice */}
+              {isLoggedIn && userRole && userRole !== 'customer' && (
+                <div className="relative group">
+                  <div className="text-gray-400 cursor-not-allowed">
+                    <FaShoppingCart className="w-5 h-5" />
+                  </div>
+                  <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 p-4">
+                    <div className="text-center text-gray-500 py-4">
+                      <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
+                      <p className="text-sm">
+                        {userRole === 'admin' ? 'Admin' : 'Super Admin'} không thể sử dụng giỏ hàng
+                      </p>
+                      <p className="text-xs mt-1">Chỉ khách hàng mới được thêm sản phẩm vào giỏ hàng</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* User Menu */}
               <div className="relative group">
@@ -290,6 +471,8 @@ const Header: React.FC = () => {
                 </Link>
                 <div className="absolute top-full right-0 mt-2 w-48 bg-white shadow-xl rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
                   <div className="p-2">
+                    {isLoggedIn ? (
+                      <>
                     <Link
                       to="/profile"
                       className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
@@ -309,12 +492,29 @@ const Header: React.FC = () => {
                       Danh sách yêu thích
                     </Link>
                     <hr className="my-2" />
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
+                        >
+                          Đăng xuất
+                        </button>
+                      </>
+                    ) : (
+                      <>
                     <Link
                       to="/login"
                       className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
                     >
                       Đăng nhập
                     </Link>
+                        <Link
+                          to="/register"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
+                        >
+                          Đăng ký
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -351,11 +551,14 @@ const Header: React.FC = () => {
               
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Danh mục</h3>
+                {isLoadingCategories ? (
+                  <div className="text-gray-500 text-sm ml-4">Đang tải...</div>
+                ) : (
                 <div className="space-y-2 ml-4">
                   {categories.map((category) => (
                     <Link
-                      key={category.name}
-                      to={category.href}
+                        key={category._id}
+                        to={`/products?category=${category.slug}`}
                       className="block text-gray-600 hover:text-blue-600"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -363,15 +566,19 @@ const Header: React.FC = () => {
                     </Link>
                   ))}
                 </div>
+                )}
               </div>
 
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Thương hiệu</h3>
+                {isLoadingBrands ? (
+                  <div className="text-gray-500 text-sm ml-4">Đang tải...</div>
+                ) : (
                 <div className="space-y-2 ml-4">
                   {brands.map((brand) => (
                     <Link
-                      key={brand.name}
-                      to={brand.href}
+                        key={brand._id}
+                        to={`/products?brand=${brand.name.toLowerCase()}`}
                       className="block text-gray-600 hover:text-blue-600"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
@@ -379,6 +586,7 @@ const Header: React.FC = () => {
                     </Link>
                   ))}
                 </div>
+                )}
               </div>
 
               <Link
@@ -433,6 +641,8 @@ const Header: React.FC = () => {
 
               <hr className="my-4" />
 
+              {isLoggedIn ? (
+                <>
               <Link
                 to="/profile"
                 className="block text-gray-700 hover:text-blue-600 font-medium"
@@ -440,6 +650,17 @@ const Header: React.FC = () => {
               >
                 Tài khoản của tôi
               </Link>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="block w-full text-left text-gray-700 hover:text-blue-600 font-medium"
+                  >
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
               <Link
                 to="/login"
                 className="block text-gray-700 hover:text-blue-600 font-medium"
@@ -447,6 +668,7 @@ const Header: React.FC = () => {
               >
                 Đăng nhập
               </Link>
+              )}
             </div>
           </div>
         )}

@@ -49,7 +49,9 @@ import {
     getRewardPoints,
     getRewardPointsHistory,
     addRewardPoints,
-    useRewardPoints
+    useRewardPoints,
+    getTotalProductWithVariantsByName,
+    getTotalProductQuantityByName
 } from "../controllers/product";
 import { protect } from "../middlewares/authMiddleware";
 import { validateRequest } from "../middlewares/validateRequest";
@@ -127,5 +129,8 @@ routerProduct.get("/reward-points", protect, getRewardPoints);
 routerProduct.get("/reward-points/history", protect, getRewardPointsHistory);
 routerProduct.post("/reward-points/use", protect, useRewardPoints);
 routerProduct.post("/users/:userId/reward-points", protect, addRewardPoints);
+
+routerProduct.get("/total-product-with-variants-by-name", getTotalProductWithVariantsByName);
+routerProduct.get("/total-product-quantity-by-name", getTotalProductQuantityByName);
 
 export default routerProduct;

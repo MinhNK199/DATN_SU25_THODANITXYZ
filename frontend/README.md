@@ -735,11 +735,11 @@ chore: cập nhật build tools
 
 ---
 
-**Phát triển bởi**: Nguyễn Kim Minh - PH51915  
+**Phát triển bởi**: Group Thổ Dân IT - WD62
 **Trường**: Cao Đẳng FPT PolyTechnic
-**Khoa**: Công Nghệ Thông TinTin
-**Năm**: 20255  
-**Đồ án tốt nghiệp**: Hệ thống Thương mại Đồ Điện Tử TechTrendTechTrend
+**Khoa**: Công Nghệ Thông Tin
+**Năm**: 20255
+**Đồ án tốt nghiệp**: Hệ thống Thương mại Đồ Điện Tử TechTrend
 ---
 
 ⭐ **Nếu dự án này hữu ích, hãy cho một star trên GitHub!** ⭐
