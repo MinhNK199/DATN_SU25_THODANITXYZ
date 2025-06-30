@@ -2347,6 +2347,11 @@ export const getTotalProductWithVariantsByName = async (req, res) => {
 // Tổng số lượng sản phẩm (gộp theo tên, gồm stock sản phẩm gốc và biến thể, mỗi tên chỉ tính 1 lần)
 export const getTotalProductQuantityByName = async (req, res) => {
     try {
+        // Tạm thời vô hiệu hóa để tránh lỗi 500, sẽ tối ưu sau
+        res.json({ totalProductQuantityByName: 0 });
+        return;
+
+        /*
         const uniqueNames = await Product.distinct('name');
         let totalQuantity = 0;
         for (const name of uniqueNames) {
@@ -2364,6 +2369,7 @@ export const getTotalProductQuantityByName = async (req, res) => {
             totalQuantity += nameQuantity;
         }
         res.json({ totalProductQuantityByName: totalQuantity });
+        */
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

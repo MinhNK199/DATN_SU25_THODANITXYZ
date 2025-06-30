@@ -151,18 +151,18 @@ const AdminSidebar = () => {
           <span className="truncate">Người dùng</span>
         </button>
 
-        {/* Bills */}
+        {/* Orders */}
         <button
-          onClick={() => navigate("/admin/bills")}
+          onClick={() => navigate("/admin/orders")}
           className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
           ${
-            location.pathname.includes("/admin/bills")
+            location.pathname.includes("/admin/orders")
               ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
               : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
           }`}
         >
           <FaFileInvoiceDollar className={iconClass} />
-          <span className="truncate">Hóa đơn</span>
+          <span className="truncate">Đơn hàng</span>
         </button>
 
         {/* Ratings */}

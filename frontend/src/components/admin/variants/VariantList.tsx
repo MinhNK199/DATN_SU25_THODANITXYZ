@@ -170,34 +170,34 @@ const VariantList: React.FC = () => {
       title: 'Biến thể',
       dataIndex: 'name',
       key: 'name',
-      width: '30%',
+      width: 180,
       render: (_, record) => (
-        <Space>
+        <Space size={8}>
           <Avatar 
             shape="square" 
-            size={64} 
+            size={48} 
             src={record.images && record.images.length > 0 ? record.images[0] : undefined}
             style={{ backgroundColor: record.color || '#f0f0f0' }}
           />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <Text strong>{record.name}</Text>
-            <Text type="secondary">SKU: {record.sku}</Text>
+          <div style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
+            <Text strong style={{ fontSize: 14 }}>{record.name}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>SKU: {record.sku}</Text>
             <Space size="small">
               {record.color && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <div 
                     style={{ 
-                      width: 16, 
-                      height: 16, 
+                      width: 14, 
+                      height: 14, 
                       borderRadius: '50%', 
                       backgroundColor: record.color,
                       border: '1px solid #d9d9d9'
                     }} 
                   />
-                  <Text type="secondary">{record.color}</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>{record.color}</Text>
                 </div>
               )}
-              {record.size && <Text type="secondary">Size: {record.size}</Text>}
+              {record.size && <Text type="secondary" style={{ fontSize: 12 }}>Size: {record.size}</Text>}
             </Space>
           </div>
         </Space>
@@ -207,26 +207,26 @@ const VariantList: React.FC = () => {
       title: 'Sản phẩm',
       dataIndex: 'product',
       key: 'product',
-      width: '20%',
+      width: 120,
       render: (product) => (
-        <Text>{product?.name || 'N/A'}</Text>
+        <Text style={{ fontSize: 13 }}>{product?.name || 'N/A'}</Text>
       ),
     },
     {
       title: 'Giá',
       dataIndex: 'price',
       key: 'price',
-      width: '15%',
+      width: 90,
       render: (price, record) => (
         <div>
           {record.salePrice && record.salePrice < price ? (
             <>
-              <Text delete type="secondary">{formatPrice(price)}</Text>
+              <Text delete type="secondary" style={{ fontSize: 12 }}>{formatPrice(price)}</Text>
               <br />
-              <Text type="danger" strong>{formatPrice(record.salePrice)}</Text>
+              <Text type="danger" strong style={{ fontSize: 13 }}>{formatPrice(record.salePrice)}</Text>
             </>
           ) : (
-            <Text strong>{formatPrice(price)}</Text>
+            <Text strong style={{ fontSize: 13 }}>{formatPrice(price)}</Text>
           )}
         </div>
       ),
@@ -236,10 +236,10 @@ const VariantList: React.FC = () => {
       dataIndex: 'stock',
       key: 'stock',
       align: 'center',
-      width: '12%',
+      width: 80,
       render: (stock) => (
-        <Tag color={stock > 0 ? 'green' : 'red'}>
-          {stock > 0 ? `Còn hàng (${stock})` : 'Hết hàng'}
+        <Tag color={stock > 0 ? 'green' : 'red'} style={{ fontSize: 12, padding: '2px 8px' }}>
+          {stock > 0 ? `Còn (${stock})` : 'Hết'}
         </Tag>
       ),
     },
@@ -248,42 +248,44 @@ const VariantList: React.FC = () => {
       dataIndex: 'isActive',
       key: 'isActive',
       align: 'center',
-      width: '12%',
+      width: 90,
       render: (isActive, record) => (
         <Switch
           checked={isActive}
           onChange={() => handleToggleStatus(record._id, isActive)}
-          checkedChildren="Kích hoạt"
-          unCheckedChildren="Không kích hoạt"
+          checkedChildren="Bật"
+          unCheckedChildren="Tắt"
+          size="small"
         />
       ),
     },
-    {
-      title: 'Ngày tạo',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: '12%',
-      render: (createdAt) => (
-        <Text type="secondary">{formatDate(createdAt)}</Text>
-      ),
-    },
+    // {
+    //   title: 'Ngày tạo',
+    //   dataIndex: 'createdAt',
+    //   key: 'createdAt',
+    //   width: '12%',
+    //   render: (createdAt) => (
+    //     <Text type="secondary">{formatDate(createdAt)}</Text>
+    //   ),
+    // },
     {
       title: 'Hành động',
       key: 'action',
       align: 'right',
-      width: '15%',
+      width: 120,
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="small">
           <Tooltip title="Xem chi tiết">
-            <Button icon={<EyeOutlined />} onClick={() => navigate(`/admin/variants/detail/${record._id}`)} />
+            <Button icon={<EyeOutlined />} size="small" onClick={() => navigate(`/admin/variants/detail/${record._id}`)} />
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
-            <Button icon={<EditOutlined />} onClick={() => navigate(`/admin/variants/edit/${record._id}`)} />
+            <Button icon={<EditOutlined />} size="small" onClick={() => navigate(`/admin/variants/edit/${record._id}`)} />
           </Tooltip>
           <Tooltip title="Xóa">
             <Button 
               icon={<DeleteOutlined />} 
               danger 
+              size="small"
               onClick={() => handleDelete(record._id)} 
             />
           </Tooltip>
@@ -414,7 +416,7 @@ const VariantList: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} biến thể`,
           }}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 'max-content' }}
         />
       </Card>
     </div>

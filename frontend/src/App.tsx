@@ -19,7 +19,8 @@ import UserList from "./components/admin/users/UserList";
 import UserEdit from "./components/admin/users/userEdit";
 import UserDetail from "./components/admin/users/userDetail";
 import Listadmin from "./components/admin/users/ListAdmin";
-import BillList from "./components/admin/bill/BillList";
+import OrderList from "./components/admin/order/OrderList";
+import OrderDetail from "./pages/admin/OrderDetail";
 import BrandList from "./components/admin/brands/BrandList";
 import BannerList from "./components/admin/Banner/BannerList";
 import BannerAdd from "./components/admin/Banner/BannerAdd";
@@ -30,6 +31,7 @@ import Dashboard from "./components/admin/dashboard";
 import VariantList from "./components/admin/variants/VariantList";
 import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
+import VariantDetail from "./components/admin/variants/VariantDetail";
 import { Toaster } from "react-hot-toast";
 import Cart from './pages/client/Cart';
 import Profile from './pages/client/Profile';
@@ -98,11 +100,13 @@ function App() {
               <Route path="variants" element={<VariantList />} />
               <Route path="variants/add" element={<VariantAdd />} />
               <Route path="variants/edit/:id" element={<VariantEdit />} />
+              <Route path="variants/detail/:id" element={<VariantDetail />} />
               <Route path="categories" element={<CategoryList />} />
               <Route path="categories/add" element={<CategoryAdd />} />
               <Route path="categories/edit/:id" element={<CategoryEdit />} />
               <Route path="categories/:id" element={<CategoryDetail />} />
-              <Route path="bills" element={<BillList />} />
+              <Route path="orders" element={<OrderList />} />
+              <Route path="orders/:id" element={<OrderDetail />} />
               <Route path="brands" element={<BrandList />} />
               <Route path="banners" element={<BannerList />} />
               <Route path="banners/add" element={<BannerAdd />} />

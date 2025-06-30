@@ -34,6 +34,7 @@ const VariantEdit: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [imageLinks, setImageLinks] = useState('');
 
   // Fetch variant data
   useEffect(() => {
@@ -56,6 +57,8 @@ const VariantEdit: React.FC = () => {
           thumbUrl: image
         }));
         setFileList(imageFiles);
+        // Set image links textarea
+        setImageLinks((variant.images || []).join('\n'));
         
         form.setFieldsValue({
           name: variant.name || '',
@@ -112,10 +115,13 @@ const VariantEdit: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
-      // Convert fileList to image URLs
-      const images = fileList.map(file => file.url || file.thumbUrl || '').filter(url => url);
-      
+      // Ưu tiên lấy link ảnh từ textarea nếu có
+      let images: string[] = [];
+      if (imageLinks.trim()) {
+        images = imageLinks.split('\n').map(link => link.trim()).filter(link => link);
+      } else {
+        images = fileList.map(file => file.url || file.thumbUrl || '').filter(url => url);
+      }
       const formData = {
         ...values,
         images,
@@ -313,23 +319,40 @@ const VariantEdit: React.FC = () => {
             </Row>
 
             {/* Images */}
-            <Divider orientation="left">Hình ảnh</Divider>
-            <Form.Item>
-              <Upload
-                listType="picture-card"
-                fileList={fileList}
-                onChange={handleImageUpload}
-                beforeUpload={() => false}
-                multiple
-              >
-                {fileList.length >= 8 ? null : (
-                  <div>
-                    <UploadOutlined />
-                    <div style={{ marginTop: 8 }}>Tải ảnh</div>
+            <Divider orientation="left">Ảnh sản phẩm</Divider>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item label="Link ảnh (mỗi dòng 1 link, ưu tiên dùng nếu có)">
+                  <Input.TextArea
+                    rows={4}
+                    placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
+                    value={imageLinks}
+                    onChange={e => setImageLinks(e.target.value)}
+                  />
+                  <div style={{ color: '#888', fontSize: 12 }}>
+                    Nếu nhập link ảnh ở đây, hệ thống sẽ dùng các link này làm ảnh cho biến thể. Nếu để trống, sẽ dùng ảnh upload bên dưới.
                   </div>
-                )}
-              </Upload>
-            </Form.Item>
+                </Form.Item>
+              </Col>
+              <Col span={24}>
+                <Form.Item label="Upload ảnh (không bắt buộc, chỉ dùng nếu không nhập link ảnh)">
+                  <Upload
+                    listType="picture-card"
+                    fileList={fileList}
+                    onChange={handleImageUpload}
+                    beforeUpload={() => false}
+                    multiple
+                  >
+                    {fileList.length < 8 && (
+                      <div>
+                        <UploadOutlined />
+                        <div style={{ marginTop: 8 }}>Upload</div>
+                      </div>
+                    )}
+                  </Upload>
+                </Form.Item>
+              </Col>
+            </Row>
 
             {/* Actions */}
             <Divider />

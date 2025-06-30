@@ -101,11 +101,29 @@ export const getOrders = async (req, res) => {
         const pageSize = 10;
         const page = Number(req.query.page) || 1;
 
-        const count = await Order.countDocuments({});
-        const orders = await Order.find({})
-            .populate('user', 'id name')
+        // Build filter object
+        const filter = {};
+        // Lọc theo trạng thái
+        if (req.query.status) {
+            filter.status = req.query.status;
+        }
+
+        // Lấy tất cả đơn hàng phù hợp trạng thái, populate user
+        let ordersQuery = Order.find(filter).populate('user', 'id name');
+        const count = await Order.countDocuments(filter);
+        let orders = await ordersQuery
             .limit(pageSize)
             .skip(pageSize * (page - 1));
+
+        // Lọc theo mã đơn hàng (orderId) và tên khách hàng (customerName) ở phía backend
+        if (req.query.orderId) {
+            const orderIdStr = req.query.orderId.toLowerCase();
+            orders = orders.filter(o => o._id.toString().toLowerCase().includes(orderIdStr));
+        }
+        if (req.query.customerName) {
+            const nameStr = req.query.customerName.toLowerCase();
+            orders = orders.filter(o => o.user && o.user.name && o.user.name.toLowerCase().includes(nameStr));
+        }
 
         res.json({
             orders,
@@ -142,6 +160,11 @@ export const updateOrderStatus = async (req, res) => {
 // Thống kê doanh thu theo ngày và tháng
 export const getRevenueStats = async (req, res) => {
     try {
+        // Tạm thời vô hiệu hóa logic thống kê
+        res.json({ daily: [], monthly: [] });
+        return;
+
+        /*
         // Doanh thu theo ngày (30 ngày gần nhất)
         const daily = await Order.aggregate([
             {
@@ -186,6 +209,7 @@ export const getRevenueStats = async (req, res) => {
         ]);
 
         res.json({ daily, monthly });
+        */
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
