@@ -4,7 +4,7 @@ export interface BillItem {
     price: number;
 }
 
-export type BillStatus = 'pending' | 'paid' | 'cancelled';
+export type BillStatus = 'pending' | 'confirmed' | 'ready_for_pickup' | 'shipping' | 'delivering' | 'delivered' | 'paid' | 'cancelled';
 export type PaymentMethod = 'cash' | 'credit_card' | 'bank_transfer';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
