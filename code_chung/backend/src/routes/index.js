@@ -1,0 +1,36 @@
+import { Router } from "express";
+import routerAuth from "./auth";
+import routerAddress from "./address";
+import routerBrand from "./brand";
+import routerCart from "./cart";
+import routerCategory from "./category";
+import routerCoupon from "./coupon";
+import routerNotifi from "./notification";
+import routerOrder from "./order";
+import routerProduct from "./product";
+import routerBill from "./bill";
+import routerBanner from "./banner"
+import routerRating from "./rating";
+import routerVariant from "./variant";
+import { runCleanupNow } from "../utils/cleanupJob";
+import { protect } from "../middlewares/authMiddleware";
+
+const router = Router();
+router.use("/auth", routerAuth);
+router.use("/address", routerAddress);
+router.use("/brand", routerBrand);
+router.use("/cart", routerCart);
+router.use("/category", routerCategory);
+router.use("/coupon", routerCoupon);
+router.use("/notification", routerNotifi);
+router.use("/order", routerOrder);
+router.use("/products", routerProduct);
+router.use("/bill", routerBill);
+router.use("/banner", routerBanner);
+router.use("/rating", routerRating);
+router.use("/variant", routerVariant);
+
+// Cleanup job route (chỉ admin mới được gọi)
+router.get("/cleanup", protect, runCleanupNow);
+
+export default router;
