@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Bill } from "../../../interfaces/Bill";
-import { FaFilePdf, FaEnvelope, FaEdit, FaEye } from "react-icons/fa";
+import { FaFilePdf, FaEnvelope, FaEdit } from "react-icons/fa";
 import { Button, Card, Tag, Tooltip, Select, Modal, message } from "antd";
 import Table, { ColumnsType } from "antd/es/table";
-import BillDetailModal from "./BillDetailModal";
 
 const API_URL = "http://localhost:5000/api/bill";
 
@@ -23,9 +22,6 @@ const BillList: React.FC = () => {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [editingStatus, setEditingStatus] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
 
   // Định nghĩa các trạng thái và thứ tự
   const statusOptions = [
@@ -73,34 +69,6 @@ const BillList: React.FC = () => {
   useEffect(() => {
     fetchBills();
   }, []);
-
-  const handleViewDetail = async (bill: Bill) => {
-    setDetailLoading(true);
-    setSelectedBill(bill);
-    setDetailModalVisible(true);
-
-    try {
-      // Fetch chi tiết hóa đơn từ server
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/${bill._id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (res.ok) {
-        const data: ApiResponse = await res.json();
-        if (data.success && data.data) {
-          setSelectedBill(data.data);
-        }
-      }
-    } catch (error) {
-      message.error("Lỗi khi tải chi tiết hóa đơn!");
-    } finally {
-      setDetailLoading(false);
-    }
-  };
 
   const handleExportPDF = async (id: string) => {
     try {
@@ -232,74 +200,6 @@ const BillList: React.FC = () => {
     return statusOption?.label || status;
   };
 
-  const getPaymentMethodLabel = (method: string): string => {
-    switch (method) {
-      case 'cash': return 'Tiền mặt';
-      case 'credit_card': return 'Thẻ tín dụng';
-      case 'bank_transfer': return 'Chuyển khoản';
-      default: return method;
-    }
-  };
-
-  const getPaymentStatusLabel = (status: string): string => {
-    switch (status) {
-      case 'unpaid': return 'Chưa thanh toán';
-      case 'paid': return 'Đã thanh toán';
-      case 'refunded': return 'Đã hoàn tiền';
-      default: return status;
-    }
-  };
-
-  // Helper function để kiểm tra customer có phải là object không
-  const isCustomerObject = (customer: any): customer is { _id: string; name: string; email: string } => {
-    return typeof customer === 'object' && customer !== null && 'name' in customer;
-  };
-
-  // Helper function để lấy tên khách hàng
-  const getCustomerName = (customer: any): string => {
-    if (isCustomerObject(customer)) {
-      return customer.name;
-    }
-    return "Không rõ";
-  };
-
-  // Helper function để lấy email khách hàng
-  const getCustomerEmail = (customer: any): string => {
-    if (isCustomerObject(customer)) {
-      return customer.email;
-    }
-    return "Không rõ";
-  };
-
-  // Helper function để lấy ID khách hàng
-  const getCustomerId = (customer: any): string => {
-    if (isCustomerObject(customer)) {
-      return customer._id;
-    }
-    return customer || 'N/A';
-  };
-
-  // Helper function để kiểm tra product có phải là object không
-  const isProductObject = (product: any): product is { _id: string; name: string; price: number } => {
-    return typeof product === 'object' && product !== null && 'name' in product;
-  };
-
-  // Helper function để lấy tên sản phẩm
-  const getProductName = (product: any): string => {
-    if (isProductObject(product)) {
-      return product.name;
-    }
-    return "Không rõ";
-  };
-
-  // Helper function để lấy ID sản phẩm
-  const getProductId = (product: any): string => {
-    if (isProductObject(product)) {
-      return product._id;
-    }
-    return product || 'N/A';
-  };
-
   const columns: ColumnsType<Bill> = [
     {
       title: "STT",
@@ -317,7 +217,7 @@ const BillList: React.FC = () => {
       title: "Khách hàng",
       dataIndex: "customer",
       key: "customer",
-      render: (customer: any) => getCustomerName(customer),
+      render: (customer: any) => customer?.name || "Không rõ",
     },
     {
       title: "Tổng tiền",
@@ -353,7 +253,12 @@ const BillList: React.FC = () => {
       title: "Thanh toán",
       dataIndex: "paymentMethod",
       key: "paymentMethod",
-      render: (method: string) => getPaymentMethodLabel(method),
+      render: (method: string) =>
+        method === "cash"
+          ? "Tiền mặt"
+          : method === "credit_card"
+            ? "Thẻ tín dụng"
+            : "Chuyển khoản",
     },
     {
       title: "Ngày tạo",
@@ -366,13 +271,6 @@ const BillList: React.FC = () => {
       key: "actions",
       render: (_: any, record: Bill) => (
         <div className="flex gap-2 justify-center">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="default"
-              icon={<FaEye />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
           <Tooltip title="Xuất PDF">
             <Button
               type="primary"
@@ -462,27 +360,6 @@ const BillList: React.FC = () => {
           </div>
         </div>
       </Modal>
-
-      {/* Modal chi tiết hóa đơn */}
-      <BillDetailModal
-        visible={detailModalVisible}
-        onCancel={() => {
-          setDetailModalVisible(false);
-          setSelectedBill(null);
-        }}
-        bill={selectedBill}
-        loading={detailLoading}
-        getStatusColor={getStatusColor}
-        getStatusLabel={getStatusLabel}
-        getPaymentMethodLabel={getPaymentMethodLabel}
-        getPaymentStatusLabel={getPaymentStatusLabel}
-        formatDate={formatDate}
-        getCustomerName={getCustomerName}
-        getCustomerEmail={getCustomerEmail}
-        getCustomerId={getCustomerId}
-        getProductName={getProductName}
-        getProductId={getProductId}
-      />
     </Card>
   );
 };
