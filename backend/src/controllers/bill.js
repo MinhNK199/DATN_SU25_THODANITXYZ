@@ -145,49 +145,6 @@ export const getBillsByCustomer = async (req, res) => {
 export const updateBillStatus = async (req, res) => {
     try {
         const { status } = req.body;
-
-        // Lấy hóa đơn hiện tại
-        const currentBill = await Bill.findById(req.params.id);
-
-        if (!currentBill) {
-            return res.status(404).json({
-                success: false,
-                error: 'Bill not found'
-            });
-        }
-
-        // Định nghĩa thứ tự trạng thái hợp lệ
-        const statusOrder = [
-            'pending',
-            'confirmed',
-            'ready_for_pickup',
-            'shipping',
-            'delivering',
-            'delivered',
-            'paid'
-        ];
-
-        // Kiểm tra xem có thể chuyển sang trạng thái mới không
-        const currentIndex = statusOrder.indexOf(currentBill.status);
-        const newIndex = statusOrder.indexOf(status);
-
-        // Cho phép chuyển sang trạng thái tiếp theo hoặc trạng thái trước đó (để có thể rollback)
-        // Hoặc cho phép chuyển sang cancelled từ bất kỳ trạng thái nào
-        if (status === 'cancelled') {
-            // Cho phép hủy từ bất kỳ trạng thái nào
-        } else if (newIndex === -1) {
-            return res.status(400).json({
-                success: false,
-                error: 'Trạng thái không hợp lệ'
-            });
-        } else if (newIndex < currentIndex - 1) {
-            return res.status(400).json({
-                success: false,
-                error: 'Không thể chuyển về trạng thái trước đó'
-            });
-        }
-
-        // Cập nhật trạng thái
         const bill = await Bill.findByIdAndUpdate(
             req.params.id,
             { status },
@@ -196,6 +153,13 @@ export const updateBillStatus = async (req, res) => {
                 runValidators: true
             }
         );
+
+        if (!bill) {
+            return res.status(404).json({
+                success: false,
+                error: 'Bill not found'
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -222,21 +186,6 @@ export const generateBillPDF = async (bill) => {
                 fs.mkdirSync('temp');
             }
 
-            // Hàm chuyển đổi trạng thái sang tiếng Việt
-            const getStatusLabel = (status) => {
-                const statusMap = {
-                    'pending': 'Chờ xác nhận',
-                    'confirmed': 'Đã xác nhận',
-                    'ready_for_pickup': 'Chờ lấy hàng',
-                    'shipping': 'Đang vận chuyển',
-                    'delivering': 'Đang giao hàng',
-                    'delivered': 'Đã giao hàng',
-                    'paid': 'Đã thanh toán',
-                    'cancelled': 'Đã hủy'
-                };
-                return statusMap[status] || status;
-            };
-
             // Tạo stream để lưu file
             const stream = fs.createWriteStream(filePath);
             doc.pipe(stream);
@@ -248,7 +197,7 @@ export const generateBillPDF = async (bill) => {
             // Thông tin hóa đơn
             doc.fontSize(12).text(`Mã hóa đơn: ${bill._id}`);
             doc.text(`Ngày tạo: ${new Date(bill.createdAt).toLocaleDateString('vi-VN')}`);
-            doc.text(`Trạng thái: ${getStatusLabel(bill.status)}`);
+            doc.text(`Trạng thái: ${bill.status}`);
             doc.moveDown();
 
             // Thông tin khách hàng
@@ -367,7 +316,7 @@ export const exportAndSendBill = async (req, res) => {
             error: error.message
         });
     }
-};
+}; 
 export const exportBillPDF = async (req, res) => {
     try {
         const bill = await Bill.findById(req.params.id)

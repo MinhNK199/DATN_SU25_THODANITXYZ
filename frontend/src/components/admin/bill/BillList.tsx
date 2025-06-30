@@ -1,66 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Bill } from "../../../interfaces/Bill";
-import { FaFilePdf, FaEnvelope, FaEdit } from "react-icons/fa";
-import { Button, Card, Tag, Tooltip, Select, Modal, message } from "antd";
+import { FaFilePdf, FaEnvelope } from "react-icons/fa";
+import { Button, Card, Tag, Tooltip } from "antd";
 import Table, { ColumnsType } from "antd/es/table";
 
 const API_URL = "http://localhost:5000/api/bill";
 
-interface ApiResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  message?: string;
-}
-
 const BillList: React.FC = () => {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error" | "">("");
   const [sendingId, setSendingId] = useState<string | null>(null);
-  const [editingStatus, setEditingStatus] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
-
-  // Định nghĩa các trạng thái và thứ tự
-  const statusOptions = [
-    { value: 'pending', label: 'Chờ xác nhận', color: 'orange' },
-    { value: 'confirmed', label: 'Đã xác nhận', color: 'blue' },
-    { value: 'ready_for_pickup', label: 'Chờ lấy hàng', color: 'cyan' },
-    { value: 'shipping', label: 'Đang vận chuyển', color: 'purple' },
-    { value: 'delivering', label: 'Đang giao hàng', color: 'geekblue' },
-    { value: 'delivered', label: 'Đã giao hàng', color: 'green' },
-    { value: 'paid', label: 'Đã thanh toán', color: 'success' },
-    { value: 'cancelled', label: 'Đã hủy', color: 'red' }
-  ];
-
-  const statusOrder = [
-    'pending',
-    'confirmed',
-    'ready_for_pickup',
-    'shipping',
-    'delivering',
-    'delivered',
-    'paid'
-  ];
 
   const fetchBills = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(API_URL, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data: ApiResponse = await res.json();
+      const res = await fetch(API_URL);
+      const data = await res.json();
       setBills(Array.isArray(data.data) ? data.data : []);
       // Log kiểm tra
       console.log("Bills:", data.data);
     } catch (error) {
-      setStatusMessage("Lỗi khi tải hóa đơn!");
+      setMessage("Lỗi khi tải hóa đơn!");
       setMessageType("error");
     }
     setLoading(false);
@@ -72,12 +35,8 @@ const BillList: React.FC = () => {
 
   const handleExportPDF = async (id: string) => {
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/${id}/pdf`, {
         method: "GET",
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
       if (res.ok) {
         const blob = await res.blob();
@@ -90,14 +49,14 @@ const BillList: React.FC = () => {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        setStatusMessage("Xuất PDF thành công!");
+        setMessage("Xuất PDF thành công!");
         setMessageType("success");
       } else {
-        setStatusMessage("Xuất PDF thất bại!");
+        setMessage("Xuất PDF thất bại!");
         setMessageType("error");
       }
     } catch (error) {
-      setStatusMessage("Lỗi khi xuất PDF!");
+      setMessage("Lỗi khi xuất PDF!");
       setMessageType("error");
     }
   };
@@ -105,81 +64,27 @@ const BillList: React.FC = () => {
   const handleSendEmail = async (id: string) => {
     setSendingId(id);
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/${id}/export`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       });
 
-      const data: ApiResponse = await res.json();
+      const data = await res.json();
       if (res.ok && data.success) {
-        setStatusMessage("Gửi email thành công!");
+        setMessage("Gửi email thành công!");
         setMessageType("success");
       } else {
-        setStatusMessage(data.error || "Gửi email thất bại!");
+        setMessage(data.error || "Gửi email thất bại!");
         setMessageType("error");
       }
     } catch (error) {
-      setStatusMessage("Lỗi khi gửi email!");
+      setMessage("Lỗi khi gửi email!");
       setMessageType("error");
     } finally {
       setSendingId(null);
     }
   };
-
-  const handleStatusEdit = (bill: Bill) => {
-    setEditingStatus(bill._id!);
-    setSelectedStatus(bill.status);
-  };
-
-  const handleStatusUpdate = async () => {
-    if (!editingStatus || !selectedStatus) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API_URL}/${editingStatus}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: selectedStatus }),
-      });
-
-      const data: ApiResponse = await res.json();
-
-      if (res.ok && data.success) {
-        message.success("Cập nhật trạng thái thành công!");
-        setEditingStatus(null);
-        setSelectedStatus("");
-        fetchBills(); // Refresh danh sách
-      } else {
-        message.error(data.error || "Cập nhật trạng thái thất bại!");
-      }
-    } catch (error) {
-      message.error("Lỗi khi cập nhật trạng thái!");
-    }
-  };
-
-  const getAvailableStatusOptions = (currentStatus: string) => {
-    const currentIndex = statusOrder.indexOf(currentStatus);
-
-    return statusOptions.filter(option => {
-      if (option.value === 'cancelled') return true; // Luôn cho phép hủy
-      if (option.value === currentStatus) return true; // Cho phép giữ nguyên
-
-      const optionIndex = statusOrder.indexOf(option.value);
-      if (optionIndex === -1) return false; // Trạng thái không hợp lệ
-
-      // Cho phép chuyển sang trạng thái tiếp theo hoặc trước đó 1 bước
-      return optionIndex <= currentIndex + 1 && optionIndex >= currentIndex - 1;
-    });
-  };
-
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString("vi-VN", {
       year: "numeric",
@@ -189,15 +94,18 @@ const BillList: React.FC = () => {
       minute: "2-digit",
     });
   };
-
   const getStatusColor = (status: string): string => {
-    const statusOption = statusOptions.find(option => option.value === status);
-    return statusOption?.color || "gray";
-  };
-
-  const getStatusLabel = (status: string): string => {
-    const statusOption = statusOptions.find(option => option.value === status);
-    return statusOption?.label || status;
+    switch (status) {
+      case "pending":
+        return "orange";
+      case "paid":
+        return "green";
+      case "cancelled":
+      case "canceled":
+        return "red";
+      default:
+        return "gray";
+    }
   };
 
   const columns: ColumnsType<Bill> = [
@@ -233,20 +141,14 @@ const BillList: React.FC = () => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: string, record: Bill) => (
-        <div className="flex items-center gap-2">
-          <Tag color={getStatusColor(status)}>
-            {getStatusLabel(status)}
-          </Tag>
-          <Tooltip title="Chỉnh sửa trạng thái">
-            <Button
-              type="text"
-              size="small"
-              icon={<FaEdit />}
-              onClick={() => handleStatusEdit(record)}
-            />
-          </Tooltip>
-        </div>
+      render: (status: string) => (
+        <Tag color={getStatusColor(status)}>
+          {status === "pending"
+            ? "Chờ xử lý"
+            : status === "paid"
+            ? "Đã thanh toán"
+            : "Đã hủy"}
+        </Tag>
       ),
     },
     {
@@ -257,14 +159,14 @@ const BillList: React.FC = () => {
         method === "cash"
           ? "Tiền mặt"
           : method === "credit_card"
-            ? "Thẻ tín dụng"
-            : "Chuyển khoản",
+          ? "Thẻ tín dụng"
+          : "Chuyển khoản",
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (date: string) => formatDate(new Date(date)),
+      render: (date: string) => formatDate(new Date(date)), // 👈 fix lỗi
     },
     {
       title: "Thao tác",
@@ -291,22 +193,22 @@ const BillList: React.FC = () => {
       ),
     },
   ];
-
   return (
     <Card className="p-6 rounded-lg shadow-md bg-white">
       <h1 className="text-2xl font-bold mb-4 text-gray-700">
         Danh sách Hóa đơn
       </h1>
 
-      {statusMessage && (
+      {message && (
         <div
           className={`mb-4 px-4 py-2 rounded-md italic text-center shadow-md font-medium
-      ${messageType === "success"
-              ? "text-green-700 bg-green-100"
-              : "text-red-700 bg-red-100"
-            }`}
+      ${
+        messageType === "success"
+          ? "text-green-700 bg-green-100"
+          : "text-red-700 bg-red-100"
+      }`}
         >
-          {statusMessage}
+          {message}
         </div>
       )}
 
@@ -321,45 +223,6 @@ const BillList: React.FC = () => {
           showTotal: (total) => `Tổng ${total} hóa đơn`,
         }}
       />
-
-      {/* Modal chỉnh sửa trạng thái */}
-      <Modal
-        title="Chỉnh sửa trạng thái hóa đơn"
-        open={!!editingStatus}
-        onOk={handleStatusUpdate}
-        onCancel={() => {
-          setEditingStatus(null);
-          setSelectedStatus("");
-        }}
-        okText="Cập nhật"
-        cancelText="Hủy"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            Chọn trạng thái mới cho hóa đơn:
-          </p>
-          <Select
-            value={selectedStatus}
-            onChange={setSelectedStatus}
-            style={{ width: '100%' }}
-            placeholder="Chọn trạng thái"
-          >
-            {editingStatus &&
-              getAvailableStatusOptions(
-                bills.find(bill => bill._id === editingStatus)?.status || 'pending'
-              ).map(option => (
-                <Select.Option key={option.value} value={option.value}>
-                  <Tag color={option.color}>{option.label}</Tag>
-                </Select.Option>
-              ))
-            }
-          </Select>
-          <div className="text-sm text-gray-500">
-            <p>Lưu ý: Chỉ có thể chuyển sang trạng thái tiếp theo hoặc trước đó 1 bước.</p>
-            <p>Có thể hủy hóa đơn từ bất kỳ trạng thái nào.</p>
-          </div>
-        </div>
-      </Modal>
     </Card>
   );
 };

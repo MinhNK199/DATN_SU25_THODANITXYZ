@@ -35,7 +35,7 @@ const billSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'confirmed', 'ready_for_pickup', 'shipping', 'delivering', 'delivered', 'paid', 'cancelled'],
+        enum: ['pending', 'paid', 'cancelled'],
         default: 'pending'
     },
     paymentMethod: {
