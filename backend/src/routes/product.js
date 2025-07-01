@@ -60,16 +60,23 @@ import upload from "../middlewares/updateMiddleware";
 
 const routerProduct = express.Router();
 
-routerProduct.get("/", getProducts);
 routerProduct.get("/top", getTopProducts);
 routerProduct.get("/stats", protect, getProductStats);
 routerProduct.get("/deleted", protect, getDeletedProducts);
 routerProduct.get("/deleted-count", protect, getDeletedProductsCount);
-routerProduct.get("/:id", getProductById);
-routerProduct.get("/:id/variant-stats", protect, getVariantStats);
 routerProduct.get("/suggest", suggestProducts);
 
-// Product CRUD
+// User Favorites
+routerProduct.get("/favorites", protect, getFavorites);
+routerProduct.get("/favorites/count", protect, getFavoritesCount);
+routerProduct.get("/:id/favorite", protect, checkFavorite);
+routerProduct.post("/:id/favorite", protect, addToFavorites);
+routerProduct.delete("/:id/favorite", protect, removeFromFavorites);
+
+routerProduct.get("/:id", getProductById);
+routerProduct.get("/:id/variant-stats", protect, getVariantStats);
+
+routerProduct.get("/", getProducts);
 routerProduct.post("/", protect, createProductValidation, validateRequest, createProduct);
 routerProduct.put("/:id", protect, updateProductValidation, validateRequest, updateProduct);
 routerProduct.delete("/:id", protect, deleteProduct);
@@ -111,13 +118,6 @@ routerProduct.get("/:id/discounts", getProductDiscounts);
 routerProduct.post("/:id/discounts", protect, addProductDiscount);
 routerProduct.put("/:id/discounts/:discountId", protect, updateProductDiscount);
 routerProduct.delete("/:id/discounts/:discountId", protect, deleteProductDiscount);
-
-// User Favorites
-routerProduct.get("/favorites", protect, getFavorites);
-routerProduct.get("/favorites/count", protect, getFavoritesCount);
-routerProduct.get("/:id/favorite", protect, checkFavorite);
-routerProduct.post("/:id/favorite", protect, addToFavorites);
-routerProduct.delete("/:id/favorite", protect, removeFromFavorites);
 
 // AI Recommendations
 routerProduct.get("/:id/recommendations", getProductRecommendations);
