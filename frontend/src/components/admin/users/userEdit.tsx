@@ -21,7 +21,7 @@ import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:5000/api/auth/users";
+const API_URL = "http://localhost:9000/api/auth/users";
 
 interface Province {
   code: number;

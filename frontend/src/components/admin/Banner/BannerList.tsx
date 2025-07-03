@@ -27,7 +27,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import type { SearchProps } from "antd/es/input";
 
-const API_URL = "http://localhost:5000/api/banner";
+const API_URL = "http://localhost:9000/api/banner";
 
 interface SearchParams {
   title: string;

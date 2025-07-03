@@ -3,7 +3,7 @@ import { FaSearch, FaTimes, FaHistory, FaFire } from 'react-icons/fa';
 import debounce from 'lodash.debounce';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api/product';
+const API_URL = 'http://localhost:9000/api/product';
 
 const SmartSearchBar: React.FC = () => {
   const [query, setQuery] = useState('');

@@ -26,7 +26,7 @@ const RegisterAdmin = () => {
     setSuccess("");
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register-admin", form);
+      const res = await axios.post("http://localhost:9000/api/auth/register-admin", form);
       setSuccess(res.data.message);
       setForm({
         name: "",

@@ -1,7 +1,7 @@
 import React from "react";
 import { FaEnvelope } from "react-icons/fa";
 
-const API_URL = "http://localhost:5000/api/bill";
+const API_URL = "http://localhost:9000/api/bill";
 
 interface SendBillEmailProps {
     billId: string;

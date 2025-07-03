@@ -3,7 +3,7 @@ import { Table, Button, Modal, Form, Input, Checkbox, message, Tag, Space, Typog
 import type { Brand } from "../../../interfaces/Brand";
 import { FaEdit, FaTrash } from "react-icons/fa";
 
-const API_URL = "http://localhost:5000/api/brand";
+const API_URL = "http://localhost:9000/api/brand";
 
 const BrandList: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);

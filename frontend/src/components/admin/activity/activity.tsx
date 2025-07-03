@@ -3,6 +3,7 @@ import axios from "axios";
 import { Table, Spin, message, DatePicker, Input, Select, Button } from "antd";
 import dayjs from "dayjs";
 import type { RangePickerProps } from "antd/es/date-picker";
+import { api } from "../../../config/axios";
 
 interface ActivityLog {
   _id: string;
@@ -34,7 +35,7 @@ const Activity: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/nhatKy", {
+      const res = await api.get(`/auth/nhatKy`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLogs(res.data.logs);

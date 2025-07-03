@@ -12,7 +12,7 @@ import SpecificationEditor from './SpecificationEditor';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:5000/api/product";
+const API_URL = "http://localhost:9000/api/product";
 
 // Hàm chuyển đổi cấu trúc cây cho TreeSelect
 const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {

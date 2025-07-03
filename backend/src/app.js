@@ -13,6 +13,6 @@ app.use(cors({
 }));
 app.use("/api", router);
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log(`Server Đã Được Chạy Ở Cổng ${process.env.PORT || 3000}🚀`);
+app.listen(process.env.PORT || 9000, () => {
+  console.log(`Server Đã Được Chạy Ở Cổng ${process.env.PORT || 9000}🚀`);
 });
