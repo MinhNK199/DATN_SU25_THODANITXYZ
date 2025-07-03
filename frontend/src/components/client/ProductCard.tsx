@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FaHeart, FaShoppingCart, FaEye, FaStar, FaTruck, FaShieldAlt, FaClock, FaCheck, FaBalanceScale } from 'react-icons/fa';
-import { useCart } from '../../contexts/CartContext';
-import cartApi from '../../services/cartApi';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import {
+  FaHeart,
+  FaShoppingCart,
+  FaEye,
+  FaStar,
+  FaTruck,
+  FaShieldAlt,
+  FaClock,
+  FaCheck,
+  FaBalanceScale,
+} from "react-icons/fa";
+import { useCart } from "../../contexts/CartContext";
+import cartApi from "../../services/cartApi";
+import { toast } from "react-hot-toast";
+import wishlistApi from "../../services/wishlistApi";
 
 interface ProductCardProps {
   product: {
@@ -12,10 +23,12 @@ interface ProductCardProps {
     price: number;
     originalPrice?: number;
     image: string;
-    brand: {
-      _id: string;
-      name: string;
-    } | string;
+    brand:
+      | {
+          _id: string;
+          name: string;
+        }
+      | string;
     rating: number;
     reviewCount: number;
     discount?: number;
@@ -31,11 +44,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [availableStock, setAvailableStock] = useState<number | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
   const { addToCart, isInCart } = useCart();
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(price);
   };
 
@@ -47,7 +61,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         const availability = await cartApi.getProductAvailability(product._id);
         setAvailableStock(availability.availableStock);
       } catch (error) {
-        console.error('Error fetching product availability:', error);
+        console.error("Error fetching product availability:", error);
         setAvailableStock(getTotalStock(product)); // Fallback to total stock
       } finally {
         setStockLoading(false);
@@ -62,20 +76,46 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     try {
       await addToCart(product._id, 1);
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      console.error("Error adding to cart:", error);
     } finally {
       setIsLoading(false);
     }
   };
+  useEffect(() => {
+    const checkIsFavorite = async () => {
+      try {
+        const res = await wishlistApi.getFavorites();
+        const isFav = res.data.favorites.some(
+          (item: any) => item._id === product._id
+        );
+        setIsFavorite(isFav);
+      } catch (err) {
+        console.error("Lỗi khi kiểm tra yêu thích", err);
+      }
+    };
+    checkIsFavorite();
+  }, [product._id]);
 
-  const handleWishlistToggle = () => {
-    console.log('Toggle wishlist:', product.name);
-    toast.info('Tính năng wishlist sẽ được phát triển sau');
+  const handleAddFavorite = async () => {
+    try {
+      if (isFavorite) {
+        await wishlistApi.removeFromWishlist(product._id);
+        setIsFavorite(false);
+        toast.success("Đã xóa khỏi yêu thích");
+      } else {
+        await wishlistApi.addToWishlist(product._id);
+        setIsFavorite(true);
+        toast.success("Đã thêm vào yêu thích");
+      }
+    } catch (error) {
+      console.error("Lỗi xử lý yêu thích:", error);
+      toast.error("Có lỗi xảy ra khi xử lý yêu thích");
+    }
   };
 
   const handleCompare = () => {
-    console.log('Add to compare:', product.name);
-    toast.info('Tính năng so sánh sẽ được phát triển sau');
+    console.log("Add to compare:", product.name);
+    toast.success("Tính năng so sánh sẽ được phát triển sau");
   };
 
   // Helper tính tổng stock
@@ -101,7 +141,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       return <span className="text-red-500 text-sm font-medium">Hết hàng</span>;
     }
     if (availableStock <= 5) {
-      return <span className="text-orange-500 text-sm font-medium">Chỉ còn ít</span>;
+      return (
+        <span className="text-orange-500 text-sm font-medium">Chỉ còn ít</span>
+      );
     }
     return <span className="text-green-500 text-sm">Còn hàng</span>;
   };
@@ -142,7 +184,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Brand Badge */}
         <div className="absolute top-3 right-3">
           <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-            {typeof product.brand === 'object' ? product.brand.name : product.brand}
+            {typeof product.brand === "object"
+              ? product.brand.name
+              : product.brand}
           </span>
         </div>
 
@@ -160,19 +204,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               onClick={handleAddToCart}
               disabled={isLoading || isOutOfStock}
               className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1 ${
-                isOutOfStock 
-                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                isOutOfStock
+                  ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
               }`}
             >
               <FaShoppingCart className="w-3 h-3" />
               <span>
-                {isLoading ? 'Đang thêm...' : isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ'}
+                {isLoading
+                  ? "Đang thêm..."
+                  : isOutOfStock
+                  ? "Hết hàng"
+                  : "Thêm vào giỏ"}
               </span>
             </button>
             <button
-              onClick={handleWishlistToggle}
-              className="p-2 bg-white text-gray-600 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
+              onClick={handleAddFavorite}
+              className={`p-2 rounded-lg transition-colors ${
+                isFavorite
+                  ? "text-red-500 bg-red-100 hover:bg-red-200"
+                  : "text-gray-600 bg-white hover:bg-red-500 hover:text-white"
+              }`}
             >
               <FaHeart className="w-4 h-4" />
             </button>
@@ -195,7 +247,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Content */}
       <div className="p-4">
         {/* Brand */}
-        <div className="text-sm text-blue-600 font-medium mb-1">{typeof product.brand === 'object' ? product.brand.name : product.brand}</div>
+        <div className="text-sm text-blue-600 font-medium mb-1">
+          {typeof product.brand === "object"
+            ? product.brand.name
+            : product.brand}
+        </div>
 
         {/* Product Name */}
         <Link to={`/product/${product._id}`}>
@@ -212,8 +268,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 key={i}
                 className={`w-4 h-4 ${
                   i < Math.floor(product.rating)
-                    ? 'text-yellow-400 fill-current'
-                    : 'text-gray-300'
+                    ? "text-yellow-400 fill-current"
+                    : "text-gray-300"
                 }`}
               />
             ))}
@@ -234,9 +290,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         {/* Stock Status */}
-        <div className="mb-3">
-          {getStockStatus()}
-        </div>
+        <div className="mb-3">{getStockStatus()}</div>
 
         {/* Features */}
         <div className="space-y-1 mb-3">
@@ -259,14 +313,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           onClick={handleAddToCart}
           disabled={isLoading || isOutOfStock}
           className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
-            isOutOfStock 
-              ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
+            isOutOfStock
+              ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
           }`}
         >
           <FaShoppingCart className="w-4 h-4" />
           <span>
-            {isLoading ? 'Đang thêm...' : isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
+            {isLoading
+              ? "Đang thêm..."
+              : isOutOfStock
+              ? "Hết hàng"
+              : "Thêm vào giỏ hàng"}
           </span>
         </button>
       </div>
@@ -274,4 +332,4 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   );
 };
 
-export default ProductCard; 
+export default ProductCard;

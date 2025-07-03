@@ -169,7 +169,7 @@ const Home: React.FC = () => {
                   price: product.salePrice || product.price,
                   originalPrice: product.salePrice ? product.price : undefined,
                   image: product.images && product.images.length > 0 ? product.images[0] : '',
-                  brand: typeof product.brand === 'object' ? product.brand.name : product.brand,
+                  brand: typeof product.brand === 'object' ? product.brand?.name : product.brand,
                   rating: product.averageRating || 0,
                   reviewCount: product.numReviews || 0,
                   discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
