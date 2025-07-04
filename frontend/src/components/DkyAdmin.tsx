@@ -31,7 +31,7 @@ const RegisterAdmin = () => {
     setIsLoading(true);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register-admin", form);
+      const res = await axios.post("http://localhost:9000/api/auth/register-admin", form);
       
       // Hiển thị toast thành công
       showToast("Đăng ký thành công! Yêu cầu của bạn sẽ được admin xem xét.", "success");

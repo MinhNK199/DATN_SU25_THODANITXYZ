@@ -54,7 +54,7 @@ const ProductDetail: React.FC = () => {
     
     console.log('Fetching product with ID:', id);
     
-    axios.get(`http://localhost:5000/api/product/${id}`)
+    axios.get(`http://localhost:9000/api/product/${id}`)
       .then(response => {
         const data = response.data;
         console.log('Product data received:', data);
@@ -85,7 +85,7 @@ const ProductDetail: React.FC = () => {
     
     console.log('Fetching related products for ID:', id);
     
-    axios.get(`http://localhost:5000/api/product/${id}/related`)
+    axios.get(`http://localhost:9000/api/product/${id}/related`)
       .then(response => {
         const data = response.data;
         console.log('Related products data received:', data);
@@ -105,10 +105,10 @@ const ProductDetail: React.FC = () => {
 
   // Fetch categories & brands từ API thực
   useEffect(() => {
-    axios.get('http://localhost:5000/api/category')
+    axios.get('http://localhost:9000/api/category')
       .then(res => setCategories(res.data))
       .catch(() => setCategories([]));
-    axios.get('http://localhost:5000/api/brand')
+    axios.get('http://localhost:9000/api/brand')
       .then(res => setBrands(res.data))
       .catch(() => setBrands([]));
   }, []);
@@ -145,7 +145,7 @@ const ProductDetail: React.FC = () => {
 
   // Hàm fetch sản phẩm theo filter
   const fetchFilteredProducts = async () => {
-    let url = 'http://localhost:5000/api/product?';
+    let url = 'http://localhost:9000/api/product?';
     if (filterCategory) url += `category=${filterCategory}&`;
     if (filterBrand) url += `brand=${filterBrand}&`;
     if (filterPriceRange[0]) url += `minPrice=${filterPriceRange[0]}&`;

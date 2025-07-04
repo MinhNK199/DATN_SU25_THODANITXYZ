@@ -50,7 +50,7 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem('token');
       
       // Fetch dashboard stats
-      const statsResponse = await axios.get('http://localhost:5000/api/admin/dashboard', { // API này không tồn tại
+      const statsResponse = await axios.get('http://localhost:9000/api/admin/dashboard', { // API này không tồn tại
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -66,7 +66,7 @@ const Dashboard: React.FC = () => {
   const fetchRevenueStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/order/admin/revenue-stats', { // Sửa lại đường dẫn API
+      const res = await axios.get('http://localhost:9000/api/order/admin/revenue-stats', { // Sửa lại đường dẫn API
         headers: { Authorization: `Bearer ${token}` }
       });
       setRevenueStats({
@@ -80,7 +80,7 @@ const Dashboard: React.FC = () => {
 
   const fetchTotalProductQuantity = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/product/total-product-quantity-by-name');
+      const res = await axios.get('http://localhost:9000/api/product/total-product-quantity-by-name');
       setTotalProductQuantity(res.data.totalProductQuantityByName || 0);
     } catch (error) {
       console.error('Error fetching total product quantity:', error);

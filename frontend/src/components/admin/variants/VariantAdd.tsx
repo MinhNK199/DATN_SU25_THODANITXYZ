@@ -38,7 +38,7 @@ const VariantAdd: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/product');
+        const response = await axios.get('http://localhost:9000/api/product');
         setProducts(response.data.products || []);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -79,7 +79,7 @@ const VariantAdd: React.FC = () => {
         isActive: values.isActive !== undefined ? values.isActive : true
       };
 
-      await axios.post('http://localhost:5000/api/variant', formData, {
+      await axios.post('http://localhost:9000/api/variant', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

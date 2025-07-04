@@ -78,7 +78,7 @@ const VariantList: React.FC = () => {
   // Fetch products for filter
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/product');
+      const response = await axios.get('http://localhost:9000/api/product');
       setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -134,7 +134,7 @@ const VariantList: React.FC = () => {
       onOk: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.delete(`http://localhost:5000/api/product/variants/bulk`, {
+          await axios.delete(`http://localhost:9000/api/product/variants/bulk`, {
             headers: { Authorization: `Bearer ${token}` },
             data: { variantIds: selectedVariants }
           });

@@ -2,7 +2,7 @@ import { message } from "antd";
 import { Product } from "../../../interfaces/Product";
 import { Brand } from "../../../interfaces/Brand";
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:9000/api";
 
 const handleResponse = async (response: Response) => {
     if (response.ok) {

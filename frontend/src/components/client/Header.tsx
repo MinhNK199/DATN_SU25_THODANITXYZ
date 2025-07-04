@@ -99,7 +99,7 @@ const Header: React.FC = () => {
     const fetchCategories = async () => {
       try {
         console.log('Fetching categories...');
-        const response = await axios.get('http://localhost:5000/api/category');
+        const response = await axios.get('http://localhost:9000/api/category');
         console.log('Categories response:', response.data);
         const activeCategories = response.data.filter((cat: Category) => cat.isActive);
         console.log('Active categories:', activeCategories);
@@ -127,7 +127,7 @@ const Header: React.FC = () => {
     const fetchBrands = async () => {
       try {
         console.log('Fetching brands...');
-        const response = await axios.get('http://localhost:5000/api/brand');
+        const response = await axios.get('http://localhost:9000/api/brand');
         console.log('Brands response:', response.data);
         const activeBrands = response.data.filter((brand: Brand) => brand.isActive);
         console.log('Active brands:', activeBrands);

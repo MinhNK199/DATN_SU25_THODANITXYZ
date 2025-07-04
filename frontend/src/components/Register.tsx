@@ -37,7 +37,7 @@ const Register = () => {
     console.log("Đang gửi request đăng ký:", form);
     
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/register", form);
+      const res = await axios.post("http://localhost:9000/api/auth/register", form);
       
       console.log("Response từ server:", res.data);
       

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import type { Banner } from "../../../interfaces/Banner";
 
-const API_URL = "http://localhost:5000/api/banner";
+const API_URL = "http://localhost:9000/api/banner";
 
 const BannerAdd: React.FC = () => {
   const {

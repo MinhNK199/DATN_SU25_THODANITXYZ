@@ -39,7 +39,7 @@ export default function Login() {
         console.log("Đang gửi request đăng nhập:", { email: formData.email, password: formData.password });
         
       const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        "http://localhost:9000/api/auth/login",
           { email: formData.email, password: formData.password }
       );
         
@@ -95,7 +95,7 @@ export default function Login() {
           password: formData.password 
         });
         
-        const res = await axios.post("http://localhost:5000/api/auth/register", {
+        const res = await axios.post("http://localhost:9000/api/auth/register", {
           name: formData.name,
           email: formData.email,
           password: formData.password

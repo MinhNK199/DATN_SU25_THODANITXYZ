@@ -27,7 +27,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import type { SearchProps } from "antd/es/input";
 
-const API_URL = "http://localhost:5000/api/banner";
+const API_URL = "http://localhost:9000/api/banner";
 
 interface SearchParams {
   title: string;
@@ -64,7 +64,7 @@ const BannerList: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await fetch(
-        "http://localhost:5000/api/banner?isActive=false",
+        "http://localhost:9000/api/banner?isActive=false",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -91,7 +91,7 @@ const BannerList: React.FC = () => {
         return;
       }
       const res = await fetch(
-        `http://localhost:5000/api/banner/${id}/soft-delete`,
+        `http://localhost:9000/api/banner/${id}/soft-delete`,
         {
           method: "PUT",
           headers: {
@@ -119,7 +119,7 @@ const BannerList: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       for (const id of ids) {
-        await fetch(`http://localhost:5000/api/banner/${id}/restore`, {
+        await fetch(`http://localhost:9000/api/banner/${id}/restore`, {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,

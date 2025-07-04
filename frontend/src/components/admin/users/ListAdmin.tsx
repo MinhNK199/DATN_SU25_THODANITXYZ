@@ -20,7 +20,7 @@ import { FaCheck, FaTimes, FaEye, FaArrowLeft } from "react-icons/fa";
 const { Title } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:5000/api/auth/admin-requests";
+const API_URL = "http://localhost:9000/api/auth/admin-requests";
 
 const Listadmin: React.FC = () => {
   const [requests, setRequests] = useState<User[]>([]);
@@ -81,7 +81,7 @@ const Listadmin: React.FC = () => {
         try {
           const token = localStorage.getItem("token");
           await axios.patch(
-            `http://localhost:5000/api/auth/admin-requests/${id}/approve`,
+            `http://localhost:9000/api/auth/admin-requests/${id}/approve`,
             { approve },
             { headers: { Authorization: `Bearer ${token}` } }
           );

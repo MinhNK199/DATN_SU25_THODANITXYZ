@@ -27,10 +27,10 @@ const ProductList: React.FC = () => {
 
   // Fetch categories & brands từ API thực
   useEffect(() => {
-    axios.get('http://localhost:5000/api/category')
+    axios.get('http://localhost:9000/api/category')
       .then(res => setCategories(res.data))
       .catch(() => setCategories([]));
-    axios.get('http://localhost:5000/api/brand')
+    axios.get('http://localhost:9000/api/brand')
       .then(res => setBrands(res.data))
       .catch(() => setBrands([]));
   }, []);
@@ -39,7 +39,7 @@ const ProductList: React.FC = () => {
   const fetchProducts = async (pageNum = 1) => {
     setLoading(true);
     setError(null);
-    let url = `http://localhost:5000/api/product?page=${pageNum}`;
+    let url = `http://localhost:9000/api/product?page=${pageNum}`;
     if (filterCategory) url += `&category=${filterCategory}`;
     if (filterBrand) url += `&brand=${filterBrand}`;
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;

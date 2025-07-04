@@ -22,7 +22,7 @@ const AdvancedProductList: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/category');
+        const res = await fetch('http://localhost:9000/api/category');
         const data = await res.json();
         setCategories(data || []);
       } catch {
@@ -35,7 +35,7 @@ const AdvancedProductList: React.FC = () => {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/brand');
+        const res = await fetch('http://localhost:9000/api/brand');
         const data = await res.json();
         setBrands(data || []);
       } catch {
