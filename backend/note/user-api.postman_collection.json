@@ -258,10 +258,10 @@
               "raw": "{\n  \"name\": \"iPhone 15 Pro Max (Updated)\",\n  \"price\": 28990000,\n  \"stock\": 150,\n  \"specifications\": {\n    \"color\": \"Titanium Black\",\n    \"storage\": \"512GB\",\n    \"ram\": \"8GB\",\n    \"screen\": \"6.7 inch\"\n  }\n}"
             },
             "url": {
-              "raw": "http://localhost:5000/api/products/{{productId}}",
+              "raw": "http://localhost:9000/api/products/{{productId}}",
               "protocol": "http",
               "host": ["localhost"],
-              "port": "5000",
+              "port": "9000",
               "path": ["api", "products", "{{productId}}"]
             }
           }
@@ -274,10 +274,10 @@
               { "key": "Authorization", "value": "Bearer {{token}}" }
             ],
         "url": {
-              "raw": "http://localhost:5000/api/products/{{productId}}/soft-delete",
+              "raw": "http://localhost:9000/api/products/{{productId}}/soft-delete",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "5000",
+          "port": "9000",
               "path": ["api", "products", "{{productId}}", "soft-delete"]
         }
       }
@@ -290,10 +290,10 @@
           { "key": "Authorization", "value": "Bearer {{token}}" }
         ],
         "url": {
-              "raw": "http://localhost:5000/api/products/{{productId}}/restore",
+              "raw": "http://localhost:9000/api/products/{{productId}}/restore",
               "protocol": "http",
               "host": ["localhost"],
-              "port": "5000",
+              "port": "9000",
               "path": ["api", "products", "{{productId}}", "restore"]
             }
           }
@@ -316,10 +316,10 @@
               ]
             },
             "url": {
-              "raw": "http://localhost:5000/api/products/import",
+              "raw": "http://localhost:9000/api/products/import",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "5000",
+          "port": "9000",
               "path": ["api", "products", "import"]
         }
       }
@@ -332,10 +332,10 @@
           { "key": "Authorization", "value": "Bearer {{token}}" }
         ],
         "url": {
-              "raw": "http://localhost:5000/api/products/stats",
+              "raw": "http://localhost:9000/api/products/stats",
           "protocol": "http",
           "host": ["localhost"],
-          "port": "5000",
+          "port": "9000",
               "path": ["api", "products", "stats"]
             }
           }

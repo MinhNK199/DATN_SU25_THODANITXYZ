@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { FaFilter, FaSort, FaTh, FaList, FaStar, FaHeart, FaShoppingCart } from 'react-icons/fa';
+import { 
+  FaFilter, 
+  FaSort, 
+  FaTh, 
+  FaList, 
+  // FaStar, 
+  // FaHeart, 
+  // FaShoppingCart 
+} from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
 
 const ProductList: React.FC = () => {
