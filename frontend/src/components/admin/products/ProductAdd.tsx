@@ -28,7 +28,7 @@ import SpecificationEditor from "./SpecificationEditor";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = "http://localhost:9000/api";
 
 // Hàm chuyển đổi cấu trúc cây cho TreeSelect
 const buildCategoryTree = (
