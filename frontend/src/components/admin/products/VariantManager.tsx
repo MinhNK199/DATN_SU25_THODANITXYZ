@@ -1,5 +1,16 @@
 import React from 'react';
-import { Button, Input, InputNumber, Switch, Row, Col, Card, Space, Tooltip, ColorPicker } from 'antd';
+import {
+  Button,
+  Input,
+  InputNumber,
+  Switch,
+  Row,
+  Col,
+  Card,
+  Space,
+  Tooltip,
+  ColorPicker,
+} from 'antd';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
 interface ProductVariant {
@@ -25,8 +36,8 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   const addVariant = () => {
     const newVariant: ProductVariant = {
       id: Date.now().toString(),
-      name: "",
-      sku: "",
+      name: '',
+      sku: '',
       price: 0,
       stock: 0,
       images: [],
@@ -36,22 +47,22 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   };
 
   const updateVariant = (id: string, field: keyof ProductVariant, value: any) => {
-    const updatedVariants = variants.map(v => 
+    const updatedVariants = variants.map((v) =>
       v.id === id ? { ...v, [field]: value } : v
     );
     onVariantsChange(updatedVariants);
   };
 
   const removeVariant = (id: string) => {
-    const updatedVariants = variants.filter(v => v.id !== id);
+    const updatedVariants = variants.filter((v) => v.id !== id);
     onVariantsChange(updatedVariants);
   };
 
   const formatPrice = (price: number) => {
-    if (!price || price <= 0) return "0 ₫";
+    if (!price || price <= 0) return '0 ₫';
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
-      currency: 'VND'
+      currency: 'VND',
     }).format(price);
   };
 
@@ -59,11 +70,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Sản phẩm biến thể</h3>
-        <Button
-          type="primary"
-          icon={<FaPlus />}
-          onClick={addVariant}
-        >
+        <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
           Thêm biến thể
         </Button>
       </div>
@@ -74,14 +81,17 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
             <div className="flex justify-between items-center">
               <h4 className="font-medium">Biến thể {index + 1}</h4>
               <Space>
-                <Tooltip title="Kích hoạt biến thể">
+                <Tooltip key={`tooltip-${variant.id}`} title="Kích hoạt biến thể">
                   <Switch
                     checked={variant.isActive}
-                    onChange={(checked) => updateVariant(variant.id, 'isActive', checked)}
+                    onChange={(checked) =>
+                      updateVariant(variant.id, 'isActive', checked)
+                    }
                     size="small"
                   />
                 </Tooltip>
                 <Button
+                  key={`btn-${variant.id}`}
                   danger
                   size="small"
                   icon={<FaTrash />}
@@ -95,14 +105,18 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 <Input
                   placeholder="Tên biến thể"
                   value={variant.name}
-                  onChange={(e) => updateVariant(variant.id, 'name', e.target.value)}
+                  onChange={(e) =>
+                    updateVariant(variant.id, 'name', e.target.value)
+                  }
                 />
               </Col>
               <Col span={12}>
                 <Input
                   placeholder="SKU"
                   value={variant.sku}
-                  onChange={(e) => updateVariant(variant.id, 'sku', e.target.value)}
+                  onChange={(e) =>
+                    updateVariant(variant.id, 'sku', e.target.value)
+                  }
                 />
               </Col>
             </Row>
@@ -112,25 +126,35 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 <InputNumber
                   placeholder="Giá"
                   value={variant.price || 0}
-                  onChange={(value) => updateVariant(variant.id, 'price', value || 0)}
+                  onChange={(value) =>
+                    updateVariant(variant.id, 'price', value || 0)
+                  }
                   className="w-full"
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                  }
                 />
               </Col>
               <Col span={8}>
                 <InputNumber
                   placeholder="Giá khuyến mãi"
                   value={variant.salePrice || undefined}
-                  onChange={(value) => updateVariant(variant.id, 'salePrice', value)}
+                  onChange={(value) =>
+                    updateVariant(variant.id, 'salePrice', value)
+                  }
                   className="w-full"
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                  }
                 />
               </Col>
               <Col span={8}>
                 <InputNumber
                   placeholder="Tồn kho"
                   value={variant.stock || 0}
-                  onChange={(value) => updateVariant(variant.id, 'stock', value || 0)}
+                  onChange={(value) =>
+                    updateVariant(variant.id, 'stock', value || 0)
+                  }
                   className="w-full"
                 />
               </Col>
@@ -149,25 +173,30 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 <Input
                   placeholder="Kích thước"
                   value={variant.size}
-                  onChange={(e) => updateVariant(variant.id, 'size', e.target.value)}
+                  onChange={(e) =>
+                    updateVariant(variant.id, 'size', e.target.value)
+                  }
                 />
               </Col>
               <Col span={8}>
                 <InputNumber
                   placeholder="Cân nặng (g)"
                   value={variant.weight || undefined}
-                  onChange={(value) => updateVariant(variant.id, 'weight', value)}
+                  onChange={(value) =>
+                    updateVariant(variant.id, 'weight', value)
+                  }
                   className="w-full"
                 />
               </Col>
             </Row>
 
-            {/* Thống kê nhanh */}
             <div className="bg-gray-50 p-3 rounded-lg">
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600">Giá:</span>
-                  <div className="font-medium">{formatPrice(variant.price)}</div>
+                  <div className="font-medium">
+                    {formatPrice(variant.price)}
+                  </div>
                 </div>
                 <div>
                   <span className="text-gray-600">Tồn kho:</span>
@@ -176,7 +205,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 <div>
                   <span className="text-gray-600">Trạng thái:</span>
                   <div className="font-medium">
-                    {variant.isActive ? "Kích hoạt" : "Không kích hoạt"}
+                    {variant.isActive ? 'Kích hoạt' : 'Không kích hoạt'}
                   </div>
                 </div>
               </div>
@@ -192,7 +221,6 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
         </div>
       )}
 
-      {/* Thống kê tổng quan */}
       {variants.length > 0 && (
         <Card size="small" className="bg-blue-50">
           <div className="grid grid-cols-4 gap-4 text-sm">
@@ -202,7 +230,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
             </div>
             <div className="text-center">
               <div className="font-bold text-green-600">
-                {variants.filter(v => v.isActive).length}
+                {variants.filter((v) => v.isActive).length}
               </div>
               <div className="text-gray-600">Kích hoạt</div>
             </div>
@@ -214,7 +242,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
             </div>
             <div className="text-center">
               <div className="font-bold text-red-600">
-                {variants.filter(v => v.stock === 0).length}
+                {variants.filter((v) => v.stock === 0).length}
               </div>
               <div className="text-gray-600">Hết hàng</div>
             </div>
@@ -225,4 +253,4 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   );
 };
 
-export default VariantManager; 
+export default VariantManager;

@@ -63,14 +63,13 @@ export const getProductById = async (id: string): Promise<Product> => {
 };
 
 export const updateProduct = async (id: string, data: Partial<Product>): Promise<Product> => {
-    const response = await fetch(`${API_URL}/product/${id}`, {
-        method: "PUT",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    return handleResponse(response);
+  const response = await fetch(`${API_URL}/product/${id}`, {
+    method: "PUT",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handleResponse(response);
 };
-
 // Brand API (cần cho form sản phẩm)
 export const getBrands = async (): Promise<Brand[]> => {
     const response = await fetch(`${API_URL}/brand`, { headers: getAuthHeaders() });
