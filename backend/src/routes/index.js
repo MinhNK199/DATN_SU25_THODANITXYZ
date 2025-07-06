@@ -12,6 +12,7 @@ import routerBill from "./bill";
 import routerBanner from "./banner"
 import routerRating from "./rating";
 import routerVariant from "./variant";
+import routerRecommendation from "./recommendation";
 import { runCleanupNow } from "../utils/cleanupJob";
 import { protect } from "../middlewares/authMiddleware";
 
@@ -29,6 +30,7 @@ router.use("/bill", routerBill);
 router.use("/banner", routerBanner);
 router.use("/rating", routerRating);
 router.use("/variant", routerVariant);
+router.use("/recommendation", routerRecommendation);
 
 // Cleanup job route (chỉ admin mới được gọi)
 router.get("/cleanup", protect, runCleanupNow);
