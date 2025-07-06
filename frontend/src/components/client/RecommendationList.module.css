@@ -1,0 +1,30 @@
+.recommendation-list .product-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.product-card {
+  flex: 1 1 180px;
+  min-width: 180px;
+  max-width: 220px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  transition: box-shadow 0.2s;
+}
+.product-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+@media (max-width: 600px) {
+  .recommendation-list .product-grid {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .product-card {
+    min-width: 100%;
+    max-width: 100%;
+  }
+} 
