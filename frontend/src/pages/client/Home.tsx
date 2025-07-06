@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import HeroSlider from '../../components/client/HeroSlider';
 import ProductCard from '../../components/client/ProductCard';
+import RecommendationList from '../../components/client/RecommendationList';
 import { FaGift, FaTruck, FaShieldAlt, FaHeadset, FaStar, FaUsers, FaAward } from 'react-icons/fa';
 
 const Home: React.FC = () => {
@@ -186,6 +187,13 @@ const Home: React.FC = () => {
               Xem tất cả sản phẩm
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* Recommendation Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <RecommendationList />
         </div>
       </section>
 
