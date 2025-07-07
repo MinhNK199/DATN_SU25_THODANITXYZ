@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaLock, FaCreditCard, FaPaypal, FaApple, FaGoogle, FaTruck, FaShieldAlt, FaCheckCircle, FaArrowLeft, FaCheck } from 'react-icons/fa';
+import { FaLock, FaCreditCard, FaPaypal, FaTruck, FaArrowLeft, FaCheck } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
 import { useToast } from '../../components/client/ToastContainer';
 import OrderSuccessModal from '../../components/client/OrderSuccessModal';
+import axios from 'axios';
+
+interface Province {
+  code: number;
+  name: string;
+}
+interface District {
+  code: number;
+  name: string;
+}
+interface Ward {
+  code: number;
+  name: string;
+}
 
 const Checkout: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -13,13 +27,54 @@ const Checkout: React.FC = () => {
     email: '',
     phone: '',
     address: '',
-    city: '',
-    zipCode: '',
+    province_code: '',
+    district_code: '',
+    ward_code: '',
     paymentMethod: 'credit-card'
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+
+  // Địa chỉ động
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+
+  useEffect(() => {
+    axios
+      .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
+      .then((r) => setProvinces(r.data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (formData.province_code) {
+      axios
+        .get<{ districts: District[] }>(
+          `https://provinces.open-api.vn/api/p/${formData.province_code}?depth=2`
+        )
+        .then((r) => setDistricts(r.data.districts))
+        .catch(() => {});
+    } else {
+      setDistricts([]);
+      setFormData((prev) => ({ ...prev, district_code: '', ward_code: '' }));
+    }
+  }, [formData.province_code]);
+
+  useEffect(() => {
+    if (formData.district_code) {
+      axios
+        .get<{ wards: Ward[] }>(
+          `https://provinces.open-api.vn/api/d/${formData.district_code}?depth=2`
+        )
+        .then((r) => setWards(r.data.wards))
+        .catch(() => {});
+    } else {
+      setWards([]);
+      setFormData((prev) => ({ ...prev, ward_code: '' }));
+    }
+  }, [formData.district_code]);
 
   const { state: cartState, clearCart } = useCart();
   const { showSuccess } = useToast();
@@ -64,6 +119,11 @@ const Checkout: React.FC = () => {
 
   const shippingFee = cartState.total > 500000 ? 0 : 30000;
   const total = cartState.total + shippingFee;
+
+  // Helper lấy tên tỉnh/huyện/xã
+  const getProvinceName = () => provinces.find(p => String(p.code) === formData.province_code)?.name || "";
+  const getDistrictName = () => districts.find(d => String(d.code) === formData.district_code)?.name || "";
+  const getWardName = () => wards.find(w => String(w.code) === formData.ward_code)?.name || "";
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -173,40 +233,87 @@ const Checkout: React.FC = () => {
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Tỉnh/Thành phố *
+                        </label>
+                        <select
+                          name="province_code"
+                          value={formData.province_code}
+                          onChange={e =>
+                            setFormData({
+                              ...formData,
+                              province_code: e.target.value,
+                              district_code: '',
+                              ward_code: ''
+                            })
+                          }
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                        >
+                          <option value="">Chọn tỉnh/thành</option>
+                          {provinces.map((p) => (
+                            <option key={p.code} value={p.code}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Quận/Huyện *
+                        </label>
+                        <select
+                          name="district_code"
+                          value={formData.district_code}
+                          onChange={e =>
+                            setFormData({
+                              ...formData,
+                              district_code: e.target.value,
+                              ward_code: ''
+                            })
+                          }
+                          required
+                          disabled={!districts.length}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                        >
+                          <option value="">Chọn quận/huyện</option>
+                          {districts.map((d) => (
+                            <option key={d.code} value={d.code}>
+                              {d.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phường/Xã *
+                        </label>
+                        <select
+                          name="ward_code"
+                          value={formData.ward_code}
+                          onChange={handleInputChange}
+                          required
+                          disabled={!wards.length}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                        >
+                          <option value="">Chọn phường/xã</option>
+                          {wards.map((w) => (
+                            <option key={w.code} value={w.code}>
+                              {w.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Địa chỉ giao hàng *
+                          Địa chỉ (số nhà, tên đường) *
                         </label>
                         <input
                           type="text"
                           name="address"
                           value={formData.address}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Thành phố *
-                        </label>
-                        <input
-                          type="text"
-                          name="city"
-                          value={formData.city}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Mã bưu điện *
-                        </label>
-                        <input
-                          type="text"
-                          name="zipCode"
-                          value={formData.zipCode}
                           onChange={handleInputChange}
                           required
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -321,7 +428,9 @@ const Checkout: React.FC = () => {
                       <p className="text-gray-700">
                         {formData.firstName} {formData.lastName}<br />
                         {formData.address}<br />
-                        {formData.city}, {formData.zipCode}<br />
+                        {getWardName() && `${getWardName()}, `}
+                        {getDistrictName() && `${getDistrictName()}, `}
+                        {getProvinceName()}<br />
                         {formData.phone}<br />
                         {formData.email}
                       </p>
@@ -413,4 +522,4 @@ const Checkout: React.FC = () => {
   );
 };
 
-export default Checkout; 
+export default Checkout;
