@@ -12,7 +12,7 @@ const TestAPI = () => {
   const [quantity, setQuantity] = useState(1);
   const [productAvailability, setProductAvailability] = useState(null);
 
-  const API_BASE_URL = 'http://localhost:5000/api';
+  const API_BASE_URL = 'http://localhost:8000/api';
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('token');

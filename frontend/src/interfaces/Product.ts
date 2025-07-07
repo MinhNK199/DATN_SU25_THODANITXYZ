@@ -1,5 +1,5 @@
-import { IBrand } from './Brand';
-import { ICategory } from './Category';
+import { Brand } from './Brand';
+import { Category } from './Category';
 
 // Giao diện cho một biến thể sản phẩm
 export interface ProductVariant {
@@ -32,7 +32,7 @@ export interface Product {
     price: number;
     salePrice?: number;
     images: string[];
-    category: ICategory | string; // Có thể là object Category đầy đủ hoặc chỉ là ID
+    category: Category | string; // Có thể là object Category đầy đủ hoặc chỉ là ID
     brand: IBrand | string | null;       // Có thể là object Brand đầy đủ hoặc chỉ là ID
     stock: number;
     variants: ProductVariant[];

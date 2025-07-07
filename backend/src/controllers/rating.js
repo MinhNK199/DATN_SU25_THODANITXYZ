@@ -28,13 +28,16 @@ export const getRatings = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({
-      error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: error.message
-      }
-    });
-  }
+  console.error("🔥 Lỗi khi GET /api/rating:", error); // 👉 thêm dòng này
+
+  res.status(500).json({
+    error: {
+      code: 'INTERNAL_SERVER_ERROR',
+      message: error.message
+    }
+  });
+}
+
 };
 
 // Tạo đánh giá mới

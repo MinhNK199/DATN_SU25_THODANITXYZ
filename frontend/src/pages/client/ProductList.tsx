@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaFilter, FaSort, FaTh, FaList, FaStar, FaHeart, FaShoppingCart } from 'react-icons/fa';
+import { FaFilter, FaSort, FaTh, FaList } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
 import axios from 'axios';
 
@@ -11,7 +11,6 @@ const ProductList: React.FC = () => {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
 
-  // State cho bộ lọc
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [filterCategory, setFilterCategory] = useState('');
@@ -25,21 +24,19 @@ const ProductList: React.FC = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  // Fetch categories & brands từ API thực
   useEffect(() => {
-    axios.get('http://localhost:9000/api/category')
+    axios.get('http://localhost:8000/api/category')
       .then(res => setCategories(res.data))
       .catch(() => setCategories([]));
-    axios.get('http://localhost:9000/api/brand')
+    axios.get('http://localhost:8000/api/brand')
       .then(res => setBrands(res.data))
       .catch(() => setBrands([]));
   }, []);
 
-  // Hàm fetch sản phẩm theo filter
   const fetchProducts = async (pageNum = 1) => {
     setLoading(true);
     setError(null);
-    let url = `http://localhost:9000/api/product?page=${pageNum}`;
+    let url = `http://localhost:8000/api/product?page=${pageNum}`;
     if (filterCategory) url += `&category=${filterCategory}`;
     if (filterBrand) url += `&brand=${filterBrand}`;
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
@@ -59,12 +56,10 @@ const ProductList: React.FC = () => {
     }
   };
 
-  // Fetch sản phẩm lần đầu
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  // Khi chuyển trang
   useEffect(() => {
     fetchProducts(page);
     // eslint-disable-next-line
@@ -80,7 +75,6 @@ const ProductList: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Tất cả sản phẩm</h1>
           <p className="text-gray-600">
@@ -89,10 +83,9 @@ const ProductList: React.FC = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Bộ lọc hiện đại */}
           <aside className="lg:w-72 w-full bg-white rounded-2xl shadow-lg p-6 mb-8 lg:mb-0 flex-shrink-0">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Bộ lọc sản phẩm</h2>
-            {/* Danh mục (dropdown) */}
+
             <div className="mb-6">
               <h3 className="text-base font-semibold text-gray-700 mb-2">Danh mục</h3>
               <select
@@ -106,7 +99,7 @@ const ProductList: React.FC = () => {
                 ))}
               </select>
             </div>
-            {/* Thương hiệu (dropdown) */}
+
             <div className="mb-6">
               <h3 className="text-base font-semibold text-gray-700 mb-2">Thương hiệu</h3>
               <select
@@ -120,7 +113,7 @@ const ProductList: React.FC = () => {
                 ))}
               </select>
             </div>
-            {/* Giá */}
+
             <div className="mb-6">
               <h3 className="text-base font-semibold text-gray-700 mb-2">Khoảng giá</h3>
               <div className="flex items-center gap-2">
@@ -144,7 +137,7 @@ const ProductList: React.FC = () => {
                 />
               </div>
             </div>
-            {/* Trạng thái kho */}
+
             <div className="mb-4">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
@@ -156,7 +149,7 @@ const ProductList: React.FC = () => {
                 <span className="text-gray-700 text-sm">Chỉ hiển thị còn hàng</span>
               </label>
             </div>
-            {/* Nút lọc */}
+
             <button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors mb-4"
               onClick={() => fetchProducts(1)}
@@ -165,9 +158,7 @@ const ProductList: React.FC = () => {
             </button>
           </aside>
 
-          {/* Products Section */}
           <div className="flex-1">
-            {/* Toolbar */}
             <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
                 <div className="flex items-center space-x-4">
@@ -182,7 +173,6 @@ const ProductList: React.FC = () => {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                  {/* Sort */}
                   <div className="flex items-center space-x-2">
                     <FaSort className="text-gray-500" />
                     <select
@@ -198,7 +188,6 @@ const ProductList: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* View Mode */}
                   <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode('grid')}
@@ -221,7 +210,6 @@ const ProductList: React.FC = () => {
               </div>
             </div>
 
-            {/* Products Grid */}
             {loading ? (
               <div className="text-center py-12 text-gray-500">Đang tải sản phẩm...</div>
             ) : error ? (
@@ -233,17 +221,21 @@ const ProductList: React.FC = () => {
                   : 'grid-cols-1'
               }`}>
                 {products.map((product) => {
-                  // Map dữ liệu từ API sang props ProductCard
                   const mappedProduct = {
                     _id: product._id || product.id,
                     name: product.name,
                     price: product.salePrice || product.price,
                     originalPrice: product.salePrice ? product.price : undefined,
                     image: product.images && product.images.length > 0 ? product.images[0] : '',
-                    brand: typeof product.brand === 'object' ? product.brand.name : product.brand,
+                    brand:
+                      product.brand && typeof product.brand === 'object'
+                        ? product.brand.name
+                        : product.brand,
                     rating: product.averageRating || 0,
                     reviewCount: product.numReviews || 0,
-                    discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
+                    discount: product.salePrice
+                      ? Math.round(100 - (product.salePrice / product.price) * 100)
+                      : undefined,
                     isNew: product.isFeatured || false,
                     isHot: product.isActive || false,
                     stock: product.stock || 0,
@@ -254,7 +246,6 @@ const ProductList: React.FC = () => {
               </div>
             )}
 
-            {/* Pagination */}
             <div className="mt-12 flex justify-center">
               <nav className="flex items-center space-x-2">
                 <button
@@ -289,4 +280,4 @@ const ProductList: React.FC = () => {
   );
 };
 
-export default ProductList; 
+export default ProductList;

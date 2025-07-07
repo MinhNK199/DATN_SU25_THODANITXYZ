@@ -1,6 +1,6 @@
 import { Category } from "../../interfaces/Category";
 
-const API_URL = "http://localhost:9000/api/category";
+const API_URL = "http://localhost:8000/api/category";
 
 const getAuthToken = () => {
     return localStorage.getItem("token");

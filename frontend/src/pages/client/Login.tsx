@@ -39,7 +39,7 @@ const Login: React.FC = () => {
         console.log("Đang gửi request đăng nhập:", { email: formData.email, password: formData.password });
         
         const res = await axios.post(
-          "http://localhost:9000/api/auth/login",
+          "http://localhost:8000/api/auth/login",
           { email: formData.email, password: formData.password }
         );
         
@@ -99,7 +99,7 @@ const Login: React.FC = () => {
           password: formData.password 
         });
         
-        const res = await axios.post("http://localhost:9000/api/auth/register", {
+        const res = await axios.post("http://localhost:8000/api/auth/register", {
           name: formData.name,
           email: formData.email,
           password: formData.password

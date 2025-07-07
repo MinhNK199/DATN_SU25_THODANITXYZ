@@ -19,7 +19,7 @@ import { FaEye } from "react-icons/fa";
 const { Title } = Typography;
 const { Option } = Select;
 
-const API_URL = "http://localhost:9000/api/auth/users";
+const API_URL = "http://localhost:8000/api/auth/users";
 
 const UserList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -35,7 +35,7 @@ const UserList: React.FC = () => {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const res = await axios.get("http://localhost:9000/api/auth/me", {
+        const res = await axios.get("http://localhost:8000/api/auth/me", {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },

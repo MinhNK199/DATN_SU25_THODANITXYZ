@@ -40,6 +40,6 @@ const ratingSchema = new mongoose.Schema({
 // Index để tối ưu query
 ratingSchema.index({ userId: 1, productId: 1 });
 ratingSchema.index({ productId: 1, createdAt: -1 });
-
-export const Rating = mongoose.model('Rating', ratingSchema);
+ const Rating = mongoose.model('Rating', ratingSchema);
+ export default Rating; 
 

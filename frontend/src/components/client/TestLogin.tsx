@@ -16,7 +16,7 @@ const TestLogin: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:9000/api/auth/login', formData);
+      const response = await axios.post('http://localhost:8000/api/auth/login', formData);
       
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);

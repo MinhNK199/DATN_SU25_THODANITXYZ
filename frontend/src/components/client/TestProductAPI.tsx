@@ -10,7 +10,7 @@ const TestProductAPI = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:9000/api/product');
+      const response = await axios.get('http://localhost:8000/api/product');
       setProducts(response.data);
       toast.success(`Lấy được ${response.data.length} sản phẩm`);
     } catch (error) {
@@ -24,7 +24,7 @@ const TestProductAPI = () => {
   const fetchProductDetail = async (productId: string) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:9000/api/product/${productId}`);
+      const response = await axios.get(`http://localhost:8000/api/product/${productId}`);
       setSelectedProduct(response.data);
       toast.success('Lấy thông tin sản phẩm thành công');
     } catch (error) {
@@ -38,7 +38,7 @@ const TestProductAPI = () => {
   const fetchRelatedProducts = async (productId: string) => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:9000/api/product/${productId}/related`);
+      const response = await axios.get(`http://localhost:8000/api/product/${productId}/related`);
       toast.success(`Lấy được ${response.data.length} sản phẩm liên quan`);
       console.log('Related products:', response.data);
     } catch (error) {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Product } from "../../../interfaces/Product";
-import { IBrand } from "../../../interfaces/Brand";
+import { Brand } from "../../../interfaces/Brand";
 import {
   getProducts,
   getDeletedProducts,
@@ -61,7 +61,7 @@ const getTotalStock = (product: Product) => {
 
 const ProductListPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [brands, setBrands] = useState<IBrand[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [deletedProducts, setDeletedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isTrashVisible, setTrashVisible] = useState(false);
@@ -152,14 +152,11 @@ const ProductListPage: React.FC = () => {
   );
 
   const filteredProducts = products
-    .filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter((p) =>
-      filterBrand
-        ? typeof p.brand === "object"
-          ? p.brand._id === filterBrand
-          : p.brand === filterBrand
-        : true
-    )
+  .filter((p) =>
+    typeof p.name === "string"
+      ? p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      : false
+  )
     .filter((p) => {
       if (filterStock === "inStock") return p.stock > 0;
       if (filterStock === "outOfStock") return p.stock === 0;

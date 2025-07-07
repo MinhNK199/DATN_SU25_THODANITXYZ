@@ -42,7 +42,7 @@ const VariantEdit: React.FC = () => {
       try {
         setInitialLoading(true);
         const token = localStorage.getItem('token');
-        const response = await axios.get(`http://localhost:9000/api/variant/${id}`, {
+        const response = await axios.get(`http://localhost:8000/api/variant/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -90,7 +90,7 @@ const VariantEdit: React.FC = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get('http://localhost:9000/api/product');
+        const response = await axios.get('http://localhost:8000/api/product');
         setProducts(response.data.products || []);
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -128,7 +128,7 @@ const VariantEdit: React.FC = () => {
         isActive: values.isActive !== undefined ? values.isActive : true
       };
 
-      await axios.put(`http://localhost:9000/api/variant/${id}`, formData, {
+      await axios.put(`http://localhost:8000/api/variant/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

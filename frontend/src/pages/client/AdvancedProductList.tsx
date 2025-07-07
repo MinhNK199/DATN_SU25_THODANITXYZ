@@ -3,7 +3,7 @@ import { FaFilter, FaSearch, FaStar } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
 import { useSearchParams } from 'react-router-dom';
 
-const API_URL = 'http://localhost:5000/api/product';
+const API_URL = 'http://localhost:8000/api/product';
 
 const AdvancedProductList: React.FC = () => {
   const [products, setProducts] = useState<any[]>([]);
@@ -22,7 +22,7 @@ const AdvancedProductList: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch('http://localhost:9000/api/category');
+        const res = await fetch('http://localhost:8000/api/category');
         const data = await res.json();
         setCategories(data || []);
       } catch {
@@ -35,7 +35,7 @@ const AdvancedProductList: React.FC = () => {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const res = await fetch('http://localhost:9000/api/brand');
+        const res = await fetch('http://localhost:8000/api/brand');
         const data = await res.json();
         setBrands(data || []);
       } catch {

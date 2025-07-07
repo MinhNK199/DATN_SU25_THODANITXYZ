@@ -34,7 +34,7 @@ const Activity: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:9000/api/auth/nhatKy", {
+      const res = await axios.get("http://localhost:8000/api/auth/nhatKy", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setLogs(res.data.logs);

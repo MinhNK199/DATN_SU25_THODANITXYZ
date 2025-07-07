@@ -48,7 +48,7 @@ const { TextArea } = Input;
 const { Panel } = Collapse;
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
-const API_URL = "http://localhost:9000/api/product";
+const API_URL = "http://localhost:8000/api/product";
 
 interface ProductVariant {
   id: string;

@@ -75,7 +75,7 @@ const RatingList: React.FC = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("http://localhost:9000/api/products?limit=1000");
+      const res = await axios.get("http://localhost:8000/api/product?limit=1000");
       setProducts(res.data.data || []);
     } catch {
       setProducts([]);
@@ -85,7 +85,7 @@ const RatingList: React.FC = () => {
   const fetchRatings = async (page = 1, pageSize = 10) => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:9000/api/rating", {
+      const res = await axios.get("http://localhost:8000/api/rating", {
         params: { page, limit: pageSize },
       });
       setData(res.data.data);

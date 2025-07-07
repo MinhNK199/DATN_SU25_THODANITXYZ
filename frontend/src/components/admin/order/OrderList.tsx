@@ -6,7 +6,7 @@ import { Button, Card, Tag, Tooltip, Table, Input, Select, Row, Col, Modal, mess
 import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
 
-const API_URL = "http://localhost:9000/api/order";
+const API_URL = "http://localhost:8000/api/order";
 
 const getToken = () => {
     return localStorage.getItem('token') || '';
