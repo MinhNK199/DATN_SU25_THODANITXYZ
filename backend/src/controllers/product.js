@@ -6,6 +6,8 @@ import Category from "../models/Category";
 import Brand from "../models/Brand";
 import User from "../models/User";
 import Order from "../models/Order";
+const removeAccents = require('remove-accents');
+
 export const getProducts = async (req, res) => {
   try {
     // ⚙️ Thiết lập phân trang mặc định
@@ -2421,4 +2423,27 @@ export const getTotalProductQuantityByName = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+};
+
+exports.searchProducts = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) return res.status(400).json({ message: "Missing search query" });
+
+    // Loại bỏ dấu và chuyển về chữ thường
+    const normalizedQuery = removeAccents(query).toLowerCase();
+
+    // Lấy tất cả sản phẩm (hoặc chỉ lấy các trường cần thiết)
+    const products = await Product.find();
+
+    // Lọc sản phẩm theo tên không dấu, không phân biệt hoa thường
+    const filtered = products.filter(p => {
+      const name = removeAccents(p.name).toLowerCase();
+      return name.includes(normalizedQuery);
+    });
+
+    res.json(filtered);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
