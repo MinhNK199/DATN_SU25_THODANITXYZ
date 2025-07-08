@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaFilter, FaSort, FaTh, FaList } from 'react-icons/fa';
 import ProductCard from '../../components/client/ProductCard';
 import axios from 'axios';
+import { useLocation } from 'react-router-dom';
 
 const ProductList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -24,6 +25,9 @@ const ProductList: React.FC = () => {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
 
+  const location = useLocation();
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
   useEffect(() => {
     axios.get('http://localhost:8000/api/category')
       .then(res => setCategories(res.data))
@@ -32,6 +36,12 @@ const ProductList: React.FC = () => {
       .then(res => setBrands(res.data))
       .catch(() => setBrands([]));
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get('search') || '';
+    setSearchTerm(search);
+  }, [location.search]);
 
   const fetchProducts = async (pageNum = 1) => {
     setLoading(true);
@@ -44,10 +54,23 @@ const ProductList: React.FC = () => {
     if (filterInStock) url += '&inStock=true';
     try {
       const res = await axios.get(url);
-      setProducts(res.data.products || []);
+      let filtered = res.data.products || [];
+      if (searchTerm.trim()) {
+        const lower = searchTerm.trim().toLowerCase();
+        // Sản phẩm tên trùng khớp tuyệt đối lên đầu
+        let exact = filtered.filter(p => p.name.toLowerCase() === lower);
+        let partial = filtered.filter(p => p.name.toLowerCase().includes(lower) && p.name.toLowerCase() !== lower);
+        // Nếu không có exact và partial, fallback: gợi ý các sản phẩm có chữ đầu tiên của từ khóa
+        if (exact.length === 0 && partial.length === 0) {
+          const firstWord = lower.split(' ')[0];
+          partial = filtered.filter(p => p.name.toLowerCase().includes(firstWord));
+        }
+        filtered = [...exact, ...partial];
+      }
+      setProducts(filtered);
       setPage(res.data.page || 1);
       setPages(res.data.pages || 1);
-      setTotal(res.data.total || 0);
+      setTotal(filtered.length);
     } catch (err: any) {
       setError(err.message || 'Lỗi khi fetch sản phẩm');
       setProducts([]);
@@ -58,12 +81,8 @@ const ProductList: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    fetchProducts(page);
     // eslint-disable-next-line
-  }, [page]);
+  }, [searchTerm, filterCategory, filterBrand, filterPriceRange, filterInStock]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
