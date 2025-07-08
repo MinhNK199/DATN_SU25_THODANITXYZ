@@ -51,7 +51,8 @@ import {
     addRewardPoints,
     useRewardPoints,
     getTotalProductWithVariantsByName,
-    getTotalProductQuantityByName
+    getTotalProductQuantityByName,
+    searchProducts
 } from "../controllers/product";
 import { protect } from "../middlewares/authMiddleware";
 import { validateRequest } from "../middlewares/validateRequest";
@@ -65,6 +66,7 @@ routerProduct.get("/stats", protect, getProductStats);
 routerProduct.get("/deleted", protect, getDeletedProducts);
 routerProduct.get("/deleted-count", protect, getDeletedProductsCount);
 routerProduct.get("/suggest", suggestProducts);
+routerProduct.get('/search', searchProducts);
 
 // User Favorites
 routerProduct.get("/favorites", protect, getFavorites);
