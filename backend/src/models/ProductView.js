@@ -19,6 +19,6 @@ const productViewSchema = new mongoose.Schema({
   timestamps: true,
   versionKey: false,
 });
-
 const ProductView = mongoose.model("ProductView", productViewSchema);
 export default ProductView; 
+// thanh tu
