@@ -8,31 +8,31 @@ import Sentiment from 'sentiment';
 // Lấy danh sách đánh giá
 export const getRatings = async(req, res) => {
     try {
-        const { page = 1, limit = 10, sort = 'createdAt', order = 'desc' } = req.query;
-        const skip = (page - 1) * limit;
+        const { productId } = req.query;
+        const filter = productId ? { productId } : {};
+        const ratings = await Rating.find(filter)
+            .populate('userId', 'name')
+            .sort({ createdAt: -1 });
 
-        const ratings = await Rating.find()
-            .populate('userId', 'name email')
-            .populate('productId', 'name price')
-            .sort({
-                [sort]: order === 'desc' ? -1 : 1
-            })
-            .skip(skip)
-            .limit(parseInt(limit));
+        // Đảm bảo trả về đúng định dạng FE cần
+        const result = ratings.map(r => ({
+            id: r._id,
+            userId: r.userId ? ._id || r.userId,
+            userName: r.userId ? .name || 'Ẩn danh',
+            rating: r.rating,
+            title: r.title || '',
+            comment: r.comment,
+            images: r.images || [],
+            date: r.createdAt,
+            helpful: r.helpful || 0,
+            notHelpful: r.notHelpful || 0,
+            verified: r.verified || false,
+            pros: r.pros || [],
+            cons: r.cons || []
+        }));
 
-        const total = await Rating.countDocuments();
-
-        res.status(200).json({
-            data: ratings,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total
-            }
-        });
+        res.status(200).json(result);
     } catch (error) {
-        console.error("🔥 Lỗi khi GET /api/rating:", error); // 👉 thêm dòng này
-
         res.status(500).json({
             error: {
                 code: 'INTERNAL_SERVER_ERROR',
@@ -40,12 +40,8 @@ export const getRatings = async(req, res) => {
             }
         });
     }
-
 };
 
-// Tạo đánh giá mới
-// ...existing code...
-// Tạo đánh giá mới
 export const createRating = async(req, res) => {
     try {
         const { productId, rating, comment, images } = req.body;
