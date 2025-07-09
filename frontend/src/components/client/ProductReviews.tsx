@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { FaStar, FaThumbsUp, FaThumbsDown, FaImage, FaTimes, FaUser, FaCalendar, FaCheck } from 'react-icons/fa';
 
 interface Review {
@@ -79,6 +80,16 @@ const ProductReviews: React.FC = () => {
     cons: '',
     images: [] as string[]
   });
+  const [sentimentResult, setSentimentResult] = useState<null | {
+    sentiment: string;
+    score: number;
+    comparative: number;
+    words: string[];
+    positive: string[];
+    negative: string[];
+  }>(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [sentimentError, setSentimentError] = useState<string | null>(null);
 
   const ratingStats = {
     average: 4.7,
@@ -167,6 +178,28 @@ const ProductReviews: React.FC = () => {
       images: prev.images.filter((_, i) => i !== index)
     }));
   };
+
+  // Gọi API phân tích cảm xúc khi comment thay đổi
+  React.useEffect(() => {
+    const fetchSentiment = async () => {
+      if (!newReview.comment.trim()) {
+        setSentimentResult(null);
+        return;
+      }
+      setSentimentLoading(true);
+      setSentimentError(null);
+      try {
+        const res = await axios.post('/api/rating/analyze-sentiment', { comment: newReview.comment });
+        setSentimentResult(res.data);
+      } catch (err: any) {
+        setSentimentError('Không phân tích được cảm xúc');
+        setSentimentResult(null);
+      } finally {
+        setSentimentLoading(false);
+      }
+    };
+    fetchSentiment();
+  }, [newReview.comment]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -296,6 +329,31 @@ const ProductReviews: React.FC = () => {
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {/* Hiển thị kết quả cảm xúc */}
+                <div className="mt-2 min-h-[32px]">
+                  {sentimentLoading && <span className="text-blue-500 text-sm">Đang phân tích cảm xúc...</span>}
+                  {sentimentError && <span className="text-red-500 text-sm">{sentimentError}</span>}
+                  {sentimentResult && !sentimentLoading && (
+                    <div className="text-sm flex flex-col md:flex-row md:items-center md:space-x-4">
+                      <span className="font-semibold">Cảm xúc: </span>
+                      <span className={
+                        sentimentResult.sentiment === 'positive' ? 'text-green-600' :
+                        sentimentResult.sentiment === 'negative' ? 'text-red-600' : 'text-gray-600'
+                      }>
+                        {sentimentResult.sentiment === 'positive' && 'Tích cực'}
+                        {sentimentResult.sentiment === 'negative' && 'Tiêu cực'}
+                        {sentimentResult.sentiment === 'neutral' && 'Trung tính'}
+                      </span>
+                      <span>• Điểm: {sentimentResult.score}</span>
+                      {sentimentResult.positive.length > 0 && (
+                        <span className="text-green-700">Từ tích cực: {sentimentResult.positive.join(', ')}</span>
+                      )}
+                      {sentimentResult.negative.length > 0 && (
+                        <span className="text-red-700">Từ tiêu cực: {sentimentResult.negative.join(', ')}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Pros and Cons */}
@@ -493,4 +551,4 @@ const ProductReviews: React.FC = () => {
   );
 };
 
-export default ProductReviews; 
+export default ProductReviews;
