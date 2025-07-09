@@ -93,6 +93,16 @@ const ProductReviews: React.FC<{ productId?: string }> = ({ productId }) => {
 
   const [starFilter, setStarFilter] = useState<number | null>(null);
 
+  // Bộ lọc nâng cao cho đánh giá sản phẩm
+  const [filter, setFilter] = useState({
+    minRating: '',
+    hasImage: false,
+    hasPros: false,
+    hasCons: false,
+    onlyVerified: false,
+    keyword: '',
+  });
+
   const ratingStats = {
     average: 4.7,
     total: 1247,
@@ -203,12 +213,6 @@ const ProductReviews: React.FC<{ productId?: string }> = ({ productId }) => {
     fetchSentiment();
   }, [newReview.comment]);
 
-  // Lọc review theo số sao nếu có chọn
-  const filteredReviews = starFilter
-    ? reviews.filter((r) => r.rating === starFilter)
-    : reviews;
-
-  // Thay thế mock data bằng fetch từ backend
   useEffect(() => {
     const fetchReviews = async () => {
       try {
@@ -223,6 +227,64 @@ const ProductReviews: React.FC<{ productId?: string }> = ({ productId }) => {
     fetchReviews();
   }, [productId]);
 
+  const [filteredReviews, setFilteredReviews] = useState<Review[]>(reviews);
+
+  // Hàm xử lý thay đổi bộ lọc nâng cao
+  const handleAdvancedFilter = (e: React.FormEvent) => {
+    e.preventDefault();
+    let filtered = reviews;
+    if (filter.minRating) {
+      filtered = filtered.filter(r => r.rating >= Number(filter.minRating));
+    }
+    if (filter.hasImage) {
+      filtered = filtered.filter(r => r.images && r.images.length > 0);
+    }
+    if (filter.hasPros) {
+      filtered = filtered.filter(r => r.pros && r.pros.length > 0);
+    }
+    if (filter.hasCons) {
+      filtered = filtered.filter(r => r.cons && r.cons.length > 0);
+    }
+    if (filter.onlyVerified) {
+      filtered = filtered.filter(r => r.verified);
+    }
+    if (filter.keyword) {
+      filtered = filtered.filter(r =>
+        r.comment.toLowerCase().includes(filter.keyword.toLowerCase()) ||
+        r.title.toLowerCase().includes(filter.keyword.toLowerCase())
+      );
+    }
+    setFilteredReviews(filtered);
+  };
+
+  useEffect(() => {
+  let filtered = reviews;
+  if (starFilter) {
+    filtered = filtered.filter(r => r.rating === starFilter);
+  }
+  if (filter.minRating) {
+    filtered = filtered.filter(r => r.rating >= Number(filter.minRating));
+  }
+  if (filter.hasImage) {
+    filtered = filtered.filter(r => r.images && r.images.length > 0);
+  }
+  if (filter.hasPros) {
+    filtered = filtered.filter(r => r.pros && r.pros.length > 0);
+  }
+  if (filter.hasCons) {
+    filtered = filtered.filter(r => r.cons && r.cons.length > 0);
+  }
+  if (filter.onlyVerified) {
+    filtered = filtered.filter(r => r.verified);
+  }
+  if (filter.keyword) {
+    filtered = filtered.filter(r =>
+      r.comment.toLowerCase().includes(filter.keyword.toLowerCase()) ||
+      r.title.toLowerCase().includes(filter.keyword.toLowerCase())
+    );
+  }
+  setFilteredReviews(filtered);
+}, [reviews, filter, starFilter]);
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -471,6 +533,67 @@ const ProductReviews: React.FC<{ productId?: string }> = ({ productId }) => {
               </div>
             </div>
           )}
+
+          {/* Bộ lọc nâng cao */}
+          <form
+            className="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded-lg shadow"
+            onSubmit={handleAdvancedFilter}
+          >
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={filter.minRating}
+              onChange={e => setFilter(f => ({ ...f, minRating: e.target.value }))}
+              placeholder="Số sao tối thiểu"
+              className="border px-3 py-2 rounded w-32"
+            />
+            <input
+              type="text"
+              value={filter.keyword}
+              onChange={e => setFilter(f => ({ ...f, keyword: e.target.value }))}
+              placeholder="Từ khóa"
+              className="border px-3 py-2 rounded w-40"
+            />
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.hasImage}
+                onChange={e => setFilter(f => ({ ...f, hasImage: e.target.checked }))}
+              />
+              Có ảnh
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.hasPros}
+                onChange={e => setFilter(f => ({ ...f, hasPros: e.target.checked }))}
+              />
+              Có ưu điểm
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.hasCons}
+                onChange={e => setFilter(f => ({ ...f, hasCons: e.target.checked }))}
+              />
+              Có nhược điểm
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.onlyVerified}
+                onChange={e => setFilter(f => ({ ...f, onlyVerified: e.target.checked }))}
+              />
+              Đã mua
+            </label>
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Lọc nhanh
+            </button>
+          </form>
 
           {/* Reviews List */}
           <div className="space-y-6">
