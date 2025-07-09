@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaStar, FaThumbsUp, FaThumbsDown, FaImage, FaTimes, FaUser, FaCalendar, FaCheck } from 'react-icons/fa';
 
@@ -18,7 +18,7 @@ interface Review {
   cons: string[];
 }
 
-const ProductReviews: React.FC = () => {
+const ProductReviews: React.FC<{ productId?: string }> = ({ productId }) => {
   const [reviews, setReviews] = useState<Review[]>([
     {
       id: '1',
@@ -207,6 +207,21 @@ const ProductReviews: React.FC = () => {
   const filteredReviews = starFilter
     ? reviews.filter((r) => r.rating === starFilter)
     : reviews;
+
+  // Thay thế mock data bằng fetch từ backend
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        // Nếu có productId truyền vào thì fetch theo productId, nếu không thì lấy mặc định
+        const res = await axios.get(`/api/rating${productId ? `?productId=${productId}` : ''}`);
+        setReviews(res.data);
+      } catch (err) {
+        // Nếu lỗi thì giữ nguyên reviews cũ hoặc set về []
+        setReviews([]);
+      }
+    };
+    fetchReviews();
+  }, [productId]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
