@@ -91,6 +91,8 @@ const ProductReviews: React.FC = () => {
   const [sentimentLoading, setSentimentLoading] = useState(false);
   const [sentimentError, setSentimentError] = useState<string | null>(null);
 
+  const [starFilter, setStarFilter] = useState<number | null>(null);
+
   const ratingStats = {
     average: 4.7,
     total: 1247,
@@ -201,6 +203,11 @@ const ProductReviews: React.FC = () => {
     fetchSentiment();
   }, [newReview.comment]);
 
+  // Lọc review theo số sao nếu có chọn
+  const filteredReviews = starFilter
+    ? reviews.filter((r) => r.rating === starFilter)
+    : reviews;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -242,6 +249,28 @@ const ProductReviews: React.FC = () => {
             >
               Viết đánh giá
             </button>
+          </div>
+
+          {/* Bộ lọc số sao */}
+          <div className="mb-6 flex flex-wrap gap-2 items-center">
+            <span className="font-semibold">Lọc theo số sao:</span>
+            {[5, 4, 3, 2, 1].map((star) => (
+              <button
+                key={star}
+                className={`px-3 py-1 rounded border ${starFilter === star ? "bg-yellow-400 text-white" : "bg-gray-100"}`}
+                onClick={() => setStarFilter(starFilter === star ? null : star)}
+              >
+                {star} ★
+              </button>
+            ))}
+            {starFilter && (
+              <button
+                className="ml-2 px-3 py-1 rounded border bg-gray-200"
+                onClick={() => setStarFilter(null)}
+              >
+                Xóa lọc
+              </button>
+            )}
           </div>
 
           {/* Rating Distribution */}
@@ -430,7 +459,10 @@ const ProductReviews: React.FC = () => {
 
           {/* Reviews List */}
           <div className="space-y-6">
-            {reviews.map((review) => (
+            {filteredReviews.length === 0 && (
+              <div className="text-gray-500 italic">Không có đánh giá phù hợp.</div>
+            )}
+            {filteredReviews.map((review) => (
               <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
                 {/* Review Header */}
                 <div className="flex items-start justify-between mb-3">
