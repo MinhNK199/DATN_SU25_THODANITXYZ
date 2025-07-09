@@ -17,8 +17,8 @@ export const getRatings = async(req, res) => {
         // Đảm bảo trả về đúng định dạng FE cần
         const result = ratings.map(r => ({
             id: r._id,
-            userId: r.userId ? ._id || r.userId,
-            userName: r.userId ? .name || 'Ẩn danh',
+            userId: r.userId && r.userId._id ? r.userId._id : r.userId,
+            userName: r.userId && r.userId.name ? r.userId.name : 'Ẩn danh',
             rating: r.rating,
             title: r.title || '',
             comment: r.comment,
@@ -201,9 +201,9 @@ export const updateRating = async(req, res) => {
             });
         }
 
-        existingRating.rating = rating ? ? existingRating.rating;
-        existingRating.comment = filteredComment ? ? existingRating.comment;
-        existingRating.images = images ? ? existingRating.images;
+        existingRating.rating = typeof rating !== 'undefined' ? rating : existingRating.rating;
+        existingRating.comment = typeof filteredComment !== 'undefined' ? filteredComment : existingRating.comment;
+        existingRating.images = typeof images !== 'undefined' ? images : existingRating.images;
         await existingRating.save();
 
         const productRatings = await Rating.find({ productId: existingRating.productId });
