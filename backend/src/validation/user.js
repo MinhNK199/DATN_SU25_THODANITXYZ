@@ -48,3 +48,21 @@ export const loginSchema = Joi.object({
         "any.required": "Mật khẩu là bắt buộc",
     }),
 });
+
+// Schema cho đổi mật khẩu
+export const changePasswordSchema = Joi.object({
+    oldPassword: Joi.string().required().messages({
+        "string.empty": "Mật khẩu cũ không được để trống",
+        "any.required": "Mật khẩu cũ là bắt buộc",
+    }),
+    newPassword: Joi.string().min(6).required().messages({
+        "string.min": "Mật khẩu mới phải có ít nhất {#limit} ký tự",
+        "string.empty": "Mật khẩu mới không được để trống",
+        "any.required": "Mật khẩu mới là bắt buộc",
+    }),
+    confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+        "any.only": "Xác nhận mật khẩu không khớp",
+        "string.empty": "Xác nhận mật khẩu không được để trống",
+        "any.required": "Xác nhận mật khẩu là bắt buộc",
+    }),
+});

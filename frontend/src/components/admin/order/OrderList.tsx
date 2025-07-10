@@ -109,6 +109,32 @@ const OrderList: React.FC = () => {
       render: (_text, _record, index) => index + 1,
     },
     {
+      title: "Mã đơn hàng",
+      dataIndex: "_id",
+      key: "_id",
+      width: 140,
+      render: (id: string) =>
+        id.length > 12 ? (
+          <span>
+            {id.slice(0, 6)}...{id.slice(-4)}
+            <Button
+              type="link"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => {
+                setModalOrderId(id);
+                setShowOrderIdModal(true);
+              }}
+              style={{ paddingLeft: 4 }}
+            >
+              Xem
+            </Button>
+          </span>
+        ) : (
+          <span>{id}</span>
+        ),
+    },
+    {
       title: "Khách hàng",
       dataIndex: "user",
       key: "user",
@@ -150,32 +176,7 @@ const OrderList: React.FC = () => {
       key: "createdAt",
       render: (date: string) => formatDate(date),
     },
-    {
-      title: "Mã đơn hàng",
-      dataIndex: "_id",
-      key: "_id",
-      width: 140,
-      render: (id: string) =>
-        id.length > 12 ? (
-          <span>
-            {id.slice(0, 6)}...{id.slice(-4)}
-            <Button
-              type="link"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => {
-                setModalOrderId(id);
-                setShowOrderIdModal(true);
-              }}
-              style={{ paddingLeft: 4 }}
-            >
-              Xem
-            </Button>
-          </span>
-        ) : (
-          <span>{id}</span>
-        ),
-    },
+    
     {
       title: "Thao tác",
       key: "actions",

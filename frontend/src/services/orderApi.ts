@@ -34,4 +34,21 @@ export const updateOrderStatus = async (id: string, status: string, note: string
         throw new Error(errorData.message || 'Failed to update order status');
     }
     return res.json();
+};
+
+export const createOrder = async (orderData: any) => {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/order`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(orderData)
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to create order');
+  }
+  return res.json();
 }; 

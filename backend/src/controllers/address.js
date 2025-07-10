@@ -1,10 +1,45 @@
 import Address from "../models/Address";
+import fs from 'fs';
+import path from 'path';
+
+// Đọc file JSON hành chính một lần khi khởi động
+const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../note/Danh-sách-cấp-tỉnh-kèm-theo-quận-huyện_-phường-xã-___09_07_2025.json')));
+
+// Helper function để mapping mã sang tên
+const mapCodeToName = (code, type) => {
+    if (!code) return null;
+    
+    const codeNum = Number(code);
+    if (type === 'province') {
+        const item = data.find(item => item["Mã TP"] === codeNum);
+        return item ? item["Tỉnh Thành Phố"] : null;
+    } else if (type === 'district') {
+        const item = data.find(item => item["Mã QH"] === codeNum);
+        return item ? item["Quận Huyện"] : null;
+    } else if (type === 'ward') {
+        const item = data.find(item => item["Mã PX"] === codeNum);
+        return item ? item["Phường Xã"] : null;
+    }
+    return null;
+};
+
+// Helper function để thêm tên vào địa chỉ
+const addNamesToAddress = (address) => {
+    const addressObj = address.toObject ? address.toObject() : address;
+    return {
+        ...addressObj,
+        cityName: mapCodeToName(addressObj.city, 'province'),
+        districtName: mapCodeToName(addressObj.district, 'district'),
+        wardName: mapCodeToName(addressObj.ward, 'ward'),
+    };
+};
 
 // Lấy tất cả địa chỉ của user
 export const getUserAddresses = async (req, res) => {
     try {
         const addresses = await Address.find({ user: req.user._id });
-        res.json(addresses);
+        const addressesWithNames = addresses.map(addNamesToAddress);
+        res.json(addressesWithNames);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -18,7 +53,9 @@ export const getAddressById = async (req, res) => {
             user: req.user._id,
         });
         if (!address) return res.status(404).json({ message: "Không tìm thấy địa chỉ" });
-        res.json(address);
+        
+        const addressWithNames = addNamesToAddress(address);
+        res.json(addressWithNames);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -55,7 +92,8 @@ export const createAddress = async (req, res) => {
         });
 
         const createdAddress = await addressObj.save();
-        res.status(201).json(createdAddress);
+        const addressWithNames = addNamesToAddress(createdAddress);
+        res.status(201).json(addressWithNames);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
@@ -96,7 +134,8 @@ export const updateAddress = async (req, res) => {
         addressObj.note = note;
 
         const updatedAddress = await addressObj.save();
-        res.json(updatedAddress);
+        const addressWithNames = addNamesToAddress(updatedAddress);
+        res.json(addressWithNames);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }
@@ -110,7 +149,27 @@ export const deleteAddress = async (req, res) => {
             user: req.user._id,
         });
         if (!address) return res.status(404).json({ message: "Không tìm thấy địa chỉ" });
-        await address.remove();
+        
+        // Kiểm tra nếu địa chỉ là mặc định
+        if (address.isDefault) {
+            // Kiểm tra xem có địa chỉ khác không
+            const otherAddresses = await Address.find({
+                user: req.user._id,
+                _id: { $ne: req.params.id }
+            });
+            
+            if (otherAddresses.length === 0) {
+                return res.status(400).json({ 
+                    message: "Không thể xóa địa chỉ mặc định. Vui lòng thêm địa chỉ khác trước." 
+                });
+            }
+            
+            return res.status(400).json({ 
+                message: "Không thể xóa địa chỉ mặc định. Vui lòng đặt địa chỉ khác làm mặc định trước." 
+            });
+        }
+        
+        await Address.findByIdAndDelete(req.params.id);
         res.json({ message: "Đã xóa địa chỉ thành công" });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -134,7 +193,8 @@ export const setDefaultAddress = async (req, res) => {
 
         address.isDefault = true;
         const updatedAddress = await address.save();
-        res.json(updatedAddress);
+        const addressWithNames = addNamesToAddress(updatedAddress);
+        res.json(addressWithNames);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }

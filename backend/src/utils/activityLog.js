@@ -35,6 +35,22 @@ export const getActivityLogs = async (req, res) => {
   }
 };
 
+export const getMyActivityLogs = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    // Lấy log mà user là đối tượng bị tác động hoặc là người thực hiện
+    const logs = await ActivityLog.find({
+      $or: [
+        { userId: userId },
+        { actorId: userId }
+      ]
+    }).sort({ createdAt: -1 });
+    res.status(200).json({ logs });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
+  }
+};
+
 export const logActivity = async ({ content, userName, userId, actorName, actorId }) => {
   try {
     await ActivityLog.create({ content, userName, userId, actorName, actorId });

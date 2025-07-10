@@ -13,8 +13,10 @@ import routerBanner from "./banner"
 import routerRating from "./rating";
 import routerVariant from "./variant";
 import routerRecommendation from "./recommendation";
+import paymentMethodRouter from "./paymentMethod";
 import { runCleanupNow } from "../utils/cleanupJob";
 import { protect } from "../middlewares/authMiddleware";
+const provinceController = require('../controllers/provinceController');
 
 const router = Router();
 router.use("/auth", routerAuth);
@@ -31,6 +33,10 @@ router.use("/banner", routerBanner);
 router.use("/rating", routerRating);
 router.use("/variant", routerVariant);
 router.use("/recommendation", routerRecommendation);
+router.use("/payment-methods", paymentMethodRouter);
+router.get('/provinces', provinceController.getProvinces);
+router.get('/wards', provinceController.getWards);
+router.get('/districts', provinceController.getDistricts);
 
 // Cleanup job route (chỉ admin mới được gọi)
 router.get("/cleanup", protect, runCleanupNow);

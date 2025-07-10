@@ -149,6 +149,12 @@ const CategoryList: React.FC = () => {
 
   const columns: ColumnsType<Category> = [
     {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_text, _record, index) => index + 1,
+    },
+    {
       title: "Tên danh mục",
       dataIndex: "name",
       key: "name",

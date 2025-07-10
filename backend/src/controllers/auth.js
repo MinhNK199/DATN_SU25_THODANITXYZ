@@ -298,8 +298,6 @@ export const toggleUserStatus = async (req, res) => {
   }
 };
 
-// ...existing code...
-
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -324,6 +322,8 @@ export const updateUser = async (req, res) => {
       district_code,
       ward_code,
       street,
+      notificationSettings,
+      privacySettings,
       ...rest
     } = req.body;
 
@@ -336,6 +336,8 @@ export const updateUser = async (req, res) => {
     user.name = name || user.name;
     user.phone = phone || user.phone;
     user.avatar = avatar || user.avatar;
+    if (notificationSettings) user.notificationSettings = { ...user.notificationSettings, ...notificationSettings };
+    if (privacySettings) user.privacySettings = { ...user.privacySettings, ...privacySettings };
 
     // ✅ Cập nhật địa chỉ mặc định
     const newAddress = {
@@ -490,5 +492,36 @@ export const dangKyAdmin = async (req, res) => {
       message: "Đăng ký thất bại",
       error: error.message,
     });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { oldPassword, newPassword } = req.body;
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
+      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+    }
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Mật khẩu cũ không đúng' });
+    }
+    if (oldPassword === newPassword) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải khác mật khẩu cũ' });
+    }
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.passwordChangedAt = new Date();
+    await user.save();
+    await logActivity({
+      content: `Đổi mật khẩu thành công`,
+      userName: user.name,
+      userId: user._id,
+      actorName: user.name,
+      actorId: user._id,
+    });
+    res.status(200).json({ message: 'Đổi mật khẩu thành công' });
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };

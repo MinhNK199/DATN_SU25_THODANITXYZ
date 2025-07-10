@@ -24,7 +24,7 @@ const addressSchema = new mongoose.Schema({
     },
     district: {
         type: String,
-        required: [true, 'Vui lòng nhập quận/huyện'],
+        required: false, // Cho phép không bắt buộc
     },
     ward: {
         type: String,

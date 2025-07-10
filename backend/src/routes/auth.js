@@ -3,9 +3,11 @@ import { validateRequestJoi } from "../middlewares/validateRequest";
 import { loginSchema, registerSchema } from "../validation/user";
 import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole, dangKyAdmin } from "../controllers/auth";
 import { checkAdmin, protect } from "../middlewares/authMiddleware";
-import { getActivityLogs } from "../utils/activityLog";
+import { getActivityLogs, getMyActivityLogs } from "../utils/activityLog";
 import { verifyEmail } from "../controllers/auth";
 import { googleLogin } from "../controllers/auth";
+import { changePassword } from "../controllers/auth";
+import { changePasswordSchema } from "../validation/user";
 
 const routerAuth = express.Router();
 routerAuth.post("/register", validateRequestJoi(registerSchema), dangKy);
@@ -20,6 +22,8 @@ routerAuth.get("/me", protect, getCurrentUser);
 routerAuth.get("/users/:id", protect, getUserById);
 routerAuth.patch("/users/:id/status", protect, checkAdmin(["CheckTaiKhoan"]), toggleUserStatus);
 routerAuth.get("/nhatKy", protect, checkAdmin(["view_nhatKy"]), getActivityLogs);
+routerAuth.get("/my-activity-logs", protect, getMyActivityLogs);
 routerAuth.put("/users/:id", protect, updateUser);
+routerAuth.patch("/change-password", protect, validateRequestJoi(changePasswordSchema), changePassword);
 
 export default routerAuth;

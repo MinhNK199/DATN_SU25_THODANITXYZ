@@ -58,6 +58,9 @@ export interface Address {
   isDefault: boolean;
   type: string;
   note?: string;
+  cityName?: string;
+  districtName?: string;
+  wardName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -145,6 +148,57 @@ export const userApi = {
   getOrderById: async (orderId: string): Promise<Order> => {
     const response = await api.get(`/order/${orderId}`);
     return response.data;
+  },
+
+  // Đổi mật khẩu
+  changePassword: async (data: { oldPassword: string; newPassword: string; confirmPassword: string }): Promise<{ message: string }> => {
+    const response = await api.patch('/auth/change-password', data);
+    return response.data;
+  },
+
+  // Lấy lịch sử hoạt động của user
+  getMyActivityLogs: async (): Promise<{ logs: any[] }> => {
+    const response = await api.get('/auth/my-activity-logs');
+    return response.data;
+  },
+
+  // Quản lý phương thức thanh toán
+  getMyPaymentMethods: async (): Promise<{ methods: any[] }> => {
+    const response = await api.get('/payment-methods');
+    return response.data;
+  },
+  addPaymentMethod: async (data: any): Promise<any> => {
+    const response = await api.post('/payment-methods', data);
+    return response.data;
+  },
+  deletePaymentMethod: async (id: string): Promise<any> => {
+    const response = await api.delete(`/payment-methods/${id}`);
+    return response.data;
+  },
+  updatePaymentMethod: async (id: string, data: any): Promise<any> => {
+    const response = await api.put(`/payment-methods/${id}`, data);
+    return response.data;
+  },
+  // Quản lý thông báo
+  getNotifications: async (): Promise<any[]> => {
+    const response = await api.get('/notification');
+    return response.data;
+  },
+  markNotificationAsRead: async (id: string): Promise<any> => {
+    const response = await api.put(`/notification/${id}/read`);
+    return response.data;
+  },
+  markAllNotificationsAsRead: async (): Promise<any> => {
+    const response = await api.put('/notification/read-all');
+    return response.data;
+  },
+  deleteNotification: async (id: string): Promise<any> => {
+    const response = await api.delete(`/notification/${id}`);
+    return response.data;
+  },
+  getUnreadNotificationCount: async (): Promise<number> => {
+    const response = await api.get('/notification/unread-count');
+    return response.data.count;
   },
 };
 

@@ -99,6 +99,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 />
               </Space>
             </div>
+            
 
             <Row gutter={16}>
               <Col span={12}>

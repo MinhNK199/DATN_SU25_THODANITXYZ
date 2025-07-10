@@ -170,6 +170,12 @@ const ProductListPage: React.FC = () => {
 
   const columns: ColumnsType<Product> = [
     {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_text, _record, index) => index + 1,
+    },
+    {
       title: "Sản phẩm",
       dataIndex: "name",
       key: "name",

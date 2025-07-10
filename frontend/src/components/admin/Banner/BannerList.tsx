@@ -163,6 +163,12 @@ const BannerList: React.FC = () => {
 
   const columns: ColumnsType<Banner> = [
     {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_text, _record, index) => index + 1,
+    },
+    {
       title: "Hình ảnh",
       dataIndex: "image",
       key: "image",

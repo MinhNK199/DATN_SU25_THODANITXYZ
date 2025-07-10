@@ -74,6 +74,7 @@ const Activity: React.FC = () => {
   }, [logs, searchKeyword, searchType, dateRange]);
 
   const columns = [
+    
     {
       title: "🕒 Thời gian",
       dataIndex: "createdAt",

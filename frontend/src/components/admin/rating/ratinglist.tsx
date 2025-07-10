@@ -166,6 +166,12 @@ const RatingList: React.FC = () => {
 
   const columns: ColumnsType<Rating> = [
     {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_text, _record, index) => index + 1,
+    },
+    {
       title: "Người đánh giá",
       render: (_, record) => (
         <div className="flex flex-col">

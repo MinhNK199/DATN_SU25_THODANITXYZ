@@ -52,6 +52,13 @@ const ProductList: React.FC = () => {
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
     if (filterPriceRange[1]) url += `&maxPrice=${filterPriceRange[1]}`;
     if (filterInStock) url += '&inStock=true';
+    if (sortBy) {
+      if (sortBy === 'price-low') url += '&sort=price';
+      else if (sortBy === 'price-high') url += '&sort=-price';
+      else if (sortBy === 'rating') url += '&sort=-averageRating';
+      else if (sortBy === 'newest') url += '&sort=-createdAt';
+      // 'featured' mặc định không truyền sort
+    }
     try {
       const res = await axios.get(url);
       let filtered = res.data.products || [];
@@ -79,10 +86,13 @@ const ProductList: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line
-  }, [searchTerm, filterCategory, filterBrand, filterPriceRange, filterInStock]);
+  // Xóa useEffect tự động fetchProducts khi thay đổi filter
+  // useEffect(() => {
+  //   fetchProducts();
+  //   // eslint-disable-next-line
+  // }, [searchTerm, filterCategory, filterBrand, filterPriceRange, filterInStock]);
+
+  // Thay vào đó, chỉ fetchProducts khi bấm nút Lọc
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -114,7 +124,7 @@ const ProductList: React.FC = () => {
               >
                 <option value="">Tất cả danh mục</option>
                 {categories.map((cat: any) => (
-                  <option key={cat._id} value={cat.slug}>{cat.name}</option>
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
                 ))}
               </select>
             </div>
@@ -128,7 +138,7 @@ const ProductList: React.FC = () => {
               >
                 <option value="">Tất cả thương hiệu</option>
                 {brands.map((brand: any) => (
-                  <option key={brand._id} value={brand.slug}>{brand.name}</option>
+                  <option key={brand._id} value={brand._id}>{brand.name}</option>
                 ))}
               </select>
             </div>

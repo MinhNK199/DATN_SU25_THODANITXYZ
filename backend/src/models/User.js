@@ -53,6 +53,15 @@ const userSchema = new mongoose.Schema(
     ],
 
     avatar: String,
+    notificationSettings: {
+      orderEmail: { type: Boolean, default: true },
+      promotionEmail: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false },
+    },
+    privacySettings: {
+      shareHistory: { type: Boolean, default: true },
+      thirdPartyAnalytics: { type: Boolean, default: false },
+    },
     emailVerified: {
       type: Boolean,
       default: false,
