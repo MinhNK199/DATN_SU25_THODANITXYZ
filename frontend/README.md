@@ -294,7 +294,7 @@ erDiagram
 \`\`\`bash
 # Clone dự án từ GitHub
 git clone https://github.com/your-username/electronics-ecommerce.git
-cd electronics-ecommerce
+cd electronics-ecommerce    
 
 # Hoặc download ZIP và giải nén
 \`\`\`
@@ -735,12 +735,11 @@ chore: cập nhật build tools
 
 ---
 
-**Phát triển bởi**: [Tên sinh viên] - [Mã sinh viên]  
-**Trường**: [Tên trường đại học]  
-**Khoa**: [Tên khoa]  
-**Năm**: 2024  
-**Đồ án tốt nghiệp**: Hệ thống Thương mại Điện tử
-
+**Phát triển bởi**: Group Thổ Dân IT - WD62
+**Trường**: Cao Đẳng FPT PolyTechnic
+**Khoa**: Công Nghệ Thông Tin
+**Năm**: 20255
+**Đồ án tốt nghiệp**: Hệ thống Thương mại Đồ Điện Tử TechTrend
 ---
 
 ⭐ **Nếu dự án này hữu ích, hãy cho một star trên GitHub!** ⭐
