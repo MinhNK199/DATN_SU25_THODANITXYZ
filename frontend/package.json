@@ -28,6 +28,7 @@
     "react-router-dom": "^6.24.1",
     "react-select": "^5.10.1",
     "react-toastify": "^11.0.5",
+    "react-use": "^17.6.0",
     "recharts": "^3.0.2",
     "slugify": "^1.6.6",
     "toastify": "^2.0.1"

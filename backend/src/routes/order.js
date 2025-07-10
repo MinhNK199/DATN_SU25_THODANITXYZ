@@ -7,7 +7,10 @@ import {
     getMyOrders,
     getOrders,
     updateOrderStatus,
-    getRevenueStats
+    getRevenueStats,
+    updateOrderToPaidCOD,
+    requestRefund,
+    getValidOrderStatusOptions
 } from "../controllers/order";
 import { protect } from "../middlewares/authMiddleware";
 
@@ -21,5 +24,8 @@ routerOrder.get("/:id", protect, getOrderById);
 routerOrder.put("/:id/pay", protect, updateOrderToPaid);
 routerOrder.put("/:id/deliver", protect, updateOrderToDelivered);
 routerOrder.put("/:id/status", protect, updateOrderStatus);
+routerOrder.put("/:id/paid-cod", protect, updateOrderToPaidCOD);
+routerOrder.put("/:id/refund-request", protect, requestRefund);
+routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
 
 export default routerOrder;

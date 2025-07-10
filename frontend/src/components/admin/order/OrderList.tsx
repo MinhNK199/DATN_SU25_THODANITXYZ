@@ -27,8 +27,10 @@ const OrderList: React.FC = () => {
   const [status, setStatus] = useState("");
   const [showOrderIdModal, setShowOrderIdModal] = useState(false);
   const [modalOrderId, setModalOrderId] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   
-  const fetchOrders = async () => {
+  const fetchOrders = async (pageNumber = 1) => {
     setLoading(true);
     try {
       const token = getToken();
@@ -36,6 +38,7 @@ const OrderList: React.FC = () => {
       if (customerName) params.append("customerName", customerName);
       if (orderId) params.append("orderId", orderId);
       if (status) params.append("status", status);
+      params.append("page", pageNumber.toString());
       const res = await fetch(`${API_URL}?${params.toString()}`, {
         headers: {
             'Authorization': `Bearer ${token}`
@@ -45,6 +48,7 @@ const OrderList: React.FC = () => {
       
       const ordersData = Array.isArray(data.orders) ? data.orders : [];
       setOrders(ordersData);
+      setTotal(data.total || 0);
 
     } catch (error) {
       setMessage("Lỗi khi tải danh sách đơn hàng!");
@@ -54,8 +58,8 @@ const OrderList: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [customerName, orderId, status]);
+    fetchOrders(page);
+  }, [customerName, orderId, status, page]);
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("vi-VN", {
@@ -69,37 +73,37 @@ const OrderList: React.FC = () => {
 
   const getStatusColor = (status: string): string => {
     switch (status) {
-      case "pending":
-        return "orange";
-      case "processing":
-        return "blue";
-      case "shipped":
-        return "purple";
-      case "delivered":
-        return "green";
-      case "cancelled":
-        return "red";
-      default:
-        return "gray";
+      case "pending": return "orange";
+      case "processing": return "blue";
+      case "shipped": return "purple";
+      case "delivered": return "green";
+      case "delivered_success": return "green";
+      case "delivered_failed": return "red";
+      case "completed": return "cyan";
+      case "cancelled": return "red";
+      case "returned": return "volcano";
+      case "refund_requested": return "gold";
+      case "refunded": return "lime";
+      default: return "gray";
     }
   };
 
   const getStatusText = (status: string): string => {
     switch (status) {
-        case "pending":
-            return "Chờ xử lý";
-        case "processing":
-            return "Đang xử lý";
-        case "shipped":
-            return "Đang giao";
-        case "delivered":
-            return "Đã giao";
-        case "cancelled":
-            return "Đã hủy";
-        default:
-            return "Không xác định";
+      case "pending": return "Chờ xác nhận";
+      case "processing": return "Đang xử lý";
+      case "shipped": return "Đang giao";
+      case "delivered": return "Đã giao";
+      case "delivered_success": return "Giao hàng thành công";
+      case "delivered_failed": return "Giao hàng thất bại";
+      case "completed": return "Thành công";
+      case "cancelled": return "Đã hủy";
+      case "returned": return "Hoàn hàng";
+      case "refund_requested": return "Yêu cầu hoàn tiền";
+      case "refunded": return "Hoàn tiền thành công";
+      default: return "Không xác định";
     }
-  }
+  };
 
   const columns: ColumnsType<Order> = [
     {
@@ -269,9 +273,12 @@ const OrderList: React.FC = () => {
         rowKey="_id"
         loading={loading}
         pagination={{
+          current: page,
           pageSize: 10,
-          showSizeChanger: true,
+          total: total,
+          showSizeChanger: false,
           showTotal: (total) => `Tổng ${total} đơn hàng`,
+          onChange: (newPage) => setPage(newPage),
         }}
       />
       <Modal

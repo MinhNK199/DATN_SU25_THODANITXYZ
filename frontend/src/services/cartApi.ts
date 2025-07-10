@@ -118,4 +118,10 @@ export const cartApi = {
   },
 };
 
+export const getTaxConfig = async (): Promise<{ rate: number, updatedAt: string }> => {
+    const res = await fetch('http://localhost:8000/api/tax');
+    if (!res.ok) throw new Error('Không lấy được cấu hình thuế');
+    return res.json();
+};
+
 export default cartApi; 

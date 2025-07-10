@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FaLock, FaCreditCard, FaPaypal, FaTruck, FaArrowLeft, FaCheck } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
 import { useToast } from '../../components/client/ToastContainer';
@@ -7,7 +7,8 @@ import OrderSuccessModal from '../../components/client/OrderSuccessModal';
 import axios from 'axios';
 import userApi, { Address } from '../../services/userApi';
 import Select from 'react-select';
-import { createOrder as createOrderApi } from "../../services/orderApi";
+import { createOrder } from "../../services/orderApi";
+import { getTaxConfig } from '../../services/cartApi';
 
 interface Province {
   code: number;
@@ -23,7 +24,10 @@ interface Ward {
 }
 
 const Checkout: React.FC = () => {
+  const location = useLocation();
+  const summary = location.state || {};
   const [currentStep, setCurrentStep] = useState(1);
+  // Khởi tạo formData với paymentMethod là 'COD'
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -33,7 +37,7 @@ const Checkout: React.FC = () => {
     province_code: '',
     district_code: '',
     ward_code: '',
-    paymentMethod: 'credit-card'
+    paymentMethod: 'COD'
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -70,11 +74,13 @@ const Checkout: React.FC = () => {
     { code: 'unionpay', name: 'UnionPay', logo: '/images/cards/unionpay.png' },
   ];
 
+  const [taxRate, setTaxRate] = useState(0.08);
   useEffect(() => {
     axios
       .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
       .then((r) => setProvinces(r.data))
       .catch(() => {});
+    getTaxConfig().then(cfg => setTaxRate(cfg.rate)).catch(() => setTaxRate(0.08));
   }, []);
 
   // Thêm hàm fetchWardsByProvinceCode để dùng lại
@@ -190,7 +196,7 @@ const Checkout: React.FC = () => {
         province_code: '',
         district_code: '',
         ward_code: '',
-        paymentMethod: 'credit-card',
+        paymentMethod: 'COD',
       });
       setDistricts([]);
       setWards([]);
@@ -228,10 +234,11 @@ const Checkout: React.FC = () => {
     }).format(price);
   };
 
+  // Đảm bảo handleInputChange cập nhật đúng và log formData
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
+    setFormData(prev => {
+      const newData = { ...prev, [e.target.name]: e.target.value };
+      return newData;
     });
   };
 
@@ -242,25 +249,27 @@ const Checkout: React.FC = () => {
 
     // Validate cart
     if (!cartState.items || cartState.items.length === 0) {
-      showError("Giỏ hàng trống!", "Vui lòng thêm sản phẩm vào giỏ hàng.");
-      setIsProcessing(false);
-      return;
-    }
-    // Validate địa chỉ
-    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.address || !formData.province_code || !formData.district_code || !formData.ward_code) {
-      showError("Thiếu thông tin giao hàng!", "Vui lòng điền đầy đủ thông tin nhận hàng.");
-      setIsProcessing(false);
-      return;
-    }
-    // Validate payment method
-    if (!formData.paymentMethod) {
-      showError("Chưa chọn phương thức thanh toán!", "Vui lòng chọn phương thức thanh toán.");
+      showError("Giỏ hàng trống", "Vui lòng thêm sản phẩm vào giỏ hàng.");
       setIsProcessing(false);
       return;
     }
 
-    // Chuẩn bị dữ liệu gửi lên backend
+    // Validate địa chỉ giao hàng
+    if (!formData.firstName || !formData.lastName || !formData.address || !formData.province_code || !formData.district_code || !formData.ward_code || !formData.phone) {
+      showError("Thiếu thông tin giao hàng", "Vui lòng điền đầy đủ thông tin nhận hàng.");
+      setIsProcessing(false);
+      return;
+    }
+
+    // Validate phương thức thanh toán
+    if (!formData.paymentMethod) {
+      showError("Chưa chọn phương thức thanh toán", "Vui lòng chọn phương thức thanh toán.");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
+      // Chuẩn bị dữ liệu gửi lên backend
       const shippingAddress = {
         fullName: formData.firstName + ' ' + formData.lastName,
         address: formData.address,
@@ -275,35 +284,31 @@ const Checkout: React.FC = () => {
         price: item.product.salePrice || item.product.price,
         product: item.product._id,
       }));
-      const itemsPrice = cartState.items.reduce((sum, item) => sum + (item.product.salePrice || item.product.price) * item.quantity, 0);
-      const taxPrice = 0; // Có thể tính thêm nếu cần
-      const shippingPrice = shippingFee;
-      const totalPrice = itemsPrice + shippingPrice;
-      // Map payment method
+      // Map payment method cho backend
       let paymentMethod = '';
-      if (formData.paymentMethod === 'cod') paymentMethod = 'COD';
+      if (formData.paymentMethod === 'credit-card') paymentMethod = 'credit-card';
+      else if (formData.paymentMethod === 'e-wallet') paymentMethod = 'e-wallet';
       else if (formData.paymentMethod === 'bank-transfer') paymentMethod = 'BANKING';
-      else if (formData.paymentMethod === 'e-wallet') paymentMethod = 'E-WALLET';
-      else if (formData.paymentMethod === 'credit-card') paymentMethod = 'E-WALLET'; // Có thể tách riêng nếu backend hỗ trợ
-      else paymentMethod = formData.paymentMethod.toUpperCase();
+      else paymentMethod = 'COD';
 
       const orderData = {
         orderItems,
         shippingAddress,
         paymentMethod,
-        itemsPrice,
-        taxPrice,
-        shippingPrice,
-        totalPrice,
+        itemsPrice: cartState.total,
+        taxPrice: cartState.total * taxRate,
+        shippingPrice: shippingFee,
+        totalPrice: cartState.total + shippingFee + cartState.total * taxRate,
+        cardId: formData.paymentMethod === 'credit-card' ? selectedCardId : undefined,
+        walletId: formData.paymentMethod === 'e-wallet' ? selectedWalletId : undefined,
       };
-      // Gọi API tạo đơn hàng
-      const createdOrder = await createOrderApi(orderData);
-      setOrderNumber(createdOrder._id || createdOrder.orderNumber || '');
+      const res = await createOrder(orderData);
+      setOrderNumber(res._id || '');
       setShowSuccessModal(true);
       clearCart();
-      showSuccess('Đặt hàng thành công!', `Đơn hàng ${createdOrder._id || ''} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
-    } catch (error: any) {
-      showError('Đặt hàng thất bại!', error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+      showSuccess('Đặt hàng thành công!', `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
+    } catch (err: any) {
+      showError('Đặt hàng thất bại', err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setIsProcessing(false);
     }
@@ -315,8 +320,12 @@ const Checkout: React.FC = () => {
     { number: 3, title: 'Xác nhận đơn hàng', icon: FaCheck }
   ];
 
-  const shippingFee = cartState.total > 500000 ? 0 : 30000;
-  const total = cartState.total + shippingFee;
+  // Khi render, ưu tiên lấy subtotal, savings, shipping, tax, total từ summary nếu có
+  const subtotal = typeof summary.subtotal === 'number' ? summary.subtotal : cartState.total;
+  const savings = typeof summary.savings === 'number' ? summary.savings : 0;
+  const shippingFee = typeof summary.shipping === 'number' ? summary.shipping : (cartState.total > 500000 ? 0 : 30000);
+  const taxPrice = typeof summary.tax === 'number' ? summary.tax : (cartState.total * taxRate);
+  const finalTotal = subtotal + shippingFee + taxPrice;
 
   // Helper lấy tên tỉnh/huyện/xã
   const getProvinceName = () => provinces.find(p => String(p.code) === formData.province_code)?.name || "";
@@ -517,8 +526,8 @@ const Checkout: React.FC = () => {
                           <input
                             type="radio"
                             name="paymentMethod"
-                            value="cod"
-                            checked={formData.paymentMethod === 'cod'}
+                            value="COD"
+                            checked={formData.paymentMethod === 'COD'}
                             onChange={handleInputChange}
                             className="w-4 h-4 text-blue-600"
                           />
@@ -854,7 +863,7 @@ const Checkout: React.FC = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tạm tính:</span>
-                  <span className="font-semibold">{formatPrice(cartState.total)}</span>
+                  <span className="font-semibold">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Phí vận chuyển:</span>
@@ -862,10 +871,14 @@ const Checkout: React.FC = () => {
                     {shippingFee === 0 ? 'Miễn phí' : formatPrice(shippingFee)}
                   </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Thuế VAT:</span>
+                  <span className="font-semibold">{formatPrice(taxPrice)}</span>
+                </div>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Tổng cộng:</span>
-                  <span className="text-blue-600">{formatPrice(total)}</span>
+                  <span className="text-blue-600">{formatPrice(finalTotal)}</span>
                 </div>
               </div>
 

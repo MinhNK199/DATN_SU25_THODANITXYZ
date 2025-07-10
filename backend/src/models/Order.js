@@ -28,7 +28,15 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Vui lòng chọn phương thức thanh toán'],
         enum: {
-            values: ['COD', 'BANKING', 'E-WALLET'],
+            values: [
+                'COD',
+                'BANKING',
+                'E-WALLET',
+                'credit-card',
+                'e-wallet',
+                'credit_card',
+                'e_wallet'
+            ],
             message: 'Phương thức thanh toán không hợp lệ',
         },
     },
@@ -82,11 +90,30 @@ const orderSchema = new mongoose.Schema({
     deliveredAt: {
         type: Date,
     },
+    // Số lần giao lại khi giao hàng thất bại
+    retryDeliveryCount: {
+        type: Number,
+        default: 0,
+    },
     status: {
         type: String,
         required: true,
         enum: {
-            values: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+            values: [
+                'pending',            // Chờ xác nhận
+                'confirmed',          // Đã xác nhận
+                'processing',         // Đang xử lý
+                'shipped',            // Đang giao hàng
+                'delivered_success',  // Giao hàng thành công
+                'delivered_failed',   // Giao hàng thất bại
+                'completed',          // Thành công
+                'cancelled',          // Đã hủy
+                'returned',           // Hoàn hàng
+                'refund_requested',   // Yêu cầu hoàn tiền
+                'refunded',           // Hoàn tiền thành công
+                'paid_cod',           // Đã thanh toán COD
+                'paid_online'         // Đã thanh toán Online
+            ],
             message: 'Trạng thái đơn hàng không hợp lệ',
         },
         default: 'pending',
@@ -95,6 +122,21 @@ const orderSchema = new mongoose.Schema({
         status: {
             type: String,
             required: [true, 'Vui lòng nhập trạng thái'],
+            enum: [
+                'pending',
+                'confirmed',
+                'processing',
+                'shipped',
+                'delivered_success',
+                'delivered_failed',
+                'completed',
+                'cancelled',
+                'returned',
+                'refund_requested',
+                'refunded',
+                'paid_cod',
+                'paid_online'
+            ]
         },
         date: {
             type: Date,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getOrderById, updateOrderStatus } from '../../services/orderApi';
+import { getOrderById, updateOrderStatus, updateOrderPaidCOD, getValidOrderStatusOptions } from '../../services/orderApi';
 import { Order } from '../../interfaces/Order';
 import { Card, Spin, Alert, Row, Col, Descriptions, Table, Tag, Timeline, Button, Select, Input, Form, message, Steps, Image } from 'antd';
 import { FaUser, FaTruck, FaBox, FaMoneyBillWave, FaInfoCircle, FaRegCheckCircle, FaRegClock, FaShippingFast, FaBan } from 'react-icons/fa';
@@ -11,28 +11,53 @@ const { Step } = Steps;
 
 const statusOptions = {
     pending: 'Chờ xác nhận',
+    confirmed: 'Đã xác nhận',
     processing: 'Đang xử lý',
     shipped: 'Đang giao hàng',
-    delivered: 'Đã giao',
+    delivered_success: 'Giao hàng thành công',
+    delivered_failed: 'Giao hàng thất bại',
+    completed: 'Thành công',
     cancelled: 'Đã hủy',
+    returned: 'Hoàn hàng',
+    refund_requested: 'Yêu cầu hoàn tiền',
+    refunded: 'Hoàn tiền thành công',
 };
 
 const nextStatusOptions = (currentStatus: string) => {
     switch (currentStatus) {
         case 'pending':
+            return ['confirmed', 'cancelled'];
+        case 'confirmed':
             return ['processing', 'cancelled'];
         case 'processing':
             return ['shipped', 'cancelled'];
         case 'shipped':
-            return ['delivered', 'cancelled'];
+            return ['delivered_success', 'delivered_failed'];
+        case 'delivered_success':
+            return ['completed', 'returned', 'refund_requested'];
+        case 'delivered_failed':
+            return ['cancelled'];
+        case 'returned':
+            return ['refund_requested'];
+        case 'refund_requested':
+            return ['refunded'];
         default:
             return [];
     }
 }
 
 const getStepStatus = (orderStatus: string, stepStatus: string): "finish" | "process" | "wait" | "error" => {
-    const statusOrder = ['pending', 'processing', 'shipped', 'delivered'];
-    if (orderStatus === 'cancelled') return 'error';
+    // Cập nhật các bước chính cho hiển thị tiến trình
+    const statusOrder = [
+        'pending',
+        'confirmed',
+        'processing',
+        'shipped',
+        'delivered_success',
+        'refund_requested', // Thêm bước này
+        'completed'
+    ];
+    if (orderStatus === 'cancelled' || orderStatus === 'delivered_failed') return 'error';
     const currentIndex = statusOrder.indexOf(orderStatus);
     const stepIndex = statusOrder.indexOf(stepStatus);
 
@@ -49,14 +74,25 @@ const OrderDetail: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [updating, setUpdating] = useState(false);
     const [form] = Form.useForm();
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReason, setRejectReason] = useState("");
+    const [rejectLoading, setRejectLoading] = useState(false);
+    const [validStatusOptions, setValidStatusOptions] = useState<string[]>([]);
 
     const fetchOrder = () => {
         if (id) {
             setLoading(true);
             getOrderById(id)
-                .then(data => {
+                .then(async data => {
                     setOrder(data);
                     setLoading(false);
+                    // Lấy danh sách trạng thái hợp lệ
+                    try {
+                        const validOptions = await getValidOrderStatusOptions(id);
+                        setValidStatusOptions(validOptions);
+                    } catch {
+                        setValidStatusOptions([]);
+                    }
                 })
                 .catch(err => {
                     setError(err.message);
@@ -122,21 +158,37 @@ const OrderDetail: React.FC = () => {
     ];
     
     const availableNextStatuses = nextStatusOptions(order.status);
-    const currentStep = ['pending', 'processing', 'shipped', 'delivered'].indexOf(order.status);
+    const currentStep = [
+    'pending',
+    'confirmed',
+    'processing',
+    'shipped',
+    'delivered_success',
+    'refund_requested',
+    'completed'
+].indexOf(order.status);
 
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold">Chi tiết đơn hàng #{order._id.substring(0,8)}</h1>
             
             <Card>
-                <Steps current={currentStep} status={order.status === 'cancelled' ? 'error' : undefined}>
+                <Steps current={currentStep} status={order.status === 'cancelled' || order.status === 'delivered_failed' ? 'error' : undefined}>
                     <Step title="Chờ xác nhận" status={getStepStatus(order.status, 'pending')} icon={<FaRegClock />} />
+                    <Step title="Đã xác nhận" status={getStepStatus(order.status, 'confirmed')} icon={<FaRegCheckCircle />} />
                     <Step title="Đang xử lý" status={getStepStatus(order.status, 'processing')} icon={<FaBox />} />
                     <Step title="Đang giao hàng" status={getStepStatus(order.status, 'shipped')} icon={<FaShippingFast />} />
-                    {order.status === 'cancelled' 
-                        ? <Step title="Đã hủy" status="error" icon={<FaBan />} />
-                        : <Step title="Đã giao" status={getStepStatus(order.status, 'delivered')} icon={<FaRegCheckCircle />} />
-                    }
+                    {order.status === 'cancelled' ? (
+                        <Step title="Đã hủy" status="error" icon={<FaBan />} />
+                    ) : order.status === 'delivered_failed' ? (
+                        <Step title="Giao hàng thất bại" status="error" icon={<FaBan />} />
+                    ) : (
+                        <Step title="Giao hàng thành công" status={getStepStatus(order.status, 'delivered_success')} icon={<FaRegCheckCircle />} />
+                    )}
+                    {order.status === 'refund_requested' && (
+                        <Step title="Đang xử lý hoàn tiền" status={getStepStatus(order.status, 'refund_requested')} icon={<FaMoneyBillWave style={{color:'#d63384'}} />} />
+                    )}
+                    <Step title="Thành công" status={getStepStatus(order.status, 'completed')} icon={<FaRegCheckCircle />} />
                 </Steps>
             </Card>
 
@@ -148,12 +200,26 @@ const OrderDetail: React.FC = () => {
 
                     <Card title={<><FaTruck className="mr-2" />Lịch sử trạng thái</>} bordered={false} className="shadow-sm mt-6">
                         <Timeline>
-                            {order.statusHistory.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((s, index) => (
-                                <Timeline.Item key={index}>
-                                    <p><strong>{statusOptions[s.status as keyof typeof statusOptions]}</strong> - {new Date(s.date).toLocaleString('vi-VN')}</p>
-                                    {s.note && <p className="text-gray-500">Ghi chú: {s.note}</p>}
-                                </Timeline.Item>
-                            ))}
+                            {order.statusHistory.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((s, index, arr) => {
+                                let statusLabel = statusOptions[s.status as keyof typeof statusOptions] || s.status;
+                                // 1. paid_cod hiển thị rõ ràng
+                                if (s.status === 'paid_cod') {
+                                    statusLabel = 'Đã thanh toán COD';
+                                }
+                                // 2. delivered_success sau refund_requested thì là từ chối hoàn tiền
+                                if (
+                                    s.status === 'delivered_success' &&
+                                    arr.slice(0, index).some(x => x.status === 'refund_requested')
+                                ) {
+                                    statusLabel = 'Từ chối hoàn tiền';
+                                }
+                                return (
+                                    <Timeline.Item key={index}>
+                                        <p><strong>{statusLabel}</strong> - {new Date(s.date).toLocaleString('vi-VN')}</p>
+                                        {s.note && <p className="text-gray-500">Ghi chú: {s.note}</p>}
+                                    </Timeline.Item>
+                                );
+                            })}
                         </Timeline>
                     </Card>
                 </Col>
@@ -172,6 +238,26 @@ const OrderDetail: React.FC = () => {
                             <Descriptions.Item label="Phương thức thanh toán">{order.paymentMethod}</Descriptions.Item>
                             <Descriptions.Item label="Trạng thái thanh toán">
                                 <Tag color={order.isPaid ? 'green' : 'red'}>{order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</Tag>
+                                {order.paymentMethod === 'COD' && !order.isPaid && (
+                                    <Button
+                                        type="primary"
+                                        danger
+                                        size="small"
+                                        style={{ marginLeft: 8 }}
+                                        onClick={async () => {
+                                            try {
+                                                await updateOrderPaidCOD(order._id);
+                                                message.success('Cập nhật trạng thái thanh toán COD thành công!');
+                                                fetchOrder();
+                                            } catch (err: any) {
+                                                message.error(err.message || 'Cập nhật trạng thái thanh toán thất bại!');
+                                            }
+                                        }}
+                                        disabled={order.status === 'delivered_failed' || order.status === 'cancelled'}
+                                    >
+                                        Xác nhận đã thanh toán COD
+                                    </Button>
+                                )}
                             </Descriptions.Item>
                             <Descriptions.Item label="Phí vận chuyển">{order.shippingPrice.toLocaleString()}₫</Descriptions.Item>
                             <Descriptions.Item label="Thuế">{order.taxPrice.toLocaleString()}₫</Descriptions.Item>
@@ -190,12 +276,12 @@ const OrderDetail: React.FC = () => {
                         </Descriptions>
                     </Card>
 
-                    {availableNextStatuses.length > 0 && (
+                    {validStatusOptions.length > 0 && (
                         <Card title="Cập nhật trạng thái" bordered={false} className="shadow-sm mt-6">
                             <Form form={form} onFinish={handleStatusUpdate} layout="vertical">
                                 <Form.Item name="status" label="Trạng thái mới" rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}>
                                     <Select placeholder="Chọn trạng thái tiếp theo">
-                                        {availableNextStatuses.map(s => <Option key={s} value={s}>{statusOptions[s as keyof typeof statusOptions]}</Option>)}
+                                        {validStatusOptions.map(s => <Option key={s} value={s}>{statusOptions[s as keyof typeof statusOptions]}</Option>)}
                                     </Select>
                                 </Form.Item>
                                 <Form.Item name="note" label="Ghi chú">
@@ -208,6 +294,66 @@ const OrderDetail: React.FC = () => {
                                 </Form.Item>
                             </Form>
                         </Card>
+                    )}
+                    {order.status === 'refund_requested' && (
+                        <Card title={<span style={{color:'#d63384'}}>Yêu cầu hoàn tiền</span>} bordered={false} className="shadow-sm mt-6">
+                            <div className="mb-2 font-semibold">Lý do yêu cầu hoàn tiền:</div>
+                            <div className="mb-2 text-gray-700">{order.statusHistory?.find(s => s.status === 'refund_requested')?.note || 'Không có lý do'}</div>
+                            <div className="mb-4 text-xs text-gray-500">Thời gian: {order.statusHistory?.find(s => s.status === 'refund_requested') ? new Date(order.statusHistory.find(s => s.status === 'refund_requested').date).toLocaleString('vi-VN') : ''}</div>
+                            <div className="flex gap-3">
+                                <Button type="primary" danger onClick={async () => {
+                                    // Đếm số lần yêu cầu hoàn tiền
+                                    const refundCount = order.statusHistory?.filter(s => s.status === 'refund_requested').length || 0;
+                                    if (refundCount >= 3) {
+                                        await updateOrderStatus(order._id, 'refunded', 'Tự động hoàn tiền do vượt quá 3 lần yêu cầu');
+                                        message.success('Đã hoàn tiền cho khách hàng (tự động do quá 3 lần yêu cầu)!');
+                                        fetchOrder();
+                                        return;
+                                    }
+                                    try {
+                                        await updateOrderStatus(order._id, 'refunded', 'Chấp nhận hoàn tiền');
+                                        message.success('Đã hoàn tiền cho khách hàng!');
+                                        fetchOrder();
+                                    } catch (err: any) {
+                                        message.error(err.message || 'Thao tác thất bại!');
+                                    }
+                                }}>Chấp nhận hoàn tiền</Button>
+                                <Button onClick={() => setShowRejectModal(true)}>Từ chối</Button>
+                            </div>
+                        </Card>
+                    )}
+                    {/* Modal từ chối hoàn tiền */}
+                    {showRejectModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                            <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 relative">
+                                <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={() => setShowRejectModal(false)}>&times;</button>
+                                <h2 className="text-lg font-bold mb-4">Lý do từ chối hoàn tiền</h2>
+                                <textarea
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 mb-4"
+                                    rows={3}
+                                    value={rejectReason}
+                                    onChange={e => setRejectReason(e.target.value)}
+                                    placeholder="Nhập lý do từ chối..."
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <Button onClick={() => setShowRejectModal(false)}>Hủy</Button>
+                                    <Button type="primary" danger loading={rejectLoading} disabled={!rejectReason.trim()} onClick={async () => {
+                                        setRejectLoading(true);
+                                        try {
+                                            await updateOrderStatus(order._id, 'delivered_success', rejectReason || 'Từ chối hoàn tiền');
+                                            message.success('Đã từ chối yêu cầu hoàn tiền!');
+                                            setShowRejectModal(false);
+                                            setRejectReason("");
+                                            fetchOrder();
+                                        } catch (err: any) {
+                                            message.error(err.message || 'Thao tác thất bại!');
+                                        } finally {
+                                            setRejectLoading(false);
+                                        }
+                                    }}>Xác nhận</Button>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </Col>
             </Row>

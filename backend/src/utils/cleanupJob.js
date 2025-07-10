@@ -1,5 +1,6 @@
 import Cart from "../models/Cart";
 import ProductReservation from "../models/ProductReservation";
+import Order from "../models/Order";
 
 // Cleanup job chạy mỗi giờ
 export const runCleanupJob = async () => {
@@ -12,6 +13,7 @@ export const runCleanupJob = async () => {
         // Cleanup old carts
         await Cart.cleanupOldCarts();
         
+        // Đã bỏ logic tự động chuyển trạng thái đơn hàng sang 'returned' sau 3 ngày giao hàng thành công mà chưa thanh toán.
         console.log('Cleanup job completed successfully');
         
         return {

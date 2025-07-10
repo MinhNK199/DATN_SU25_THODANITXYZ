@@ -15,7 +15,8 @@ import routerVariant from "./variant";
 import routerRecommendation from "./recommendation";
 import paymentMethodRouter from "./paymentMethod";
 import { runCleanupNow } from "../utils/cleanupJob";
-import { protect } from "../middlewares/authMiddleware";
+import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig';
+import { protect, checkAdmin } from '../middlewares/authMiddleware';
 const provinceController = require('../controllers/provinceController');
 
 const router = Router();
@@ -37,6 +38,8 @@ router.use("/payment-methods", paymentMethodRouter);
 router.get('/provinces', provinceController.getProvinces);
 router.get('/wards', provinceController.getWards);
 router.get('/districts', provinceController.getDistricts);
+router.get('/tax', getTaxConfig);
+router.put('/tax', protect, checkAdmin(['Superadmin']), updateTaxConfig);
 
 // Cleanup job route (chỉ admin mới được gọi)
 router.get("/cleanup", protect, runCleanupNow);

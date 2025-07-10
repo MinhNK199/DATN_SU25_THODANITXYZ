@@ -27,10 +27,19 @@ import { useLocation } from "react-router-dom";
 import wishlistApi from "../../services/wishlistApi";
 import { WishlistItem } from "../../services/wishlistApi";
 import cartApi from "../../services/cartApi";
-import { getOrderById } from "../../services/orderApi";
+import { getOrderById, requestRefund } from "../../services/orderApi";
 import { Order as OrderDetailType } from "../../interfaces/Order";
 import ScrollToTop from "../../components/ScrollToTop";
 import Select from 'react-select';
+
+// Tự định nghĩa usePrevious
+function usePrevious<T>(value: T): T | undefined {
+  const ref = React.useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -475,15 +484,28 @@ const Profile: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Đã giao":
-      case "delivered":
-        return "text-green-600 bg-green-100";
-      case "Đang giao":
-      case "shipped":
-        return "text-blue-600 bg-blue-100";
-      case "Đang xử lý":
+      case "pending":
+        return "text-gray-700 bg-yellow-100"; // Chờ xác nhận - vàng nhạt
+      case "confirmed":
+        return "text-blue-700 bg-blue-100"; // Đã xác nhận - xanh dương
       case "processing":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-indigo-700 bg-indigo-100"; // Đang xử lý - tím
+      case "shipped":
+        return "text-orange-700 bg-orange-100"; // Đang giao hàng - cam
+      case "delivered_success":
+        return "text-green-700 bg-green-100"; // Giao hàng thành công - xanh lá
+      case "delivered_failed":
+        return "text-red-700 bg-red-100"; // Giao hàng thất bại - đỏ
+      case "completed":
+        return "text-green-800 bg-green-200"; // Thành công - xanh lá đậm
+      case "cancelled":
+        return "text-red-600 bg-red-100"; // Đã hủy - đỏ
+      case "returned":
+        return "text-purple-700 bg-purple-100"; // Hoàn hàng - tím
+      case "refund_requested":
+        return "text-pink-700 bg-pink-100"; // Yêu cầu hoàn tiền - hồng
+      case "refunded":
+        return "text-pink-900 bg-pink-200"; // Hoàn tiền thành công - hồng đậm
       default:
         return "text-gray-600 bg-gray-100";
     }
@@ -491,14 +513,28 @@ const Profile: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "delivered":
-        return "Đã giao";
-      case "shipped":
-        return "Đang giao";
+      case "pending":
+        return "Chờ xác nhận";
+      case "confirmed":
+        return "Đã xác nhận";
       case "processing":
         return "Đang xử lý";
-      case "pending":
-        return "Chờ xử lý";
+      case "shipped":
+        return "Đang giao hàng";
+      case "delivered_success":
+        return "Giao hàng thành công";
+      case "delivered_failed":
+        return "Giao hàng thất bại";
+      case "completed":
+        return "Thành công";
+      case "cancelled":
+        return "Đã hủy";
+      case "returned":
+        return "Hoàn hàng";
+      case "refund_requested":
+        return "Yêu cầu hoàn tiền";
+      case "refunded":
+        return "Hoàn tiền thành công";
       default:
         return status;
     }
@@ -804,6 +840,74 @@ const Profile: React.FC = () => {
   const getBankLogo = (bank) => `/images/banks/${(bank.code || bank.value || '').toLowerCase().replace(/\s+/g, '')}.png`;
   const getEWalletLogo = (wallet) => `/images/wallets/${(wallet.code || wallet.value || '').toLowerCase().replace(/\s+/g, '')}.png`;
 
+  // State cho modal hủy đơn hàng
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const handleOpenCancelModal = (orderId: string) => {
+    setCancelOrderId(orderId);
+    setCancelReason("");
+    setShowCancelModal(true);
+  };
+  const handleCloseCancelModal = () => {
+    setShowCancelModal(false);
+    setCancelOrderId(null);
+    setCancelReason("");
+  };
+  const handleCancelOrder = () => {
+    if (cancelOrderId && cancelReason.trim()) {
+      console.log('Hủy đơn hàng:', cancelOrderId, 'Lý do:', cancelReason);
+      // TODO: Gọi API hủy đơn hàng ở đây
+      handleCloseCancelModal();
+    }
+  };
+
+  // State cho modal hoàn tiền
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundOrderId, setRefundOrderId] = useState<string | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+
+  const handleOpenRefundModal = (orderId: string) => {
+    setRefundOrderId(orderId);
+    setRefundReason("");
+    setShowRefundModal(true);
+  };
+  const handleCloseRefundModal = () => {
+    setShowRefundModal(false);
+    setRefundOrderId(null);
+    setRefundReason("");
+  };
+  const handleRefundOrder = async () => {
+    if (refundOrderId && refundReason.trim()) {
+      try {
+        await requestRefund(refundOrderId, refundReason);
+        toast.success('Gửi yêu cầu hoàn tiền thành công!');
+        loadUserData();
+      } catch (err: any) {
+        toast.error(err.message || 'Gửi yêu cầu hoàn tiền thất bại!');
+      }
+      handleCloseRefundModal();
+    }
+  };
+
+  const prevOrders = usePrevious(orders);
+  useEffect(() => {
+    if (!prevOrders) return;
+    orders.forEach((order, idx) => {
+      const prevOrder = prevOrders[idx];
+      if (!prevOrder) return;
+      // Thông báo hoàn tiền thành công
+      if (prevOrder.status === 'refund_requested' && order.status === 'refunded') {
+        toast.success('Yêu cầu hoàn tiền của bạn đã được chấp nhận và xử lý thành công!');
+      }
+      // Thông báo bị từ chối hoàn tiền
+      if (prevOrder.status === 'refund_requested' && order.status === 'delivered_success') {
+        toast.error('Yêu cầu hoàn tiền của bạn đã bị từ chối. Vui lòng liên hệ CSKH nếu cần hỗ trợ thêm.');
+      }
+    });
+  }, [orders, prevOrders]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1018,6 +1122,9 @@ const Profile: React.FC = () => {
                                 )}`}
                               >
                                 {getStatusText(order.status)}
+                                {order.status === 'refund_requested' && (
+                                  <span className="ml-2 text-pink-700 font-semibold">(Đang xử lý yêu cầu hoàn tiền)</span>
+                                )}
                               </span>
                               <span className="text-lg font-bold text-gray-900">
                                 {formatPrice(order.totalPrice)}
@@ -1039,10 +1146,26 @@ const Profile: React.FC = () => {
                             ))}
                           </div>
 
-                          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-4">
                             <button className="text-blue-600 hover:text-blue-700 font-medium" onClick={() => handleShowOrderDetail(order._id)}>
                               Xem chi tiết
                             </button>
+                            {order.status === 'delivered_success' && order.isPaid && (
+                              <button
+                                className="ml-4 text-pink-700 hover:text-white hover:bg-pink-600 border border-pink-300 rounded px-4 py-1 font-medium transition"
+                                onClick={() => handleOpenRefundModal(order._id)}
+                              >
+                                Yêu cầu hoàn tiền
+                              </button>
+                            )}
+                            {order.status === 'pending' && (
+                              <button
+                                className="ml-4 text-gray-600 hover:text-white hover:bg-red-600 border border-red-300 rounded px-4 py-1 font-medium transition"
+                                onClick={() => handleOpenCancelModal(order._id)}
+                              >
+                                Hủy đơn hàng
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -2031,6 +2154,74 @@ const Profile: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal hủy đơn hàng */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={handleCloseCancelModal}>&times;</button>
+            <h2 className="text-lg font-bold mb-4">Hủy đơn hàng</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Lý do hủy đơn hàng</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                rows={3}
+                value={cancelReason}
+                onChange={e => setCancelReason(e.target.value)}
+                placeholder="Nhập lý do hủy..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCloseCancelModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-60"
+                disabled={!cancelReason.trim()}
+              >
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal hoàn tiền */}
+      {showRefundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={handleCloseRefundModal}>&times;</button>
+            <h2 className="text-lg font-bold mb-4">Yêu cầu hoàn tiền</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Lý do yêu cầu hoàn tiền</label>
+              <textarea
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                rows={3}
+                value={refundReason}
+                onChange={e => setRefundReason(e.target.value)}
+                placeholder="Nhập lý do hoàn tiền..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCloseRefundModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleRefundOrder}
+                className="px-4 py-2 bg-pink-600 text-white rounded-lg font-semibold hover:bg-pink-700 disabled:opacity-60"
+                disabled={!refundReason.trim()}
+              >
+                Xác nhận yêu cầu
+              </button>
+            </div>
           </div>
         </div>
       )}

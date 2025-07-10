@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaTrash,
   FaMinus,
@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa";
 import ProductCard from "../../components/client/ProductCard";
 import { useCart } from "../../contexts/CartContext";
-import cartApi from "../../services/cartApi";
+import cartApi, { getTaxConfig } from "../../services/cartApi";
 import { Product } from "../../interfaces/Product";
 
 const Cart: React.FC = () => {
@@ -73,8 +73,14 @@ const Cart: React.FC = () => {
     return sum;
   }, 0);
   const shipping = subtotal > 500000 ? 0 : 30000;
-  const tax = subtotal * 0.08;
-  const total = subtotal - savings + shipping + tax;
+  const [taxRate, setTaxRate] = useState(0.08);
+  useEffect(() => {
+    getTaxConfig().then(cfg => setTaxRate(cfg.rate)).catch(() => setTaxRate(0.08));
+  }, []);
+  const tax = subtotal * taxRate;
+  const total = subtotal + shipping + tax;
+
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -351,7 +357,19 @@ const Cart: React.FC = () => {
 
               {/* Checkout Button */}
               <Link
-                to="/checkout"
+                to="#"
+                onClick={e => {
+                  e.preventDefault();
+                  navigate("/checkout", {
+                    state: {
+                      subtotal,
+                      savings,
+                      shipping,
+                      tax,
+                      total
+                    }
+                  });
+                }}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 mb-4"
               >
                 <FaLock className="w-5 h-5" />
