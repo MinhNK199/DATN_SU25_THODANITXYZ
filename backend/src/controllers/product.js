@@ -201,7 +201,7 @@ export const createProduct = async(req, res) => {
             slug: req.body.slug, // nếu có sẵn
             price: req.body.price,
             salePrice: req.body.salePrice,
-            user: req.user?._id, // tùy middleware
+            user: req.user ? ._id, // tùy middleware
             images: req.body.images || [],
             videos: req.body.videos || [],
             brand: req.body.brand,
@@ -219,9 +219,9 @@ export const createProduct = async(req, res) => {
             weight: req.body.weight || 0,
             warranty: req.body.warranty || 0,
             dimensions: {
-                length: req.body.dimensions?.length || 0,
-                width: req.body.dimensions?.width || 0,
-                height: req.body.dimensions?.height || 0,
+                length: req.body.dimensions ? .length || 0,
+                width: req.body.dimensions ? .width || 0,
+                height: req.body.dimensions ? .height || 0,
             },
         });
 
