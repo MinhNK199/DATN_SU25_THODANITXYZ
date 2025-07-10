@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { FaStar, FaThumbsUp, FaThumbsDown, FaImage, FaTimes, FaUser, FaCalendar, FaCheck } from 'react-icons/fa';
 
 interface Review {
@@ -17,7 +18,7 @@ interface Review {
   cons: string[];
 }
 
-const ProductReviews: React.FC = () => {
+const ProductReviews: React.FC<{ productId?: string }> = ({ productId }) => {
   const [reviews, setReviews] = useState<Review[]>([
     {
       id: '1',
@@ -78,6 +79,28 @@ const ProductReviews: React.FC = () => {
     pros: '',
     cons: '',
     images: [] as string[]
+  });
+  const [sentimentResult, setSentimentResult] = useState<null | {
+    sentiment: string;
+    score: number;
+    comparative: number;
+    words: string[];
+    positive: string[];
+    negative: string[];
+  }>(null);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [sentimentError, setSentimentError] = useState<string | null>(null);
+
+  const [starFilter, setStarFilter] = useState<number | null>(null);
+
+  // Bộ lọc nâng cao cho đánh giá sản phẩm
+  const [filter, setFilter] = useState({
+    minRating: '',
+    hasImage: false,
+    hasPros: false,
+    hasCons: false,
+    onlyVerified: false,
+    keyword: '',
   });
 
   const ratingStats = {
@@ -168,6 +191,100 @@ const ProductReviews: React.FC = () => {
     }));
   };
 
+  // Gọi API phân tích cảm xúc khi comment thay đổi
+  React.useEffect(() => {
+    const fetchSentiment = async () => {
+      if (!newReview.comment.trim()) {
+        setSentimentResult(null);
+        return;
+      }
+      setSentimentLoading(true);
+      setSentimentError(null);
+      try {
+        const res = await axios.post('/api/rating/analyze-sentiment', { comment: newReview.comment });
+        setSentimentResult(res.data);
+      } catch (err: any) {
+        setSentimentError('Không phân tích được cảm xúc');
+        setSentimentResult(null);
+      } finally {
+        setSentimentLoading(false);
+      }
+    };
+    fetchSentiment();
+  }, [newReview.comment]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        // Nếu có productId truyền vào thì fetch theo productId, nếu không thì lấy mặc định
+        const res = await axios.get(`/api/rating${productId ? `?productId=${productId}` : ''}`);
+        setReviews(res.data);
+      } catch (err) {
+        // Nếu lỗi thì giữ nguyên reviews cũ hoặc set về []
+        setReviews([]);
+      }
+    };
+    fetchReviews();
+  }, [productId]);
+
+  const [filteredReviews, setFilteredReviews] = useState<Review[]>(reviews);
+
+  // Hàm xử lý thay đổi bộ lọc nâng cao
+  const handleAdvancedFilter = (e: React.FormEvent) => {
+    e.preventDefault();
+    let filtered = reviews;
+    if (filter.minRating) {
+      filtered = filtered.filter(r => r.rating >= Number(filter.minRating));
+    }
+    if (filter.hasImage) {
+      filtered = filtered.filter(r => r.images && r.images.length > 0);
+    }
+    if (filter.hasPros) {
+      filtered = filtered.filter(r => r.pros && r.pros.length > 0);
+    }
+    if (filter.hasCons) {
+      filtered = filtered.filter(r => r.cons && r.cons.length > 0);
+    }
+    if (filter.onlyVerified) {
+      filtered = filtered.filter(r => r.verified);
+    }
+    if (filter.keyword) {
+      filtered = filtered.filter(r =>
+        r.comment.toLowerCase().includes(filter.keyword.toLowerCase()) ||
+        r.title.toLowerCase().includes(filter.keyword.toLowerCase())
+      );
+    }
+    setFilteredReviews(filtered);
+  };
+
+  useEffect(() => {
+  let filtered = reviews;
+  if (starFilter) {
+    filtered = filtered.filter(r => r.rating === starFilter);
+  }
+  if (filter.minRating) {
+    filtered = filtered.filter(r => r.rating >= Number(filter.minRating));
+  }
+  if (filter.hasImage) {
+    filtered = filtered.filter(r => r.images && r.images.length > 0);
+  }
+  if (filter.hasPros) {
+    filtered = filtered.filter(r => r.pros && r.pros.length > 0);
+  }
+  if (filter.hasCons) {
+    filtered = filtered.filter(r => r.cons && r.cons.length > 0);
+  }
+  if (filter.onlyVerified) {
+    filtered = filtered.filter(r => r.verified);
+  }
+  if (filter.keyword) {
+    filtered = filtered.filter(r =>
+      r.comment.toLowerCase().includes(filter.keyword.toLowerCase()) ||
+      r.title.toLowerCase().includes(filter.keyword.toLowerCase())
+    );
+  }
+  setFilteredReviews(filtered);
+}, [reviews, filter, starFilter]);
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -209,6 +326,28 @@ const ProductReviews: React.FC = () => {
             >
               Viết đánh giá
             </button>
+          </div>
+
+          {/* Bộ lọc số sao */}
+          <div className="mb-6 flex flex-wrap gap-2 items-center">
+            <span className="font-semibold">Lọc theo số sao:</span>
+            {[5, 4, 3, 2, 1].map((star) => (
+              <button
+                key={star}
+                className={`px-3 py-1 rounded border ${starFilter === star ? "bg-yellow-400 text-white" : "bg-gray-100"}`}
+                onClick={() => setStarFilter(starFilter === star ? null : star)}
+              >
+                {star} ★
+              </button>
+            ))}
+            {starFilter && (
+              <button
+                className="ml-2 px-3 py-1 rounded border bg-gray-200"
+                onClick={() => setStarFilter(null)}
+              >
+                Xóa lọc
+              </button>
+            )}
           </div>
 
           {/* Rating Distribution */}
@@ -296,6 +435,31 @@ const ProductReviews: React.FC = () => {
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {/* Hiển thị kết quả cảm xúc */}
+                <div className="mt-2 min-h-[32px]">
+                  {sentimentLoading && <span className="text-blue-500 text-sm">Đang phân tích cảm xúc...</span>}
+                  {sentimentError && <span className="text-red-500 text-sm">{sentimentError}</span>}
+                  {sentimentResult && !sentimentLoading && (
+                    <div className="text-sm flex flex-col md:flex-row md:items-center md:space-x-4">
+                      <span className="font-semibold">Cảm xúc: </span>
+                      <span className={
+                        sentimentResult.sentiment === 'positive' ? 'text-green-600' :
+                        sentimentResult.sentiment === 'negative' ? 'text-red-600' : 'text-gray-600'
+                      }>
+                        {sentimentResult.sentiment === 'positive' && 'Tích cực'}
+                        {sentimentResult.sentiment === 'negative' && 'Tiêu cực'}
+                        {sentimentResult.sentiment === 'neutral' && 'Trung tính'}
+                      </span>
+                      <span>• Điểm: {sentimentResult.score}</span>
+                      {sentimentResult.positive.length > 0 && (
+                        <span className="text-green-700">Từ tích cực: {sentimentResult.positive.join(', ')}</span>
+                      )}
+                      {sentimentResult.negative.length > 0 && (
+                        <span className="text-red-700">Từ tiêu cực: {sentimentResult.negative.join(', ')}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Pros and Cons */}
@@ -370,9 +534,73 @@ const ProductReviews: React.FC = () => {
             </div>
           )}
 
+          {/* Bộ lọc nâng cao */}
+          <form
+            className="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded-lg shadow"
+            onSubmit={handleAdvancedFilter}
+          >
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={filter.minRating}
+              onChange={e => setFilter(f => ({ ...f, minRating: e.target.value }))}
+              placeholder="Số sao tối thiểu"
+              className="border px-3 py-2 rounded w-32"
+            />
+            <input
+              type="text"
+              value={filter.keyword}
+              onChange={e => setFilter(f => ({ ...f, keyword: e.target.value }))}
+              placeholder="Từ khóa"
+              className="border px-3 py-2 rounded w-40"
+            />
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.hasImage}
+                onChange={e => setFilter(f => ({ ...f, hasImage: e.target.checked }))}
+              />
+              Có ảnh
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.hasPros}
+                onChange={e => setFilter(f => ({ ...f, hasPros: e.target.checked }))}
+              />
+              Có ưu điểm
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.hasCons}
+                onChange={e => setFilter(f => ({ ...f, hasCons: e.target.checked }))}
+              />
+              Có nhược điểm
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={filter.onlyVerified}
+                onChange={e => setFilter(f => ({ ...f, onlyVerified: e.target.checked }))}
+              />
+              Đã mua
+            </label>
+            <button
+              type="submit"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Lọc nhanh
+            </button>
+          </form>
+
           {/* Reviews List */}
           <div className="space-y-6">
-            {reviews.map((review) => (
+            {filteredReviews.length === 0 && (
+              <div className="text-gray-500 italic">Không có đánh giá phù hợp.</div>
+            )}
+            {filteredReviews.map((review) => (
               <div key={review.id} className="border-b border-gray-200 pb-6 last:border-b-0">
                 {/* Review Header */}
                 <div className="flex items-start justify-between mb-3">
@@ -493,4 +721,4 @@ const ProductReviews: React.FC = () => {
   );
 };
 
-export default ProductReviews; 
+export default ProductReviews;

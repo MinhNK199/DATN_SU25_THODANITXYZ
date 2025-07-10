@@ -7,7 +7,7 @@ import OrderSuccessModal from '../../components/client/OrderSuccessModal';
 import axios from 'axios';
 import userApi, { Address } from '../../services/userApi';
 import Select from 'react-select';
-import { createOrder as createOrderApi } from "../../services/orderApi";
+import { createOrder } from "../../services/orderApi";
 
 interface Province {
   code: number;
@@ -242,25 +242,27 @@ const Checkout: React.FC = () => {
 
     // Validate cart
     if (!cartState.items || cartState.items.length === 0) {
-      showError("Giỏ hàng trống!", "Vui lòng thêm sản phẩm vào giỏ hàng.");
-      setIsProcessing(false);
-      return;
-    }
-    // Validate địa chỉ
-    if (!formData.firstName || !formData.lastName || !formData.phone || !formData.address || !formData.province_code || !formData.district_code || !formData.ward_code) {
-      showError("Thiếu thông tin giao hàng!", "Vui lòng điền đầy đủ thông tin nhận hàng.");
-      setIsProcessing(false);
-      return;
-    }
-    // Validate payment method
-    if (!formData.paymentMethod) {
-      showError("Chưa chọn phương thức thanh toán!", "Vui lòng chọn phương thức thanh toán.");
+      showError("Giỏ hàng trống", "Vui lòng thêm sản phẩm vào giỏ hàng.");
       setIsProcessing(false);
       return;
     }
 
-    // Chuẩn bị dữ liệu gửi lên backend
+    // Validate địa chỉ giao hàng
+    if (!formData.firstName || !formData.lastName || !formData.address || !formData.province_code || !formData.district_code || !formData.ward_code || !formData.phone) {
+      showError("Thiếu thông tin giao hàng", "Vui lòng điền đầy đủ thông tin nhận hàng.");
+      setIsProcessing(false);
+      return;
+    }
+
+    // Validate phương thức thanh toán
+    if (!formData.paymentMethod) {
+      showError("Chưa chọn phương thức thanh toán", "Vui lòng chọn phương thức thanh toán.");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
+      // Chuẩn bị dữ liệu gửi lên backend
       const shippingAddress = {
         fullName: formData.firstName + ' ' + formData.lastName,
         address: formData.address,
@@ -275,35 +277,30 @@ const Checkout: React.FC = () => {
         price: item.product.salePrice || item.product.price,
         product: item.product._id,
       }));
-      const itemsPrice = cartState.items.reduce((sum, item) => sum + (item.product.salePrice || item.product.price) * item.quantity, 0);
-      const taxPrice = 0; // Có thể tính thêm nếu cần
-      const shippingPrice = shippingFee;
-      const totalPrice = itemsPrice + shippingPrice;
-      // Map payment method
+      // Map payment method cho backend
       let paymentMethod = '';
       if (formData.paymentMethod === 'cod') paymentMethod = 'COD';
       else if (formData.paymentMethod === 'bank-transfer') paymentMethod = 'BANKING';
       else if (formData.paymentMethod === 'e-wallet') paymentMethod = 'E-WALLET';
-      else if (formData.paymentMethod === 'credit-card') paymentMethod = 'E-WALLET'; // Có thể tách riêng nếu backend hỗ trợ
-      else paymentMethod = formData.paymentMethod.toUpperCase();
+      else paymentMethod = 'COD';
 
       const orderData = {
         orderItems,
         shippingAddress,
         paymentMethod,
-        itemsPrice,
-        taxPrice,
-        shippingPrice,
-        totalPrice,
+        itemsPrice: cartState.total,
+        taxPrice: 0,
+        shippingPrice: shippingFee,
+        totalPrice: total,
       };
-      // Gọi API tạo đơn hàng
-      const createdOrder = await createOrderApi(orderData);
-      setOrderNumber(createdOrder._id || createdOrder.orderNumber || '');
+
+      const res = await createOrder(orderData);
+      setOrderNumber(res._id || '');
       setShowSuccessModal(true);
       clearCart();
-      showSuccess('Đặt hàng thành công!', `Đơn hàng ${createdOrder._id || ''} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
-    } catch (error: any) {
-      showError('Đặt hàng thất bại!', error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+      showSuccess('Đặt hàng thành công!', `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
+    } catch (err: any) {
+      showError('Đặt hàng thất bại', err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setIsProcessing(false);
     }
