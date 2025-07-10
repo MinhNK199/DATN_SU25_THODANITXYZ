@@ -114,22 +114,22 @@ export const getProducts = async(req, res) => {
             ])
         };
 
-        // 📤 Trả kết quả về client
-        res.json({
-            products: productsWithVariants,
-            page,
-            pages: Math.ceil(count / pageSize),
-            total: count,
-            stats: {
-                total: stats.total,
-                minPrice: stats.minPrice?.price || 0,
-                maxPrice: stats.maxPrice?.price || 0,
-                avgRating: stats.avgRating[0]?.avgRating || 0
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    // 📤 Trả kết quả về client
+    res.json({
+      products: productsWithVariants,
+      page,
+      pages: Math.ceil(count / pageSize),
+      total: count,
+      stats: {
+        total: stats.total,
+        minPrice: stats.minPrice?.price || 0,
+        maxPrice: stats.maxPrice?.price || 0,
+        avgRating: stats.avgRating[0]?.avgRating || 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 
@@ -201,7 +201,7 @@ export const createProduct = async(req, res) => {
             slug: req.body.slug, // nếu có sẵn
             price: req.body.price,
             salePrice: req.body.salePrice,
-            user: req.user?._id, // tùy middleware
+            user: req.user ? ._id, // tùy middleware
             images: req.body.images || [],
             videos: req.body.videos || [],
             brand: req.body.brand,
@@ -219,9 +219,9 @@ export const createProduct = async(req, res) => {
             weight: req.body.weight || 0,
             warranty: req.body.warranty || 0,
             dimensions: {
-                length: req.body.dimensions?.length || 0,
-                width: req.body.dimensions?.width || 0,
-                height: req.body.dimensions?.height || 0,
+                length: req.body.dimensions ? .length || 0,
+                width: req.body.dimensions ? .width || 0,
+                height: req.body.dimensions ? .height || 0,
             },
         });
 
@@ -816,22 +816,22 @@ export const updateProductVideo = async(req, res) => {
 };
 
 // Cập nhật meta SEO cho sản phẩm
-export const updateProductMeta = async(req, res) => {
-    try {
-        const { id } = req.params;
-        const { metaTitle, metaDescription, metaImage } = req.body;
-        const product = await Product.findById(id);
-        if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
-        product.meta = {
-            metaTitle: metaTitle ?? (product.meta?.metaTitle),
-            metaDescription: metaDescription ?? (product.meta?.metaDescription),
-            metaImage: metaImage ?? (product.meta?.metaImage),
-        };
-        await product.save();
-        res.status(200).json({ message: 'Đã cập nhật meta SEO', meta: product.meta });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+export const updateProductMeta = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { metaTitle, metaDescription, metaImage } = req.body;
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+    product.meta = {
+      metaTitle: metaTitle ?? product.meta?.metaTitle,
+      metaDescription: metaDescription ?? product.meta?.metaDescription,
+      metaImage: metaImage ?? product.meta?.metaImage,
+    };
+    await product.save();
+    res.status(200).json({ message: 'Đã cập nhật meta SEO', meta: product.meta });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 // Thêm câu hỏi cho sản phẩm
