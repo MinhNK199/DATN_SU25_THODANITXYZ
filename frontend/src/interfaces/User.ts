@@ -37,6 +37,17 @@ export interface User {
 
   // Trường dùng cho danh sách đã xóa mềm (nếu có)
   deleted?: boolean;
+
+  // Thêm các trường cho notification và privacy settings
+  notificationSettings?: {
+    orderEmail?: boolean;
+    promotionEmail?: boolean;
+    sms?: boolean;
+  };
+  privacySettings?: {
+    shareHistory?: boolean;
+    thirdPartyAnalytics?: boolean;
+  };
 }
 
 export interface UserForm extends Partial<User> {
