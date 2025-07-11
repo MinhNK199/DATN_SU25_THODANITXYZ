@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaLock, FaCreditCard, FaPaypal, FaTruck, FaArrowLeft, FaCheck } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
 import { useToast } from '../../components/client/ToastContainer';
@@ -7,8 +7,9 @@ import OrderSuccessModal from '../../components/client/OrderSuccessModal';
 import axios from 'axios';
 import userApi, { Address } from '../../services/userApi';
 import Select from 'react-select';
-import { createOrder } from "../../services/orderApi";
+import { createOrder, createMomoPayment } from "../../services/orderApi";
 import { getTaxConfig } from '../../services/cartApi';
+import ScrollToTop from '../../components/ScrollToTop';
 
 interface Province {
   code: number;
@@ -42,6 +43,7 @@ const Checkout: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
 
   // Địa chỉ động
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -225,6 +227,7 @@ const Checkout: React.FC = () => {
   };
 
   const { state: cartState, clearCart } = useCart();
+  const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
 
   const formatPrice = (price: number) => {
@@ -291,6 +294,7 @@ const Checkout: React.FC = () => {
       else if (formData.paymentMethod === 'bank-transfer') paymentMethod = 'BANKING';
       else paymentMethod = 'COD';
 
+      // Chỉ gửi cardId nếu backend thực sự cần, còn lại loại bỏ khỏi payload
       const orderData = {
         orderItems,
         shippingAddress,
@@ -299,14 +303,32 @@ const Checkout: React.FC = () => {
         taxPrice: cartState.total * taxRate,
         shippingPrice: shippingFee,
         totalPrice: cartState.total + shippingFee + cartState.total * taxRate,
-        cardId: formData.paymentMethod === 'credit-card' ? selectedCardId : undefined,
-        walletId: formData.paymentMethod === 'e-wallet' ? selectedWalletId : undefined,
+        // cardId: formData.paymentMethod === 'credit-card' ? selectedCardId : undefined, // Bỏ nếu backend không cần
+        // walletId: formData.paymentMethod === 'e-wallet' ? selectedWalletId : undefined, // Bỏ nếu backend không cần
       };
       const res = await createOrder(orderData);
       setOrderNumber(res._id || '');
-      setShowSuccessModal(true);
-      clearCart();
-      showSuccess('Đặt hàng thành công!', `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
+      if (formData.paymentMethod === 'e-wallet') {
+        // Gọi API tạo thanh toán Momo
+        const momoRes = await createMomoPayment({
+          amount: orderData.totalPrice,
+          orderId: res._id,
+          orderInfo: `Thanh toán đơn hàng ${res._id}`,
+          redirectUrl: window.location.origin + '/checkout/success',
+          ipnUrl: 'http://localhost:8000/api/payment/momo/webhook',
+          extraData: ''
+        });
+        if (momoRes && momoRes.payUrl) {
+          window.location.href = momoRes.payUrl;
+          return;
+        } else {
+          showError('Không lấy được link thanh toán Momo', momoRes.message || 'Vui lòng thử lại.');
+        }
+      } else {
+        setShowSuccessModal(true);
+        clearCart();
+        showSuccess('Đặt hàng thành công!', `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
+      }
     } catch (err: any) {
       showError('Đặt hàng thất bại', err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
@@ -331,6 +353,35 @@ const Checkout: React.FC = () => {
   const getProvinceName = () => provinces.find(p => String(p.code) === formData.province_code)?.name || "";
   const getDistrictName = () => districts.find(d => String(d.code) === formData.district_code)?.name || "";
   const getWardName = () => wards.find(w => String(w.code) === formData.ward_code)?.name || "";
+
+  useEffect(() => {
+    // Khi chuyển bước, scroll lên đầu trang
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
+  // Nếu ở bước thanh toán mà giỏ hàng rỗng, tự động về trang chủ
+  useEffect(() => {
+    if (currentStep === 2 && (!cartState.items || cartState.items.length === 0)) {
+      navigate('/');
+    }
+  }, [currentStep, cartState.items, navigate]);
+
+  // Sau khi đặt hàng thành công, tự động về trang chủ sau 5s và hiển thị đếm ngược
+  useEffect(() => {
+    if (showSuccessModal) {
+      setRedirectCountdown(5);
+      const interval = setInterval(() => {
+        setRedirectCountdown(prev => prev - 1);
+      }, 1000);
+      const timer = setTimeout(() => {
+        navigate('/');
+      }, 5000);
+      return () => {
+        clearTimeout(timer);
+        clearInterval(interval);
+      };
+    }
+  }, [showSuccessModal, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -907,7 +958,15 @@ const Checkout: React.FC = () => {
         onClose={() => setShowSuccessModal(false)}
         orderNumber={orderNumber}
         estimatedDelivery="2-3 ngày làm việc"
-      />
+      >
+        {/* Dòng báo đếm ngược */}
+        {showSuccessModal && (
+          <div className="text-center text-sm text-gray-500 mt-2">
+            Bạn sẽ được chuyển về trang chủ sau {redirectCountdown} giây...
+          </div>
+        )}
+      </OrderSuccessModal>
+      <ScrollToTop />
     </div>
   );
 };

@@ -97,4 +97,21 @@ export const getValidOrderStatusOptions = async (id: string): Promise<string[]> 
     }
     const data = await res.json();
     return data.validStatus || [];
+};
+
+export const createMomoPayment = async (paymentData: any) => {
+  const token = getToken();
+  const res = await fetch(`${API_URL}/payment/momo/create`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(paymentData)
+  });
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.message || 'Failed to create Momo payment');
+  }
+  return res.json();
 }; 

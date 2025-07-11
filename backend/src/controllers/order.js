@@ -1,9 +1,13 @@
 import Order from "../models/Order";
 import Notification from '../models/Notification';
+import { sendMail } from '../utils/mailer';
+import User from '../models/User';
 
 // Tạo đơn hàng mới
 export const createOrder = async (req, res) => {
     try {
+        // Thêm dòng này để khai báo paidMethods
+        const paidMethods = ['BANKING', 'E-WALLET', 'credit-card', 'e-wallet', 'credit_card', 'e_wallet'];
         const {
             orderItems,
             shippingAddress,
@@ -32,8 +36,17 @@ export const createOrder = async (req, res) => {
         });
 
         const createdOrder = await order.save();
+        // const user = await User.findById(req.user._id);
+        // if (user && user.email) {
+        //   await sendMail({
+        //     to: user.email,
+        //     subject: 'Xác nhận đơn hàng tại TechTrend',
+        //     html: `<p>Cảm ơn bạn đã đặt hàng tại TechTrend!</p><p>Mã đơn hàng: <b>${createdOrder._id}</b></p>`
+        //   });
+        // }
         res.status(201).json(createdOrder);
     } catch (error) {
+        console.error('Lỗi khi tạo đơn hàng:', error);
         res.status(400).json({ message: error.message });
     }
 };

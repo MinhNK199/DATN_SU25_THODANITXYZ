@@ -1,18 +1,21 @@
-import React from 'react';
-import { FaCheckCircle, FaTruck, FaEnvelope, FaWhatsapp, FaTimes, FaDownload, FaPrint } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaCheckCircle, FaTruck, FaEnvelope, FaWhatsapp, FaTimes, FaDownload, FaPrint, FaRegCopy } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 interface OrderSuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderNumber: string;
   estimatedDelivery: string;
+  children?: React.ReactNode;
 }
 
 const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
   isOpen,
   onClose,
   orderNumber,
-  estimatedDelivery
+  estimatedDelivery,
+  children
 }) => {
   if (!isOpen) return null;
 
@@ -69,7 +72,21 @@ const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Mã đơn hàng</h3>
-                <p className="text-2xl font-bold text-blue-600">{orderNumber}</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-base bg-gray-100 px-2 py-1 rounded">
+                    {orderNumber.slice(0, 6)}...{orderNumber.slice(-4)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(orderNumber);
+                      toast.success('Đã copy mã đơn hàng!');
+                    }}
+                    className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                    title="Sao chép mã đơn hàng"
+                  >
+                    <FaRegCopy className="w-4 h-4" /> Copy
+                  </button>
+                </div>
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Dự kiến giao hàng</h3>
@@ -139,6 +156,9 @@ const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
               Tiếp tục mua sắm
             </button>
           </div>
+
+          {/* Hiển thị children nếu có */}
+          {children}
 
           {/* Contact Info */}
           <div className="mt-6 pt-6 border-t border-gray-200 text-center">

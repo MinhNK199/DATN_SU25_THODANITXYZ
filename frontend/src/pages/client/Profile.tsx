@@ -927,6 +927,9 @@ const Profile: React.FC = () => {
   const totalOrdersPages = Math.ceil(orders.length / ordersPerPage);
   const paginatedOrders = orders.slice((ordersPage - 1) * ordersPerPage, ordersPage * ordersPerPage);
 
+  // Thêm state cho ô tìm kiếm mã đơn hàng
+  const [searchOrderId, setSearchOrderId] = useState('');
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1110,6 +1113,25 @@ const Profile: React.FC = () => {
                   <h2 className="text-2xl font-bold text-gray-900 mb-6">
                     Lịch sử đơn hàng
                   </h2>
+                  {/* Ô tra cứu mã đơn hàng */}
+                  <div className="mb-4 flex items-center w-full md:w-1/3">
+                    <input
+                      type="text"
+                      placeholder="Nhập mã đơn hàng để tra cứu..."
+                      value={searchOrderId}
+                      onChange={e => setSearchOrderId(e.target.value)}
+                      className="px-3 py-2 border rounded-l w-full"
+                    />
+                    {searchOrderId && (
+                      <button
+                        onClick={() => setSearchOrderId('')}
+                        className="px-3 py-2 bg-gray-200 border border-l-0 rounded-r hover:bg-gray-300 text-gray-600"
+                        title="Xóa ký tự"
+                      >
+                        &times;
+                      </button>
+                    )}
+                  </div>
                   {orders.length === 0 ? (
                     <div className="text-center py-8">
                       <FaShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -1117,68 +1139,70 @@ const Profile: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-6 max-h-[85vh] overflow-y-auto">
-                      {paginatedOrders.map((order) => (
-                        <div
-                          key={order._id}
-                          className="border border-gray-200 rounded-lg p-6"
-                        >
-                          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {order._id}
-                              </h3>
-                              <p className="text-gray-600">
-                                Đặt hàng ngày {new Date(order.createdAt).toLocaleDateString("vi-VN")}
-                              </p>
-                            </div>
-                            <div className="flex items-center space-x-4 mt-4 md:mt-0">
-                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                                {getStatusText(order.status)}
-                                {order.status === 'refund_requested' && (
-                                  <span className="ml-2 text-pink-700 font-semibold">(Đang xử lý yêu cầu hoàn tiền)</span>
-                                )}
-                              </span>
-                              <span className="text-lg font-bold text-gray-900">
-                                {formatPrice(order.totalPrice)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            {order.orderItems.map((item, index) => (
-                              <div
-                                key={index}
-                                className="flex justify-between text-sm"
-                              >
-                                <span>
-                                  {item.name} x{item.quantity}
-                                </span>
-                                <span>{formatPrice(item.price)}</span>
+                      {paginatedOrders
+                        .filter(order => order._id.toLowerCase().includes(searchOrderId.trim().toLowerCase()))
+                        .map((order) => (
+                          <div
+                            key={order._id}
+                            className="border border-gray-200 rounded-lg p-6"
+                          >
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                  {order._id}
+                                </h3>
+                                <p className="text-gray-600">
+                                  Đặt hàng ngày {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                                </p>
                               </div>
-                            ))}
-                          </div>
-                          <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-4">
-                            <button className="text-blue-600 hover:text-blue-700 font-medium" onClick={() => handleShowOrderDetail(order._id)}>
-                              Xem chi tiết
-                            </button>
-                            {order.status === 'delivered_success' && order.isPaid && (
-                              <button
-                                className="ml-4 text-pink-700 hover:text-white hover:bg-pink-600 border border-pink-300 rounded px-4 py-1 font-medium transition"
-                                onClick={() => handleOpenRefundModal(order._id)}
-                              >
-                                Yêu cầu hoàn tiền
+                              <div className="flex items-center space-x-4 mt-4 md:mt-0">
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                                  {getStatusText(order.status)}
+                                  {order.status === 'refund_requested' && (
+                                    <span className="ml-2 text-pink-700 font-semibold">(Đang xử lý yêu cầu hoàn tiền)</span>
+                                  )}
+                                </span>
+                                <span className="text-lg font-bold text-gray-900">
+                                  {formatPrice(order.totalPrice)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              {order.orderItems.map((item, index) => (
+                                <div
+                                  key={index}
+                                  className="flex justify-between text-sm"
+                                >
+                                  <span>
+                                    {item.name} x{item.quantity}
+                                  </span>
+                                  <span>{formatPrice(item.price)}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-4">
+                              <button className="text-blue-600 hover:text-blue-700 font-medium" onClick={() => handleShowOrderDetail(order._id)}>
+                                Xem chi tiết
                               </button>
-                            )}
-                            {order.status === 'pending' && (
-                              <button
-                                className="ml-4 text-gray-600 hover:text-white hover:bg-red-600 border border-red-300 rounded px-4 py-1 font-medium transition"
-                                onClick={() => handleOpenCancelModal(order._id)}
-                              >
-                                Hủy đơn hàng
-                              </button>
-                            )}
+                              {order.status === 'delivered_success' && order.isPaid && (
+                                <button
+                                  className="ml-4 text-pink-700 hover:text-white hover:bg-pink-600 border border-pink-300 rounded px-4 py-1 font-medium transition"
+                                  onClick={() => handleOpenRefundModal(order._id)}
+                                >
+                                  Yêu cầu hoàn tiền
+                                </button>
+                              )}
+                              {order.status === 'pending' && (
+                                <button
+                                  className="ml-4 text-gray-600 hover:text-white hover:bg-red-600 border border-red-300 rounded px-4 py-1 font-medium transition"
+                                  onClick={() => handleOpenCancelModal(order._id)}
+                                >
+                                  Hủy đơn hàng
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                       {/* Phân trang */}
                       {totalOrdersPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-4">

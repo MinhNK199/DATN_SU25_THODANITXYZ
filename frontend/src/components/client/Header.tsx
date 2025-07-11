@@ -199,7 +199,7 @@ const Header: React.FC = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <FaEnvelope className="w-3 h-3" />
-                <span>support@electronstore.vn</span>
+                <span>support@techtrend.vn</span>
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
@@ -222,13 +222,13 @@ const Header: React.FC = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">E</span>
+                <span className="text-white font-bold text-xl">T</span>
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  ElectronStore
+                  TechTrend
                 </h1>
-                <p className="text-xs text-gray-500">Thiết bị điện tử cao cấp</p>
+                <p className="text-xs text-gray-500">Công nghệ dẫn đầu</p>
               </div>
             </Link>
 

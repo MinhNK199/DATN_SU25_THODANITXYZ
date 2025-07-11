@@ -68,13 +68,13 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-2 mb-6">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">E</span>
+                <span className="text-white font-bold text-xl">T</span>
               </div>
               <div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  ElectronStore
+                  TechTrend
                 </h3>
-                <p className="text-xs text-gray-400">Thiết bị điện tử cao cấp</p>
+                <p className="text-xs text-gray-400">Công nghệ dẫn đầu</p>
               </div>
             </div>
             <p className="text-gray-400 mb-6 leading-relaxed">
@@ -161,8 +161,8 @@ const Footer: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <FaEnvelope className="w-5 h-5 text-blue-400 flex-shrink-0" />
                 <div>
-                  <p className="text-gray-400">info@electronstore.vn</p>
-                  <p className="text-gray-400">support@electronstore.vn</p>
+                  <p className="text-gray-400">info@techtrend.vn</p>
+                  <p className="text-gray-400">support@techtrend.vn</p>
                 </div>
               </div>
             </div>
@@ -204,7 +204,7 @@ const Footer: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-gray-400 text-sm">
-              © {currentYear} ElectronStore. Tất cả quyền được bảo lưu.
+              © {currentYear} TechTrend. Tất cả quyền được bảo lưu.
             </div>
             
             <div className="flex items-center space-x-6 text-sm">
@@ -221,7 +221,7 @@ const Footer: React.FC = () => {
 
             <div className="flex items-center space-x-2 text-sm text-gray-400">
               <span>Được phát triển bởi</span>
-              <span className="text-blue-400 font-semibold">ElectronStore Team</span>
+              <span className="text-blue-400 font-semibold">Thổ Dân IT</span>
             </div>
           </div>
         </div>
