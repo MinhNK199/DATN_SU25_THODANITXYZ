@@ -908,6 +908,25 @@ const Profile: React.FC = () => {
     });
   }, [orders, prevOrders]);
 
+  // Thêm state phân trang cho notifications
+  const [notificationPage, setNotificationPage] = useState(1);
+  const notificationsPerPage = 5;
+  const totalNotificationPages = Math.ceil(notifications.length / notificationsPerPage);
+  const paginatedNotifications = notifications.slice((notificationPage - 1) * notificationsPerPage, notificationPage * notificationsPerPage);
+
+  // Thêm state phân trang cho lịch sử trạng thái đơn hàng
+  const [orderHistoryPage, setOrderHistoryPage] = useState(1);
+  const orderHistoryPerPage = 5;
+  const orderDetailHistory = orderDetail?.statusHistory || [];
+  const totalOrderHistoryPages = Math.ceil(orderDetailHistory.length / orderHistoryPerPage);
+  const paginatedOrderHistory = orderDetailHistory.slice((orderHistoryPage - 1) * orderHistoryPerPage, orderHistoryPage * orderHistoryPerPage);
+
+  // Thêm state phân trang cho lịch sử đơn hàng chung (tab orders)
+  const [ordersPage, setOrdersPage] = useState(1);
+  const ordersPerPage = 5;
+  const totalOrdersPages = Math.ceil(orders.length / ordersPerPage);
+  const paginatedOrders = orders.slice((ordersPage - 1) * ordersPerPage, ordersPage * ordersPerPage);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1097,8 +1116,8 @@ const Profile: React.FC = () => {
                       <p className="text-gray-600">Bạn chưa có đơn hàng nào</p>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                      {orders.map((order) => (
+                    <div className="space-y-6 max-h-[85vh] overflow-y-auto">
+                      {paginatedOrders.map((order) => (
                         <div
                           key={order._id}
                           className="border border-gray-200 rounded-lg p-6"
@@ -1109,18 +1128,11 @@ const Profile: React.FC = () => {
                                 {order._id}
                               </h3>
                               <p className="text-gray-600">
-                                Đặt hàng ngày{" "}
-                                {new Date(order.createdAt).toLocaleDateString(
-                                  "vi-VN"
-                                )}
+                                Đặt hàng ngày {new Date(order.createdAt).toLocaleDateString("vi-VN")}
                               </p>
                             </div>
                             <div className="flex items-center space-x-4 mt-4 md:mt-0">
-                              <span
-                                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                                  order.status
-                                )}`}
-                              >
+                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                                 {getStatusText(order.status)}
                                 {order.status === 'refund_requested' && (
                                   <span className="ml-2 text-pink-700 font-semibold">(Đang xử lý yêu cầu hoàn tiền)</span>
@@ -1131,7 +1143,6 @@ const Profile: React.FC = () => {
                               </span>
                             </div>
                           </div>
-
                           <div className="space-y-2">
                             {order.orderItems.map((item, index) => (
                               <div
@@ -1145,7 +1156,6 @@ const Profile: React.FC = () => {
                               </div>
                             ))}
                           </div>
-
                           <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-4">
                             <button className="text-blue-600 hover:text-blue-700 font-medium" onClick={() => handleShowOrderDetail(order._id)}>
                               Xem chi tiết
@@ -1169,6 +1179,26 @@ const Profile: React.FC = () => {
                           </div>
                         </div>
                       ))}
+                      {/* Phân trang */}
+                      {totalOrdersPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-4">
+                          <button
+                            className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                            onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
+                            disabled={ordersPage === 1}
+                          >
+                            Trước
+                          </button>
+                          <span className="mx-2 text-sm">Trang {ordersPage} / {totalOrdersPages}</span>
+                          <button
+                            className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                            onClick={() => setOrdersPage(p => Math.min(totalOrdersPages, p + 1))}
+                            disabled={ordersPage === totalOrdersPages}
+                          >
+                            Sau
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2015,21 +2045,41 @@ const Profile: React.FC = () => {
                   ) : notifications.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">Không có thông báo nào.</div>
                   ) : (
-                    <ul className="divide-y divide-gray-100">
-                      {notifications.map((n, idx) => (
-                        <li key={idx} className={`py-3 flex items-center justify-between ${n.isRead ? '' : 'bg-blue-50'}`}>
-                          <div>
-                            <div className="font-medium">{n.title}</div>
-                            <div className="text-sm text-gray-600">{n.message}</div>
-                            <div className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString('vi-VN')}</div>
-                          </div>
-                          <div className="flex flex-col gap-2 items-end">
-                            {!n.isRead && <button onClick={() => handleMarkAsRead(n._id)} className="text-blue-600 hover:underline text-sm">Đánh dấu đã đọc</button>}
-                            <button onClick={() => handleDeleteNotification(n._id)} className="text-red-600 hover:underline text-sm">Xoá</button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <ul className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                        {paginatedNotifications.map((n, idx) => (
+                          <li key={n._id || idx} className={`py-3 flex items-center justify-between ${n.isRead ? '' : 'bg-blue-50'}`}>
+                            <div>
+                              <div className="font-medium">{n.title}</div>
+                              <div className="text-sm text-gray-600">{n.message}</div>
+                              <div className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString('vi-VN')}</div>
+                            </div>
+                            <div className="flex flex-col gap-2 items-end">
+                              {!n.isRead && <button onClick={() => handleMarkAsRead(n._id)} className="text-blue-600 hover:underline text-sm">Đánh dấu đã đọc</button>}
+                              <button onClick={() => handleDeleteNotification(n._id)} className="text-red-600 hover:underline text-sm">Xoá</button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      {/* Phân trang */}
+                      <div className="flex justify-center items-center gap-2 mt-4">
+                        <button
+                          className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                          onClick={() => setNotificationPage(p => Math.max(1, p - 1))}
+                          disabled={notificationPage === 1}
+                        >
+                          Trước
+                        </button>
+                        <span className="mx-2 text-sm">Trang {notificationPage} / {totalNotificationPages}</span>
+                        <button
+                          className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+                          onClick={() => setNotificationPage(p => Math.min(totalNotificationPages, p + 1))}
+                          disabled={notificationPage === totalNotificationPages}
+                        >
+                          Sau
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -2041,53 +2091,101 @@ const Profile: React.FC = () => {
       {showOrderDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-xl shadow-lg max-w-2xl w-full p-6 relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={handleCloseOrderDetail}>&times;</button>
-            {orderDetailLoading ? (
-              <div className="flex items-center justify-center h-40">Đang tải...</div>
-            ) : orderDetail ? (
-              <div>
-                <h2 className="text-xl font-bold mb-2">Chi tiết đơn hàng #{orderDetail._id.slice(-6)}</h2>
-                <div className="mb-4 text-sm text-gray-600">Ngày đặt: {new Date(orderDetail.createdAt).toLocaleString('vi-VN')}</div>
-                <div className="mb-4">
-                  <div className="font-semibold mb-1">Sản phẩm:</div>
-                  <ul className="divide-y divide-gray-100">
-                    {orderDetail.orderItems.map((item, idx) => (
-                      <li key={idx} className="py-2 flex items-center gap-3">
-                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
-                        <div className="flex-1">
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-xs text-gray-500">x{item.quantity}</div>
-                        </div>
-                        <div className="font-semibold">{item.price.toLocaleString()}₫</div>
-                      </li>
-                    ))}
-                  </ul>
+            {/* Nút thoát thiết kế như ban đầu, chỉ to hơn */}
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-4 text-3xl font-bold"
+              onClick={handleCloseOrderDetail}
+              aria-label="Đóng"
+            >
+              &times;
+            </button>
+            <div className="max-h-[80vh] overflow-y-auto pr-2">
+              {orderDetailLoading ? (
+                <div className="flex items-center justify-center h-40">Đang tải...</div>
+              ) : orderDetail ? (
+                <div>
+                  <h2 className="text-xl font-bold mb-2">Chi tiết đơn hàng #{orderDetail._id.slice(-6)}</h2>
+                  <div className="mb-4 text-sm text-gray-600">Ngày đặt: {new Date(orderDetail.createdAt).toLocaleString('vi-VN')}</div>
+                  <div className="mb-4">
+                    <div className="font-semibold mb-1">Sản phẩm:</div>
+                    <ul className="divide-y divide-gray-100">
+                      {orderDetail.orderItems.map((item, idx) => (
+                        <li key={idx} className="py-2 flex items-center gap-3">
+                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                          <div className="flex-1">
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-xs text-gray-500">x{item.quantity}</div>
+                          </div>
+                          <div className="font-semibold">{item.price.toLocaleString()}₫</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="mb-4">
+                    <div className="font-semibold mb-1">Địa chỉ giao hàng:</div>
+                    <div>{orderDetail.shippingAddress.fullName} - {orderDetail.shippingAddress.phone}</div>
+                    <div>{orderDetail.shippingAddress.address}, {orderDetail.shippingAddress.city}</div>
+                  </div>
+                  {/* Mapping trạng thái tiếng Việt */}
+                  {(() => {
+                    const statusMap: Record<string, string> = {
+                      pending: "Chờ xác nhận",
+                      confirmed: "Đã xác nhận",
+                      processing: "Đang xử lý",
+                      shipped: "Đang giao hàng",
+                      delivered_success: "Giao hàng thành công",
+                      delivered_failed: "Giao hàng thất bại",
+                      completed: "Hoàn thành",
+                      cancelled: "Đã hủy",
+                      returned: "Hoàn hàng",
+                      refund_requested: "Yêu cầu hoàn tiền",
+                      refunded: "Hoàn tiền thành công",
+                      paid_cod: "Đã thanh toán COD"
+                    };
+                    return (
+                      <div className="mb-4">
+                        <div className="font-semibold mb-1">Trạng thái đơn hàng:</div>
+                        <div>{statusMap[orderDetail.status] || orderDetail.status}</div>
+                        <div className="mt-2 text-xs text-gray-500">Lịch sử trạng thái:</div>
+                        <ul className="text-xs text-gray-600 max-h-48 overflow-y-auto">
+                          {paginatedOrderHistory.map((s, idx) => (
+                            <li key={idx}>- {statusMap[s.status] || s.status} ({new Date(s.date).toLocaleString('vi-VN')}) {s.note && `- ${s.note}`}</li>
+                          ))}
+                        </ul>
+                        {/* Phân trang lịch sử trạng thái */}
+                        {totalOrderHistoryPages > 1 && (
+                          <div className="flex justify-center items-center gap-2 mt-2">
+                            <button
+                              className="px-2 py-1 rounded border text-xs disabled:opacity-50"
+                              onClick={() => setOrderHistoryPage(p => Math.max(1, p - 1))}
+                              disabled={orderHistoryPage === 1}
+                            >
+                              Trước
+                            </button>
+                            <span className="mx-1 text-xs">Trang {orderHistoryPage} / {totalOrderHistoryPages}</span>
+                            <button
+                              className="px-2 py-1 rounded border text-xs disabled:opacity-50"
+                              onClick={() => setOrderHistoryPage(p => Math.min(totalOrderHistoryPages, p + 1))}
+                              disabled={orderHistoryPage === totalOrderHistoryPages}
+                            >
+                              Sau
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  <div className="mb-4">
+                    <div className="font-semibold mb-1">Phương thức thanh toán:</div>
+                    <div>{orderDetail.paymentMethod}</div>
+                    <div>Trạng thái thanh toán: <span className={orderDetail.isPaid ? 'text-green-600' : 'text-red-600'}>{orderDetail.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</span></div>
+                  </div>
+                  <div className="mb-2 font-bold text-right">Tổng cộng: <span className="text-red-600">{orderDetail.totalPrice.toLocaleString()}₫</span></div>
                 </div>
-                <div className="mb-4">
-                  <div className="font-semibold mb-1">Địa chỉ giao hàng:</div>
-                  <div>{orderDetail.shippingAddress.fullName} - {orderDetail.shippingAddress.phone}</div>
-                  <div>{orderDetail.shippingAddress.address}, {orderDetail.shippingAddress.city}</div>
-                </div>
-                <div className="mb-4">
-                  <div className="font-semibold mb-1">Trạng thái đơn hàng:</div>
-                  <div>{orderDetail.status}</div>
-                  <div className="mt-2 text-xs text-gray-500">Lịch sử trạng thái:</div>
-                  <ul className="text-xs text-gray-600">
-                    {orderDetail.statusHistory.map((s, idx) => (
-                      <li key={idx}>- {s.status} ({new Date(s.date).toLocaleString('vi-VN')}) {s.note && `- ${s.note}`}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="mb-4">
-                  <div className="font-semibold mb-1">Phương thức thanh toán:</div>
-                  <div>{orderDetail.paymentMethod}</div>
-                  <div>Trạng thái thanh toán: <span className={orderDetail.isPaid ? 'text-green-600' : 'text-red-600'}>{orderDetail.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</span></div>
-                </div>
-                <div className="mb-2 font-bold text-right">Tổng cộng: <span className="text-red-600">{orderDetail.totalPrice.toLocaleString()}₫</span></div>
-              </div>
-            ) : (
-              <div className="text-red-600">Không tìm thấy đơn hàng</div>
-            )}
+              ) : (
+                <div className="text-red-600">Không tìm thấy đơn hàng</div>
+              )}
+            </div>
           </div>
         </div>
       )}

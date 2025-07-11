@@ -201,7 +201,7 @@ export const createProduct = async(req, res) => {
             slug: req.body.slug, // nếu có sẵn
             price: req.body.price,
             salePrice: req.body.salePrice,
-            user: req.user?._id, // tùy middleware
+            user: req.user ? req.user._id : undefined, // tùy middleware
             images: req.body.images || [],
             videos: req.body.videos || [],
             brand: req.body.brand,
