@@ -52,6 +52,13 @@ const ProductList: React.FC = () => {
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
     if (filterPriceRange[1]) url += `&maxPrice=${filterPriceRange[1]}`;
     if (filterInStock) url += '&inStock=true';
+    // Thêm sort theo lựa chọn
+    let sortParam = '-createdAt';
+    if (sortBy === 'price-low') sortParam = 'price';
+    else if (sortBy === 'price-high') sortParam = '-price';
+    else if (sortBy === 'rating') sortParam = '-averageRating';
+    else if (sortBy === 'newest') sortParam = '-createdAt';
+    url += `&sort=${encodeURIComponent(sortParam)}`;
     try {
       const res = await axios.get(url);
       let filtered = res.data.products || [];
@@ -210,17 +217,15 @@ const ProductList: React.FC = () => {
                   <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded-md transition-colors ${
-                        viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
-                      }`}
+                      className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
+                        }`}
                     >
                       <FaTh className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
-                      className={`p-2 rounded-md transition-colors ${
-                        viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
-                      }`}
+                      className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
+                        }`}
                     >
                       <FaList className="w-4 h-4" />
                     </button>
@@ -234,11 +239,10 @@ const ProductList: React.FC = () => {
             ) : error ? (
               <div className="text-center py-12 text-red-500">{error}</div>
             ) : (
-              <div className={`grid gap-6 ${
-                viewMode === 'grid' 
-                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+              <div className={`grid gap-6 ${viewMode === 'grid'
+                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
                   : 'grid-cols-1'
-              }`}>
+                }`}>
                 {products.map((product) => {
                   const mappedProduct = {
                     _id: product._id || product.id,

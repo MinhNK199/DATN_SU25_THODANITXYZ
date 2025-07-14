@@ -77,7 +77,7 @@ const ProductListPage: React.FC = () => {
     setLoading(true);
     try {
       const [productsData, deletedProductsData, brandsData] = await Promise.all(
-        [getProducts(), getDeletedProducts(), getBrands()]
+        [getProducts('-createdAt'), getDeletedProducts(), getBrands()]
       );
       setProducts(productsData);
       setDeletedProducts(deletedProductsData);
@@ -152,11 +152,11 @@ const ProductListPage: React.FC = () => {
   );
 
   const filteredProducts = products
-  .filter((p) =>
-    typeof p.name === "string"
-      ? p.name.toLowerCase().includes(searchTerm.toLowerCase())
-      : false
-  )
+    .filter((p) =>
+      typeof p.name === "string"
+        ? p.name.toLowerCase().includes(searchTerm.toLowerCase())
+        : false
+    )
     .filter((p) => {
       if (filterStock === "inStock") return p.stock > 0;
       if (filterStock === "outOfStock") return p.stock === 0;
@@ -238,8 +238,8 @@ const ProductListPage: React.FC = () => {
         typeof category === "object" && category !== null
           ? category.name
           : typeof category === "string"
-          ? category
-          : "N/A",
+            ? category
+            : "N/A",
     },
     {
       title: "Trạng thái",

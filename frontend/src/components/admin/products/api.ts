@@ -22,8 +22,8 @@ const getAuthHeaders = () => {
 };
 
 // Product API
-export const getProducts = async (): Promise<Product[]> => {
-    const response = await fetch(`${API_URL}/product`, { headers: getAuthHeaders() });
+export const getProducts = async (sort = '-createdAt'): Promise<Product[]> => {
+    const response = await fetch(`${API_URL}/product?sort=${encodeURIComponent(sort)}`, { headers: getAuthHeaders() });
     const data = await handleResponse(response);
     return data.products.filter((p: Product) => p.isActive);
 };
@@ -63,12 +63,12 @@ export const getProductById = async (id: string): Promise<Product> => {
 };
 
 export const updateProduct = async (id: string, data: Partial<Product>): Promise<Product> => {
-  const response = await fetch(`${API_URL}/product/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data),
-  });
-  return handleResponse(response);
+    const response = await fetch(`${API_URL}/product/${id}`, {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+    });
+    return handleResponse(response);
 };
 // Brand API (cần cho form sản phẩm)
 export const getBrands = async (): Promise<Brand[]> => {
