@@ -113,7 +113,11 @@ const ProductEdit: React.FC = () => {
         setCategories(cats);
         setBrands(brs);
         setSpecifications({ ...(productData.specifications || {}) });
-        setVariants(productData.variants || []);
+        // Map _id to id for FE variant manager compatibility
+        setVariants((productData.variants || []).map((v: any) => ({
+          ...v,
+          id: v.id || v._id || String(Date.now() + Math.random()),
+        })));
         setImages(productData.images || []);
         if (productData.images?.length > 0) {
           setPreviewImage(productData.images[0]);
@@ -126,8 +130,8 @@ const ProductEdit: React.FC = () => {
           salePrice: productData.salePrice,
           stock: productData.stock,
           sku: productData.sku,
-          brand: productData.brand?._id || productData.brand,
-          category: productData.category?._id || productData.category,
+          brand: (typeof productData.brand === 'object' && productData.brand !== null && '_id' in productData.brand) ? (productData.brand as any)._id : productData.brand,
+          category: (typeof productData.category === 'object' && productData.category !== null && '_id' in productData.category) ? (productData.category as any)._id : productData.category,
           weight: productData.weight,
           warranty: productData.warranty,
           tags: productData.tags || [],
@@ -138,6 +142,11 @@ const ProductEdit: React.FC = () => {
             width: productData.dimensions?.width || 0,
             height: productData.dimensions?.height || 0,
           },
+          specifications: productData.specifications
+            ? Object.entries(productData.specifications)
+              .map(([k, v]) => `${k}: ${v}`)
+              .join('\n')
+            : '',
         });
       } catch (error) {
         message.error("Không thể tải dữ liệu sản phẩm.");
@@ -152,35 +161,64 @@ const ProductEdit: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!id) return;
+    if (variants.length < 1) {
+      message.error("Sản phẩm phải có ít nhất 1 biến thể!");
+      return;
+    }
     setSubmitting(true);
     try {
       const uploadedImageUrls = fileList
         .map((file) => {
-          // Nếu file có response từ server (file mới upload), lấy url từ response
           if (file.response && file.response.url) return file.response.url;
-          // Nếu file đã có url (ảnh cũ), giữ nguyên url
           if (file.url) return file.url;
           return null;
         })
         .filter((url): url is string => url !== null);
 
+      // Ensure variants match ProductVariant interface (with optional _id)
+      const safeVariants = variants.map((v) => ({
+        _id: (typeof v === 'object' && v !== null && '_id' in v) ? (v as any)._id : undefined,
+        id: v.id,
+        name: v.name,
+        sku: v.sku,
+        price: v.price,
+        salePrice: v.salePrice,
+        stock: v.stock,
+        color: v.color,
+        size: v.size,
+        weight: v.weight,
+        images: v.images,
+        isActive: v.isActive,
+      }));
+
+      const getId = (val: any) => (typeof val === 'object' && val !== null && '_id' in val ? val._id : val);
+
+      const specificationsObj: Record<string, string> = {};
+      (values.specifications || '').split('\n').forEach((line: string) => {
+        const [key, ...rest] = line.split(':');
+        if (key && rest.length) specificationsObj[key.trim()] = rest.join(':').trim();
+      });
       const productData: Partial<Product> = {
-        ...values,
-        brand:
-          typeof values.brand === "object" ? values.brand._id : values.brand,
-        category:
-          typeof values.category === "object"
-            ? values.category._id
-            : values.category,
-        images: images.filter((img) => img.trim() !== ""),
-        variants: variants,
+        // Thông tin chung giữ lại
+        name: values.name,
         slug: slugify(values.name, { lower: true, strict: true }),
-        specifications: specifications || {},
+        description: values.description,
+        images: images.filter((img) => img.trim() !== ""),
+        tags: values.tags || [],
+        // Thông tin bổ sung
+        warranty: values.warranty,
+        specifications: specificationsObj,
+        // Liên kết
+        brand: getId(values.brand),
+        category: getId(values.category),
+        // Bổ sung cho backend
+        price: safeVariants[0]?.price,
+        stock: safeVariants.reduce((sum, v) => sum + (v.stock || 0), 0),
+        // Biến thể
+        variants: safeVariants,
+        isActive: values.isActive,
+        isFeatured: values.isFeatured,
       };
-      console.log(
-        "📦 Gửi API updateProduct với dữ liệu:",
-        JSON.stringify(productData, null, 2)
-      );
       await updateProduct(id, productData);
       message.success("Cập nhật sản phẩm thành công!");
       navigate("/admin/products");
@@ -286,8 +324,8 @@ const ProductEdit: React.FC = () => {
                   onChange={handleNameChange}
                 />
               </Form.Item>
-              <Form.Item name="slug" label="Slug (URL thân thiện)">
-                <Input placeholder="VD: ao-thun-nam" readOnly />
+              <Form.Item name="sku" label="SKU">
+                <Input placeholder="VD: ATN-001" />
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea
@@ -298,114 +336,21 @@ const ProductEdit: React.FC = () => {
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Hình ảnh sản phẩm</Title>
-              {images.map((img, idx) => (
-                <Space key={idx} align="start" className="mb-2 w-full">
-                  <Input
-                    placeholder="Nhập link ảnh..."
-                    value={img}
-                    onChange={(e) => handleImageChange(e.target.value, idx)}
-                    className="w-full"
-                  />
-                  <Button
-                    danger
-                    onClick={() => removeImageField(idx)}
-                    disabled={images.length === 1}
-                  >
-                    Xóa
-                  </Button>
-                </Space>
-              ))}
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={addImageField}
-                className="mt-2"
-              >
-                Thêm link ảnh
-              </Button>
-              <Text type="secondary" className="block mt-2">
-                Nhập link ảnh sản phẩm. Ảnh đầu tiên sẽ là ảnh đại diện.
-              </Text>
-            </Card>
-
-            <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Giá & Kho hàng</Title>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="price"
-                    label="Giá gốc"
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber className="w-full" addonAfter="VND" min={0} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="salePrice" label="Giá khuyến mãi">
-                    <InputNumber className="w-full" addonAfter="VND" min={0} />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="stock"
-                    label="Số lượng tồn kho"
-                    rules={[{ required: true }]}
-                  >
-                    <InputNumber className="w-full" min={0} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="sku" label="SKU">
-                    <Input placeholder="VD: ATN-001" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
-
-            <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Thông số kỹ thuật</Title>
-              <SpecificationEditor
-                value={specifications}
-                onChange={setSpecifications}
-              />
-            </Card>
-
-            <Card className="shadow-lg rounded-xl mb-6">
               <Title level={4}>Thông tin bổ sung</Title>
               <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item name="weight" label="Cân nặng (gram)">
-                    <InputNumber className="w-full" min={0} />
-                  </Form.Item>
-                </Col>
                 <Col span={12}>
                   <Form.Item name="warranty" label="Bảo hành (tháng)">
                     <InputNumber className="w-full" min={0} />
                   </Form.Item>
                 </Col>
+                <Col span={12}>
+                  <Form.Item name="tags" label="Tags (phân cách bởi dấu phẩy)">
+                    <Select mode="tags" style={{ width: "100%" }} placeholder="VD: iphone, apple" />
+                  </Form.Item>
+                </Col>
               </Row>
-              <Form.Item label="Kích thước (Dài x Rộng x Cao)">
-                <Space.Compact>
-                  <Form.Item name={["dimensions", "length"]} noStyle>
-                    <InputNumber placeholder="Dài (cm)" min={0} />
-                  </Form.Item>
-                  <Form.Item name={["dimensions", "width"]} noStyle>
-                    <InputNumber placeholder="Rộng (cm)" min={0} />
-                  </Form.Item>
-                  <Form.Item name={["dimensions", "height"]} noStyle>
-                    <InputNumber placeholder="Cao (cm)" min={0} />
-                  </Form.Item>
-                </Space.Compact>
-              </Form.Item>
-              <Form.Item name="tags" label="Tags (phân cách bởi dấu phẩy)">
-                <Select
-                  mode="tags"
-                  style={{ width: "100%" }}
-                  placeholder="VD: áo nam, thời trang"
-                />
+              <Form.Item name="specifications" label="Thông số kỹ thuật">
+                <Input.TextArea rows={4} placeholder="Nhập thông số kỹ thuật, ví dụ: CPU: Apple M1, RAM: 8GB, ..." />
               </Form.Item>
             </Card>
 
@@ -517,7 +462,12 @@ const buildCategoryTree = (
   parentId: string | null = null
 ): any[] => {
   return categories
-    .filter((cat) => (cat.parent?._id || cat.parent) === parentId)
+    .filter((cat) => {
+      if (typeof cat.parent === "object" && cat.parent !== null && "_id" in cat.parent) {
+        return (cat.parent as any)._id === parentId;
+      }
+      return cat.parent === parentId;
+    })
     .map((cat) => ({
       title: cat.name,
       value: cat._id,

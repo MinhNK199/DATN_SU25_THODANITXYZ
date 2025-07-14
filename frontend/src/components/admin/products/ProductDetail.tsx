@@ -156,6 +156,13 @@ const ProductDetail: React.FC = () => {
     </div>
   );
 
+  // Thay vì lấy trực tiếp product.dimensions và product.weight, lấy như sau:
+  const mainVariant = product.variants && product.variants.length > 0 ? product.variants[0] : {};
+  const length = product.dimensions?.length || mainVariant.length || 0;
+  const width = product.dimensions?.width || mainVariant.width || 0;
+  const height = product.dimensions?.height || mainVariant.height || 0;
+  const weight = product.weight || mainVariant.weight || 0;
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <Card className="bg-white shadow-lg rounded-xl mb-6">
@@ -285,7 +292,7 @@ const ProductDetail: React.FC = () => {
                     -
                     {Math.round(
                       ((product.price - product.salePrice) / product.price) *
-                        100
+                      100
                     )}
                     %
                   </Tag>
@@ -315,27 +322,17 @@ const ProductDetail: React.FC = () => {
                           </InfoItem>
                           <InfoItem label="Bảo hành">
                             {product.warranty !== undefined &&
-                            product.warranty !== null ? (
+                              product.warranty !== null ? (
                               `${product.warranty} tháng`
                             ) : (
                               <Text type="secondary">N/A</Text>
                             )}
                           </InfoItem>
                           <InfoItem label="Cân nặng">
-                            {product.weight !== undefined &&
-                            product.weight !== null ? (
-                              `${product.weight} gram`
-                            ) : (
-                              <Text type="secondary">N/A</Text>
-                            )}
+                            {weight !== 0 ? `${weight} gram` : <Text type="secondary">N/A</Text>}
                           </InfoItem>
                           <InfoItem label="Kích thước">
-                            {product.dimensions &&
-                            product.dimensions.length !== undefined ? (
-                              `${product.dimensions.length} x ${product.dimensions.width} x ${product.dimensions.height} (cm)`
-                            ) : (
-                              <Text type="secondary">N/A</Text>
-                            )}
+                            {`${length} x ${width} x ${height} (cm)`}
                           </InfoItem>
                           <InfoItem label="Tags">
                             {product.tags && product.tags.length > 0 ? (
@@ -373,7 +370,7 @@ const ProductDetail: React.FC = () => {
                       <Col span={12}>
                         <Title level={5}>Thông số kỹ thuật</Title>
                         {product.specifications &&
-                        Object.keys(product.specifications).length > 0 ? (
+                          Object.keys(product.specifications).length > 0 ? (
                           <table className="w-full border rounded-lg overflow-hidden mb-4">
                             <thead>
                               <tr className="bg-gradient-to-r from-blue-100 to-purple-100">

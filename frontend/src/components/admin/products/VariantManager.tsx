@@ -25,6 +25,9 @@ interface ProductVariant {
   weight?: number;
   images: string[];
   isActive: boolean;
+  length?: number;
+  width?: number;
+  height?: number;
 }
 
 interface VariantManagerProps {
@@ -54,6 +57,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   };
 
   const removeVariant = (id: string) => {
+    if (variants.length <= 1) {
+      // Không cho xóa nếu chỉ còn 1 biến thể
+      return;
+    }
     const updatedVariants = variants.filter((v) => v.id !== id);
     onVariantsChange(updatedVariants);
   };
@@ -99,10 +106,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 />
               </Space>
             </div>
-            
+
 
             <Row gutter={16}>
-              <Col span={12}>
+              <Col span={8}>
                 <Input
                   placeholder="Tên biến thể"
                   value={variant.name}
@@ -111,7 +118,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                   }
                 />
               </Col>
-              <Col span={12}>
+              <Col span={8}>
                 <Input
                   placeholder="SKU"
                   value={variant.sku}
@@ -120,74 +127,102 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                   }
                 />
               </Col>
+              <Col span={8}>
+                <InputNumber
+                  placeholder="Cân nặng (gram)"
+                  value={variant.weight || undefined}
+                  onChange={(value) => updateVariant(variant.id, 'weight', value || 0)}
+                  min={0}
+                  className="w-full"
+                />
+              </Col>
             </Row>
 
             <Row gutter={16}>
               <Col span={8}>
                 <InputNumber
-                  placeholder="Giá"
-                  value={variant.price || 0}
-                  onChange={(value) =>
-                    updateVariant(variant.id, 'price', value || 0)
-                  }
+                  placeholder="Giá gốc"
+                  value={variant.price || undefined}
+                  onChange={(value) => updateVariant(variant.id, 'price', value || 0)}
                   className="w-full"
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                  }
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 />
               </Col>
               <Col span={8}>
                 <InputNumber
                   placeholder="Giá khuyến mãi"
                   value={variant.salePrice || undefined}
-                  onChange={(value) =>
-                    updateVariant(variant.id, 'salePrice', value)
-                  }
+                  onChange={(value) => updateVariant(variant.id, 'salePrice', value)}
                   className="w-full"
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-                  }
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 />
               </Col>
               <Col span={8}>
                 <InputNumber
                   placeholder="Tồn kho"
-                  value={variant.stock || 0}
-                  onChange={(value) =>
-                    updateVariant(variant.id, 'stock', value || 0)
-                  }
+                  value={variant.stock || undefined}
+                  onChange={(value) => updateVariant(variant.id, 'stock', value || 0)}
                   className="w-full"
                 />
               </Col>
             </Row>
-
             <Row gutter={16}>
               <Col span={8}>
-                <ColorPicker
-                  value={variant.color || '#000000'}
-                  onChange={(_, hex) => updateVariant(variant.id, 'color', hex)}
-                  showText
-                  style={{ width: '100%' }}
-                />
-              </Col>
-              <Col span={8}>
                 <Input
-                  placeholder="Kích thước"
-                  value={variant.size}
-                  onChange={(e) =>
-                    updateVariant(variant.id, 'size', e.target.value)
-                  }
+                  placeholder="Màu sắc"
+                  value={variant.color || ''}
+                  onChange={(e) => updateVariant(variant.id, 'color', e.target.value)}
                 />
               </Col>
-              <Col span={8}>
-                <InputNumber
-                  placeholder="Cân nặng (g)"
-                  value={variant.weight || undefined}
-                  onChange={(value) =>
-                    updateVariant(variant.id, 'weight', value)
-                  }
-                  className="w-full"
+              <Col span={16}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ minWidth: 80 }}>Kích thước:</span>
+                  <InputNumber
+                    placeholder="Dài (cm)"
+                    value={variant.length || undefined}
+                    onChange={(value) => updateVariant(variant.id, 'length', value || 0)}
+                    min={0}
+                    style={{ width: 80 }}
+                  />
+                  <InputNumber
+                    placeholder="Rộng (cm)"
+                    value={variant.width || undefined}
+                    onChange={(value) => updateVariant(variant.id, 'width', value || 0)}
+                    min={0}
+                    style={{ width: 80 }}
+                  />
+                  <InputNumber
+                    placeholder="Cao (cm)"
+                    value={variant.height || undefined}
+                    onChange={(value) => updateVariant(variant.id, 'height', value || 0)}
+                    min={0}
+                    style={{ width: 80 }}
+                  />
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Input
+                  placeholder="Link hình ảnh (cách nhau bởi dấu phẩy)"
+                  value={variant.images?.join(',') || ''}
+                  onChange={(e) => updateVariant(variant.id, 'images', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
                 />
+                {/* Nếu đã có ít nhất 1 ảnh, hiển thị nút Thêm ảnh */}
+                {Array.isArray(variant.images) && variant.images.length > 0 && (
+                  <Button
+                    style={{ marginTop: 8 }}
+                    onClick={() => updateVariant(variant.id, 'images', [...variant.images, ''])}
+                  >
+                    Thêm ảnh
+                  </Button>
+                )}
+                {/* Xem trước ảnh đầu tiên nếu có */}
+                {Array.isArray(variant.images) && variant.images[0] && (
+                  <div style={{ marginTop: 8 }}>
+                    <img src={variant.images[0]} alt="Preview" style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8, border: '1px solid #eee' }} />
+                  </div>
+                )}
               </Col>
             </Row>
 

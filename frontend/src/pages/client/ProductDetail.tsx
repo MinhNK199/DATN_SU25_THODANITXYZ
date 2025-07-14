@@ -48,25 +48,25 @@ const ProductDetail: React.FC = () => {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     console.log('Fetching product with ID:', id);
-    
+
     axios.get(`http://localhost:8000/api/product/${id}`)
       .then(response => {
         const data = response.data;
         console.log('Product data received:', data);
         setProduct(data);
-        
+
         // Ưu tiên chọn màu/size đầu tiên nếu có
         if (data.variants && Array.isArray(data.variants) && data.variants.length > 0) {
           const firstVariant = data.variants[0];
           if (firstVariant.color) setSelectedColor(firstVariant.color);
           if (firstVariant.size) setSelectedSize(firstVariant.size);
         }
-        
+
         setLoading(false);
       })
       .catch(err => {
@@ -82,9 +82,9 @@ const ProductDetail: React.FC = () => {
     if (!id || id === 'undefined' || id === 'null') {
       return;
     }
-    
+
     console.log('Fetching related products for ID:', id);
-    
+
     axios.get(`http://localhost:8000/api/product/${id}/related`)
       .then(response => {
         const data = response.data;
@@ -127,7 +127,7 @@ const ProductDetail: React.FC = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
+
     try {
       addToCart(product._id, quantity);
       toast.success('Đã thêm sản phẩm vào giỏ hàng');
@@ -186,13 +186,13 @@ const ProductDetail: React.FC = () => {
         <div className="text-center">
           <p className="text-red-500 text-lg mb-4">{error || 'Không tìm thấy sản phẩm'}</p>
           <div className="space-x-4">
-            <button 
+            <button
               onClick={() => navigate(-1)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               Quay lại
             </button>
-            <button 
+            <button
               onClick={() => navigate('/')}
               className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
             >
@@ -207,8 +207,8 @@ const ProductDetail: React.FC = () => {
   const colorList = Array.isArray(product?.variants) && product.variants.length > 0
     ? product.variants.map((v: any) => v.color).filter((c: any) => !!c)
     : (Array.isArray(product?.colors)
-        ? product.colors.map((c: any) => typeof c === 'string' ? c : (c?.color || ''))
-        : []);
+      ? product.colors.map((c: any) => typeof c === 'string' ? c : (c?.color || ''))
+      : []);
 
   const sizeList = Array.isArray(product?.variants) && product.variants.length > 0
     ? product.variants.map((v: any) => v.size).filter((s: any) => !!s)
@@ -217,10 +217,17 @@ const ProductDetail: React.FC = () => {
   // Tạo mapping từ mã màu sang tên màu (nếu có)
   const colorNameMap: Record<string, string> = (Array.isArray(product?.variants) && product.variants.length > 0)
     ? product.variants.reduce((acc: any, v: any) => {
-        if (v.color) acc[v.color] = v.name || v.colorName || v.color;
-        return acc;
-      }, {})
+      if (v.color) acc[v.color] = v.name || v.colorName || v.color;
+      return acc;
+    }, {})
     : {};
+
+  // Thêm logic lấy kích thước/cân nặng từ biến thể đầu tiên nếu ngoài cùng là 0/null
+  const mainVariant = product.variants && product.variants.length > 0 ? product.variants[0] : {};
+  const length = product.dimensions?.length || mainVariant.length || 0;
+  const width = product.dimensions?.width || mainVariant.width || 0;
+  const height = product.dimensions?.height || mainVariant.height || 0;
+  const weight = product.weight || mainVariant.weight || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -369,11 +376,10 @@ const ProductDetail: React.FC = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`rounded-lg border-2 p-1 transition-all duration-200 ${
-                          selectedImage === index
+                        className={`rounded-lg border-2 p-1 transition-all duration-200 ${selectedImage === index
                             ? 'border-blue-500 scale-105'
                             : 'border-gray-200 hover:border-gray-400'
-                        }`}
+                          }`}
                       >
                         <img
                           src={image}
@@ -401,11 +407,10 @@ const ProductDetail: React.FC = () => {
                     {[...Array(5)].map((_, index) => (
                       <FaStar
                         key={index}
-                        className={`w-5 h-5 ${
-                          index < Math.floor(product.rating || 0)
+                        className={`w-5 h-5 ${index < Math.floor(product.rating || 0)
                             ? 'text-yellow-400'
                             : 'text-gray-300'
-                        }`}
+                          }`}
                       />
                     ))}
                   </div>
@@ -437,12 +442,10 @@ const ProductDetail: React.FC = () => {
                 </div>
                 {/* Stock Status */}
                 <div className="flex items-center space-x-2">
-                  <span className={`w-2 h-2 rounded-full ${
-                    product.stock > 0 ? 'bg-green-500' : 'bg-red-500'
-                  }`}></span>
-                  <span className={`font-medium ${
-                    product.stock > 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <span className={`w-2 h-2 rounded-full ${product.stock > 0 ? 'bg-green-500' : 'bg-red-500'
+                    }`}></span>
+                  <span className={`font-medium ${product.stock > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
                     {product.stock > 0 ? `Còn ${product.stock} sản phẩm` : 'Hết hàng'}
                   </span>
                 </div>
@@ -455,11 +458,10 @@ const ProductDetail: React.FC = () => {
                         <button
                           key={color}
                           onClick={() => setSelectedColor(color)}
-                          className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                            selectedColor === color
+                          className={`px-4 py-2 rounded-lg border-2 transition-all ${selectedColor === color
                               ? 'border-blue-500 bg-blue-50 text-blue-600'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                         >
                           {colorNameMap[color] || color}
                         </button>
@@ -475,11 +477,10 @@ const ProductDetail: React.FC = () => {
                         <button
                           key={size}
                           onClick={() => setSelectedSize(size)}
-                          className={`px-4 py-2 rounded-lg border-2 transition-all ${
-                            selectedSize === size
+                          className={`px-4 py-2 rounded-lg border-2 transition-all ${selectedSize === size
                               ? 'border-blue-500 bg-blue-50 text-blue-600'
                               : 'border-gray-300 hover:border-gray-400'
-                          }`}
+                            }`}
                         >
                           {size}
                         </button>
@@ -566,11 +567,10 @@ const ProductDetail: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>

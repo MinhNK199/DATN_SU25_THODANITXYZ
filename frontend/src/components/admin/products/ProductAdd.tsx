@@ -56,11 +56,19 @@ const ProductAddPage: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>("");
   const [variants, setVariants] = useState<any[]>([]);
   const [specs, setSpecs] = useState<Record<string, string>>({});
+  // Thêm state cho ảnh đại diện
+  const [mainImage, setMainImage] = useState<string>("");
 
   useEffect(() => {
     const currentSpecs = form.getFieldValue("specifications");
-    if (currentSpecs) {
-      setSpecs(currentSpecs);
+    if (currentSpecs && typeof currentSpecs === 'object') {
+      form.setFieldsValue({
+        specifications: Object.entries(currentSpecs)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join('\n')
+      });
+    } else if (!currentSpecs) {
+      form.setFieldsValue({ specifications: '' });
     }
   }, [form]);
   useEffect(() => {
@@ -79,6 +87,30 @@ const ProductAddPage: React.FC = () => {
   const categoryTree = buildCategoryTree(categories);
 
   const onFinish = async (values: any) => {
+    if (variants.length < 1) {
+      message.error("Chưa có biến thể sản phẩm, vui lòng kiểm tra lại");
+      return;
+    }
+    for (const v of variants) {
+      if (!v.length || !v.width || !v.height) {
+        message.error("Mỗi biến thể phải nhập đủ Dài, Rộng, Cao");
+        return;
+      }
+      if (!v.name || !v.sku || !v.price || v.price <= 0) {
+        message.error("Mỗi biến thể phải có tên, SKU và giá gốc > 0");
+        return;
+      }
+    }
+    // Lấy tổng tồn kho từ các biến thể
+    const totalStock = variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+    // Lấy giá gốc từ biến thể đầu tiên
+    const mainPrice = variants[0].price;
+    // Gộp tất cả ảnh từ các biến thể
+    const allImages = variants.flatMap(v => Array.isArray(v.images) ? v.images.filter((img: string) => !!img) : []).filter(Boolean);
+    if (allImages.length < 1) {
+      message.error("Phải có ít nhất 1 hình ảnh sản phẩm");
+      return;
+    }
     setLoading(true);
     try {
       const brandId =
@@ -89,13 +121,20 @@ const ProductAddPage: React.FC = () => {
           : values.category?._id;
 
       const productData = {
-        ...values,
+        name: values.name,
+        sku: values.sku,
+        description: values.description || "", // Không bắt buộc nhập
+        mainImage: mainImage,
+        warranty: values.warranty,
+        tags: values.tags || [],
         brand: brandId,
         category: categoryId,
-        images: images.filter((img) => img.trim() !== ""),
+        price: mainPrice, // BẮT BUỘC cho backend
+        stock: totalStock, // BẮT BUỘC cho backend
+        images: allImages, // Đảm bảo có ít nhất 1 ảnh
         variants,
-        slug: slugify(values.name, { lower: true, strict: true }),
-        specifications: values.specifications || {},
+        isActive: values.isActive,
+        isFeatured: values.isFeatured,
       };
 
       const token = localStorage.getItem("token");
@@ -107,14 +146,24 @@ const ProductAddPage: React.FC = () => {
         },
         body: JSON.stringify(productData),
       });
-      console.log("Submitting product data:", productData);
-      if (response.ok) {
-        message.success("Thêm sản phẩm thành công!");
-        navigate("/admin/products");
-      } else {
+      if (!response.ok) {
         const errorData = await response.json();
-        message.error(errorData.message || "Thêm sản phẩm thất bại.");
+        if (errorData.details && Array.isArray(errorData.details)) {
+          errorData.details.forEach((msg: string) => message.error(msg));
+        } else if (
+          errorData.message &&
+          errorData.message.includes("duplicate key") &&
+          errorData.message.includes("slug")
+        ) {
+          message.error("Sản phẩm này đã tồn tại. Vui lòng chọn tên khác hoặc kiểm tra lại.");
+        } else {
+          message.error(errorData.message || "Thêm sản phẩm thất bại.");
+        }
+        console.error("Backend error:", errorData);
+        return;
       }
+      message.success("Thêm sản phẩm thành công!");
+      navigate("/admin/products");
     } catch (error) {
       message.error("Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
@@ -173,8 +222,15 @@ const ProductAddPage: React.FC = () => {
                   onChange={handleNameChange}
                 />
               </Form.Item>
-              <Form.Item name="slug" label="Slug (URL thân thiện)">
-                <Input placeholder="VD: i-phone-15-pro-max" readOnly />
+              <Form.Item name="sku" label="SKU (Mã định danh sản phẩm)">
+                <Input placeholder="VD: ATN-001" />
+              </Form.Item>
+              <Form.Item name="mainImage" label="Link ảnh đại diện">
+                <Input
+                  placeholder="Nhập link ảnh đại diện..."
+                  value={mainImage}
+                  onChange={e => setMainImage(e.target.value)}
+                />
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea
@@ -185,120 +241,26 @@ const ProductAddPage: React.FC = () => {
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Hình ảnh sản phẩm</Title>
-              {images.map((img, idx) => (
-                <Space key={idx} align="start" className="mb-2 w-full">
-                  <Input
-                    placeholder="Nhập link ảnh..."
-                    value={img}
-                    onChange={(e) => handleImageChange(e.target.value, idx)}
-                    className="w-full"
-                  />
-                  <Button
-                    danger
-                    onClick={() => removeImageField(idx)}
-                    disabled={images.length === 1}
-                  >
-                    Xóa
-                  </Button>
-                </Space>
-              ))}
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={addImageField}
-                className="mt-2"
-              >
-                Thêm link ảnh
-              </Button>
-              <Text type="secondary" className="block mt-2">
-                Nhập link ảnh sản phẩm. Ảnh đầu tiên sẽ là ảnh đại diện.
-              </Text>
-            </Card>
-
-            <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Giá & Kho hàng</Title>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="price"
-                    label="Giá gốc"
-                    rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
-                  >
-                    <InputNumber className="w-full" addonAfter="VND" min={0} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="salePrice" label="Giá khuyến mãi">
-                    <InputNumber className="w-full" addonAfter="VND" min={0} />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="stock"
-                    label="Số lượng tồn kho"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập số lượng!" },
-                    ]}
-                  >
-                    <InputNumber className="w-full" min={0} />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="sku" label="SKU (Mã định danh sản phẩm)">
-                    <Input placeholder="VD: ATN-001" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </Card>
-
-            <Card className="shadow-lg rounded-xl mb-6">
               <Title level={4}>Thông tin bổ sung</Title>
               <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item name="weight" label="Cân nặng (gram)">
-                    <InputNumber className="w-full" min={0} />
-                  </Form.Item>
-                </Col>
                 <Col span={12}>
                   <Form.Item name="warranty" label="Bảo hành (tháng)">
                     <InputNumber className="w-full" min={0} />
                   </Form.Item>
                 </Col>
+                <Col span={12}>
+                  <Form.Item name="tags" label="Tags (phân cách bởi dấu phẩy)">
+                    <Select
+                      mode="tags"
+                      style={{ width: "100%" }}
+                      placeholder="VD: iphone, apple"
+                    />
+                  </Form.Item>
+                </Col>
               </Row>
-              <Form.Item label="Kích thước (Dài x Rộng x Cao)">
-                <Space.Compact>
-                  <Form.Item name={["dimensions", "length"]} noStyle>
-                    <InputNumber placeholder="Dài (cm)" min={0} />
-                  </Form.Item>
-                  <Form.Item name={["dimensions", "width"]} noStyle>
-                    <InputNumber placeholder="Rộng (cm)" min={0} />
-                  </Form.Item>
-                  <Form.Item name={["dimensions", "height"]} noStyle>
-                    <InputNumber placeholder="Cao (cm)" min={0} />
-                  </Form.Item>
-                </Space.Compact>
+              <Form.Item name="specifications" label="Thông số kỹ thuật">
+                <Input.TextArea rows={4} placeholder="Nhập thông số kỹ thuật, ví dụ: CPU: Apple M1, RAM: 8GB, ..." />
               </Form.Item>
-              <Form.Item name="tags" label="Tags (phân cách bởi dấu phẩy)">
-                <Select
-                  mode="tags"
-                  style={{ width: "100%" }}
-                  placeholder="VD: iphone, apple"
-                />
-              </Form.Item>
-            </Card>
-
-            <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Thông số kỹ thuật</Title>
-              <SpecificationEditor
-                value={specs}
-                onChange={(newSpecs) => {
-                  setSpecs(newSpecs);
-                  form.setFieldsValue({ specifications: newSpecs });
-                }}
-              />{" "}
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
@@ -369,9 +331,9 @@ const ProductAddPage: React.FC = () => {
               <Divider />
 
               <Title level={4}>Xem trước ảnh</Title>
-              {previewImage ? (
+              {mainImage ? (
                 <img
-                  src={previewImage}
+                  src={mainImage}
                   alt="Preview"
                   style={{
                     width: "100%",
