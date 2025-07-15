@@ -1,30 +1,94 @@
-.recommendation-list .product-grid {
+.recommendation-list-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 32px 0;
+}
+
+.recommendation-title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+  letter-spacing: 1px;
+  color: #1a202c;
+  border-bottom: 2px solid #3182ce;
+  padding-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(90deg, #e0e7ff 0%, #fff 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.recommendation-list {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.product-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 32px;
+  justify-content: center;
 }
+
 .product-card {
-  flex: 1 1 180px;
-  min-width: 180px;
-  max-width: 220px;
+  flex: 1 1 220px;
+  min-width: 220px;
+  max-width: 240px;
   border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: 16px;
+  padding: 16px 12px 20px 12px;
   text-align: center;
   background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-  transition: box-shadow 0.2s;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .product-card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 24px rgba(49,130,206,0.15);
+  transform: translateY(-6px) scale(1.03);
 }
+
+.product-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: #f5f5f5;
+  box-shadow: 0 1px 4px rgba(49,130,206,0.07);
+}
+
+.product-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin: 10px 0 6px;
+  color: #22223b;
+}
+
+.product-price {
+  color: #1976d2;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+}
+
 @media (max-width: 600px) {
   .recommendation-list .product-grid {
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
   }
   .product-card {
     min-width: 100%;
     max-width: 100%;
+  }
+  .recommendation-title {
+    font-size: 1.2rem;
+    padding-bottom: 0.2rem;
   }
 } 
