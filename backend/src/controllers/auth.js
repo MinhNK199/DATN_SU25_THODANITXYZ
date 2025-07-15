@@ -11,17 +11,6 @@ export const dangKy = async (req, res) => {
   try {
     const { name, email, password, phone, addresses, avatar, recaptchaToken } = req.body;
 
-    // Tạm thời bỏ qua reCAPTCHA validation để test
-    // if (!recaptchaToken) {
-    //   return res.status(400).json({ message: "Thiếu mã xác thực reCAPTCHA." });
-    // }
-    // const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-    // const recaptchaVerifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
-    // const captchaRes = await axios.post(recaptchaVerifyUrl);
-    // if (!captchaRes.data.success) {
-    //   return res.status(400).json({ message: "Xác thực reCAPTCHA thất bại." });
-    // }
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email đã tồn tại" });
