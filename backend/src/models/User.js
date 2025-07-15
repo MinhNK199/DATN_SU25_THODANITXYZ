@@ -19,9 +19,11 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, "Vui lòng cung cấp mật khẩu"],
-      minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
-      select: false,
+  minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
+  select: false,
+  required: function() {
+    return this.provider === "local";
+  }
     },
     passwordChangedAt: Date,
     role: {

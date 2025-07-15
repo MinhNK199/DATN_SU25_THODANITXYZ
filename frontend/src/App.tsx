@@ -50,6 +50,7 @@ import ScrollToTop from './components/ScrollToTop';
 import TestAPI from './components/client/TestAPI';
 import TestLogin from './components/client/TestLogin';
 import TestProductAPI from './components/client/TestProductAPI';
+import LoginSuccess from './components/LoginSuccess';
 
 function App() {
   return (
@@ -65,6 +66,7 @@ function App() {
             
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/login-success" element={<LoginSuccess />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin-dky" element={<RegisterAdmin />} />
 

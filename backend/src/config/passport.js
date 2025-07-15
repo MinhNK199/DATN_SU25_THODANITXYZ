@@ -15,15 +15,14 @@ passport.use(new FacebookStrategy.Strategy({
       const email = profile.emails?.[0]?.value || `${profile.id}@facebook.com`;
       let user = await User.findOne({ email });
       if (!user) {
-        user = await User.create({
-          name: profile.displayName,
-          email,
-          password: '',
-          provider: 'facebook',
-          role: 'customer',
-          active: true,
-        });
-      }
+  user = await User.create({
+    name: profile.displayName,
+    email,
+    provider: 'facebook',
+    role: 'customer',
+    active: true,
+  });
+}
       return done(null, user);
     } catch (err) {
       return done(err, null);
