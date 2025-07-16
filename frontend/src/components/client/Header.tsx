@@ -99,7 +99,7 @@ const Header: React.FC = () => {
     const fetchCategories = async () => {
       try {
         console.log('Fetching categories...');
-        const response = await axios.get('http://localhost:8000/api/category');
+        const response = await axios.get('/api/category');
         console.log('Categories response:', response.data);
         const activeCategories = response.data.filter((cat: Category) => cat.isActive);
         console.log('Active categories:', activeCategories);

@@ -7,10 +7,6 @@ import { useLocation } from 'react-router-dom';
 const ProductList: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState('featured');
-  const [priceRange, setPriceRange] = useState([0, 3000]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [showFilters, setShowFilters] = useState(false);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
@@ -29,10 +25,10 @@ const ProductList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
-    axios.get('http://localhost:8000/api/category')
+    axios.get('/api/category')
       .then(res => setCategories(res.data))
       .catch(() => setCategories([]));
-    axios.get('http://localhost:8000/api/brand')
+    axios.get('/api/brand')
       .then(res => setBrands(res.data))
       .catch(() => setBrands([]));
   }, []);
@@ -46,7 +42,7 @@ const ProductList: React.FC = () => {
   const fetchProducts = async (pageNum = 1) => {
     setLoading(true);
     setError(null);
-    let url = `http://localhost:8000/api/product?page=${pageNum}`;
+    let url = `/api/product?page=${pageNum}`;
     if (filterCategory) url += `&category=${filterCategory}`;
     if (filterBrand) url += `&brand=${filterBrand}`;
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
@@ -64,20 +60,18 @@ const ProductList: React.FC = () => {
       let filtered = res.data.products || [];
       if (searchTerm.trim()) {
         const lower = searchTerm.trim().toLowerCase();
-        // Sản phẩm tên trùng khớp tuyệt đối lên đầu
-        let exact = filtered.filter(p => p.name.toLowerCase() === lower);
-        let partial = filtered.filter(p => p.name.toLowerCase().includes(lower) && p.name.toLowerCase() !== lower);
-        // Nếu không có exact và partial, fallback: gợi ý các sản phẩm có chữ đầu tiên của từ khóa
+        let exact = filtered.filter((p: any) => p.name.toLowerCase() === lower);
+        let partial = filtered.filter((p: any) => p.name.toLowerCase().includes(lower) && p.name.toLowerCase() !== lower);
         if (exact.length === 0 && partial.length === 0) {
           const firstWord = lower.split(' ')[0];
-          partial = filtered.filter(p => p.name.toLowerCase().includes(firstWord));
+          partial = filtered.filter((p: any) => p.name.toLowerCase().includes(firstWord));
         }
         filtered = [...exact, ...partial];
       }
       setProducts(filtered);
       setPage(res.data.page || 1);
       setPages(res.data.pages || 1);
-      setTotal(filtered.length);
+      setTotal(res.data.total || filtered.length);
     } catch (err: any) {
       setError(err.message || 'Lỗi khi fetch sản phẩm');
       setProducts([]);
@@ -121,7 +115,7 @@ const ProductList: React.FC = () => {
               >
                 <option value="">Tất cả danh mục</option>
                 {categories.map((cat: any) => (
-                  <option key={cat._id} value={cat.slug}>{cat.name}</option>
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
                 ))}
               </select>
             </div>
@@ -135,7 +129,7 @@ const ProductList: React.FC = () => {
               >
                 <option value="">Tất cả thương hiệu</option>
                 {brands.map((brand: any) => (
-                  <option key={brand._id} value={brand.slug}>{brand.name}</option>
+                  <option key={brand._id} value={brand._id}>{brand.name}</option>
                 ))}
               </select>
             </div>
