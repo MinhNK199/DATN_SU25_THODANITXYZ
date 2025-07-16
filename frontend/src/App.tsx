@@ -51,6 +51,8 @@ import TestAPI from './components/client/TestAPI';
 import TestLogin from './components/client/TestLogin';
 import TestProductAPI from './components/client/TestProductAPI';
 import LoginSuccess from './components/LoginSuccess';
+import VoucherAdd from './components/admin/vouchers/VoucherAdd';
+import VoucherList from './components/admin/vouchers/VoucherList';
 
 function App() {
   return (
@@ -115,6 +117,8 @@ function App() {
               <Route path="banners/edit/:id" element={<BannerEdit />} />
               <Route path="activities" element={<Activity />} />
               <Route path="ratings" element={<RatingList />} />
+              <Route path="vouchers" element={<VoucherList />} />
+              <Route path="vouchers/add" element={<VoucherAdd />} />
             </Route>
           </Routes>
           
