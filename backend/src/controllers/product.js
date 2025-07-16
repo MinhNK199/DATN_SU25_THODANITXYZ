@@ -6,6 +6,7 @@ import Category from "../models/Category";
 import Brand from "../models/Brand";
 import User from "../models/User";
 import Order from "../models/Order";
+import mongoose from "mongoose";
 const removeAccents = require('remove-accents');
 
 export const getProducts = async(req, res) => {
@@ -29,13 +30,21 @@ export const getProducts = async(req, res) => {
 
         // 🏷️ Lọc theo danh mục
         if (req.query.category) {
-            filter.category = req.query.category;
+            if (mongoose.Types.ObjectId.isValid(req.query.category)) {
+                filter.category = req.query.category;
+            }
         }
 
         // 🏷️ Lọc theo thương hiệu
         if (req.query.brand) {
-            filter.brand = req.query.brand;
+            if (mongoose.Types.ObjectId.isValid(req.query.brand)) {
+                filter.brand = req.query.brand;
+            }
         }
+
+        // Nếu filter.brand hoặc filter.category không hợp lệ, xóa khỏi filter để tránh lỗi Cast to ObjectId
+        if (filter.brand && !mongoose.Types.ObjectId.isValid(filter.brand)) delete filter.brand;
+        if (filter.category && !mongoose.Types.ObjectId.isValid(filter.category)) delete filter.category;
 
         // 💰 Lọc theo khoảng giá
         if (req.query.minPrice || req.query.maxPrice) {
@@ -81,25 +90,30 @@ export const getProducts = async(req, res) => {
         }
 
         // 🧮 Đếm tổng số sản phẩm phù hợp với bộ lọc
+        console.log('Filter used for product search:', filter);
         const count = await Product.countDocuments(filter);
 
         // 📦 Lấy danh sách sản phẩm đã lọc và sắp xếp theo sortField + sortOrder
         const products = await Product.find(filter)
-            .populate('category', 'name') // lấy tên danh mục
-            .populate('brand', 'name') // lấy tên thương hiệu
-            .select('name slug description price salePrice images category brand stock sku weight dimensions warranty specifications variants isActive isFeatured tags averageRating numReviews createdAt updatedAt') // chỉ lấy các trường cần thiết
+            .populate('category', 'name')
+            .populate('brand', 'name')
+            .select('name slug description price salePrice images category brand stock sku weight dimensions warranty specifications variants isActive isFeatured tags averageRating numReviews createdAt updatedAt')
             .sort({
                 [sortField]: sortOrder
-            }) // sắp xếp dữ liệu
-            .limit(pageSize) // giới hạn số lượng mỗi trang
-            .skip(pageSize * (page - 1)); // bỏ qua các sản phẩm trước trang hiện tại
+            })
+            .limit(pageSize)
+            .skip(pageSize * (page - 1));
 
-        // 🧩 Đảm bảo luôn có mảng biến thể
+        // 🧩 Đảm bảo luôn có mảng biến thể và các trường quan trọng không null
         const productsWithVariants = products.map(product => {
-            const productObj = product.toObject();
-            if (!productObj.hasOwnProperty('variants')) {
+            const productObj = typeof product.toObject === 'function' ? product.toObject() : product;
+            if (!productObj.hasOwnProperty('variants') || !Array.isArray(productObj.variants)) {
                 productObj.variants = [];
             }
+            if (!productObj.category) productObj.category = null;
+            if (!productObj.brand) productObj.brand = null;
+            if (typeof productObj.price !== 'number') productObj.price = 0;
+            if (!Array.isArray(productObj.images)) productObj.images = [];
             return productObj;
         });
 
@@ -122,12 +136,13 @@ export const getProducts = async(req, res) => {
             total: count,
             stats: {
                 total: stats.total,
-                minPrice: stats.minPrice?.price || 0,
-                maxPrice: stats.maxPrice?.price || 0,
-                avgRating: stats.avgRating[0]?.avgRating || 0
+                minPrice: stats.minPrice && stats.minPrice.price ? stats.minPrice.price : 0,
+                maxPrice: stats.maxPrice && stats.maxPrice.price ? stats.maxPrice.price : 0,
+                avgRating: Array.isArray(stats.avgRating) && stats.avgRating[0] && stats.avgRating[0].avgRating ? stats.avgRating[0].avgRating : 0
             }
         });
     } catch (error) {
+        console.error('Error in getProducts:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -201,7 +216,7 @@ export const createProduct = async(req, res) => {
             slug: req.body.slug, // nếu có sẵn
             price: req.body.price,
             salePrice: req.body.salePrice,
-            user: req.user?._id, // tùy middleware
+            user: req.user && req.user._id, // tùy middleware
             images: req.body.images || [],
             videos: req.body.videos || [],
             brand: req.body.brand,
@@ -219,9 +234,9 @@ export const createProduct = async(req, res) => {
             weight: req.body.weight || 0,
             warranty: req.body.warranty || 0,
             dimensions: {
-                length: req.body.dimensions?.length || 0,
-                width: req.body.dimensions?.width || 0,
-                height: req.body.dimensions?.height || 0,
+                length: req.body.dimensions && typeof req.body.dimensions.length !== 'undefined' ? req.body.dimensions.length : 0,
+                width: req.body.dimensions && typeof req.body.dimensions.width !== 'undefined' ? req.body.dimensions.width : 0,
+                height: req.body.dimensions && typeof req.body.dimensions.height !== 'undefined' ? req.body.dimensions.height : 0,
             },
         });
 
@@ -823,9 +838,9 @@ export const updateProductMeta = async(req, res) => {
         const product = await Product.findById(id);
         if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
         product.meta = {
-            metaTitle: metaTitle ?? (product.meta?.metaTitle),
-            metaDescription: metaDescription ?? (product.meta?.metaDescription),
-            metaImage: metaImage ?? (product.meta?.metaImage),
+            metaTitle: typeof metaTitle !== 'undefined' ? metaTitle : (product.meta && product.meta.metaTitle ? product.meta.metaTitle : ''),
+            metaDescription: typeof metaDescription !== 'undefined' ? metaDescription : (product.meta && product.meta.metaDescription ? product.meta.metaDescription : ''),
+            metaImage: typeof metaImage !== 'undefined' ? metaImage : (product.meta && product.meta.metaImage ? product.meta.metaImage : ''),
         };
         await product.save();
         res.status(200).json({ message: 'Đã cập nhật meta SEO', meta: product.meta });
