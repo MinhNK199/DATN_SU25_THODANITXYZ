@@ -2464,3 +2464,46 @@ exports.searchProducts = async(req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// Tạo voucher cho sản phẩm (admin)
+export const createVoucher = async(req, res) => {
+    try {
+        const { productId, code, discountType, value, startDate, endDate, usageLimit, minOrderValue } = req.body;
+        const product = await Product.findById(productId);
+        if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+        if (product.vouchers.find(v => v.code === code)) {
+            return res.status(400).json({ message: 'Mã voucher đã tồn tại cho sản phẩm này' });
+        }
+        product.vouchers.push({ code, discountType, value, startDate, endDate, usageLimit, minOrderValue });
+        await product.save();
+        res.json({ message: 'Tạo voucher thành công', vouchers: product.vouchers });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Kiểm tra và áp dụng voucher (người dùng nhập lúc checkout)
+export const checkVoucher = async(req, res) => {
+    try {
+        const { productId, code, orderValue } = req.body;
+        const product = await Product.findById(productId);
+        if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+        const voucher = product.vouchers.find(v => v.code === code);
+        if (!voucher) return res.status(400).json({ valid: false, message: 'Mã voucher không tồn tại' });
+        const now = new Date();
+        if (voucher.startDate && now < voucher.startDate) return res.status(400).json({ valid: false, message: 'Voucher chưa bắt đầu' });
+        if (voucher.endDate && now > voucher.endDate) return res.status(400).json({ valid: false, message: 'Voucher đã hết hạn' });
+        if (voucher.usageLimit > 0 && voucher.usedCount >= voucher.usageLimit) return res.status(400).json({ valid: false, message: 'Voucher đã hết lượt sử dụng' });
+        if (voucher.minOrderValue > 0 && orderValue < voucher.minOrderValue) return res.status(400).json({ valid: false, message: `Đơn hàng tối thiểu phải từ ${voucher.minOrderValue}đ` });
+        // Tính giảm giá
+        let discount = 0;
+        if (voucher.discountType === 'percentage') {
+            discount = Math.round(orderValue * (voucher.value / 100));
+        } else if (voucher.discountType === 'fixed') {
+            discount = voucher.value;
+        }
+        res.json({ valid: true, discount, voucher });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
