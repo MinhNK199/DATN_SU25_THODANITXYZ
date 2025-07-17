@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button } from "antd";
+import type { Product } from "../../../interfaces/Product";
 import { useNavigate } from "react-router-dom";
 
+interface Voucher {
+  _id: string;
+  code: string;
+  discountType: string;
+  value: number;
+  startDate: string;
+  endDate: string;
+  productName: string;
+}
+
 const VoucherList: React.FC = () => {
-  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -11,9 +22,9 @@ const VoucherList: React.FC = () => {
       .then(res => res.json())
       .then(data => {
         // Gộp tất cả voucher từ các sản phẩm
-        const allVouchers: any[] = [];
-        (data.products || []).forEach((p: any) => {
-          (p.vouchers || []).forEach((v: any) => {
+        const allVouchers: Voucher[] = [];
+        (data.products || []).forEach((p: Product & { vouchers?: Voucher[] }) => {
+          (p.vouchers ?? []).forEach((v: Voucher) => {
             allVouchers.push({ ...v, productName: p.name });
           });
         });
