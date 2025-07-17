@@ -1,6 +1,10 @@
 import { message } from "antd";
 import { Product } from "../../../interfaces/Product";
 import { Brand } from "../../../interfaces/Brand";
+import { Category } from "../../../interfaces/Category";
+
+
+
 
 const API_URL = "http://localhost:8000/api";
 
@@ -77,7 +81,7 @@ export const getBrands = async (): Promise<Brand[]> => {
 };
 
 // Category API (cần cho form sản phẩm)
-export const getCategories = async (): Promise<any[]> => { // Thay 'any' bằng interface Category sau này
+export const getCategories = async (): Promise<Category[]> => { // Thay 'any' bằng interface Category sau này
     const response = await fetch(`${API_URL}/category`, { headers: getAuthHeaders() });
     return handleResponse(response);
 }; 
