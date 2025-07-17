@@ -54,7 +54,8 @@ import {
     getTotalProductQuantityByName,
     searchProducts,
     createVoucher,
-    checkVoucher
+    checkVoucher,
+    updateVoucherUsage
 } from "../controllers/product";
 import { protect } from "../middlewares/authMiddleware";
 import { validateRequest } from "../middlewares/validateRequest";
@@ -141,5 +142,7 @@ routerProduct.get("/total-product-quantity-by-name", getTotalProductQuantityByNa
 routerProduct.post('/voucher', createVoucher);
 // Kiểm tra và áp dụng voucher (người dùng nhập lúc checkout)
 routerProduct.post('/check-voucher', checkVoucher);
+// Cập nhật lượt dùng voucher
+routerProduct.post('/voucher/update-usage', updateVoucherUsage);
 
 export default routerProduct;

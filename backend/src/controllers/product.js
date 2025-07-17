@@ -97,7 +97,7 @@ export const getProducts = async(req, res) => {
         const products = await Product.find(filter)
             .populate('category', 'name')
             .populate('brand', 'name')
-            .select('name slug description price salePrice images category brand stock sku weight dimensions warranty specifications variants isActive isFeatured tags averageRating numReviews createdAt updatedAt')
+            .select('name slug description price salePrice images category brand stock sku weight dimensions warranty specifications variants isActive isFeatured tags averageRating numReviews createdAt updatedAt vouchers')
             .sort({
                 [sortField]: sortOrder
             })
@@ -2503,6 +2503,25 @@ export const checkVoucher = async(req, res) => {
             discount = voucher.value;
         }
         res.json({ valid: true, discount, voucher });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Cập nhật lượt dùng voucher (tăng usedCount khi đã sử dụng thành công)
+export const updateVoucherUsage = async(req, res) => {
+    try {
+        const { productId, code } = req.body;
+        const product = await Product.findById(productId);
+        if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm' });
+        const voucher = product.vouchers.find(v => v.code === code);
+        if (!voucher) return res.status(404).json({ message: 'Không tìm thấy voucher' });
+        if (voucher.usageLimit > 0 && voucher.usedCount >= voucher.usageLimit) {
+            return res.status(400).json({ message: 'Voucher đã hết lượt sử dụng' });
+        }
+        voucher.usedCount = (voucher.usedCount || 0) + 1;
+        await product.save();
+        res.json({ message: 'Cập nhật lượt dùng voucher thành công', voucher });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
