@@ -18,6 +18,7 @@ import paymentMomoRouter from './paymentMomo.js';
 import { runCleanupNow } from "../utils/cleanupJob";
 import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig';
 import { protect, checkAdmin } from '../middlewares/authMiddleware';
+import routerBlog from "./blog.js";
 const provinceController = require('../controllers/provinceController');
 
 const router = Router();
@@ -37,6 +38,7 @@ router.use("/variant", routerVariant);
 router.use("/recommendation", routerRecommendation);
 router.use("/payment-methods", paymentMethodRouter);
 router.use('/payment/momo', paymentMomoRouter);
+router.use("/blogs", routerBlog);
 router.get('/provinces', provinceController.getProvinces);
 router.get('/wards', provinceController.getWards);
 router.get('/districts', provinceController.getDistricts);
