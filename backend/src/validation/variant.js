@@ -64,7 +64,12 @@ export const createVariantValidation = [
         .notEmpty()
         .withMessage('Sản phẩm không được để trống')
         .isMongoId()
-        .withMessage('ID sản phẩm không hợp lệ')
+        .withMessage('ID sản phẩm không hợp lệ'),
+    
+    body('specifications')
+        .optional()
+        .isObject()
+        .withMessage('Thông số kỹ thuật phải là một object'),
 ];
 
 export const updateVariantValidation = [
@@ -129,5 +134,10 @@ export const updateVariantValidation = [
     body('isActive')
         .optional()
         .isBoolean()
-        .withMessage('Trạng thái phải là boolean')
+        .withMessage('Trạng thái phải là boolean'),
+    
+    body('specifications')
+        .optional()
+        .isObject()
+        .withMessage('Thông số kỹ thuật phải là một object'),
 ]; 

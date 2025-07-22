@@ -12,6 +12,7 @@ import {
   ColorPicker,
 } from 'antd';
 import { FaPlus, FaTrash } from 'react-icons/fa';
+import SpecificationEditor from './SpecificationEditor';
 
 interface ProductVariant {
   id: string;
@@ -20,14 +21,15 @@ interface ProductVariant {
   price: number;
   salePrice?: number;
   stock: number;
-  color?: string;
-  size?: string;
+  color?: { code: string; name: string };
+  size?: number; // size là số
   weight?: number;
   images: string[];
   isActive: boolean;
   length?: number;
   width?: number;
   height?: number;
+  specifications?: { [key: string]: string };
 }
 
 interface VariantManagerProps {
@@ -42,17 +44,47 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       name: '',
       sku: '',
       price: 0,
+      salePrice: 0,
       stock: 0,
+      color: { code: '#000000', name: '' },
+      size: 0,
+      length: 0,
+      width: 0,
+      height: 0,
+      weight: 0,
       images: [],
       isActive: true,
+      specifications: {},
     };
     onVariantsChange([...variants, newVariant]);
   };
 
   const updateVariant = (id: string, field: keyof ProductVariant, value: any) => {
-    const updatedVariants = variants.map((v) =>
-      v.id === id ? { ...v, [field]: value } : v
-    );
+    const updatedVariants = variants.map((v) => {
+      if (v.id === id) {
+        return {
+          ...{
+            id: v.id,
+            name: v.name || '',
+            sku: v.sku || '',
+            price: v.price || 0,
+            salePrice: v.salePrice || 0,
+            stock: v.stock || 0,
+            color: v.color || { code: '#000000', name: '' },
+            size: v.size || 0,
+            length: v.length || 0,
+            width: v.width || 0,
+            height: v.height || 0,
+            weight: v.weight || 0,
+            images: v.images || [],
+            isActive: typeof v.isActive === 'boolean' ? v.isActive : true,
+            specifications: v.specifications || {},
+          },
+          [field]: value,
+        };
+      }
+      return v;
+    });
     onVariantsChange(updatedVariants);
   };
 
@@ -73,6 +105,17 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     }).format(price);
   };
 
+  // Thêm validate khi nhập size, length, width, height
+  const validatePositiveNumber = (value: any) => {
+    if (typeof value !== 'number' || value <= 0 || isNaN(value)) {
+      return {
+        validateStatus: 'error',
+        help: 'Phải nhập số dương',
+      };
+    }
+    return {};
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -83,7 +126,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       </div>
 
       {variants.map((variant, index) => (
-        <Card key={variant.id} className="border-2 border-dashed">
+        <Card key={variant.id} className="mb-4">
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h4 className="font-medium">Biến thể {index + 1}</h4>
@@ -168,35 +211,59 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
             </Row>
             <Row gutter={16}>
               <Col span={8}>
-                <Input
-                  placeholder="Màu sắc"
-                  value={variant.color || ''}
-                  onChange={(e) => updateVariant(variant.id, 'color', e.target.value)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ minWidth: 60 }}>Màu sắc:</span>
+                  <ColorPicker
+                    value={variant.color?.code || '#000000'}
+                    onChange={(color, hex) => {
+                      updateVariant(variant.id, 'color', { ...variant.color, code: hex });
+                    }}
+                    showText
+                  />
+                  <Input
+                    placeholder="Tên màu"
+                    value={variant.color?.name || ''}
+                    onChange={e => updateVariant(variant.id, 'color', { ...variant.color, name: e.target.value })}
+                    style={{ width: 100 }}
+                  />
+                </div>
+              </Col>
+              <Col span={8}>
+                <InputNumber
+                  placeholder="Size (mm, cm, ...)"
+                  value={variant.size || undefined}
+                  onChange={value => updateVariant(variant.id, 'size', value || 0)}
+                  min={1}
+                  style={{ width: '100%' }}
+                  {...validatePositiveNumber(variant.size)}
                 />
               </Col>
-              <Col span={16}>
+              <Col span={8}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ minWidth: 80 }}>Kích thước:</span>
+                  <span style={{ minWidth: 80 }}>Kích thước (cm):</span>
                   <InputNumber
-                    placeholder="Dài (cm)"
+                    placeholder="Dài"
                     value={variant.length || undefined}
-                    onChange={(value) => updateVariant(variant.id, 'length', value || 0)}
-                    min={0}
-                    style={{ width: 80 }}
+                    onChange={value => updateVariant(variant.id, 'length', value || 0)}
+                    min={1}
+                    style={{ width: 60 }}
+                    {...validatePositiveNumber(variant.length)}
                   />
                   <InputNumber
-                    placeholder="Rộng (cm)"
+                    placeholder="Rộng"
                     value={variant.width || undefined}
-                    onChange={(value) => updateVariant(variant.id, 'width', value || 0)}
-                    min={0}
-                    style={{ width: 80 }}
+                    onChange={value => updateVariant(variant.id, 'width', value || 0)}
+                    min={1}
+                    style={{ width: 60 }}
+                    {...validatePositiveNumber(variant.width)}
                   />
                   <InputNumber
-                    placeholder="Cao (cm)"
+                    placeholder="Cao"
                     value={variant.height || undefined}
-                    onChange={(value) => updateVariant(variant.id, 'height', value || 0)}
-                    min={0}
-                    style={{ width: 80 }}
+                    onChange={value => updateVariant(variant.id, 'height', value || 0)}
+                    min={1}
+                    style={{ width: 60 }}
+                    {...validatePositiveNumber(variant.height)}
                   />
                 </div>
               </Col>
@@ -223,6 +290,19 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     <img src={variant.images[0]} alt="Preview" style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8, border: '1px solid #eee' }} />
                   </div>
                 )}
+              </Col>
+            </Row>
+
+            {/* Thông số kỹ thuật cho từng biến thể */}
+            <Row gutter={16}>
+              <Col span={24}>
+                <div style={{ marginTop: 8, marginBottom: 8 }}>
+                  <span style={{ fontWeight: 500 }}>Thông số kỹ thuật:</span>
+                  <SpecificationEditor
+                    value={typeof variant.specifications === 'object' && variant.specifications !== null ? variant.specifications : {}}
+                    onChange={specs => updateVariant(variant.id, 'specifications', specs)}
+                  />
+                </div>
               </Col>
             </Row>
 

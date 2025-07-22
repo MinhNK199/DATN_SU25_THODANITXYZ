@@ -13,6 +13,13 @@ const cartSchema = new mongoose.Schema({
                 ref: 'Product',
                 required: [true, 'Sản phẩm không được để trống'],
             },
+            variantId: {
+                type: String, // hoặc ObjectId nếu variant có _id riêng
+            },
+            specifications: {
+                type: Map,
+                of: String,
+            },
             quantity: {
                 type: Number,
                 required: [true, 'Vui lòng nhập số lượng'],

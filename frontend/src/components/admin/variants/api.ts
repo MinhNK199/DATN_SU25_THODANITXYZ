@@ -45,21 +45,15 @@ export const variantApi = {
   },
 
   // Create new variant
-  createVariant: async (variantData: {
-    name: string;
-    sku: string;
-    price: number;
-    salePrice?: number;
-    stock: number;
-    color?: string;
-    size?: string;
-    weight?: number;
-    images: string[];
-    isActive: boolean;
-    product: string;
-  }) => {
+  createVariant: async (variantData: any) => {
+    const data = { ...variantData };
+    if (typeof data.color === 'string') {
+      data.color = { code: data.color, name: '' };
+    } else if (typeof data.color !== 'object' || typeof data.color.code !== 'string' || typeof data.color.name !== 'string') {
+      data.color = { code: '', name: '' };
+    }
     try {
-      const response = await axios.post(`${API_BASE}/variant`, variantData, {
+      const response = await axios.post(`${API_BASE}/variant`, data, {
         headers: getHeaders()
       });
       return response.data;
@@ -69,20 +63,15 @@ export const variantApi = {
   },
 
   // Update variant
-  updateVariant: async (id: string, variantData: {
-    name?: string;
-    sku?: string;
-    price?: number;
-    salePrice?: number;
-    stock?: number;
-    color?: string;
-    size?: string;
-    weight?: number;
-    images?: string[];
-    isActive?: boolean;
-  }) => {
+  updateVariant: async (id: string, variantData: any) => {
+    const data = { ...variantData };
+    if (typeof data.color === 'string') {
+      data.color = { code: data.color, name: '' };
+    } else if (typeof data.color !== 'object' || typeof data.color.code !== 'string' || typeof data.color.name !== 'string') {
+      data.color = { code: '', name: '' };
+    }
     try {
-      const response = await axios.put(`${API_BASE}/variant/${id}`, variantData, {
+      const response = await axios.put(`${API_BASE}/variant/${id}`, data, {
         headers: getHeaders()
       });
       return response.data;

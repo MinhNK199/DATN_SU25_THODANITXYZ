@@ -14,6 +14,7 @@ import ProductCard from "../../components/client/ProductCard";
 import { useCart } from "../../contexts/CartContext";
 import cartApi, { getTaxConfig } from "../../services/cartApi";
 import { Product } from "../../interfaces/Product";
+import { Modal, Button, message } from 'antd';
 
 const Cart: React.FC = () => {
   const { state, updateQuantity, removeFromCart, clearCart, loadCart } =
@@ -81,6 +82,17 @@ const Cart: React.FC = () => {
   const total = subtotal + shipping + tax;
 
   const navigate = useNavigate();
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState<any>(null);
+
+  const handleShowDetail = (item: any) => {
+    setDetailItem(item);
+    setDetailModalOpen(true);
+  };
+  const handleCloseDetail = () => {
+    setDetailModalOpen(false);
+    setDetailItem(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -120,171 +132,199 @@ const Cart: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <div
-                    key={item._id}
-                    className="bg-white rounded-2xl shadow-lg p-6"
-                  >
-                    <div className="flex flex-col md:flex-row gap-6">
-                      {/* Product Image */}
-                      <div className="flex-shrink-0">
-                        <img
-                          src={
-                            item.product.images && item.product.images[0]
-                              ? item.product.images[0]
-                              : "/placeholder-image.jpg"
-                          }
-                          alt={item.product.name}
-                          className="w-32 h-32 object-cover rounded-lg"
-                        />
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="flex-1">
-                        <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                          <div className="flex-1">
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                              {item.product.name}
-                            </h3>
-
-                            {/* Product Options */}
-                            <div className="flex items-center space-x-4 mb-4">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">
-                                  Màu:
-                                </span>
-                                <div
-                                  className="w-6 h-6 rounded-full border-2 border-gray-300"
-                                  style={{ backgroundColor: item.color }}
-                                />
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">
-                                  Dung lượng:
-                                </span>
-                                <span className="text-sm font-medium">
-                                  {item.size || "Không có"}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Price */}
-                            <div className="flex items-center space-x-3 mb-4">
-                              <span className="text-2xl font-bold text-gray-900">
-                                {formatPrice(
-                                  item.product.salePrice || item.product.price
-                                )}
-                              </span>
-                              {item.product.salePrice &&
-                                item.product.salePrice < item.product.price && (
-                                  <span className="text-lg text-gray-500 line-through">
-                                    {formatPrice(item.product.price)}
-                                  </span>
-                                )}
-                              {item.product.salePrice &&
-                                item.product.salePrice < item.product.price && (
-                                  <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-semibold">
-                                    Tiết kiệm{" "}
-                                    {formatPrice(
-                                      item.product.price -
-                                        item.product.salePrice
-                                    )}
-                                  </span>
-                                )}
-                            </div>
-                          </div>
-
-                          {/* Quantity Controls */}
-                          <div className="flex flex-col items-end space-y-4">
-                            <div className="flex items-center space-x-3">
-                              <button
-                                onClick={() =>
-                                  updateQuantity(item._id, item.quantity - 1)
-                                }
-                                disabled={item.quantity <= 1}
-                                className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <FaMinus className="w-3 h-3" />
-                              </button>
-                              <span className="text-lg font-semibold w-12 text-center">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() =>
-                                  updateQuantity(item._id, item.quantity + 1)
-                                }
-                                disabled={
-                                  item.quantity >= (item.product.stock || 99)
-                                }
-                                className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <FaPlus className="w-3 h-3" />
-                              </button>
-                            </div>
-
-                            {/* Remove Button */}
-                            <button
-                              onClick={() => removeFromCart(item._id)}
-                              className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
-                            >
-                              <FaTrash className="w-4 h-4" />
-                              <span>Xóa</span>
-                            </button>
-                          </div>
+                {cartItems.map((item) => {
+                  // Ưu tiên lấy thông tin từ variantInfo nếu có
+                  const variant = item.variantInfo;
+                  const displayName = variant?.name || item.product.name;
+                  const displayImage = variant?.images?.[0] || item.product.images?.[0] || "/placeholder-image.jpg";
+                  const displayPrice = (variant?.salePrice && variant?.salePrice < variant?.price) ? variant.salePrice : (variant?.price ?? (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price));
+                  const displayOldPrice = (variant?.salePrice && variant?.salePrice < variant?.price) ? variant.price : (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.price : undefined);
+                  const displayStock = variant?.stock ?? item.product.stock;
+                  const displayColor = variant?.color ?? null;
+                  const displaySize = variant?.size ?? null;
+                  const displaySKU = variant?.sku ?? null;
+                  const displaySpecifications = variant?.specifications && Object.keys(variant.specifications).length > 0 ? variant.specifications : (item.specifications && Object.keys(item.specifications).length > 0 ? item.specifications : null);
+                  return (
+                    <div
+                      key={item._id}
+                      className="bg-white rounded-2xl shadow-lg p-6"
+                    >
+                      <div className="flex flex-col md:flex-row gap-6">
+                        {/* Product Image */}
+                        <div className="flex-shrink-0">
+                          <img
+                            src={displayImage}
+                            alt={displayName}
+                            className="w-32 h-32 object-cover rounded-lg"
+                          />
                         </div>
 
-                        {/* Stock Info */}
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <span className="text-sm text-gray-600">
-                            {typeof item.product.availableStock === "number"
-                              ? (() => {
-                                  const remain =
-                                    item.product.availableStock - item.quantity;
-                                  if (remain <= 0)
+                        {/* Product Info */}
+                        <div className="flex-1">
+                          <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+                            <div className="flex-1">
+                              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                                {displayName}
+                              </h3>
+                              {/* Nút xem chi tiết */}
+                              <Button type="link" onClick={() => handleShowDetail(item)} style={{padding:0}}>
+                                Xem chi tiết
+                              </Button>
+                              {/* Product Options */}
+                              <div className="flex items-center space-x-4 mb-4">
+                                {displayColor && (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600">Màu:</span>
+                                    <div
+                                      className="w-6 h-6 rounded-full border-2 border-gray-300"
+                                      style={{ backgroundColor: displayColor }}
+                                    />
+                                  </div>
+                                )}
+                                {displaySize && (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600">Kích thước:</span>
+                                    <span className="text-sm font-medium">{displaySize}</span>
+                                  </div>
+                                )}
+                                {displaySKU && (
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm text-gray-600">SKU:</span>
+                                    <span className="text-sm font-mono">{displaySKU}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Price */}
+                              <div className="flex items-center space-x-3 mb-4">
+                                <span className="text-2xl font-bold text-gray-900">
+                                  {formatPrice(displayPrice)}
+                                </span>
+                                {displayOldPrice && (
+                                  <span className="text-lg text-gray-500 line-through">
+                                    {formatPrice(displayOldPrice)}
+                                  </span>
+                                )}
+                                {displayOldPrice && (
+                                  <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-semibold">
+                                    Tiết kiệm {formatPrice(displayOldPrice - displayPrice)}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-2">Tồn kho: {displayStock}</div>
+                            </div>
+
+                            {/* Quantity Controls */}
+                            <div className="flex flex-col items-end space-y-4">
+                              <div className="flex items-center space-x-3">
+                                <button
+                                  onClick={() =>
+                                    updateQuantity(item._id, item.quantity - 1)
+                                  }
+                                  disabled={item.quantity <= 1}
+                                  className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <FaMinus className="w-3 h-3" />
+                                </button>
+                                <span className="text-lg font-semibold w-12 text-center">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    const maxStock = variant?.stock ?? item.product.stock;
+                                    if (item.quantity >= maxStock) {
+                                      message.warning('Đã đạt số lượng tối đa tồn kho của biến thể này!');
+                                      return;
+                                    }
+                                    updateQuantity(item._id, item.quantity + 1);
+                                  }}
+                                  disabled={item.quantity >= (variant?.stock ?? item.product.stock)}
+                                  className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <FaPlus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {/* Remove Button */}
+                              <button
+                                onClick={() => removeFromCart(item._id)}
+                                className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
+                              >
+                                <FaTrash className="w-4 h-4" />
+                                <span>Xóa</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Stock Info */}
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                            <span className="text-sm text-gray-600">
+                              {typeof displayStock === "number"
+                                ? (() => {
+                                    const remain =
+                                      displayStock - item.quantity;
+                                    if (remain <= 0)
+                                      return (
+                                        <span className="text-red-600">
+                                          Hết hàng
+                                        </span>
+                                      );
+                                    if (remain <= 5)
+                                      return (
+                                        <span className="text-orange-500">
+                                          Chỉ còn {remain}
+                                        </span>
+                                      );
                                     return (
-                                      <span className="text-red-600">
-                                        Hết hàng
+                                      <span className="text-green-600">
+                                        Còn {remain} sản phẩm
                                       </span>
                                     );
-                                  if (remain <= 5)
+                                  })()
+                                : (() => {
+                                    const remain =
+                                      item.product.stock - item.quantity;
+                                    if (remain <= 0)
+                                      return (
+                                        <span className="text-red-600">
+                                          Hết hàng
+                                        </span>
+                                      );
+                                    if (remain <= 5)
+                                      return (
+                                        <span className="text-orange-500">
+                                          Chỉ còn {remain}
+                                        </span>
+                                      );
                                     return (
-                                      <span className="text-orange-500">
-                                        Chỉ còn {remain}
+                                      <span className="text-green-600">
+                                        Còn {remain} sản phẩm
                                       </span>
                                     );
-                                  return (
-                                    <span className="text-green-600">
-                                      Còn {remain} sản phẩm
-                                    </span>
-                                  );
-                                })()
-                              : (() => {
-                                  const remain =
-                                    item.product.stock - item.quantity;
-                                  if (remain <= 0)
-                                    return (
-                                      <span className="text-red-600">
-                                        Hết hàng
-                                      </span>
-                                    );
-                                  if (remain <= 5)
-                                    return (
-                                      <span className="text-orange-500">
-                                        Chỉ còn {remain}
-                                      </span>
-                                    );
-                                  return (
-                                    <span className="text-green-600">
-                                      Còn {remain} sản phẩm
-                                    </span>
-                                  );
-                                })()}
-                          </span>
+                                  })()}
+                            </span>
+                          </div>
+                          {/* Thông số kỹ thuật của biến thể nếu có */}
+                          {displaySpecifications && Object.keys(displaySpecifications).length > 0 && (
+                            <div className="mt-2">
+                              <span className="font-medium text-gray-700">Thông số kỹ thuật:</span>
+                              <table className="w-full border rounded-lg overflow-hidden mb-2 mt-1">
+                                <tbody>
+                                  {Object.entries(displaySpecifications).map(([key, value]) => (
+                                    <tr key={key}>
+                                      <td className="py-1 px-2 bg-gray-50 font-medium text-sm text-gray-700">{key}</td>
+                                      <td className="py-1 px-2 text-sm text-gray-600">{value}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -388,6 +428,49 @@ const Cart: React.FC = () => {
           </div>
         </div>
 
+        {/* Modal hiển thị chi tiết sản phẩm/biến thể */}
+        <Modal
+          open={detailModalOpen}
+          onCancel={handleCloseDetail}
+          footer={null}
+          title="Thông tin chi tiết sản phẩm"
+        >
+          {detailItem && (
+            <div>
+              <div className="flex flex-col items-center mb-4">
+                <img
+                  src={detailItem.variantInfo?.images?.[0] || detailItem.product.images?.[0] || "/placeholder-image.jpg"}
+                  alt={detailItem.variantInfo?.name || detailItem.product.name}
+                  className="w-40 h-40 object-cover rounded-lg mb-2"
+                />
+                <div className="text-lg font-bold mb-1">{detailItem.variantInfo?.name || detailItem.product.name}</div>
+                <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice((detailItem.variantInfo?.salePrice && detailItem.variantInfo?.salePrice < detailItem.variantInfo?.price) ? detailItem.variantInfo.salePrice : (typeof detailItem.variantInfo?.price === 'number' ? detailItem.variantInfo.price : (detailItem.product.salePrice && detailItem.product.salePrice < detailItem.product.price ? detailItem.product.salePrice : detailItem.product.price)))}</span></div>
+                <div className="mb-1">Tồn kho: <span className="font-semibold">{typeof detailItem.variantInfo?.stock === 'number' ? detailItem.variantInfo.stock : detailItem.product.stock}</span></div>
+                <div className="mb-1">SKU: <span className="font-mono">{detailItem.variantInfo?.sku || detailItem.product.sku || 'N/A'}</span></div>
+                <div className="mb-1">Màu sắc: <span>{detailItem.variantInfo?.color || detailItem.product.color || 'N/A'}</span></div>
+                <div className="mb-1">Kích thước: <span>{detailItem.variantInfo?.size || detailItem.product.size || 'N/A'}</span></div>
+                <div className="mb-1">Cân nặng: <span>{typeof detailItem.variantInfo?.weight === 'number' ? detailItem.variantInfo.weight : (typeof detailItem.product.weight === 'number' ? detailItem.product.weight : 'N/A')}</span></div>
+                {detailItem.variantInfo?.specifications && Object.keys(detailItem.variantInfo.specifications).length > 0 ? (
+                  <div className="mt-2 w-full">
+                    <div className="font-medium mb-1">Thông số kỹ thuật:</div>
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {Object.entries(detailItem.variantInfo.specifications).map(([key, value]) => (
+                          <tr key={key}>
+                            <td className="pr-2 text-gray-600">{key}</td>
+                            <td className="text-gray-800">{value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-gray-500">Biến thể này chưa có thông số kỹ thuật.</div>
+                )}
+              </div>
+            </div>
+          )}
+        </Modal>
         {/* Recommended Products */}
         {cartItems.length > 0 && (
           <div className="mt-16">

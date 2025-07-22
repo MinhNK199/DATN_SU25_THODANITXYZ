@@ -24,6 +24,7 @@ interface Variant {
   };
   createdAt: string;
   updatedAt: string;
+  specifications?: { [key: string]: string };
 }
 
 const VariantDetail: React.FC = () => {
@@ -114,6 +115,28 @@ const VariantDetail: React.FC = () => {
               <Descriptions.Item label="Ngày tạo">{new Date(variant.createdAt).toLocaleDateString('vi-VN')}</Descriptions.Item>
               <Descriptions.Item label="Cập nhật lần cuối">{new Date(variant.updatedAt).toLocaleDateString('vi-VN')}</Descriptions.Item>
             </Descriptions>
+            {/* Hiển thị thông số kỹ thuật nếu có */}
+            {variant.specifications && Object.keys(variant.specifications).length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <Title level={5}>Thông số kỹ thuật</Title>
+                <table className="w-full border rounded-lg overflow-hidden mb-4">
+                  <thead>
+                    <tr>
+                      <th className="py-2 px-4 text-left font-semibold">Thông số</th>
+                      <th className="py-2 px-4 text-center font-semibold">Giá trị</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(variant.specifications).map(([key, value]) => (
+                      <tr key={key}>
+                        <td className="py-2 px-4 bg-gray-50 font-medium">{key}</td>
+                        <td className="py-2 px-4 text-center">{value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Col>
         </Row>
       </Card>

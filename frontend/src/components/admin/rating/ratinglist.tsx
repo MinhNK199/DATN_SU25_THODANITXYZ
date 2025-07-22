@@ -136,7 +136,7 @@ const RatingList: React.FC = () => {
   setReplyLoading(true);
   try {
     await axios.post(
-      `http://localhost:5000/api/rating/${id}/reply`,
+      `http://localhost:8000/api/rating/${id}/reply`,
       { reply: replyValue },
       {
         headers: {

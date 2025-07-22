@@ -9,11 +9,15 @@ export interface ProductVariant {
     price: number;
     salePrice?: number;
     stock: number;
-    color?: string;
-    size?: string;
+    color?: { code: string; name: string };
+    size?: number;
     weight?: number;
     images?: string[];
     isActive?: boolean;
+    specifications?: Record<string, string>;
+    length?: number;
+    width?: number;
+    height?: number;
 }
 
 // Giao diện cho kích thước sản phẩm

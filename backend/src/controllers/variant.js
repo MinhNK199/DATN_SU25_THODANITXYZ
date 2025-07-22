@@ -156,7 +156,10 @@ export const createVariant = async (req, res) => {
         }
         
         // Add variant to product
-        product.variants.push(variantData);
+        product.variants.push({
+            ...variantData,
+            specifications: variantData.specifications || {}
+        });
         await product.save();
         
         const newVariant = product.variants[product.variants.length - 1];
@@ -199,8 +202,23 @@ export const updateVariant = async (req, res) => {
         
         // Update variant fields
         Object.keys(updateData).forEach(key => {
-            if (key !== 'product') { // Don't allow changing product
-                variant[key] = updateData[key];
+            if (key !== 'product') {
+                if (key === 'color') {
+                    let color = updateData[key];
+                    if (typeof color === 'string') {
+                        color = { code: color, name: '' };
+                    } else if (typeof color === 'object' && color !== null) {
+                        if (typeof color.code !== 'string') color.code = '';
+                        if (typeof color.name !== 'string') color.name = '';
+                    } else {
+                        color = { code: '', name: '' };
+                    }
+                    variant.color = { ...color };
+                } else if (key === 'specifications' && typeof updateData[key] === 'object') {
+                    variant.specifications = updateData[key];
+                } else {
+                    variant[key] = updateData[key];
+                }
             }
         });
         

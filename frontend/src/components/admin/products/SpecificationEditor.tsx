@@ -13,9 +13,12 @@ const SpecificationEditor: React.FC<SpecificationEditorProps> = ({ value = {}, o
   );
 
   React.useEffect(() => {
-    onChange(Object.fromEntries(specs.filter(s => s.key)));
-    // eslint-disable-next-line
-  }, [specs]);
+    // Chỉ gọi onChange nếu dữ liệu specs thực sự thay đổi
+    const newSpecsObject = Object.fromEntries(specs.filter(s => s.key && s.value));
+    if (JSON.stringify(newSpecsObject) !== JSON.stringify(value)) {
+      onChange(newSpecsObject);
+    }
+  }, [specs, value, onChange]);
 
   const handleAdd = () => {
     setSpecs([...specs, { key: '', value: '' }]);
