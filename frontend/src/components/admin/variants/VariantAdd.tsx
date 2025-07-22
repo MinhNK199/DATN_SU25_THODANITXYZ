@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import axios from 'axios';
+import SpecificationEditor from '../products/SpecificationEditor';
 
 interface Product {
   _id: string;
@@ -33,6 +34,7 @@ const VariantAdd: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [imageLinks, setImageLinks] = useState('');
+  const [specifications, setSpecifications] = useState<Record<string, string>>({});
 
   // Fetch products
   useEffect(() => {
@@ -76,7 +78,11 @@ const VariantAdd: React.FC = () => {
       const formData = {
         ...values,
         images,
-        isActive: values.isActive !== undefined ? values.isActive : true
+        isActive: values.isActive !== undefined ? values.isActive : true,
+        specifications,
+        color: (typeof values.color === 'object' && typeof values.color.code === 'string' && typeof values.color.name === 'string')
+          ? { code: values.color.code, name: values.color.name }
+          : (typeof values.color === 'string' ? { code: values.color, name: values.colorName || '' } : { code: '', name: '' }),
       };
 
       await axios.post('http://localhost:8000/api/variant', formData, {
@@ -232,36 +238,9 @@ const VariantAdd: React.FC = () => {
 
             {/* Specifications */}
             <Divider orientation="left">Thông số kỹ thuật</Divider>
-            <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item
-                  label="Màu sắc"
-                  name="color"
-                >
-                  <Input type="color" style={{ height: 40 }} />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  label="Kích thước"
-                  name="size"
-                >
-                  <Input placeholder="VD: 256GB, XL, 42mm" />
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  label="Cân nặng (g)"
-                  name="weight"
-                >
-                  <InputNumber
-                    style={{ width: '100%' }}
-                    placeholder="0"
-                    min={0}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+            <Form.Item label="Thông số kỹ thuật">
+              <SpecificationEditor value={specifications} onChange={setSpecifications} />
+            </Form.Item>
 
             {/* Ảnh sản phẩm */}
             <Divider orientation="left">Ảnh sản phẩm</Divider>

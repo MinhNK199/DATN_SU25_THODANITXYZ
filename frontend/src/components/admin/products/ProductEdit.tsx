@@ -57,11 +57,15 @@ interface ProductVariant {
   price: number;
   salePrice?: number;
   stock: number;
-  color?: string;
-  size?: string;
+  color?: { code: string; name: string };
+  size?: number;
+  length?: number;
+  width?: number;
+  height?: number;
   weight?: number;
   images: string[];
   isActive: boolean;
+  specifications?: { [key: string]: string };
 }
 
 const ProductEdit: React.FC = () => {
@@ -113,10 +117,16 @@ const ProductEdit: React.FC = () => {
         setCategories(cats);
         setBrands(brs);
         setSpecifications({ ...(productData.specifications || {}) });
-        // Map _id to id for FE variant manager compatibility
+        // Khi setVariants từ productData.variants, map lại các trường cho đúng kiểu
         setVariants((productData.variants || []).map((v: any) => ({
           ...v,
           id: v.id || v._id || String(Date.now() + Math.random()),
+          color: typeof v.color === 'object' && v.color !== null ? v.color : { code: '#000000', name: '' },
+          size: typeof v.size === 'number' ? v.size : (parseFloat(v.size) || 0),
+          length: typeof v.length === 'number' ? v.length : (parseFloat(v.length) || 0),
+          width: typeof v.width === 'number' ? v.width : (parseFloat(v.width) || 0),
+          height: typeof v.height === 'number' ? v.height : (parseFloat(v.height) || 0),
+          specifications: v.specifications || {},
         })));
         setImages(productData.images || []);
         if (productData.images?.length > 0) {
@@ -175,6 +185,19 @@ const ProductEdit: React.FC = () => {
         })
         .filter((url): url is string => url !== null);
 
+      // Log variants trước khi gửi
+      variants.forEach((v, idx) => {
+        console.log(`--- Variant ${idx} ---`);
+        console.log('typeof color:', typeof v.color, v.color, JSON.stringify(v.color));
+        console.log('typeof specifications:', typeof v.specifications, v.specifications, JSON.stringify(v.specifications));
+        console.log('typeof images:', typeof v.images, v.images);
+        console.log('typeof size:', typeof v.size, v.size);
+        console.log('typeof length:', typeof v.length, v.length);
+        console.log('typeof width:', typeof v.width, v.width);
+        console.log('typeof height:', typeof v.height, v.height);
+      });
+      console.log('Variants gửi lên:', variants);
+
       // Ensure variants match ProductVariant interface (with optional _id)
       const safeVariants = variants.map((v) => ({
         _id: (typeof v === 'object' && v !== null && '_id' in v) ? (v as any)._id : undefined,
@@ -184,12 +207,21 @@ const ProductEdit: React.FC = () => {
         price: v.price,
         salePrice: v.salePrice,
         stock: v.stock,
-        color: v.color,
-        size: v.size,
-        weight: v.weight,
-        images: v.images,
-        isActive: v.isActive,
+        color: (v.color && typeof v.color === 'object' && typeof v.color.code === 'string' && typeof v.color.name === 'string')
+          ? { code: v.color.code, name: v.color.name }
+          : { code: '', name: '' },
+        specifications: (v.specifications && typeof v.specifications === 'object') ? { ...v.specifications } : {},
+        size: typeof v.size === 'number' ? v.size : parseFloat(v.size) || 0,
+        length: typeof v.length === 'number' ? v.length : parseFloat(v.length) || 0,
+        width: typeof v.width === 'number' ? v.width : parseFloat(v.width) || 0,
+        height: typeof v.height === 'number' ? v.height : parseFloat(v.height) || 0,
+        weight: typeof v.weight === 'number' ? v.weight : parseFloat(v.weight) || 0,
+        images: Array.isArray(v.images) ? v.images : [],
+        isActive: !!v.isActive,
       }));
+
+      // Log safeVariants trước khi gửi
+      console.log('safeVariants gửi lên:', safeVariants);
 
       const getId = (val: any) => (typeof val === 'object' && val !== null && '_id' in val ? val._id : val);
 
@@ -349,9 +381,7 @@ const ProductEdit: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item name="specifications" label="Thông số kỹ thuật">
-                <Input.TextArea rows={4} placeholder="Nhập thông số kỹ thuật, ví dụ: CPU: Apple M1, RAM: 8GB, ..." />
-              </Form.Item>
+             
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">

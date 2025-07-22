@@ -47,6 +47,10 @@ export interface CartItem {
   };
   quantity: number;
   price: number;
+  // Bổ sung các trường cho biến thể
+  variantId?: string;
+  variantInfo?: import("../interfaces/Product").ProductVariant;
+  specifications?: Record<string, string>;
 }
 
 export interface Cart {
@@ -82,8 +86,8 @@ export const cartApi = {
   },
 
   // Thêm sản phẩm vào giỏ hàng
-  addToCart: async (productId: string, quantity: number): Promise<Cart> => {
-    const response = await api.post('/cart', { productId, quantity });
+  addToCart: async ({ productId, quantity, variantId }: { productId: string, quantity: number, variantId?: string }): Promise<Cart> => {
+    const response = await api.post('/cart', { productId, quantity, variantId });
     return response.data;
   },
 

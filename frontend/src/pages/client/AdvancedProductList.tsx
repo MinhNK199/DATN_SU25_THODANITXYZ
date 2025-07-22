@@ -177,9 +177,24 @@ const AdvancedProductList: React.FC = () => {
         <div className="text-center py-12 text-lg text-gray-500">Không tìm thấy sản phẩm phù hợp.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {products.map(product => (
-            <ProductCard key={product._id} product={product} />
-          ))}
+          {products.map(product => {
+            const mappedProduct = {
+              _id: product._id || product.id,
+              name: product.name,
+              price: product.salePrice || product.price,
+              originalPrice: product.salePrice ? product.price : undefined,
+              image: product.images && product.images.length > 0 ? product.images[0] : '',
+              brand: typeof product.brand === 'object' ? product.brand?.name : product.brand,
+              rating: product.averageRating || 0,
+              reviewCount: product.numReviews || 0,
+              discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
+              isNew: product.isFeatured || false,
+              isHot: product.isActive || false,
+              stock: product.stock || 0,
+              variants: product.variants || [],
+            };
+            return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
+          })}
         </div>
       )}
     </div>

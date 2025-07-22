@@ -120,6 +120,19 @@ const ProductAddPage: React.FC = () => {
           ? values.category
           : values.category?._id;
 
+      // Log variants trước khi gửi
+      variants.forEach((v, idx) => {
+        console.log(`--- Variant ${idx} ---`);
+        console.log('typeof color:', typeof v.color, v.color, JSON.stringify(v.color));
+        console.log('typeof specifications:', typeof v.specifications, v.specifications, JSON.stringify(v.specifications));
+        console.log('typeof images:', typeof v.images, v.images);
+        console.log('typeof size:', typeof v.size, v.size);
+        console.log('typeof length:', typeof v.length, v.length);
+        console.log('typeof width:', typeof v.width, v.width);
+        console.log('typeof height:', typeof v.height, v.height);
+      });
+      console.log('Variants gửi lên:', variants);
+
       const productData = {
         name: values.name,
         sku: values.sku,
@@ -132,10 +145,31 @@ const ProductAddPage: React.FC = () => {
         price: mainPrice, // BẮT BUỘC cho backend
         stock: totalStock, // BẮT BUỘC cho backend
         images: allImages, // Đảm bảo có ít nhất 1 ảnh
-        variants,
+        variants: variants.map(v => ({
+          id: v.id,
+          name: v.name,
+          sku: v.sku,
+          price: v.price,
+          salePrice: v.salePrice,
+          stock: v.stock,
+          color: (v.color && typeof v.color === 'object' && typeof v.color.code === 'string' && typeof v.color.name === 'string')
+            ? { code: v.color.code, name: v.color.name }
+            : { code: '', name: '' },
+          specifications: (v.specifications && typeof v.specifications === 'object') ? { ...v.specifications } : {},
+          size: typeof v.size === 'number' ? v.size : parseFloat(v.size) || 0,
+          length: typeof v.length === 'number' ? v.length : parseFloat(v.length) || 0,
+          width: typeof v.width === 'number' ? v.width : parseFloat(v.width) || 0,
+          height: typeof v.height === 'number' ? v.height : parseFloat(v.height) || 0,
+          weight: typeof v.weight === 'number' ? v.weight : parseFloat(v.weight) || 0,
+          images: Array.isArray(v.images) ? v.images : [],
+          isActive: !!v.isActive,
+        })),
         isActive: values.isActive,
         isFeatured: values.isFeatured,
       };
+
+      // Log productData trước khi gửi
+      console.log('ProductData gửi lên:', productData);
 
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_URL}/product`, {
@@ -258,9 +292,7 @@ const ProductAddPage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item name="specifications" label="Thông số kỹ thuật">
-                <Input.TextArea rows={4} placeholder="Nhập thông số kỹ thuật, ví dụ: CPU: Apple M1, RAM: 8GB, ..." />
-              </Form.Item>
+             
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">

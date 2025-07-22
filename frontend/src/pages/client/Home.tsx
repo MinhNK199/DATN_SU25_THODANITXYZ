@@ -177,6 +177,7 @@ const Home: React.FC = () => {
                   isNew: product.isFeatured || false,
                   isHot: product.isActive || false,
                   stock: product.stock || 0,
+                  variants: product.variants || [], // Bổ sung dòng này
                 };
                 return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
               })

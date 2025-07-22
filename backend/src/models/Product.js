@@ -1,58 +1,27 @@
 import mongoose from "mongoose";
 
 const productVariantSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: [true, 'Vui lòng nhập tên biến thể'],
-        trim: true,
-    },
-    sku: {
-        type: String,
-        unique: true,
-        sparse: true,
-    },
-    price: {
-        type: Number,
-        required: [true, 'Vui lòng nhập giá biến thể'],
-        min: [0, 'Giá biến thể không được nhỏ hơn 0'],
-    },
-    salePrice: {
-        type: Number,
-        min: [0, 'Giá khuyến mãi không được nhỏ hơn 0'],
-    },
-    stock: {
-        type: Number,
-        required: [true, 'Vui lòng nhập số lượng tồn kho'],
-        min: [0, 'Số lượng tồn kho không được nhỏ hơn 0'],
-        default: 0,
-    },
+    name: { type: String, required: true, trim: true },
+    sku: { type: String, unique: true, sparse: true, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    salePrice: { type: Number, min: 0 },
+    stock: { type: Number, required: true, min: 0, default: 0 },
     color: {
-        type: String,
-        trim: true,
+        code: { type: String, trim: true, default: '#000000' },
+        name: { type: String, trim: true, default: '' },
     },
-    size: {
-        type: String,
-        trim: true,
+    size: { type: Number, default: 0 },
+    length: { type: Number, default: 0 },
+    width: { type: Number, default: 0 },
+    height: { type: Number, default: 0 },
+    weight: { type: Number, min: 0, default: 0 },
+    images: [{ type: String }],
+    isActive: { type: Boolean, default: true },
+    specifications: {
+        type: Map,
+        of: String,
+        default: {},
     },
-    weight: {
-        type: Number,
-        min: 0,
-    },
-    images: [{
-        type: String,
-    }],
-    isActive: {
-        type: Boolean,
-        default: true,
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now,
-    }
 }, {
     timestamps: true,
     versionKey: false,

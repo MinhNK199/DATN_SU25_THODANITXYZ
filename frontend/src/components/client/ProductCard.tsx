@@ -15,6 +15,7 @@ import { useCart } from "../../contexts/CartContext";
 import cartApi from "../../services/cartApi";
 import { toast } from "react-hot-toast";
 import wishlistApi from "../../services/wishlistApi";
+import { Modal, Button, Popover, Input, Select, Tag, Badge } from 'antd';
 
 interface ProductCardProps {
   product: {
@@ -45,6 +46,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [stockLoading, setStockLoading] = useState(false);
   const { addToCart, isInCart } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showVariantModal, setShowVariantModal] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
+  const [variantOptions, setVariantOptions] = useState<any[]>(product.variants || []);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
+  const [filterText, setFilterText] = useState('');
+  const [filterColor, setFilterColor] = useState<string | undefined>(undefined);
+  const [filterSize, setFilterSize] = useState<string | undefined>(undefined);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -71,7 +80,50 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     fetchAvailability();
   }, [product._id, product.stock]);
 
+  const openVariantModal = () => {
+    setShowVariantModal(true);
+    setSelectedColor(undefined);
+    setSelectedSize(undefined);
+    setSelectedVariantId(undefined);
+  };
+
+  const closeVariantModal = () => {
+    setShowVariantModal(false);
+  };
+
+  const handleVariantSelect = () => {
+    if (selectedVariantId) {
+      addToCart(product._id, 1, selectedVariantId);
+      setShowVariantModal(false);
+    }
+  };
+
+  // Lọc các lựa chọn hợp lệ dựa trên lựa chọn hiện tại
+  const colorList = Array.from(new Set((product.variants || []).map((v: any) => v.color).filter(Boolean)));
+  const sizeList = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
+
+  const filteredVariants = (product.variants || []).filter((variant: any) => {
+    const matchText = filterText ? (variant.name || '').toLowerCase().includes(filterText.toLowerCase()) : true;
+    const matchColor = filterColor ? variant.color === filterColor : true;
+    const matchSize = filterSize ? variant.size === filterSize : true;
+    return matchText && matchColor && matchSize;
+  });
+
+  useEffect(() => {
+    // Khi chọn đủ thuộc tính, xác định variantId hợp lệ
+    if (selectedColor && selectedSize) {
+      const found = (product.variants || []).find((v: any) => v.color === selectedColor && v.size === selectedSize);
+      setSelectedVariantId(found?._id);
+    } else {
+      setSelectedVariantId(undefined);
+    }
+  }, [selectedColor, selectedSize, product.variants]);
+
   const handleAddToCart = async () => {
+    if (product.variants && product.variants.length > 0) {
+      openVariantModal();
+      return;
+    }
     setIsLoading(true);
     try {
       await addToCart(product._id, 1);
@@ -149,6 +201,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const isOutOfStock = availableStock === 0;
+
+  // Tìm giá tốt nhất và trạng thái tồn kho tổng hợp
+  const bestPrice = product.variants && product.variants.length > 0
+    ? Math.min(...product.variants.map((v: any) => v.salePrice && v.salePrice > 0 && v.salePrice < v.price ? v.salePrice : v.price))
+    : product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
+  const allColors = Array.from(new Set((product.variants || []).map((v: any) => v.color).filter(Boolean)));
+  const allSizes = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
+  const lowStock = (product.variants || []).some((v: any) => v.stock > 0 && v.stock <= 5);
+  const outOfStock = (product.variants || []).every((v: any) => v.stock === 0);
 
   return (
     <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
@@ -325,6 +386,155 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </span>
         </button>
       </div>
+      {/* Modal chọn biến thể */}
+      <Modal
+        open={showVariantModal}
+        onCancel={closeVariantModal}
+        footer={null}
+        title={`Chọn loại sản phẩm cho ${product.name}`}
+        bodyStyle={{ maxHeight: 480, overflowY: 'auto', padding: 0 }}
+      >
+        {/* Filter nâng cao */}
+        <div style={{ display: 'flex', gap: 8, padding: 16, paddingBottom: 0 }}>
+          <Input
+            placeholder="Tìm theo tên loại sản phẩm..."
+            value={filterText}
+            onChange={e => setFilterText(e.target.value)}
+            style={{ width: 180 }}
+            allowClear
+          />
+          <Select
+            placeholder="Lọc theo màu sắc"
+            value={filterColor}
+            onChange={setFilterColor}
+            allowClear
+            style={{ width: 120 }}
+            options={colorList.map(color => ({ label: color, value: color }))}
+          />
+          <Select
+            placeholder="Lọc theo kích thước"
+            value={filterSize}
+            onChange={setFilterSize}
+            allowClear
+            style={{ width: 120 }}
+            options={sizeList.map(size => ({ label: size, value: size }))}
+          />
+        </div>
+        {/* Danh sách biến thể dọc */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, paddingTop: 8 }}>
+          {filteredVariants.length === 0 && <div style={{ color: '#888', textAlign: 'center', padding: 32 }}>Không có loại sản phẩm phù hợp.</div>}
+          {filteredVariants.map((variant: any) => (
+            <Popover
+              key={variant._id}
+              content={
+                <div style={{ minWidth: 300 }}>
+                  <div className="font-semibold mb-1 text-base">{variant.name || `${variant.color || ''} ${variant.size || ''}`}</div>
+                  <div className="mb-2">
+                    <img
+                      src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder-image.jpg'}
+                      alt="variant-large"
+                      style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee', marginBottom: 8 }}
+                    />
+                  </div>
+                  <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
+                  <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
+                  <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
+                  <div className="mb-1">Màu sắc: <span>{variant.color || 'N/A'}</span></div>
+                  <div className="mb-1">Kích thước: <span>{variant.size || 'N/A'}</span></div>
+                  <div className="mb-1">Cân nặng: <span>{variant.weight ? `${variant.weight}g` : 'N/A'}</span></div>
+                  <div className="mb-1">Trạng thái: <span className={variant.isActive ? 'text-green-600' : 'text-red-600'}>{variant.isActive ? 'Hoạt động' : 'Ẩn'}</span></div>
+                  {variant.images && variant.images.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      {variant.images.map((img: string, idx: number) => (
+                        <img key={idx} src={img} alt="variant-img" style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover', border: '1px solid #eee' }} />
+                      ))}
+                    </div>
+                  )}
+                  {variant.specifications && Object.keys(variant.specifications).length > 0 && (
+                    <div className="mt-2">
+                      <div className="font-medium mb-1">Thông số loại sản phẩm:</div>
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {Object.entries(variant.specifications).map(([key, value]) => (
+                            <tr key={key}>
+                              <td className="pr-2 text-gray-600">{key}</td>
+                              <td className="text-gray-800">{value}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              }
+              placement="right"
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 12,
+                  padding: 14,
+                  background: variant.stock === 0 ? '#f8d7da' : variant.stock <= 5 ? '#fffbe6' : '#fff',
+                  boxShadow: '0 2px 8px #f0f1f2',
+                  marginBottom: 4,
+                  position: 'relative',
+                  transition: 'box-shadow 0.2s',
+                  cursor: variant.stock > 0 ? 'pointer' : 'not-allowed',
+                }}
+                className={variant.stock > 0 ? 'hover:shadow-lg transition-shadow' : ''}
+              >
+                <Badge.Ribbon
+                  text={variant.stock === 0 ? 'Hết hàng' : variant.stock <= 5 ? 'Sắp hết hàng' : ''}
+                  color={variant.stock === 0 ? 'red' : 'orange'}
+                  style={{ display: variant.stock > 5 ? 'none' : undefined }}
+                >
+                  <img
+                    src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder-image.jpg'}
+                    alt="variant"
+                    style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee' }}
+                  />
+                </Badge.Ribbon>
+                <div style={{ flex: 1 }}>
+                  <div className="font-semibold text-base mb-1">{variant.name || `${variant.color || ''} ${variant.size || ''}`}</div>
+                  <div className="mb-1">
+                    {variant.salePrice && variant.salePrice < variant.price ? (
+                      <>
+                        <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice)}</span>
+                        <span className="text-gray-400 line-through ml-2">{formatPrice(variant.price)}</span>
+                      </>
+                    ) : (
+                      <span>{formatPrice(variant.price)}</span>
+                    )}
+                  </div>
+                  <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
+                  {/* Hiển thị màu sắc nếu có */}
+                  {variant.color && (
+                    <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: variant.color, border: '1px solid #ccc', marginRight: 8, verticalAlign: 'middle' }} title={variant.color}></span>
+                  )}
+                  {/* Hiển thị size nếu có */}
+                  {variant.size && (
+                    <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
+                  )}
+                </div>
+                <Button
+                  type="primary"
+                  disabled={variant.stock <= 0}
+                  onClick={() => {
+                    addToCart(product._id, 1, variant._id);
+                    setShowVariantModal(false);
+                  }}
+                  style={{ minWidth: 120, fontWeight: 600 }}
+                >
+                  {variant.stock > 0 ? 'Thêm vào giỏ' : 'Hết hàng'}
+                </Button>
+              </div>
+            </Popover>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 };

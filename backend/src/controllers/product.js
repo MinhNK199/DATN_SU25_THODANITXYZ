@@ -163,6 +163,7 @@ export const getProductById = async(req, res) => {
 
 export const createProduct = async(req, res) => {
     try {
+        console.log("Received data for new product:", JSON.stringify(req.body, null, 2));
         // Validate required fields
         if (!req.body.name || !req.body.price || !req.body.category || !req.body.brand) {
             return res.status(400).json({
@@ -196,6 +197,34 @@ export const createProduct = async(req, res) => {
             }
         }
 
+        // Ép kiểu variants nếu có
+        let variants = req.body.variants;
+        if (variants && Array.isArray(variants)) {
+            variants = variants.map((v, idx) => {
+                let colorObj = v.color;
+                if (typeof colorObj === 'string') {
+                  colorObj = { code: colorObj, name: '' };
+                } else if (typeof colorObj === 'object' && colorObj !== null) {
+                  if (typeof colorObj.code !== 'string') colorObj.code = '';
+                  if (typeof colorObj.name !== 'string') colorObj.name = '';
+                } else {
+                  colorObj = { code: '', name: '' };
+                }
+                return {
+                    ...v,
+                    color: { ...colorObj },
+                    size: typeof v.size === 'number' ? v.size : parseFloat(v.size) || 0,
+                    length: typeof v.length === 'number' ? v.length : parseFloat(v.length) || 0,
+                    width: typeof v.width === 'number' ? v.width : parseFloat(v.width) || 0,
+                    height: typeof v.height === 'number' ? v.height : parseFloat(v.height) || 0,
+                    weight: typeof v.weight === 'number' ? v.weight : parseFloat(v.weight) || 0,
+                    specifications: (typeof v.specifications === 'object' && v.specifications !== null) ? { ...v.specifications } : {},
+                    images: Array.isArray(v.images) ? v.images : [],
+                    isActive: !!v.isActive,
+                };
+            });
+        }
+
         const product = new Product({
             name: req.body.name,
             slug: req.body.slug, // nếu có sẵn
@@ -212,7 +241,7 @@ export const createProduct = async(req, res) => {
             description: req.body.description || "",
             specifications: req.body.specifications || {},
             features: req.body.features || [],
-            variants: req.body.variants || [],
+            variants: variants || [],
             isActive: req.body.isActive !== undefined ? req.body.isActive : true,
             isFeatured: req.body.isFeatured || false,
             tags: req.body.tags || [],
@@ -226,6 +255,7 @@ export const createProduct = async(req, res) => {
         });
 
         const createdProduct = await product.save();
+        console.log("Saved product:", JSON.stringify(createdProduct, null, 2));
         res.status(201).json(createdProduct);
     } catch (error) {
         console.error("Error creating product:", error);
@@ -236,6 +266,7 @@ export const createProduct = async(req, res) => {
 // Cập nhật sản phẩm
 export const updateProduct = async(req, res) => {
     try {
+        console.log("Received data for updating product:", req.params.id, JSON.stringify(req.body, null, 2));
         let {
             name,
             price,
@@ -326,11 +357,28 @@ export const updateProduct = async(req, res) => {
 
         if (specifications !== undefined) product.specifications = specifications;
         if (features !== undefined) product.features = features;
-        if (variants !== undefined) product.variants = variants;
+        if (variants !== undefined) {
+          const safeVariants = variants.map(variant => {
+            let color = variant.color;
+            if (typeof color === 'string') {
+              color = { code: color, name: '' };
+            } else if (typeof color === 'object' && color !== null) {
+              if (typeof color.code !== 'string') color.code = '';
+              if (typeof color.name !== 'string') color.name = '';
+            } else {
+              color = { code: '', name: '' };
+            }
+            return { ...variant, color: { ...color } };
+          });
+          console.log("Updating variants (safe):", JSON.stringify(safeVariants, null, 2));
+          product.variants = safeVariants;
+          product.markModified('variants');
+        }
         if (isActive !== undefined) product.isActive = isActive;
         if (isFeatured !== undefined) product.isFeatured = isFeatured;
 
         const updatedProduct = await product.save();
+        console.log("Updated product:", JSON.stringify(updatedProduct, null, 2));
         res.json(updatedProduct);
     } catch (error) {
         console.error("❌ Error updating product:", error);

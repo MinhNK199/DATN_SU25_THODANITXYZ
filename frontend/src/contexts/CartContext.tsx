@@ -152,7 +152,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadCart();
   }, [loadCart]);
 
-  const addToCart = useCallback(async (productId: string, quantity: number = 1) => {
+  const addToCart = useCallback(async (productId: string, quantity: number = 1, variantId?: string) => {
     const token = localStorage.getItem('token');
     
     if (!token) {
@@ -178,10 +178,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const cart = await cartApi.addToCart(productId, quantity);
+      const cart = await cartApi.addToCart({ productId, quantity, variantId });
       dispatch({ type: 'LOAD_CART', payload: cart });
       
-      const product = cart.items.find(item => item.product._id === productId);
+      const product = cart.items.find(item => item.product._id === productId && String(item.variantId || '') === String(variantId || ''));
       if (product) {
         toast.success(`Đã thêm "${product.product.name}" vào giỏ hàng`);
       }
