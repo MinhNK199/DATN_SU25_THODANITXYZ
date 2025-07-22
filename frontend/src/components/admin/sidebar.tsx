@@ -12,6 +12,7 @@ import {
   FaCubes,
   FaChartBar,
   FaCog,
+  FaTicketAlt
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -178,6 +179,20 @@ const AdminSidebar = () => {
           <span className="truncate">Đánh giá</span>
         </button>
 
+        {/* Voucher */}
+        <button
+          onClick={() => navigate("/admin/vouchers")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/vouchers")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaTicketAlt className={iconClass} />
+          <span className="truncate">Voucher</span>
+        </button>
+
         {/* Activities - Superadmin only */}
         {user?.role === "superadmin" && (
           <button
@@ -209,6 +224,20 @@ const AdminSidebar = () => {
             <span className="truncate">Cài đặt</span>
           </button>
         )}
+
+        {/* Blog công nghệ */}
+        <button
+          onClick={() => navigate("/admin/blogs")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/blogs")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <i className="fa-solid fa-blog text-[20px] min-w-[24px]"></i>
+          <span className="truncate">Blog công nghệ</span>
+        </button>
 
         {/* Divider */}
         <div className="border-t border-gray-200 my-4"></div>

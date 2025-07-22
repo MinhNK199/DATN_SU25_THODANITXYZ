@@ -50,6 +50,10 @@ import ScrollToTop from './components/ScrollToTop';
 import TestAPI from './components/client/TestAPI';
 import TestLogin from './components/client/TestLogin';
 import TestProductAPI from './components/client/TestProductAPI';
+import LoginSuccess from './components/LoginSuccess';
+import VoucherAdd from './components/admin/vouchers/VoucherAdd';
+import VoucherList from './components/admin/vouchers/VoucherList';
+import BlogPage from './pages/admin/BlogPage';
 
 function App() {
   return (
@@ -65,6 +69,7 @@ function App() {
             
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/login-success" element={<LoginSuccess />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin-dky" element={<RegisterAdmin />} />
 
@@ -113,6 +118,9 @@ function App() {
               <Route path="banners/edit/:id" element={<BannerEdit />} />
               <Route path="activities" element={<Activity />} />
               <Route path="ratings" element={<RatingList />} />
+              <Route path="vouchers" element={<VoucherList />} />
+              <Route path="vouchers/add" element={<VoucherAdd />} />
+              <Route path="blogs" element={<BlogPage />} />
             </Route>
           </Routes>
           

@@ -149,6 +149,16 @@ const productSchema = new mongoose.Schema({
         start: Date,
         end: Date,
     }],
+    vouchers: [{
+        code: { type: String, trim: true, required: true },
+        discountType: { type: String, enum: ['percentage', 'fixed'], default: 'percentage' },
+        value: { type: Number, default: 0 },
+        startDate: { type: Date },
+        endDate: { type: Date },
+        usageLimit: { type: Number, default: 0 }, // 0 = không giới hạn
+        usedCount: { type: Number, default: 0 },
+        minOrderValue: { type: Number, default: 0 }
+    }],
     sku: {
         type: String,
         unique: true,
@@ -191,8 +201,8 @@ productSchema.pre('save', function(next) {
 });
 
 // Tạo compound index cho tìm kiếm nâng cao
-productSchema.index({ 
-    name: 'text', 
+productSchema.index({
+    name: 'text',
     description: 'text',
     tags: 'text'
 });

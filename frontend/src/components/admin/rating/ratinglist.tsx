@@ -75,10 +75,18 @@ const RatingList: React.FC = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axios.get("http://localhost:8000/api/product?limit=1000");
-      setProducts(res.data.data || []);
-    } catch {
+      const res = await axios.get("/api/product?pageSize=1000");
+      if (res.data && Array.isArray(res.data.products)) {
+        setProducts(res.data.products);
+      } else {
+        setProducts([]);
+        message.warning("Không lấy được danh sách sản phẩm hoặc dữ liệu trả về không đúng định dạng.");
+        console.error("API /api/product trả về dữ liệu không đúng định dạng:", res.data);
+      }
+    } catch (err) {
       setProducts([]);
+      message.error("Lỗi khi lấy danh sách sản phẩm");
+      console.error("Lỗi khi fetch /api/product:", err);
     }
   };
 
@@ -88,14 +96,24 @@ const RatingList: React.FC = () => {
       const res = await axios.get("http://localhost:8000/api/rating", {
         params: { page, limit: pageSize },
       });
-      setData(res.data.data);
-      setPagination({
-        current: page,
-        pageSize,
-        total: res.data.pagination.total,
-      });
-    } catch {
+      if (res.data && Array.isArray(res.data.data) && res.data.pagination) {
+        setData(res.data.data);
+        setPagination({
+          current: page,
+          pageSize,
+          total: res.data.pagination.total,
+        });
+      } else {
+        setData([]);
+        setPagination({ current: 1, pageSize: 10, total: 0 });
+        message.warning("Không lấy được danh sách đánh giá hoặc dữ liệu trả về không đúng định dạng.");
+        console.error("API /api/rating trả về dữ liệu không đúng định dạng:", res.data);
+      }
+    } catch (err) {
+      setData([]);
+      setPagination({ current: 1, pageSize: 10, total: 0 });
       message.error("Không thể tải danh sách đánh giá");
+      console.error("Lỗi khi fetch /api/rating:", err);
     } finally {
       setLoading(false);
     }

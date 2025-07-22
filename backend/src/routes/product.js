@@ -52,7 +52,10 @@ import {
     useRewardPoints,
     getTotalProductWithVariantsByName,
     getTotalProductQuantityByName,
-    searchProducts
+    searchProducts,
+    createVoucher,
+    checkVoucher,
+    updateVoucherUsage
 } from "../controllers/product";
 import { protect } from "../middlewares/authMiddleware";
 import { validateRequest } from "../middlewares/validateRequest";
@@ -134,5 +137,12 @@ routerProduct.post("/users/:userId/reward-points", protect, addRewardPoints);
 
 routerProduct.get("/total-product-with-variants-by-name", getTotalProductWithVariantsByName);
 routerProduct.get("/total-product-quantity-by-name", getTotalProductQuantityByName);
+
+// Tạo voucher cho sản phẩm (admin)
+routerProduct.post('/voucher', createVoucher);
+// Kiểm tra và áp dụng voucher (người dùng nhập lúc checkout)
+routerProduct.post('/check-voucher', checkVoucher);
+// Cập nhật lượt dùng voucher
+routerProduct.post('/voucher/update-usage', updateVoucherUsage);
 
 export default routerProduct;

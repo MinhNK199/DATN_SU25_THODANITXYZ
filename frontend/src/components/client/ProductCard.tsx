@@ -243,11 +243,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         {/* Brand Badge */}
-  <div className="text-sm text-blue-600 font-medium mb-1">
-  {typeof product.brand === "object" && product.brand !== null
-  ? product.brand.name
-  : product.brand || "Không rõ"}
-</div>
         {/* Stock Status Badge */}
         <div className="absolute top-3 right-3 transform translate-x-16">
           <div className="bg-white bg-opacity-90 text-xs font-medium px-2 py-1 rounded-full">
@@ -540,3 +535,4 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 };
 
 export default ProductCard;
+

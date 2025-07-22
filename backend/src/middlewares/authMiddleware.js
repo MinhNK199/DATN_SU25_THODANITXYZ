@@ -13,6 +13,7 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
+        console.log('Không có token');
         return res.status(401).json({ message: "Không có token, không được phép truy cập" });
     }
 
@@ -24,13 +25,15 @@ export const protect = async (req, res, next) => {
         const user = await User.findById(decoded.id).select("-password");
 
         if (!user || user.active === false) {
+            console.log('User không tồn tại hoặc bị khóa');
             return res.status(401).json({ message: "Người dùng không tồn tại hoặc đã bị khóa" });
         }
 
         req.user = user; 
+        console.log('Xác thực thành công:', user.email, user.role);
         next();
     } catch (error) {
-        console.error(error);
+        console.error('Token không hợp lệ:', error);
         res.status(401).json({ message: "Token không hợp lệ" });
     }
 };
@@ -40,6 +43,7 @@ export const checkAdmin = (requiredCheck = []) => {
         const user = req.user;
 
         if (!user) {
+            console.log('Chưa xác thực');
             return res.status(401).json({ message: "Chưa xác thực" });
         }
 
@@ -56,9 +60,11 @@ export const checkAdmin = (requiredCheck = []) => {
         const okCheck = requiredCheck.every(p => userCheck.includes(p));
 
         if (!okCheck) {
+            console.log('Không đủ quyền:', user.role, user.email);
             return res.status(403).json({ message: "Không đủ quyền để thực hiện hành động này" });
         }
 
+        console.log('Qua checkAdmin:', user.email, user.role);
         next();
     };
 };
