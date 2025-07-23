@@ -24,6 +24,16 @@ interface Ward {
   name: string;
 }
 
+// Thêm interface cho PaymentMethod
+interface PaymentMethod {
+  _id: string;
+  type: string;
+  provider?: string;
+  last4?: string;
+  name?: string;
+  phone?: string;
+}
+
 const Checkout: React.FC = () => {
   const location = useLocation();
   const summary = location.state || {};
@@ -50,9 +60,7 @@ const Checkout: React.FC = () => {
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [provinceLoading, setProvinceLoading] = useState(false);
   const [districtLoading, setDistrictLoading] = useState(false);
-  const [wardLoading, setWardLoading] = useState(false);
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
 
   // Thêm state cho thông tin bổ sung
@@ -61,20 +69,8 @@ const Checkout: React.FC = () => {
   const [bankTransferInfo, setBankTransferInfo] = useState({ transactionId: '' });
 
   // Lấy danh sách thẻ/ví đã lưu khi vào bước thanh toán
-  const [savedCards, setSavedCards] = useState<any[]>([]);
-  const [savedWallets, setSavedWallets] = useState<any[]>([]);
-  const [selectedCardId, setSelectedCardId] = useState<string>('');
-  const [selectedWalletId, setSelectedWalletId] = useState<string>('');
   const [showNewCardForm, setShowNewCardForm] = useState<boolean>(false);
   const [showNewWalletForm, setShowNewWalletForm] = useState<boolean>(false);
-
-  const cardList = [
-    { code: 'visa', name: 'Visa', logo: '/images/cards/visa.png' },
-    { code: 'mastercard', name: 'MasterCard', logo: '/images/cards/mastercard.png' },
-    { code: 'jcb', name: 'JCB', logo: '/images/cards/jcb.png' },
-    { code: 'amex', name: 'American Express', logo: '/images/cards/amex.png' },
-    { code: 'unionpay', name: 'UnionPay', logo: '/images/cards/unionpay.png' },
-  ];
 
   const [taxRate, setTaxRate] = useState(0.08);
   useEffect(() => {
@@ -84,22 +80,6 @@ const Checkout: React.FC = () => {
       .catch(() => {});
     getTaxConfig().then(cfg => setTaxRate(cfg.rate)).catch(() => setTaxRate(0.08));
   }, []);
-
-  // Thêm hàm fetchWardsByProvinceCode để dùng lại
-  const fetchWardsByProvinceCode = (provinceCode: string) => {
-    setWardLoading(true);
-    axios
-      .get(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`)
-      .then((r) => {
-        const allWards = [];
-        (r.data.districts || []).forEach((d: any) => {
-          if (Array.isArray(d.wards)) allWards.push(...d.wards);
-        });
-        setWards(allWards);
-      })
-      .catch(() => setWards([]))
-      .finally(() => setWardLoading(false));
-  };
 
   // Fetch districts khi chọn tỉnh
   const fetchDistrictsByProvinceCode = (provinceCode: string) => {
@@ -111,18 +91,6 @@ const Checkout: React.FC = () => {
       })
       .catch(() => setDistricts([]))
       .finally(() => setDistrictLoading(false));
-  };
-
-  // Fetch wards khi chọn quận
-  const fetchWardsByDistrictCode = (districtCode: string) => {
-    setWardLoading(true);
-    axios
-      .get(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`)
-      .then((r) => {
-        setWards(r.data.wards || []);
-      })
-      .catch(() => setWards([]))
-      .finally(() => setWardLoading(false));
   };
 
   // Khi chọn tỉnh, fetch quận/huyện và reset quận, phường
@@ -142,7 +110,6 @@ const Checkout: React.FC = () => {
   // Khi chọn quận, fetch phường
   useEffect(() => {
     if (formData.district_code) {
-      fetchWardsByDistrictCode(formData.district_code);
       setFormData(f => ({ ...f, ward_code: '' }));
     } else {
       setWards([]);
@@ -151,8 +118,13 @@ const Checkout: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData.district_code]);
 
+  const userApiWithExtra = userApi as typeof userApi & {
+    getAddresses?: () => Promise<Address[]>;
+    getMyPaymentMethods?: () => Promise<{ methods: PaymentMethod[] }>;
+  };
+
   useEffect(() => {
-    userApi.getAddresses?.().then((data: Address[]) => {
+    userApiWithExtra.getAddresses?.().then((data: Address[]) => {
       setAddresses(data);
       const defaultAddress = data.find(a => a.isDefault) || data[0];
       if (defaultAddress) {
@@ -168,7 +140,6 @@ const Checkout: React.FC = () => {
           ward_code: defaultAddress.ward,
         }));
         if (defaultAddress.city) fetchDistrictsByProvinceCode(defaultAddress.city);
-        if (defaultAddress.district) fetchWardsByDistrictCode(defaultAddress.district);
       } else {
         setSelectedAddressId('new');
       }
@@ -178,10 +149,7 @@ const Checkout: React.FC = () => {
   // Lấy danh sách thẻ/ví đã lưu khi vào bước thanh toán
   useEffect(() => {
     if (currentStep === 2) {
-      userApi.getMyPaymentMethods().then(res => {
-        setSavedCards(res.methods.filter((m: any) => m.type === 'credit_card'));
-        setSavedWallets(res.methods.filter((m: any) => m.type === 'e_wallet'));
-      });
+      userApiWithExtra.getMyPaymentMethods?.();
     }
   }, [currentStep]);
 
@@ -219,9 +187,6 @@ const Checkout: React.FC = () => {
         // B2: fetch quận/huyện, sau đó set quận/huyện
         await fetchDistrictsByProvinceCode(addr.city);
         setFormData(f => ({ ...f, district_code: addr.district, ward_code: '' }));
-        // B3: fetch phường/xã, sau đó set phường/xã
-        await fetchWardsByDistrictCode(addr.district);
-        setFormData(f => ({ ...f, ward_code: addr.ward }));
       }
     }
   };
@@ -329,8 +294,9 @@ const Checkout: React.FC = () => {
         clearCart();
         showSuccess('Đặt hàng thành công!', `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`);
       }
-    } catch (err: any) {
-      showError('Đặt hàng thất bại', err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+    } catch (err) {
+      const error = err as Error;
+      showError('Đặt hàng thất bại', error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setIsProcessing(false);
     }
@@ -344,7 +310,6 @@ const Checkout: React.FC = () => {
 
   // Khi render, ưu tiên lấy subtotal, savings, shipping, tax, total từ summary nếu có
   const subtotal = typeof summary.subtotal === 'number' ? summary.subtotal : cartState.total;
-  const savings = typeof summary.savings === 'number' ? summary.savings : 0;
   const shippingFee = typeof summary.shipping === 'number' ? summary.shipping : (cartState.total > 500000 ? 0 : 30000);
   const taxPrice = typeof summary.tax === 'number' ? summary.tax : (cartState.total * taxRate);
   const finalTotal = subtotal + shippingFee + taxPrice;
@@ -515,10 +480,24 @@ const Checkout: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
                         <Select
-                          options={provinces.map((p: any) => ({ value: String(p.code), label: p.name }))}
-                          isLoading={provinceLoading}
-                          value={provinces.find((p: any) => String(p.code) === formData.province_code) ? { value: formData.province_code, label: provinces.find((p: any) => String(p.code) === formData.province_code)?.name } : null}
-                          onChange={option => setFormData(f => ({ ...f, province_code: option?.value || '' }))}
+                          options={provinces.map((p) => ({ value: String(p.code), label: p.name }))}
+                          value={
+                            provinces.find((p) => String(p.code) === formData.province_code)
+                              ? {
+                                  value: formData.province_code,
+                                  label:
+                                    provinces.find((p) => String(p.code) === formData.province_code)?.name ?? ''
+                                }
+                              : null
+                          }
+                          onChange={option =>
+                            setFormData(f => ({
+                              ...f,
+                              province_code: option?.value || '',
+                              district_code: '', // reset district when province changes
+                              ward_code: '' // reset ward when province changes
+                            }))
+                          }
                           placeholder="Chọn tỉnh/thành phố..."
                           isClearable
                           classNamePrefix="react-select"
@@ -528,9 +507,11 @@ const Checkout: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện</label>
                         <Select
-                          options={districts.map((d: any) => ({ value: String(d.code), label: d.name }))}
+                          options={districts.map((d) => ({ value: String(d.code), label: d.name }))}
                           isLoading={districtLoading}
-                          value={districts.find((d: any) => String(d.code) === formData.district_code) ? { value: formData.district_code, label: districts.find((d: any) => String(d.code) === formData.district_code)?.name } : null}
+                          value={districts.find((d) => String(d.code) === formData.district_code)
+                            ? { value: formData.district_code, label: districts.find((d) => String(d.code) === formData.district_code)?.name ?? '' }
+                            : null}
                           onChange={option => setFormData(f => ({ ...f, district_code: option?.value || '' }))}
                           placeholder="Chọn quận/huyện..."
                           isClearable
@@ -542,9 +523,10 @@ const Checkout: React.FC = () => {
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Xã/Phường/Thị trấn</label>
                         <Select
-                          options={wards.map((w: any) => ({ value: String(w.code), label: w.name }))}
-                          isLoading={wardLoading}
-                          value={wards.find((w: any) => String(w.code) === formData.ward_code) ? { value: formData.ward_code, label: wards.find((w: any) => String(w.code) === formData.ward_code)?.name } : null}
+                          options={wards.map((w) => ({ value: String(w.code), label: w.name }))}
+                          value={wards.find((w) => String(w.code) === formData.ward_code)
+                            ? { value: formData.ward_code, label: wards.find((w) => String(w.code) === formData.ward_code)?.name ?? '' }
+                            : null}
                           onChange={option => setFormData(f => ({ ...f, ward_code: option?.value || '' }))}
                           placeholder="Chọn xã/phường/thị trấn..."
                           isClearable
@@ -597,7 +579,6 @@ const Checkout: React.FC = () => {
                             onChange={e => {
                               handleInputChange(e);
                               setShowNewCardForm(false);
-                              setSelectedCardId('');
                             }}
                             className="w-4 h-4 text-blue-600"
                           />
@@ -606,45 +587,7 @@ const Checkout: React.FC = () => {
                         </label>
                         {formData.paymentMethod === 'credit-card' && (
                           <div className="mt-4">
-                            {savedCards.length > 0 && (
-                              <div className="mb-2 space-y-2">
-                                {savedCards.map(card => {
-                                  const cardType = card.provider || card.type || '';
-                                  const cardMeta = cardList.find(c => c.code.toLowerCase() === cardType?.toLowerCase());
-                                  return (
-                                    <label key={card._id} className="flex items-center cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition">
-                                      <input
-                                        type="radio"
-                                        name="saved-card"
-                                        value={card._id}
-                                        checked={selectedCardId === card._id}
-                                        onChange={() => { setSelectedCardId(card._id); setShowNewCardForm(false); }}
-                                        className="mr-4"
-                                      />
-                                      {cardMeta && (
-                                        <img src={cardMeta.logo} alt={cardMeta.name} className="w-14 h-14 mr-6 object-contain" />
-                                      )}
-                                      <div className="flex flex-col">
-                                        <span className="font-semibold text-lg">{cardMeta ? cardMeta.name : 'Thẻ'} {card.last4 ? `**** ${card.last4}` : ''}</span>
-                                        <span className="text-gray-700 text-base">Chủ thẻ: <b>{card.name}</b></span>
-                                      </div>
-                                    </label>
-                                  );
-                                })}
-                                <label className="flex items-center cursor-pointer p-3 border rounded-lg hover:bg-gray-50 transition">
-                                  <input
-                                    type="radio"
-                                    name="saved-card"
-                                    value="new"
-                                    checked={showNewCardForm}
-                                    onChange={() => { setShowNewCardForm(true); setSelectedCardId(''); }}
-                                    className="mr-4"
-                                  />
-                                  <span className="font-medium text-blue-600">Thêm thẻ mới</span>
-                                </label>
-                              </div>
-                            )}
-                            {(showNewCardForm || savedCards.length === 0) && (
+                            {(showNewCardForm || true) && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <input
                                   type="text"
@@ -694,7 +637,6 @@ const Checkout: React.FC = () => {
                             onChange={e => {
                               handleInputChange(e);
                               setShowNewWalletForm(false);
-                              setSelectedWalletId('');
                             }}
                             className="w-4 h-4 text-blue-600"
                           />
@@ -703,35 +645,7 @@ const Checkout: React.FC = () => {
                         </label>
                         {formData.paymentMethod === 'e-wallet' && (
                           <div className="mt-4">
-                            {savedWallets.length > 0 && (
-                              <div className="mb-2 space-y-2">
-                                {savedWallets.map(wallet => (
-                                  <label key={wallet._id} className="flex items-center cursor-pointer">
-                                    <input
-                                      type="radio"
-                                      name="saved-wallet"
-                                      value={wallet._id}
-                                      checked={selectedWalletId === wallet._id}
-                                      onChange={() => { setSelectedWalletId(wallet._id); setShowNewWalletForm(false); }}
-                                      className="mr-2"
-                                    />
-                                    <span className="font-medium">{wallet.type?.toUpperCase()} - {wallet.phone}</span>
-                                  </label>
-                                ))}
-                                <label className="flex items-center cursor-pointer">
-                                  <input
-                                    type="radio"
-                                    name="saved-wallet"
-                                    value="new"
-                                    checked={showNewWalletForm}
-                                    onChange={() => { setShowNewWalletForm(true); setSelectedWalletId(''); }}
-                                    className="mr-2"
-                                  />
-                                  <span className="font-medium text-blue-600">Thêm ví mới</span>
-                                </label>
-                              </div>
-                            )}
-                            {(showNewWalletForm || savedWallets.length === 0) && (
+                            {(showNewWalletForm || true) && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <select
                                   value={walletInfo.type}
