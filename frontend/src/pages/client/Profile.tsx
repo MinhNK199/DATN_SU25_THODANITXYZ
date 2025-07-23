@@ -2763,93 +2763,92 @@ const Profile: React.FC = () => {
                 </div>
               )}
               {/* Notification Tab */}
-              {activeTab === "notification" && (
-                <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      Thông báo
-                    </h2>
-                    <button
-                      onClick={handleMarkAllAsRead}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Đánh dấu tất cả đã đọc
-                    </button>
+             {activeTab === "notification" && (
+  <div className="bg-white rounded-2xl shadow-lg p-8">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-900">Thông báo</h2>
+      <button
+        onClick={handleMarkAllAsRead}
+        className="text-blue-600 hover:underline text-sm"
+      >
+        Đánh dấu tất cả đã đọc
+      </button>
+    </div>
+
+    {notificationLoading ? (
+      <div className="text-center py-8">Đang tải...</div>
+    ) : notifications.length === 0 ? (
+      <div className="text-center py-8 text-gray-500">
+        Không có thông báo nào.
+      </div>
+    ) : (
+      <>
+        <ul className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+          {paginatedNotifications.map((n, idx) => (
+            <li
+              key={n._id || idx}
+              className={`py-4 px-2 sm:px-0 ${
+                n.isRead ? "" : "bg-blue-50"
+              }`}
+            >
+              <div className="flex justify-between gap-4 items-start">
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{n.title}</div>
+                  <div className="text-sm text-gray-600">{n.message}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    {new Date(n.createdAt).toLocaleString("vi-VN")}
                   </div>
-                  {notificationLoading ? (
-                    <div className="text-center py-8">Đang tải...</div>
-                  ) : notifications.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      Không có thông báo nào.
-                    </div>
-                  ) : (
-                    <>
-                      <ul className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-                        {paginatedNotifications.map((n, idx) => (
-                          <li
-                            key={n._id || idx}
-                            className={`py-3 flex items-center justify-between ${
-                              n.isRead ? "" : "bg-blue-50"
-                            }`}
-                          >
-                            <div>
-                              <div className="font-medium">{n.title}</div>
-                              <div className="text-sm text-gray-600">
-                                {n.message}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {new Date(n.createdAt).toLocaleString("vi-VN")}
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2 items-end">
-                              {!n.isRead && (
-                                <button
-                                  onClick={() => handleMarkAsRead(n._id)}
-                                  className="text-blue-600 hover:underline text-sm"
-                                >
-                                  Đánh dấu đã đọc
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteNotification(n._id)}
-                                className="text-red-600 hover:underline text-sm"
-                              >
-                                Xoá
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                      {/* Phân trang */}
-                      <div className="flex justify-center items-center gap-2 mt-4">
-                        <button
-                          className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                          onClick={() =>
-                            setNotificationPage((p) => Math.max(1, p - 1))
-                          }
-                          disabled={notificationPage === 1}
-                        >
-                          Trước
-                        </button>
-                        <span className="mx-2 text-sm">
-                          Trang {notificationPage} / {totalNotificationPages}
-                        </span>
-                        <button
-                          className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                          onClick={() =>
-                            setNotificationPage((p) =>
-                              Math.min(totalNotificationPages, p + 1)
-                            )
-                          }
-                          disabled={notificationPage === totalNotificationPages}
-                        >
-                          Sau
-                        </button>
-                      </div>
-                    </>
-                  )}
                 </div>
-              )}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  {!n.isRead && (
+                    <button
+                      onClick={() => handleMarkAsRead(n._id)}
+                      className="text-blue-600 hover:underline text-sm"
+                    >
+                      Đánh dấu đã đọc
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDeleteNotification(n._id)}
+                    className="text-red-600 hover:underline text-sm"
+                  >
+                    Xoá
+                  </button>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {/* Pagination */}
+        <div className="flex justify-center items-center gap-2 mt-4">
+          <button
+            className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+            onClick={() => setNotificationPage((p) => Math.max(1, p - 1))}
+            disabled={notificationPage === 1}
+          >
+            Trước
+          </button>
+          <span className="mx-2 text-sm">
+            Trang {notificationPage} / {totalNotificationPages}
+          </span>
+          <button
+            className="px-3 py-1 rounded border text-sm disabled:opacity-50"
+            onClick={() =>
+              setNotificationPage((p) =>
+                Math.min(totalNotificationPages, p + 1)
+              )
+            }
+            disabled={notificationPage === totalNotificationPages}
+          >
+            Sau
+          </button>
+        </div>
+      </>
+    )}
+  </div>
+)}
+
             </div>
           </div>
         </div>
