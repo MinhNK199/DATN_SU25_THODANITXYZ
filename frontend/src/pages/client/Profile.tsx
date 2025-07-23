@@ -21,7 +21,7 @@ import {
   FaBell,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import userApi, { User, Address, Order } from "../../services/userApi";
+import { userApi, User, Address, Order } from "../../services/userApi";
 import toast from "react-hot-toast";
 import { useLocation } from "react-router-dom";
 import wishlistApi from "../../services/wishlistApi";
@@ -30,7 +30,7 @@ import cartApi from "../../services/cartApi";
 import { getOrderById, requestRefund } from "../../services/orderApi";
 import { Order as OrderDetailType } from "../../interfaces/Order";
 import ScrollToTop from "../../components/ScrollToTop";
-import Select from 'react-select';
+import Select from "react-select";
 
 // Tự định nghĩa usePrevious
 function usePrevious<T>(value: T): T | undefined {
@@ -54,7 +54,7 @@ const Profile: React.FC = () => {
 
   // Tự động cuộn lên đầu khi chuyển tab
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -100,9 +100,9 @@ const Profile: React.FC = () => {
 
   // State cho đổi mật khẩu
   const [passwordForm, setPasswordForm] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
 
@@ -132,7 +132,9 @@ const Profile: React.FC = () => {
   const [showSensitiveModal, setShowSensitiveModal] = useState(false);
   const [sensitivePassword, setSensitivePassword] = useState("");
   const [sensitiveLoading, setSensitiveLoading] = useState(false);
-  const [pendingProfileForm, setPendingProfileForm] = useState<typeof profileForm | null>(null);
+  const [pendingProfileForm, setPendingProfileForm] = useState<
+    typeof profileForm | null
+  >(null);
 
   // State cho activity log
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
@@ -142,7 +144,13 @@ const Profile: React.FC = () => {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
-  const [addPaymentForm, setAddPaymentForm] = useState({ type: 'credit_card', provider: '', last4: '', expired: '', token: '' });
+  const [addPaymentForm, setAddPaymentForm] = useState({
+    type: "credit_card",
+    provider: "",
+    last4: "",
+    expired: "",
+    token: "",
+  });
   const [addPaymentLoading, setAddPaymentLoading] = useState(false);
 
   // State cho thông báo
@@ -156,29 +164,41 @@ const Profile: React.FC = () => {
     { code: "momo", name: "Momo", logo: "/images/wallets/momo.png" },
     { code: "zalopay", name: "ZaloPay", logo: "/images/wallets/zalopay.png" },
     { code: "vnpay", name: "VNPAY", logo: "/images/wallets/vnpay.png" },
-    { code: "shopeepay", name: "ShopeePay", logo: "/images/wallets/shopeepay.png" },
-    { code: "viettelmoney", name: "Viettel Money", logo: "/images/wallets/viettelmoney.png" },
+    {
+      code: "shopeepay",
+      name: "ShopeePay",
+      logo: "/images/wallets/shopeepay.png",
+    },
+    {
+      code: "viettelmoney",
+      name: "Viettel Money",
+      logo: "/images/wallets/viettelmoney.png",
+    },
     { code: "onepay", name: "OnePay", logo: "/images/wallets/onepay.png" },
     { code: "neox", name: "NeoX", logo: "/images/wallets/neox.png" },
   ];
 
   const cardList = [
-    { code: 'visa', name: 'Visa', logo: '/images/cards/visa.png' },
-    { code: 'mastercard', name: 'MasterCard', logo: '/images/cards/mastercard.png' },
-    { code: 'jcb', name: 'JCB', logo: '/images/cards/jcb.png' },
-    { code: 'amex', name: 'American Express', logo: '/images/cards/amex.png' },
-    { code: 'unionpay', name: 'UnionPay', logo: '/images/cards/unionpay.png' },
+    { code: "visa", name: "Visa", logo: "/images/cards/visa.png" },
+    {
+      code: "mastercard",
+      name: "MasterCard",
+      logo: "/images/cards/mastercard.png",
+    },
+    { code: "jcb", name: "JCB", logo: "/images/cards/jcb.png" },
+    { code: "amex", name: "American Express", logo: "/images/cards/amex.png" },
+    { code: "unionpay", name: "UnionPay", logo: "/images/cards/unionpay.png" },
   ];
 
   useEffect(() => {
     // Fetch danh sách ngân hàng Việt Nam từ API VietQR (chuẩn code + tên tiếng Việt)
     fetch("https://api.vietqr.io/v2/banks")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         const banks = data.data.map((b: any) => ({
           code: b.code.toLowerCase(), // mã chuẩn, ví dụ: vcb, bidv, tcb, ...
           name: b.name, // tên tiếng Việt có dấu
-          logo: `/images/banks/${b.code.toLowerCase()}.png`
+          logo: `/images/banks/${b.code.toLowerCase()}.png`,
         }));
         setBankList(banks);
       })
@@ -207,10 +227,11 @@ const Profile: React.FC = () => {
 
   // Load activity log khi vào tab
   useEffect(() => {
-    if (activeTab === 'activity') {
+    if (activeTab === "activity") {
       setActivityLoading(true);
-      userApi.getMyActivityLogs()
-        .then(res => setActivityLogs(res.logs))
+      userApi
+        .getMyActivityLogs()
+        .then((res) => setActivityLogs(res.logs))
         .catch(() => setActivityLogs([]))
         .finally(() => setActivityLoading(false));
     }
@@ -218,10 +239,11 @@ const Profile: React.FC = () => {
 
   // Load payment methods khi vào tab
   useEffect(() => {
-    if (activeTab === 'payment') {
+    if (activeTab === "payment") {
       setPaymentLoading(true);
-      userApi.getMyPaymentMethods()
-        .then(res => setPaymentMethods(res.methods))
+      userApi
+        .getMyPaymentMethods()
+        .then((res) => setPaymentMethods(res.methods))
         .catch(() => setPaymentMethods([]))
         .finally(() => setPaymentLoading(false));
     }
@@ -229,13 +251,17 @@ const Profile: React.FC = () => {
 
   // Load notifications khi vào tab
   useEffect(() => {
-    if (activeTab === 'notification') {
+    if (activeTab === "notification") {
       setNotificationLoading(true);
-      userApi.getNotifications()
-        .then(res => setNotifications(res))
+      userApi
+        .getNotifications()
+        .then((res) => setNotifications(res))
         .catch(() => setNotifications([]))
         .finally(() => setNotificationLoading(false));
-      userApi.getUnreadNotificationCount().then(setUnreadCount).catch(() => setUnreadCount(0));
+      userApi
+        .getUnreadNotificationCount()
+        .then(setUnreadCount)
+        .catch(() => setUnreadCount(0));
     }
   }, [activeTab]);
 
@@ -273,7 +299,8 @@ const Profile: React.FC = () => {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    const isSensitive = profileForm.email !== user.email || profileForm.phone !== user.phone;
+    const isSensitive =
+      profileForm.email !== user.email || profileForm.phone !== user.phone;
     if (isSensitive) {
       setPendingProfileForm(profileForm);
       setShowSensitiveModal(true);
@@ -376,7 +403,8 @@ const Profile: React.FC = () => {
       toast.success("Xóa địa chỉ thành công");
     } catch (error: any) {
       console.error("Error deleting address:", error);
-      const errorMessage = error?.response?.data?.message || "Không thể xóa địa chỉ";
+      const errorMessage =
+        error?.response?.data?.message || "Không thể xóa địa chỉ";
       toast.error(errorMessage);
     }
   };
@@ -403,10 +431,14 @@ const Profile: React.FC = () => {
     setPasswordLoading(true);
     try {
       await userApi.changePassword(passwordForm);
-      toast.success('Đổi mật khẩu thành công');
-      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+      toast.success("Đổi mật khẩu thành công");
+      setPasswordForm({
+        oldPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Đổi mật khẩu thất bại');
+      toast.error(error?.response?.data?.message || "Đổi mật khẩu thất bại");
     } finally {
       setPasswordLoading(false);
     }
@@ -428,22 +460,27 @@ const Profile: React.FC = () => {
     try {
       // Upload lên Cloudinary
       const formData = new FormData();
-      formData.append('file', avatarFile);
-      formData.append('upload_preset', 'ml_default'); // Thay bằng preset của bạn nếu có
-      const res = await fetch('https://api.cloudinary.com/v1_1/demo/image/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      formData.append("file", avatarFile);
+      formData.append("upload_preset", "ml_default"); // Thay bằng preset của bạn nếu có
+      const res = await fetch(
+        "https://api.cloudinary.com/v1_1/demo/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       const data = await res.json();
-      if (!data.secure_url) throw new Error('Upload thất bại');
+      if (!data.secure_url) throw new Error("Upload thất bại");
       // Cập nhật avatar qua API
-      const updatedUser = await userApi.updateProfile(user._id, { avatar: data.secure_url });
+      const updatedUser = await userApi.updateProfile(user._id, {
+        avatar: data.secure_url,
+      });
       setUser(updatedUser);
-      toast.success('Cập nhật avatar thành công');
+      toast.success("Cập nhật avatar thành công");
       setAvatarFile(null);
       setAvatarPreview(null);
     } catch (error) {
-      toast.error('Cập nhật avatar thất bại');
+      toast.error("Cập nhật avatar thất bại");
     } finally {
       setAvatarLoading(false);
     }
@@ -459,9 +496,9 @@ const Profile: React.FC = () => {
         privacySettings,
       });
       setUser(updatedUser);
-      toast.success('Lưu cài đặt thành công');
+      toast.success("Lưu cài đặt thành công");
     } catch (error) {
-      toast.error('Lưu cài đặt thất bại');
+      toast.error("Lưu cài đặt thất bại");
     } finally {
       setSettingsLoading(false);
     }
@@ -559,7 +596,11 @@ const Profile: React.FC = () => {
     { id: "wishlist", label: "Yêu thích", icon: FaHeart },
     { id: "addresses", label: "Địa chỉ", icon: FaMapMarkerAlt },
     { id: "payment", label: "Phương thức thanh toán", icon: FaCreditCard },
-    { id: "notification", label: `Thông báo${unreadCount > 0 ? ' (' + unreadCount + ')' : ''}`, icon: FaBell },
+    {
+      id: "notification",
+      label: `Thông báo${unreadCount > 0 ? " (" + unreadCount + ")" : ""}`,
+      icon: FaBell,
+    },
     { id: "settings", label: "Cài đặt", icon: FaCog },
     { id: "password", label: "Đổi mật khẩu", icon: FaLock },
     { id: "activity", label: "Lịch sử hoạt động", icon: FaRegClock },
@@ -573,7 +614,7 @@ const Profile: React.FC = () => {
       const data = await getOrderById(orderId);
       setOrderDetail(data);
     } catch (error) {
-      toast.error('Không thể tải chi tiết đơn hàng');
+      toast.error("Không thể tải chi tiết đơn hàng");
       setOrderDetail(null);
     } finally {
       setOrderDetailLoading(false);
@@ -593,9 +634,16 @@ const Profile: React.FC = () => {
     setSensitiveLoading(true);
     try {
       // Gọi API xác thực mật khẩu (dùng endpoint đổi mật khẩu với oldPassword, newPassword = oldPassword)
-      await userApi.changePassword({ oldPassword: sensitivePassword, newPassword: sensitivePassword, confirmPassword: sensitivePassword });
+      await userApi.changePassword({
+        oldPassword: sensitivePassword,
+        newPassword: sensitivePassword,
+        confirmPassword: sensitivePassword,
+      });
       // Nếu xác thực thành công, cập nhật thông tin
-      const updatedUser = await userApi.updateProfile(user._id, pendingProfileForm);
+      const updatedUser = await userApi.updateProfile(
+        user._id,
+        pendingProfileForm
+      );
       setUser(updatedUser);
       setIsEditing(false);
       toast.success("Cập nhật thông tin thành công");
@@ -603,7 +651,9 @@ const Profile: React.FC = () => {
       setSensitivePassword("");
       setPendingProfileForm(null);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Mật khẩu xác thực không đúng");
+      toast.error(
+        error?.response?.data?.message || "Mật khẩu xác thực không đúng"
+      );
     } finally {
       setSensitiveLoading(false);
     }
@@ -615,15 +665,21 @@ const Profile: React.FC = () => {
     setAddPaymentLoading(true);
     try {
       await userApi.addPaymentMethod(addPaymentForm);
-      toast.success('Thêm phương thức thanh toán thành công');
+      toast.success("Thêm phương thức thanh toán thành công");
       setShowAddPayment(false);
-      setAddPaymentForm({ type: 'credit_card', provider: '', last4: '', expired: '', token: '' });
+      setAddPaymentForm({
+        type: "credit_card",
+        provider: "",
+        last4: "",
+        expired: "",
+        token: "",
+      });
       // Reload
       setPaymentLoading(true);
       const res = await userApi.getMyPaymentMethods();
       setPaymentMethods(res.methods);
     } catch (error) {
-      toast.error('Thêm phương thức thanh toán thất bại');
+      toast.error("Thêm phương thức thanh toán thất bại");
     } finally {
       setAddPaymentLoading(false);
       setPaymentLoading(false);
@@ -632,13 +688,13 @@ const Profile: React.FC = () => {
 
   // Xoá phương thức thanh toán
   const handleDeletePaymentMethod = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xoá phương thức này?')) return;
+    if (!window.confirm("Bạn có chắc muốn xoá phương thức này?")) return;
     try {
       await userApi.deletePaymentMethod(id);
-      toast.success('Đã xoá phương thức thanh toán');
-      setPaymentMethods(methods => methods.filter(m => m._id !== id));
+      toast.success("Đã xoá phương thức thanh toán");
+      setPaymentMethods((methods) => methods.filter((m) => m._id !== id));
     } catch (error) {
-      toast.error('Xoá thất bại');
+      toast.error("Xoá thất bại");
     }
   };
 
@@ -646,24 +702,26 @@ const Profile: React.FC = () => {
   const handleMarkAsRead = async (id: string) => {
     try {
       await userApi.markNotificationAsRead(id);
-      setNotifications(n => n.map(x => x._id === id ? { ...x, isRead: true } : x));
-      setUnreadCount(c => Math.max(0, c - 1));
+      setNotifications((n) =>
+        n.map((x) => (x._id === id ? { ...x, isRead: true } : x))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
     } catch {}
   };
   // Đánh dấu tất cả đã đọc
   const handleMarkAllAsRead = async () => {
     try {
       await userApi.markAllNotificationsAsRead();
-      setNotifications(n => n.map(x => ({ ...x, isRead: true })));
+      setNotifications((n) => n.map((x) => ({ ...x, isRead: true })));
       setUnreadCount(0);
     } catch {}
   };
   // Xoá thông báo
   const handleDeleteNotification = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xoá thông báo này?')) return;
+    if (!window.confirm("Bạn có chắc muốn xoá thông báo này?")) return;
     try {
       await userApi.deleteNotification(id);
-      setNotifications(n => n.filter(x => x._id !== id));
+      setNotifications((n) => n.filter((x) => x._id !== id));
     } catch {}
   };
 
@@ -677,15 +735,17 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (showAddAddressForm || showEditAddressForm || editingAddress) {
       setProvinceLoading(true);
-      fetch('/api/provinces')
-        .then(res => res.json())
-        .then(data => {
+      fetch("/api/provinces")
+        .then((res) => res.json())
+        .then((data) => {
           setProvinces(data);
         })
-        .catch(err => {
+        .catch((err) => {
           setProvinces([]);
-          toast.error('Không thể tải danh sách tỉnh/thành phố. Vui lòng thử lại hoặc kiểm tra kết nối mạng.');
-          console.error('Lỗi fetch tỉnh/thành phố:', err);
+          toast.error(
+            "Không thể tải danh sách tỉnh/thành phố. Vui lòng thử lại hoặc kiểm tra kết nối mạng."
+          );
+          console.error("Lỗi fetch tỉnh/thành phố:", err);
         })
         .finally(() => setProvinceLoading(false));
     }
@@ -696,7 +756,7 @@ const Profile: React.FC = () => {
     "Thành phố Hồ Chí Minh",
     "Thành phố Hải Phòng",
     "Thành phố Đà Nẵng",
-    "Thành phố Cần Thơ"
+    "Thành phố Cần Thơ",
   ];
   const [districts, setDistricts] = useState<any[]>([]);
   const [districtLoading, setDistrictLoading] = useState(false);
@@ -709,14 +769,14 @@ const Profile: React.FC = () => {
       return;
     }
     fetch(`/api/districts?provinceCode=${addAddressForm.city}`)
-      .then(res => res.json())
-      .then(districtsData => {
+      .then((res) => res.json())
+      .then((districtsData) => {
         setDistricts(districtsData);
         if (!districtsData || districtsData.length === 0) {
           // Không có quận/huyện, fetch luôn toàn bộ phường/xã của tỉnh
           fetch(`/api/wards?provinceCode=${addAddressForm.city}`)
-            .then(res => res.json())
-            .then(wardsData => setWards(wardsData));
+            .then((res) => res.json())
+            .then((wardsData) => setWards(wardsData));
         } else {
           setWards([]);
         }
@@ -727,26 +787,34 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (!addAddressForm.city || !addAddressForm.district) return;
     if (districts.length === 0) return; // Không có quận/huyện thì không fetch theo quận
-    fetch(`/api/wards?provinceCode=${addAddressForm.city}&districtCode=${addAddressForm.district}`)
-      .then(res => res.json())
-      .then(data => setWards(data));
+    fetch(
+      `/api/wards?provinceCode=${addAddressForm.city}&districtCode=${addAddressForm.district}`
+    )
+      .then((res) => res.json())
+      .then((data) => setWards(data));
   }, [addAddressForm.district, addAddressForm.city, districts.length]);
 
   // Khi chọn tỉnh trong form edit, nếu là TP trực thuộc TW thì fetch quận/huyện, ngược lại fetch xã/phường luôn
   useEffect(() => {
-    const selectedProvince = provinces.find((p: any) => p.code === editAddressForm.city);
+    const selectedProvince = provinces.find(
+      (p: any) => p.code === editAddressForm.city
+    );
     if (!editAddressForm.city) {
-      setDistricts([]); setWards([]);
-      setEditAddressForm(f => ({ ...f, district: '', ward: '' }));
+      setDistricts([]);
+      setWards([]);
+      setEditAddressForm((f) => ({ ...f, district: "", ward: "" }));
       return;
     }
-    if (selectedProvince && centrallyGovernedCities.includes(selectedProvince.name)) {
+    if (
+      selectedProvince &&
+      centrallyGovernedCities.includes(selectedProvince.name)
+    ) {
       setDistrictLoading(true);
       fetch(`/api/districts?provinceCode=${editAddressForm.city}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           setDistricts(data);
-          setEditAddressForm(f => ({ ...f, district: '', ward: '' }));
+          setEditAddressForm((f) => ({ ...f, district: "", ward: "" }));
           setWards([]);
         })
         .catch(() => setDistricts([]))
@@ -756,10 +824,10 @@ const Profile: React.FC = () => {
       setDistrictLoading(false);
       setWardLoading(true);
       fetch(`/api/wards?provinceCode=${editAddressForm.city}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           setWards(data);
-          setEditAddressForm(f => ({ ...f, ward: '' }));
+          setEditAddressForm((f) => ({ ...f, ward: "" }));
         })
         .catch(() => setWards([]))
         .finally(() => setWardLoading(false));
@@ -770,9 +838,11 @@ const Profile: React.FC = () => {
   useEffect(() => {
     if (!editAddressForm.city || !editAddressForm.district) return;
     if (districts.length === 0) return; // Không có quận/huyện thì không fetch theo quận
-    fetch(`/api/wards?provinceCode=${editAddressForm.city}&districtCode=${editAddressForm.district}`)
-        .then(res => res.json())
-      .then(data => setWards(data));
+    fetch(
+      `/api/wards?provinceCode=${editAddressForm.city}&districtCode=${editAddressForm.district}`
+    )
+      .then((res) => res.json())
+      .then((data) => setWards(data));
   }, [editAddressForm.district, editAddressForm.city, districts.length]);
 
   useEffect(() => {
@@ -786,25 +856,29 @@ const Profile: React.FC = () => {
 
   const handleEditAddress = (address: Address) => {
     setShowEditAddressForm(true);
-          setEditingAddress(address);
+    setEditingAddress(address);
     setEditAddressForm({
-            type: address.type,
-            fullName: address.fullName,
-            phone: address.phone,
-            address: address.address,
-            city: address.city,
-            district: address.district,
-            ward: address.ward,
-            postalCode: address.postalCode,
-            note: address.note,
-          });
+      type: address.type,
+      fullName: address.fullName,
+      phone: address.phone,
+      address: address.address,
+      city: address.city,
+      district: address.district,
+      ward: address.ward,
+      postalCode: address.postalCode,
+      note: address.note,
+    });
     if (address.city) {
       fetch(`/api/districts?provinceCode=${address.city}`)
-        .then(res => res.json())
-        .then(data => setDistricts(data));
-      fetch(`/api/wards?provinceCode=${address.city}${address.district ? `&districtCode=${address.district}` : ''}`)
-        .then(res => res.json())
-        .then(data => setWards(data));
+        .then((res) => res.json())
+        .then((data) => setDistricts(data));
+      fetch(
+        `/api/wards?provinceCode=${address.city}${
+          address.district ? `&districtCode=${address.district}` : ""
+        }`
+      )
+        .then((res) => res.json())
+        .then((data) => setWards(data));
     }
   };
 
@@ -829,7 +903,10 @@ const Profile: React.FC = () => {
       setPaymentMethods(res.methods);
       toast.success("Cập nhật phương thức thanh toán thành công!");
     } catch (error: any) {
-      const msg = error?.response?.data?.message || error?.message || 'Cập nhật phương thức thất bại';
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Cập nhật phương thức thất bại";
       toast.error(msg);
     } finally {
       setEditPaymentLoading(false);
@@ -837,8 +914,14 @@ const Profile: React.FC = () => {
     }
   };
 
-  const getBankLogo = (bank) => `/images/banks/${(bank.code || bank.value || '').toLowerCase().replace(/\s+/g, '')}.png`;
-  const getEWalletLogo = (wallet) => `/images/wallets/${(wallet.code || wallet.value || '').toLowerCase().replace(/\s+/g, '')}.png`;
+  const getBankLogo = (bank) =>
+    `/images/banks/${(bank.code || bank.value || "")
+      .toLowerCase()
+      .replace(/\s+/g, "")}.png`;
+  const getEWalletLogo = (wallet) =>
+    `/images/wallets/${(wallet.code || wallet.value || "")
+      .toLowerCase()
+      .replace(/\s+/g, "")}.png`;
 
   // State cho modal hủy đơn hàng
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -857,7 +940,7 @@ const Profile: React.FC = () => {
   };
   const handleCancelOrder = () => {
     if (cancelOrderId && cancelReason.trim()) {
-      console.log('Hủy đơn hàng:', cancelOrderId, 'Lý do:', cancelReason);
+      console.log("Hủy đơn hàng:", cancelOrderId, "Lý do:", cancelReason);
       // TODO: Gọi API hủy đơn hàng ở đây
       handleCloseCancelModal();
     }
@@ -882,10 +965,10 @@ const Profile: React.FC = () => {
     if (refundOrderId && refundReason.trim()) {
       try {
         await requestRefund(refundOrderId, refundReason);
-        toast.success('Gửi yêu cầu hoàn tiền thành công!');
+        toast.success("Gửi yêu cầu hoàn tiền thành công!");
         loadUserData();
       } catch (err: any) {
-        toast.error(err.message || 'Gửi yêu cầu hoàn tiền thất bại!');
+        toast.error(err.message || "Gửi yêu cầu hoàn tiền thất bại!");
       }
       handleCloseRefundModal();
     }
@@ -898,12 +981,22 @@ const Profile: React.FC = () => {
       const prevOrder = prevOrders[idx];
       if (!prevOrder) return;
       // Thông báo hoàn tiền thành công
-      if (prevOrder.status === 'refund_requested' && order.status === 'refunded') {
-        toast.success('Yêu cầu hoàn tiền của bạn đã được chấp nhận và xử lý thành công!');
+      if (
+        prevOrder.status === "refund_requested" &&
+        order.status === "refunded"
+      ) {
+        toast.success(
+          "Yêu cầu hoàn tiền của bạn đã được chấp nhận và xử lý thành công!"
+        );
       }
       // Thông báo bị từ chối hoàn tiền
-      if (prevOrder.status === 'refund_requested' && order.status === 'delivered_success') {
-        toast.error('Yêu cầu hoàn tiền của bạn đã bị từ chối. Vui lòng liên hệ CSKH nếu cần hỗ trợ thêm.');
+      if (
+        prevOrder.status === "refund_requested" &&
+        order.status === "delivered_success"
+      ) {
+        toast.error(
+          "Yêu cầu hoàn tiền của bạn đã bị từ chối. Vui lòng liên hệ CSKH nếu cần hỗ trợ thêm."
+        );
       }
     });
   }, [orders, prevOrders]);
@@ -911,24 +1004,37 @@ const Profile: React.FC = () => {
   // Thêm state phân trang cho notifications
   const [notificationPage, setNotificationPage] = useState(1);
   const notificationsPerPage = 5;
-  const totalNotificationPages = Math.ceil(notifications.length / notificationsPerPage);
-  const paginatedNotifications = notifications.slice((notificationPage - 1) * notificationsPerPage, notificationPage * notificationsPerPage);
+  const totalNotificationPages = Math.ceil(
+    notifications.length / notificationsPerPage
+  );
+  const paginatedNotifications = notifications.slice(
+    (notificationPage - 1) * notificationsPerPage,
+    notificationPage * notificationsPerPage
+  );
 
   // Thêm state phân trang cho lịch sử trạng thái đơn hàng
   const [orderHistoryPage, setOrderHistoryPage] = useState(1);
   const orderHistoryPerPage = 5;
   const orderDetailHistory = orderDetail?.statusHistory || [];
-  const totalOrderHistoryPages = Math.ceil(orderDetailHistory.length / orderHistoryPerPage);
-  const paginatedOrderHistory = orderDetailHistory.slice((orderHistoryPage - 1) * orderHistoryPerPage, orderHistoryPage * orderHistoryPerPage);
+  const totalOrderHistoryPages = Math.ceil(
+    orderDetailHistory.length / orderHistoryPerPage
+  );
+  const paginatedOrderHistory = orderDetailHistory.slice(
+    (orderHistoryPage - 1) * orderHistoryPerPage,
+    orderHistoryPage * orderHistoryPerPage
+  );
 
   // Thêm state phân trang cho lịch sử đơn hàng chung (tab orders)
   const [ordersPage, setOrdersPage] = useState(1);
   const ordersPerPage = 5;
   const totalOrdersPages = Math.ceil(orders.length / ordersPerPage);
-  const paginatedOrders = orders.slice((ordersPage - 1) * ordersPerPage, ordersPage * ordersPerPage);
+  const paginatedOrders = orders.slice(
+    (ordersPage - 1) * ordersPerPage,
+    ordersPage * ordersPerPage
+  );
 
   // Thêm state cho ô tìm kiếm mã đơn hàng
-  const [searchOrderId, setSearchOrderId] = useState('');
+  const [searchOrderId, setSearchOrderId] = useState("");
 
   if (loading) {
     return (
@@ -977,7 +1083,11 @@ const Profile: React.FC = () => {
               <div className="bg-white p-6 rounded-2xl shadow-lg sticky top-8 w-80 min-w-[260px] max-w-[340px] flex-shrink-0 mx-auto lg:mx-0">
                 <div className="text-center mb-6">
                   <img
-                    src={avatarPreview || user.avatar || "https://i.pravatar.cc/150?img=3"}
+                    src={
+                      avatarPreview ||
+                      user.avatar ||
+                      "https://i.pravatar.cc/150?img=3"
+                    }
                     alt="avatar"
                     className="w-20 h-20 rounded-full object-cover mx-auto mb-2"
                   />
@@ -994,7 +1104,9 @@ const Profile: React.FC = () => {
                         className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 text-sm"
                         disabled={avatarLoading}
                       >
-                        {avatarLoading ? 'Đang cập nhật...' : 'Lưu ảnh đại diện'}
+                        {avatarLoading
+                          ? "Đang cập nhật..."
+                          : "Lưu ảnh đại diện"}
                       </button>
                     )}
                   </div>
@@ -1051,35 +1163,57 @@ const Profile: React.FC = () => {
                   <form onSubmit={handleProfileUpdate} className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="flex flex-col gap-2">
-                        <label className="block text-sm font-medium text-gray-700">Họ và tên</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Họ và tên
+                        </label>
                         {isEditing ? (
                           <input
                             type="text"
                             value={profileForm.name}
-                            onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                name: e.target.value,
+                              })
+                            }
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             required
                           />
                         ) : (
-                          <div className="text-gray-900 font-medium px-2 py-2 bg-gray-50 rounded-lg border border-transparent min-h-[48px] flex items-center">{profileForm.name}</div>
+                          <div className="text-gray-900 font-medium px-2 py-2 bg-gray-50 rounded-lg border border-transparent min-h-[48px] flex items-center">
+                            {profileForm.name}
+                          </div>
                         )}
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="block text-sm font-medium text-gray-700">Địa chỉ email</label>
-                        <div className="text-gray-900 font-medium px-2 py-2 bg-gray-50 rounded-lg border border-transparent min-h-[48px] flex items-center">{profileForm.email}</div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Địa chỉ email
+                        </label>
+                        <div className="text-gray-900 font-medium px-2 py-2 bg-gray-50 rounded-lg border border-transparent min-h-[48px] flex items-center">
+                          {profileForm.email}
+                        </div>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Số điện thoại
+                        </label>
                         {isEditing ? (
                           <input
                             type="tel"
                             value={profileForm.phone}
-                            onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                            onChange={(e) =>
+                              setProfileForm({
+                                ...profileForm,
+                                phone: e.target.value,
+                              })
+                            }
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                             required
                           />
                         ) : (
-                          <div className="text-gray-900 font-medium px-2 py-2 bg-gray-50 rounded-lg border border-transparent min-h-[48px] flex items-center">{profileForm.phone}</div>
+                          <div className="text-gray-900 font-medium px-2 py-2 bg-gray-50 rounded-lg border border-transparent min-h-[48px] flex items-center">
+                            {profileForm.phone}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1098,7 +1232,11 @@ const Profile: React.FC = () => {
                           className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-sm disabled:opacity-60"
                           disabled={loading}
                         >
-                          {loading ? <span className="animate-spin mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span> : <FaSave className="w-4 h-4" />}
+                          {loading ? (
+                            <span className="animate-spin mr-2 w-4 h-4 border-2 border-white border-t-transparent rounded-full"></span>
+                          ) : (
+                            <FaSave className="w-4 h-4" />
+                          )}
                           <span>Lưu thay đổi</span>
                         </button>
                       </div>
@@ -1119,12 +1257,12 @@ const Profile: React.FC = () => {
                       type="text"
                       placeholder="Nhập mã đơn hàng để tra cứu..."
                       value={searchOrderId}
-                      onChange={e => setSearchOrderId(e.target.value)}
+                      onChange={(e) => setSearchOrderId(e.target.value)}
                       className="px-3 py-2 border rounded-l w-full"
                     />
                     {searchOrderId && (
                       <button
-                        onClick={() => setSearchOrderId('')}
+                        onClick={() => setSearchOrderId("")}
                         className="px-3 py-2 bg-gray-200 border border-l-0 rounded-r hover:bg-gray-300 text-gray-600"
                         title="Xóa ký tự"
                       >
@@ -1140,7 +1278,11 @@ const Profile: React.FC = () => {
                   ) : (
                     <div className="space-y-6 max-h-[85vh] overflow-y-auto">
                       {paginatedOrders
-                        .filter(order => order._id.toLowerCase().includes(searchOrderId.trim().toLowerCase()))
+                        .filter((order) =>
+                          order._id
+                            .toLowerCase()
+                            .includes(searchOrderId.trim().toLowerCase())
+                        )
                         .map((order) => (
                           <div
                             key={order._id}
@@ -1152,14 +1294,23 @@ const Profile: React.FC = () => {
                                   {order._id}
                                 </h3>
                                 <p className="text-gray-600">
-                                  Đặt hàng ngày {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                                  Đặt hàng ngày{" "}
+                                  {new Date(order.createdAt).toLocaleDateString(
+                                    "vi-VN"
+                                  )}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-4 mt-4 md:mt-0">
-                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                                <span
+                                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                                    order.status
+                                  )}`}
+                                >
                                   {getStatusText(order.status)}
-                                  {order.status === 'refund_requested' && (
-                                    <span className="ml-2 text-pink-700 font-semibold">(Đang xử lý yêu cầu hoàn tiền)</span>
+                                  {order.status === "refund_requested" && (
+                                    <span className="ml-2 text-pink-700 font-semibold">
+                                      (Đang xử lý yêu cầu hoàn tiền)
+                                    </span>
                                   )}
                                 </span>
                                 <span className="text-lg font-bold text-gray-900">
@@ -1181,21 +1332,29 @@ const Profile: React.FC = () => {
                               ))}
                             </div>
                             <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end gap-4">
-                              <button className="text-blue-600 hover:text-blue-700 font-medium" onClick={() => handleShowOrderDetail(order._id)}>
+                              <button
+                                className="text-blue-600 hover:text-blue-700 font-medium"
+                                onClick={() => handleShowOrderDetail(order._id)}
+                              >
                                 Xem chi tiết
                               </button>
-                              {order.status === 'delivered_success' && order.isPaid && (
-                                <button
-                                  className="ml-4 text-pink-700 hover:text-white hover:bg-pink-600 border border-pink-300 rounded px-4 py-1 font-medium transition"
-                                  onClick={() => handleOpenRefundModal(order._id)}
-                                >
-                                  Yêu cầu hoàn tiền
-                                </button>
-                              )}
-                              {order.status === 'pending' && (
+                              {order.status === "delivered_success" &&
+                                order.isPaid && (
+                                  <button
+                                    className="ml-4 text-pink-700 hover:text-white hover:bg-pink-600 border border-pink-300 rounded px-4 py-1 font-medium transition"
+                                    onClick={() =>
+                                      handleOpenRefundModal(order._id)
+                                    }
+                                  >
+                                    Yêu cầu hoàn tiền
+                                  </button>
+                                )}
+                              {order.status === "pending" && (
                                 <button
                                   className="ml-4 text-gray-600 hover:text-white hover:bg-red-600 border border-red-300 rounded px-4 py-1 font-medium transition"
-                                  onClick={() => handleOpenCancelModal(order._id)}
+                                  onClick={() =>
+                                    handleOpenCancelModal(order._id)
+                                  }
                                 >
                                   Hủy đơn hàng
                                 </button>
@@ -1208,15 +1367,23 @@ const Profile: React.FC = () => {
                         <div className="flex justify-center items-center gap-2 mt-4">
                           <button
                             className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                            onClick={() => setOrdersPage(p => Math.max(1, p - 1))}
+                            onClick={() =>
+                              setOrdersPage((p) => Math.max(1, p - 1))
+                            }
                             disabled={ordersPage === 1}
                           >
                             Trước
                           </button>
-                          <span className="mx-2 text-sm">Trang {ordersPage} / {totalOrdersPages}</span>
+                          <span className="mx-2 text-sm">
+                            Trang {ordersPage} / {totalOrdersPages}
+                          </span>
                           <button
                             className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                            onClick={() => setOrdersPage(p => Math.min(totalOrdersPages, p + 1))}
+                            onClick={() =>
+                              setOrdersPage((p) =>
+                                Math.min(totalOrdersPages, p + 1)
+                              )
+                            }
                             disabled={ordersPage === totalOrdersPages}
                           >
                             Sau
@@ -1377,7 +1544,12 @@ const Profile: React.FC = () => {
                             <input
                               type="text"
                               value={addAddressForm.address}
-                              onChange={(e) => setAddAddressForm({ ...addAddressForm, address: e.target.value })}
+                              onChange={(e) =>
+                                setAddAddressForm({
+                                  ...addAddressForm,
+                                  address: e.target.value,
+                                })
+                              }
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                               required
                             />
@@ -1386,35 +1558,91 @@ const Profile: React.FC = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               Tỉnh/Thành phố
                             </label>
-                              <Select
-                                options={provinces.map((p: any) => ({ value: p.code, label: p.name }))}
-                                isLoading={provinceLoading}
-                              value={provinces.find((p: any) => p.code === addAddressForm.city) ? { value: addAddressForm.city, label: provinces.find((p: any) => p.code === addAddressForm.city)?.name } : null}
-                                onChange={option => {
-                                setAddAddressForm({ ...addAddressForm, city: option?.value || '', district: '', ward: '' });
-                                }}
-                                placeholder="Chọn tỉnh/thành phố..."
-                                isClearable
-                                classNamePrefix="react-select"
-                                noOptionsMessage={() => "Không tìm thấy"}
-                              />
+                            <Select
+                              options={provinces.map((p: any) => ({
+                                value: p.code,
+                                label: p.name,
+                              }))}
+                              isLoading={provinceLoading}
+                              value={
+                                provinces.find(
+                                  (p: any) => p.code === addAddressForm.city
+                                )
+                                  ? {
+                                      value: addAddressForm.city,
+                                      label: provinces.find(
+                                        (p: any) =>
+                                          p.code === addAddressForm.city
+                                      )?.name,
+                                    }
+                                  : null
+                              }
+                              onChange={(option) => {
+                                setAddAddressForm({
+                                  ...addAddressForm,
+                                  city: option?.value || "",
+                                  district: "",
+                                  ward: "",
+                                });
+                              }}
+                              placeholder="Chọn tỉnh/thành phố..."
+                              isClearable
+                              classNamePrefix="react-select"
+                              noOptionsMessage={() => "Không tìm thấy"}
+                            />
                           </div>
                           {(() => {
-                            const selectedProvince = provinces.find((p: any) => p.code === addAddressForm.city);
-                            if (selectedProvince && centrallyGovernedCities.includes(selectedProvince.name)) {
+                            const selectedProvince = provinces.find(
+                              (p: any) => p.code === addAddressForm.city
+                            );
+                            if (
+                              selectedProvince &&
+                              centrallyGovernedCities.includes(
+                                selectedProvince.name
+                              )
+                            ) {
                               return (
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện</label>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Quận/Huyện
+                                  </label>
                                   <Select
-                                    options={districts.map((d: any) => ({ value: d.code, label: d.name }))}
+                                    options={districts.map((d: any) => ({
+                                      value: d.code,
+                                      label: d.name,
+                                    }))}
                                     isLoading={districtLoading}
-                                    value={districts.find((d: any) => d.code === addAddressForm.district) ? { value: addAddressForm.district, label: districts.find((d: any) => d.code === addAddressForm.district)?.name } : null}
-                                    onChange={option => setAddAddressForm({ ...addAddressForm, district: option?.value || '', ward: '' })}
+                                    value={
+                                      districts.find(
+                                        (d: any) =>
+                                          d.code === addAddressForm.district
+                                      )
+                                        ? {
+                                            value: addAddressForm.district,
+                                            label: districts.find(
+                                              (d: any) =>
+                                                d.code ===
+                                                addAddressForm.district
+                                            )?.name,
+                                          }
+                                        : null
+                                    }
+                                    onChange={(option) =>
+                                      setAddAddressForm({
+                                        ...addAddressForm,
+                                        district: option?.value || "",
+                                        ward: "",
+                                      })
+                                    }
                                     placeholder="Chọn quận/huyện..."
                                     isClearable
                                     isDisabled={!addAddressForm.city}
                                     classNamePrefix="react-select"
-                                    noOptionsMessage={() => addAddressForm.city ? "Không tìm thấy" : "Chọn tỉnh/thành phố trước"}
+                                    noOptionsMessage={() =>
+                                      addAddressForm.city
+                                        ? "Không tìm thấy"
+                                        : "Chọn tỉnh/thành phố trước"
+                                    }
                                   />
                                 </div>
                               );
@@ -1422,19 +1650,39 @@ const Profile: React.FC = () => {
                             return null;
                           })()}
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Xã/Phường/Thị trấn</label>
-                              <Select
-                                options={wards.map((w: any) => ({ value: w.code, label: w.name }))}
-                                isLoading={wardLoading}
-                              value={wards.find((w: any) => w.code === addAddressForm.ward) ? { value: addAddressForm.ward, label: wards.find((w: any) => w.code === addAddressForm.ward)?.name } : null}
-                                onChange={option => {
-                                setAddAddressForm({ ...addAddressForm, ward: option?.value || '' });
-                                }}
-                                placeholder="Chọn xã/phường/thị trấn..."
-                                isClearable
-                                classNamePrefix="react-select"
-                                noOptionsMessage={() => "Không tìm thấy"}
-                              />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Xã/Phường/Thị trấn
+                            </label>
+                            <Select
+                              options={wards.map((w: any) => ({
+                                value: w.code,
+                                label: w.name,
+                              }))}
+                              isLoading={wardLoading}
+                              value={
+                                wards.find(
+                                  (w: any) => w.code === addAddressForm.ward
+                                )
+                                  ? {
+                                      value: addAddressForm.ward,
+                                      label: wards.find(
+                                        (w: any) =>
+                                          w.code === addAddressForm.ward
+                                      )?.name,
+                                    }
+                                  : null
+                              }
+                              onChange={(option) => {
+                                setAddAddressForm({
+                                  ...addAddressForm,
+                                  ward: option?.value || "",
+                                });
+                              }}
+                              placeholder="Chọn xã/phường/thị trấn..."
+                              isClearable
+                              classNamePrefix="react-select"
+                              noOptionsMessage={() => "Không tìm thấy"}
+                            />
                           </div>
                         </div>
                         <div className="flex justify-end space-x-4">
@@ -1540,7 +1788,12 @@ const Profile: React.FC = () => {
                             <input
                               type="text"
                               value={editAddressForm.address}
-                              onChange={(e) => setEditAddressForm({ ...editAddressForm, address: e.target.value })}
+                              onChange={(e) =>
+                                setEditAddressForm({
+                                  ...editAddressForm,
+                                  address: e.target.value,
+                                })
+                              }
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                               required
                             />
@@ -1550,11 +1803,31 @@ const Profile: React.FC = () => {
                               Tỉnh/Thành phố
                             </label>
                             <Select
-                              options={provinces.map((p: any) => ({ value: p.code, label: p.name }))}
+                              options={provinces.map((p: any) => ({
+                                value: p.code,
+                                label: p.name,
+                              }))}
                               isLoading={provinceLoading}
-                              value={provinces.find((p: any) => p.code === editAddressForm.city) ? { value: editAddressForm.city, label: provinces.find((p: any) => p.code === editAddressForm.city)?.name } : null}
-                              onChange={option => {
-                                setEditAddressForm({ ...editAddressForm, city: option?.value || '', district: '', ward: '' });
+                              value={
+                                provinces.find(
+                                  (p: any) => p.code === editAddressForm.city
+                                )
+                                  ? {
+                                      value: editAddressForm.city,
+                                      label: provinces.find(
+                                        (p: any) =>
+                                          p.code === editAddressForm.city
+                                      )?.name,
+                                    }
+                                  : null
+                              }
+                              onChange={(option) => {
+                                setEditAddressForm({
+                                  ...editAddressForm,
+                                  city: option?.value || "",
+                                  district: "",
+                                  ward: "",
+                                });
                               }}
                               placeholder="Chọn tỉnh/thành phố..."
                               isClearable
@@ -1563,21 +1836,57 @@ const Profile: React.FC = () => {
                             />
                           </div>
                           {(() => {
-                            const selectedProvince = provinces.find((p: any) => p.code === editAddressForm.city);
-                            if (selectedProvince && centrallyGovernedCities.includes(selectedProvince.name)) {
+                            const selectedProvince = provinces.find(
+                              (p: any) => p.code === editAddressForm.city
+                            );
+                            if (
+                              selectedProvince &&
+                              centrallyGovernedCities.includes(
+                                selectedProvince.name
+                              )
+                            ) {
                               return (
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện</label>
+                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Quận/Huyện
+                                  </label>
                                   <Select
-                                    options={districts.map((d: any) => ({ value: d.code, label: d.name }))}
+                                    options={districts.map((d: any) => ({
+                                      value: d.code,
+                                      label: d.name,
+                                    }))}
                                     isLoading={districtLoading}
-                                    value={districts.find((d: any) => d.code === editAddressForm.district) ? { value: editAddressForm.district, label: districts.find((d: any) => d.code === editAddressForm.district)?.name } : null}
-                                    onChange={option => setEditAddressForm({ ...editAddressForm, district: option?.value || '', ward: '' })}
+                                    value={
+                                      districts.find(
+                                        (d: any) =>
+                                          d.code === editAddressForm.district
+                                      )
+                                        ? {
+                                            value: editAddressForm.district,
+                                            label: districts.find(
+                                              (d: any) =>
+                                                d.code ===
+                                                editAddressForm.district
+                                            )?.name,
+                                          }
+                                        : null
+                                    }
+                                    onChange={(option) =>
+                                      setEditAddressForm({
+                                        ...editAddressForm,
+                                        district: option?.value || "",
+                                        ward: "",
+                                      })
+                                    }
                                     placeholder="Chọn quận/huyện..."
                                     isClearable
                                     isDisabled={!editAddressForm.city}
                                     classNamePrefix="react-select"
-                                    noOptionsMessage={() => editAddressForm.city ? "Không tìm thấy" : "Chọn tỉnh/thành phố trước"}
+                                    noOptionsMessage={() =>
+                                      editAddressForm.city
+                                        ? "Không tìm thấy"
+                                        : "Chọn tỉnh/thành phố trước"
+                                    }
                                   />
                                 </div>
                               );
@@ -1585,13 +1894,33 @@ const Profile: React.FC = () => {
                             return null;
                           })()}
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Xã/Phường/Thị trấn</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Xã/Phường/Thị trấn
+                            </label>
                             <Select
-                              options={wards.map((w: any) => ({ value: w.code, label: w.name }))}
+                              options={wards.map((w: any) => ({
+                                value: w.code,
+                                label: w.name,
+                              }))}
                               isLoading={wardLoading}
-                              value={wards.find((w: any) => w.code === editAddressForm.ward) ? { value: editAddressForm.ward, label: wards.find((w: any) => w.code === editAddressForm.ward)?.name } : null}
-                              onChange={option => {
-                                setEditAddressForm({ ...editAddressForm, ward: option?.value || '' });
+                              value={
+                                wards.find(
+                                  (w: any) => w.code === editAddressForm.ward
+                                )
+                                  ? {
+                                      value: editAddressForm.ward,
+                                      label: wards.find(
+                                        (w: any) =>
+                                          w.code === editAddressForm.ward
+                                      )?.name,
+                                    }
+                                  : null
+                              }
+                              onChange={(option) => {
+                                setEditAddressForm({
+                                  ...editAddressForm,
+                                  ward: option?.value || "",
+                                });
                               }}
                               placeholder="Chọn xã/phường/thị trấn..."
                               isClearable
@@ -1665,17 +1994,19 @@ const Profile: React.FC = () => {
                                 <FaEdit className="w-4 h-4" />
                               </button>
                               {!address.isDefault && (
-                              <button
-                                onClick={() => handleDeleteAddress(address._id)}
-                                className="text-red-400 hover:text-red-600"
+                                <button
+                                  onClick={() =>
+                                    handleDeleteAddress(address._id)
+                                  }
+                                  className="text-red-400 hover:text-red-600"
                                   title="Xóa địa chỉ"
-                              >
-                                <FaTrash className="w-4 h-4" />
-                              </button>
+                                >
+                                  <FaTrash className="w-4 h-4" />
+                                </button>
                               )}
                               {address.isDefault && (
-                                <span 
-                                  className="text-gray-300 cursor-not-allowed" 
+                                <span
+                                  className="text-gray-300 cursor-not-allowed"
                                   title="Không thể xóa địa chỉ mặc định"
                                 >
                                   <FaTrash className="w-4 h-4" />
@@ -1689,12 +2020,20 @@ const Profile: React.FC = () => {
                             <p className="text-gray-600">{address.address}</p>
                             <p className="text-gray-600">
                               {/* Hiển thị tên tỉnh/thành, quận/huyện, phường/xã từ backend */}
-                              {[address.wardName, address.districtName, address.cityName].filter(Boolean).join(", ")}
+                              {[
+                                address.wardName,
+                                address.districtName,
+                                address.cityName,
+                              ]
+                                .filter(Boolean)
+                                .join(", ")}
                             </p>
                           </div>
                           {!address.isDefault && (
                             <button
-                              onClick={() => handleSetDefaultAddress(address._id)}
+                              onClick={() =>
+                                handleSetDefaultAddress(address._id)
+                              }
                               className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
                             >
                               Đặt làm mặc định
@@ -1724,7 +2063,12 @@ const Profile: React.FC = () => {
                             type="checkbox"
                             className="mr-3"
                             checked={notificationSettings.orderEmail}
-                            onChange={e => setNotificationSettings(ns => ({ ...ns, orderEmail: e.target.checked }))}
+                            onChange={(e) =>
+                              setNotificationSettings((ns) => ({
+                                ...ns,
+                                orderEmail: e.target.checked,
+                              }))
+                            }
                           />
                           <span>Thông báo email cho đơn hàng</span>
                         </label>
@@ -1733,7 +2077,12 @@ const Profile: React.FC = () => {
                             type="checkbox"
                             className="mr-3"
                             checked={notificationSettings.promotionEmail}
-                            onChange={e => setNotificationSettings(ns => ({ ...ns, promotionEmail: e.target.checked }))}
+                            onChange={(e) =>
+                              setNotificationSettings((ns) => ({
+                                ...ns,
+                                promotionEmail: e.target.checked,
+                              }))
+                            }
                           />
                           <span>Email khuyến mãi</span>
                         </label>
@@ -1742,7 +2091,12 @@ const Profile: React.FC = () => {
                             type="checkbox"
                             className="mr-3"
                             checked={notificationSettings.sms}
-                            onChange={e => setNotificationSettings(ns => ({ ...ns, sms: e.target.checked }))}
+                            onChange={(e) =>
+                              setNotificationSettings((ns) => ({
+                                ...ns,
+                                sms: e.target.checked,
+                              }))
+                            }
                           />
                           <span>Thông báo SMS</span>
                         </label>
@@ -1759,7 +2113,12 @@ const Profile: React.FC = () => {
                             type="checkbox"
                             className="mr-3"
                             checked={privacySettings.shareHistory}
-                            onChange={e => setPrivacySettings(ps => ({ ...ps, shareHistory: e.target.checked }))}
+                            onChange={(e) =>
+                              setPrivacySettings((ps) => ({
+                                ...ps,
+                                shareHistory: e.target.checked,
+                              }))
+                            }
                           />
                           <span>Chia sẻ lịch sử mua hàng để gợi ý</span>
                         </label>
@@ -1768,7 +2127,12 @@ const Profile: React.FC = () => {
                             type="checkbox"
                             className="mr-3"
                             checked={privacySettings.thirdPartyAnalytics}
-                            onChange={e => setPrivacySettings(ps => ({ ...ps, thirdPartyAnalytics: e.target.checked }))}
+                            onChange={(e) =>
+                              setPrivacySettings((ps) => ({
+                                ...ps,
+                                thirdPartyAnalytics: e.target.checked,
+                              }))
+                            }
                           />
                           <span>Cho phép phân tích bên thứ ba</span>
                         </label>
@@ -1781,7 +2145,7 @@ const Profile: React.FC = () => {
                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                         disabled={settingsLoading}
                       >
-                        {settingsLoading ? 'Đang lưu...' : 'Lưu cài đặt'}
+                        {settingsLoading ? "Đang lưu..." : "Lưu cài đặt"}
                       </button>
                     </div>
                   </div>
@@ -1791,34 +2155,57 @@ const Profile: React.FC = () => {
               {/* Password Tab */}
               {activeTab === "password" && (
                 <div className="bg-white rounded-2xl shadow-lg p-8 max-w-lg mx-auto">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Đổi mật khẩu</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    Đổi mật khẩu
+                  </h2>
                   <form onSubmit={handleChangePassword} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Mật khẩu cũ</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mật khẩu cũ
+                      </label>
                       <input
                         type="password"
                         value={passwordForm.oldPassword}
-                        onChange={e => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            oldPassword: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Mật khẩu mới</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mật khẩu mới
+                      </label>
                       <input
                         type="password"
                         value={passwordForm.newPassword}
-                        onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            newPassword: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Xác nhận mật khẩu mới</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Xác nhận mật khẩu mới
+                      </label>
                       <input
                         type="password"
                         value={passwordForm.confirmPassword}
-                        onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        onChange={(e) =>
+                          setPasswordForm({
+                            ...passwordForm,
+                            confirmPassword: e.target.value,
+                          })
+                        }
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       />
@@ -1829,7 +2216,7 @@ const Profile: React.FC = () => {
                         className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                         disabled={passwordLoading}
                       >
-                        {passwordLoading ? 'Đang đổi...' : 'Đổi mật khẩu'}
+                        {passwordLoading ? "Đang đổi..." : "Đổi mật khẩu"}
                       </button>
                     </div>
                   </form>
@@ -1839,71 +2226,157 @@ const Profile: React.FC = () => {
               {/* Payment Methods Tab */}
               {activeTab === "payment" && (
                 <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center justify-between">
-                    <span>Phương thức thanh toán</span>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Phương thức thanh toán
+                    </h2>
                     <button
                       onClick={() => setShowAddPayment(true)}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full shadow hover:bg-blue-700 transition font-semibold"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                      Thêm mới
+                      <FaPlus className="w-4 h-4" />
+                      <span>Thêm phương thức thanh toán</span>
                     </button>
-                  </h2>
+                  </div>
+
                   {paymentLoading ? (
                     <div className="text-center py-8">Đang tải...</div>
                   ) : paymentMethods.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">Chưa có phương thức thanh toán nào.</div>
+                    <div className="text-center py-8 text-gray-500">
+                      Chưa có phương thức thanh toán nào.
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {paymentMethods.map((m, idx) => {
                         let icon = null;
-                        let typeLabel = '';
+                        let typeLabel = "";
                         let cardMeta = null;
-                        if (m.type === 'credit_card') {
-                          icon = <img src={cardList.find(c => c.code === m.provider)?.logo || '/images/cards/visa.png'} alt={m.provider} className="w-12 h-12 mr-4 object-contain" />;
-                          typeLabel = 'Thẻ tín dụng';
-                          cardMeta = cardList.find(c => c.code === m.provider);
-                        } else if (m.type === 'e_wallet') {
-                          const eWalletMeta = eWalletList.find(w => w.code === m.provider || w.name === m.provider);
-                          icon = <img src={eWalletMeta?.logo || '/images/wallets/default.png'} alt={m.provider} className="w-12 h-12 mr-4 object-contain" />;
-                          typeLabel = 'Ví điện tử';
+                        if (m.type === "credit_card") {
+                          icon = (
+                            <img
+                              src={
+                                cardList.find((c) => c.code === m.provider)
+                                  ?.logo || "/images/cards/visa.png"
+                              }
+                              alt={m.provider}
+                              className="w-12 h-12 mr-4 object-contain"
+                            />
+                          );
+                          typeLabel = "Thẻ tín dụng";
+                          cardMeta = cardList.find(
+                            (c) => c.code === m.provider
+                          );
+                        } else if (m.type === "e_wallet") {
+                          const eWalletMeta = eWalletList.find(
+                            (w) =>
+                              w.code === m.provider || w.name === m.provider
+                          );
+                          icon = (
+                            <img
+                              src={
+                                eWalletMeta?.logo ||
+                                "/images/wallets/default.png"
+                              }
+                              alt={m.provider}
+                              className="w-12 h-12 mr-4 object-contain"
+                            />
+                          );
+                          typeLabel = "Ví điện tử";
                         } else {
-                          const bankMeta = bankList.find(b => b.code === m.provider || b.name === m.provider);
-                          icon = <img src={bankMeta?.logo || '/images/banks/default.png'} alt={m.provider} className="w-16 h-16 mr-4 object-contain" />;
-                          typeLabel = 'Tài khoản ngân hàng';
+                          const bankMeta = bankList.find(
+                            (b) =>
+                              b.code === m.provider || b.name === m.provider
+                          );
+                          icon = (
+                            <img
+                              src={
+                                bankMeta?.logo || "/images/banks/default.png"
+                              }
+                              alt={m.provider}
+                              className="w-16 h-16 mr-4 object-contain"
+                            />
+                          );
+                          typeLabel = "Tài khoản ngân hàng";
                         }
                         return (
-                          <div key={idx} className="flex items-center justify-between bg-white rounded-2xl shadow-md p-5 border border-gray-100 hover:shadow-lg transition group relative">
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between bg-white rounded-2xl shadow-md p-5 border border-gray-100 hover:shadow-lg transition group relative"
+                          >
                             <div className="flex items-center">
                               {icon}
                               <div>
                                 <div className="font-semibold text-gray-900 text-lg flex items-center gap-2">
                                   {typeLabel}
-                                  {m.isDefault && <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">Mặc định</span>}
-                                </div>
-                                <div className="text-gray-700 text-base">
-                                  {m.type === 'credit_card' && cardMeta ? (
-                                    <span className="font-semibold">{cardMeta.name} <span className="ml-2 text-gray-500">**** {m.last4}</span></span>
-                                  ) : (
-                                    <span>{m.provider} <span className="ml-2 text-gray-500">**** {m.last4}</span></span>
+                                  {m.isDefault && (
+                                    <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">
+                                      Mặc định
+                                    </span>
                                   )}
                                 </div>
-                                {m.expired && <div className="text-xs text-gray-400 mt-1">Hết hạn: {m.expired}</div>}
+                                <div className="text-gray-700 text-base">
+                                  {m.type === "credit_card" && cardMeta ? (
+                                    <span className="font-semibold">
+                                      {cardMeta.name}{" "}
+                                      <span className="ml-2 text-gray-500">
+                                        **** {m.last4}
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <span>
+                                      {m.provider}{" "}
+                                      <span className="ml-2 text-gray-500">
+                                        **** {m.last4}
+                                      </span>
+                                    </span>
+                                  )}
+                                </div>
+                                {m.expired && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    Hết hạn: {m.expired}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <button onClick={() => handleEditPaymentMethod(m)}
+                              <button
+                                onClick={() => handleEditPaymentMethod(m)}
                                 className="ml-2 p-2 rounded-full hover:bg-yellow-100 transition group"
                                 title="Xem/Sửa phương thức thanh toán"
                               >
-                                <svg className="w-6 h-6 text-yellow-500 group-hover:text-yellow-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6" /></svg>
+                                <svg
+                                  className="w-6 h-6 text-yellow-500 group-hover:text-yellow-700"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h6"
+                                  />
+                                </svg>
                               </button>
-                            <button onClick={() => handleDeletePaymentMethod(m._id)}
+                              <button
+                                onClick={() => handleDeletePaymentMethod(m._id)}
                                 className="ml-2 p-2 rounded-full hover:bg-red-100 transition group"
-                              title="Xoá phương thức thanh toán"
-                            >
-                              <svg className="w-6 h-6 text-red-500 group-hover:text-red-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
+                                title="Xoá phương thức thanh toán"
+                              >
+                                <svg
+                                  className="w-6 h-6 text-red-500 group-hover:text-red-700"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
                             </div>
                           </div>
                         );
@@ -1914,120 +2387,343 @@ const Profile: React.FC = () => {
                   {showAddPayment && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
                       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-16 relative border border-gray-100">
-                        <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl" onClick={() => setShowAddPayment(false)}>&times;</button>
-                        <h2 className="text-xl font-bold mb-6 text-center">Thêm phương thức thanh toán</h2>
-                        <form onSubmit={handleAddPaymentMethod} className="space-y-5">
+                        <button
+                          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl"
+                          onClick={() => setShowAddPayment(false)}
+                        >
+                          &times;
+                        </button>
+                        <h2 className="text-xl font-bold mb-6 text-center">
+                          Thêm phương thức thanh toán
+                        </h2>
+                        <form
+                          onSubmit={handleAddPaymentMethod}
+                          className="space-y-5"
+                        >
                           {/* Nút chọn loại phương thức (UI cũ) */}
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Loại phương thức</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Loại phương thức
+                            </label>
                             <div className="flex gap-3 mb-6">
-                              <button type="button" onClick={() => setAddPaymentForm(f => ({ ...f, type: 'credit_card', provider: '' }))} className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${addPaymentForm.type === 'credit_card' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    type: "credit_card",
+                                    provider: "",
+                                  }))
+                                }
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
+                                  addPaymentForm.type === "credit_card"
+                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                    : "border-gray-200 bg-gray-50 text-gray-700"
+                                }`}
+                              >
+                                <svg
+                                  className="w-6 h-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <rect
+                                    x="2"
+                                    y="5"
+                                    width="20"
+                                    height="14"
+                                    rx="3"
+                                  />
+                                  <path d="M2 10h20" />
+                                </svg>
                                 Thẻ tín dụng
                               </button>
-                              <button type="button" onClick={() => setAddPaymentForm(f => ({ ...f, type: 'e_wallet', provider: '' }))} className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${addPaymentForm.type === 'e_wallet' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="3"/><path d="M7 7V5a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v2"/></svg>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    type: "e_wallet",
+                                    provider: "",
+                                  }))
+                                }
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
+                                  addPaymentForm.type === "e_wallet"
+                                    ? "border-green-500 bg-green-50 text-green-700"
+                                    : "border-gray-200 bg-gray-50 text-gray-700"
+                                }`}
+                              >
+                                <svg
+                                  className="w-6 h-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <rect
+                                    x="3"
+                                    y="7"
+                                    width="18"
+                                    height="10"
+                                    rx="3"
+                                  />
+                                  <path d="M7 7V5a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3v2" />
+                                </svg>
                                 Ví điện tử
                               </button>
-                              <button type="button" onClick={() => setAddPaymentForm(f => ({ ...f, type: 'bank_account', provider: '' }))} className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${addPaymentForm.type === 'bank_account' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 bg-gray-50 text-gray-700'}`}>
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="3"/><path d="M6 7V5a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2"/></svg>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    type: "bank_account",
+                                    provider: "",
+                                  }))
+                                }
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition ${
+                                  addPaymentForm.type === "bank_account"
+                                    ? "border-purple-500 bg-purple-50 text-purple-700"
+                                    : "border-gray-200 bg-gray-50 text-gray-700"
+                                }`}
+                              >
+                                <svg
+                                  className="w-6 h-6"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <rect
+                                    x="2"
+                                    y="7"
+                                    width="20"
+                                    height="10"
+                                    rx="3"
+                                  />
+                                  <path d="M6 7V5a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2" />
+                                </svg>
                                 Tài khoản ngân hàng
                               </button>
                             </div>
                           </div>
                           {/* Nếu là credit_card thì hiển thị dropdown loại thẻ ngay dưới các nút chọn phương thức */}
-                          {addPaymentForm.type === 'credit_card' && (
+                          {addPaymentForm.type === "credit_card" && (
                             <div className="mb-6">
-                              <label className="block font-medium mb-2">Loại thẻ</label>
+                              <label className="block font-medium mb-2">
+                                Loại thẻ
+                              </label>
                               <Select
-                                options={cardList.map(c => ({ value: c.code, label: c.name, logo: c.logo }))}
-                                value={cardList.map(c => ({ value: c.code, label: c.name, logo: c.logo })).find(opt => opt.value === addPaymentForm.provider) || null}
-                                onChange={option => setAddPaymentForm(f => ({ ...f, provider: option?.value || '' }))}
+                                options={cardList.map((c) => ({
+                                  value: c.code,
+                                  label: c.name,
+                                  logo: c.logo,
+                                }))}
+                                value={
+                                  cardList
+                                    .map((c) => ({
+                                      value: c.code,
+                                      label: c.name,
+                                      logo: c.logo,
+                                    }))
+                                    .find(
+                                      (opt) =>
+                                        opt.value === addPaymentForm.provider
+                                    ) || null
+                                }
+                                onChange={(option) =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    provider: option?.value || "",
+                                  }))
+                                }
                                 placeholder="Chọn loại thẻ..."
                                 isClearable
                                 classNamePrefix="react-select"
-                                formatOptionLabel={option => (
+                                formatOptionLabel={(option) => (
                                   <div className="flex items-center gap-4">
                                     <img
                                       src={option.logo}
                                       alt="logo"
                                       className="w-12 h-12 object-contain"
-                                      onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = ''; }}
+                                      onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src = "";
+                                      }}
                                     />
-                                    <span className="text-lg font-medium text-gray-900">{option.label}</span>
+                                    <span className="text-lg font-medium text-gray-900">
+                                      {option.label}
+                                    </span>
                                   </div>
                                 )}
-                                styles={{ menu: base => ({ ...base, zIndex: 9999 }) }}
+                                styles={{
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
                                 required
                               />
                             </div>
                           )}
                           {/* Dropdown nhà cung cấp/ngân hàng/ví sẽ nằm dưới loại thẻ */}
-                          {addPaymentForm.type === 'bank_account' && (
+                          {addPaymentForm.type === "bank_account" && (
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Nhà cung cấp</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nhà cung cấp
+                              </label>
                               <Select
-                                options={bankList.map((b: any) => ({ value: b.code, label: b.name, logo: getBankLogo(b) }))}
-                                value={bankList.map((b: any) => ({ value: b.code, label: b.name, logo: getBankLogo(b) })).find(opt => opt.value === addPaymentForm.provider) || null}
-                                onChange={option => setAddPaymentForm(f => ({ ...f, provider: option?.value || '' }))}
+                                options={bankList.map((b: any) => ({
+                                  value: b.code,
+                                  label: b.name,
+                                  logo: getBankLogo(b),
+                                }))}
+                                value={
+                                  bankList
+                                    .map((b: any) => ({
+                                      value: b.code,
+                                      label: b.name,
+                                      logo: getBankLogo(b),
+                                    }))
+                                    .find(
+                                      (opt) =>
+                                        opt.value === addPaymentForm.provider
+                                    ) || null
+                                }
+                                onChange={(option) =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    provider: option?.value || "",
+                                  }))
+                                }
                                 placeholder="Chọn ngân hàng..."
                                 isClearable
                                 classNamePrefix="react-select"
-                                formatOptionLabel={option => (
+                                formatOptionLabel={(option) => (
                                   <div className="flex items-center gap-4">
                                     <img
                                       src={option.logo}
                                       alt="logo"
                                       className="w-12 h-12 object-contain"
-                                      onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = option.fallbackLogo || ''; }}
+                                      onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src =
+                                          option.fallbackLogo || "";
+                                      }}
                                     />
-                                    <span className="text-lg font-medium text-gray-900">{option.label}</span>
+                                    <span className="text-lg font-medium text-gray-900">
+                                      {option.label}
+                                    </span>
                                   </div>
                                 )}
-                                styles={{ menu: base => ({ ...base, zIndex: 9999 }) }}
+                                styles={{
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
                                 required
                               />
                             </div>
                           )}
-                          {addPaymentForm.type === 'e_wallet' && (
+                          {addPaymentForm.type === "e_wallet" && (
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Nhà cung cấp</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nhà cung cấp
+                              </label>
                               <Select
-                                options={eWalletList.map(w => ({ value: w.name, label: w.name, logo: getEWalletLogo(w), fallbackLogo: w.logo || '' }))}
-                                value={eWalletList.map(w => ({ value: w.name, label: w.name, logo: getEWalletLogo(w), fallbackLogo: w.logo || '' })).find(opt => opt.value === addPaymentForm.provider) || null}
-                                onChange={option => setAddPaymentForm(f => ({ ...f, provider: option?.value || '' }))}
+                                options={eWalletList.map((w) => ({
+                                  value: w.name,
+                                  label: w.name,
+                                  logo: getEWalletLogo(w),
+                                  fallbackLogo: w.logo || "",
+                                }))}
+                                value={
+                                  eWalletList
+                                    .map((w) => ({
+                                      value: w.name,
+                                      label: w.name,
+                                      logo: getEWalletLogo(w),
+                                      fallbackLogo: w.logo || "",
+                                    }))
+                                    .find(
+                                      (opt) =>
+                                        opt.value === addPaymentForm.provider
+                                    ) || null
+                                }
+                                onChange={(option) =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    provider: option?.value || "",
+                                  }))
+                                }
                                 placeholder="Chọn ví điện tử..."
                                 isClearable
                                 classNamePrefix="react-select"
-                                formatOptionLabel={option => (
+                                formatOptionLabel={(option) => (
                                   <div className="flex items-center gap-4">
                                     <img
                                       src={option.logo}
                                       alt="logo"
                                       className="w-12 h-12 object-contain"
-                                      onError={e => { e.currentTarget.onerror = null; e.currentTarget.src = option.fallbackLogo || ''; }}
+                                      onError={(e) => {
+                                        e.currentTarget.onerror = null;
+                                        e.currentTarget.src =
+                                          option.fallbackLogo || "";
+                                      }}
                                     />
-                                    <span className="text-lg font-medium text-gray-900">{option.label}</span>
+                                    <span className="text-lg font-medium text-gray-900">
+                                      {option.label}
+                                    </span>
                                   </div>
                                 )}
-                                styles={{ menu: base => ({ ...base, zIndex: 9999 }) }}
+                                styles={{
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
                                 required
                               />
                             </div>
                           )}
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">4 số cuối</label>
-                            <input type="text" value={addPaymentForm.last4} onChange={e => setAddPaymentForm(f => ({ ...f, last4: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" maxLength={4} required />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              4 số cuối
+                            </label>
+                            <input
+                              type="text"
+                              value={addPaymentForm.last4}
+                              onChange={(e) =>
+                                setAddPaymentForm((f) => ({
+                                  ...f,
+                                  last4: e.target.value,
+                                }))
+                              }
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              maxLength={4}
+                              required
+                            />
                           </div>
-                          {addPaymentForm.type === 'credit_card' && (
+                          {addPaymentForm.type === "credit_card" && (
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Hết hạn (MM/YY)</label>
-                              <input type="text" value={addPaymentForm.expired} onChange={e => setAddPaymentForm(f => ({ ...f, expired: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="MM/YY" />
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Hết hạn (MM/YY)
+                              </label>
+                              <input
+                                type="text"
+                                value={addPaymentForm.expired}
+                                onChange={(e) =>
+                                  setAddPaymentForm((f) => ({
+                                    ...f,
+                                    expired: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="MM/YY"
+                              />
                             </div>
                           )}
                           <div className="flex justify-end">
-                            <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow" disabled={addPaymentLoading}>
-                              {addPaymentLoading ? 'Đang thêm...' : 'Thêm phương thức'}
+                            <button
+                              type="submit"
+                              className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow"
+                              disabled={addPaymentLoading}
+                            >
+                              {addPaymentLoading
+                                ? "Đang thêm..."
+                                : "Thêm phương thức"}
                             </button>
                           </div>
                         </form>
@@ -2040,17 +2736,26 @@ const Profile: React.FC = () => {
               {/* Activity Log Tab */}
               {activeTab === "activity" && (
                 <div className="bg-white rounded-2xl shadow-lg p-8">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Lịch sử hoạt động</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                    Lịch sử hoạt động
+                  </h2>
                   {activityLoading ? (
                     <div className="text-center py-8">Đang tải...</div>
                   ) : activityLogs.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">Chưa có hoạt động nào.</div>
+                    <div className="text-center py-8 text-gray-500">
+                      Chưa có hoạt động nào.
+                    </div>
                   ) : (
                     <ul className="divide-y divide-gray-100">
                       {activityLogs.map((log, idx) => (
                         <li key={idx} className="py-3">
                           <div className="font-medium">{log.content}</div>
-                          <div className="text-xs text-gray-500">{log.actorName ? `Thực hiện bởi: ${log.actorName}` : ''} {new Date(log.createdAt).toLocaleString('vi-VN')}</div>
+                          <div className="text-xs text-gray-500">
+                            {log.actorName
+                              ? `Thực hiện bởi: ${log.actorName}`
+                              : ""}{" "}
+                            {new Date(log.createdAt).toLocaleString("vi-VN")}
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -2061,26 +2766,56 @@ const Profile: React.FC = () => {
               {activeTab === "notification" && (
                 <div className="bg-white rounded-2xl shadow-lg p-8">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Thông báo</h2>
-                    <button onClick={handleMarkAllAsRead} className="text-blue-600 hover:underline">Đánh dấu tất cả đã đọc</button>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Thông báo
+                    </h2>
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Đánh dấu tất cả đã đọc
+                    </button>
                   </div>
                   {notificationLoading ? (
                     <div className="text-center py-8">Đang tải...</div>
                   ) : notifications.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">Không có thông báo nào.</div>
+                    <div className="text-center py-8 text-gray-500">
+                      Không có thông báo nào.
+                    </div>
                   ) : (
                     <>
                       <ul className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
                         {paginatedNotifications.map((n, idx) => (
-                          <li key={n._id || idx} className={`py-3 flex items-center justify-between ${n.isRead ? '' : 'bg-blue-50'}`}>
+                          <li
+                            key={n._id || idx}
+                            className={`py-3 flex items-center justify-between ${
+                              n.isRead ? "" : "bg-blue-50"
+                            }`}
+                          >
                             <div>
                               <div className="font-medium">{n.title}</div>
-                              <div className="text-sm text-gray-600">{n.message}</div>
-                              <div className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString('vi-VN')}</div>
+                              <div className="text-sm text-gray-600">
+                                {n.message}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {new Date(n.createdAt).toLocaleString("vi-VN")}
+                              </div>
                             </div>
                             <div className="flex flex-col gap-2 items-end">
-                              {!n.isRead && <button onClick={() => handleMarkAsRead(n._id)} className="text-blue-600 hover:underline text-sm">Đánh dấu đã đọc</button>}
-                              <button onClick={() => handleDeleteNotification(n._id)} className="text-red-600 hover:underline text-sm">Xoá</button>
+                              {!n.isRead && (
+                                <button
+                                  onClick={() => handleMarkAsRead(n._id)}
+                                  className="text-blue-600 hover:underline text-sm"
+                                >
+                                  Đánh dấu đã đọc
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteNotification(n._id)}
+                                className="text-red-600 hover:underline text-sm"
+                              >
+                                Xoá
+                              </button>
                             </div>
                           </li>
                         ))}
@@ -2089,15 +2824,23 @@ const Profile: React.FC = () => {
                       <div className="flex justify-center items-center gap-2 mt-4">
                         <button
                           className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                          onClick={() => setNotificationPage(p => Math.max(1, p - 1))}
+                          onClick={() =>
+                            setNotificationPage((p) => Math.max(1, p - 1))
+                          }
                           disabled={notificationPage === 1}
                         >
                           Trước
                         </button>
-                        <span className="mx-2 text-sm">Trang {notificationPage} / {totalNotificationPages}</span>
+                        <span className="mx-2 text-sm">
+                          Trang {notificationPage} / {totalNotificationPages}
+                        </span>
                         <button
                           className="px-3 py-1 rounded border text-sm disabled:opacity-50"
-                          onClick={() => setNotificationPage(p => Math.min(totalNotificationPages, p + 1))}
+                          onClick={() =>
+                            setNotificationPage((p) =>
+                              Math.min(totalNotificationPages, p + 1)
+                            )
+                          }
                           disabled={notificationPage === totalNotificationPages}
                         >
                           Sau
@@ -2125,30 +2868,51 @@ const Profile: React.FC = () => {
             </button>
             <div className="max-h-[80vh] overflow-y-auto pr-2">
               {orderDetailLoading ? (
-                <div className="flex items-center justify-center h-40">Đang tải...</div>
+                <div className="flex items-center justify-center h-40">
+                  Đang tải...
+                </div>
               ) : orderDetail ? (
                 <div>
-                  <h2 className="text-xl font-bold mb-2">Chi tiết đơn hàng #{orderDetail._id.slice(-6)}</h2>
-                  <div className="mb-4 text-sm text-gray-600">Ngày đặt: {new Date(orderDetail.createdAt).toLocaleString('vi-VN')}</div>
+                  <h2 className="text-xl font-bold mb-2">
+                    Chi tiết đơn hàng #{orderDetail._id.slice(-6)}
+                  </h2>
+                  <div className="mb-4 text-sm text-gray-600">
+                    Ngày đặt:{" "}
+                    {new Date(orderDetail.createdAt).toLocaleString("vi-VN")}
+                  </div>
                   <div className="mb-4">
                     <div className="font-semibold mb-1">Sản phẩm:</div>
                     <ul className="divide-y divide-gray-100">
                       {orderDetail.orderItems.map((item, idx) => (
                         <li key={idx} className="py-2 flex items-center gap-3">
-                          <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded" />
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-12 h-12 object-cover rounded"
+                          />
                           <div className="flex-1">
                             <div className="font-medium">{item.name}</div>
-                            <div className="text-xs text-gray-500">x{item.quantity}</div>
+                            <div className="text-xs text-gray-500">
+                              x{item.quantity}
+                            </div>
                           </div>
-                          <div className="font-semibold">{item.price.toLocaleString()}₫</div>
+                          <div className="font-semibold">
+                            {item.price.toLocaleString()}₫
+                          </div>
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div className="mb-4">
                     <div className="font-semibold mb-1">Địa chỉ giao hàng:</div>
-                    <div>{orderDetail.shippingAddress.fullName} - {orderDetail.shippingAddress.phone}</div>
-                    <div>{orderDetail.shippingAddress.address}, {orderDetail.shippingAddress.city}</div>
+                    <div>
+                      {orderDetail.shippingAddress.fullName} -{" "}
+                      {orderDetail.shippingAddress.phone}
+                    </div>
+                    <div>
+                      {orderDetail.shippingAddress.address},{" "}
+                      {orderDetail.shippingAddress.city}
+                    </div>
                   </div>
                   {/* Mapping trạng thái tiếng Việt */}
                   {(() => {
@@ -2164,16 +2928,26 @@ const Profile: React.FC = () => {
                       returned: "Hoàn hàng",
                       refund_requested: "Yêu cầu hoàn tiền",
                       refunded: "Hoàn tiền thành công",
-                      paid_cod: "Đã thanh toán COD"
+                      paid_cod: "Đã thanh toán COD",
                     };
                     return (
                       <div className="mb-4">
-                        <div className="font-semibold mb-1">Trạng thái đơn hàng:</div>
-                        <div>{statusMap[orderDetail.status] || orderDetail.status}</div>
-                        <div className="mt-2 text-xs text-gray-500">Lịch sử trạng thái:</div>
+                        <div className="font-semibold mb-1">
+                          Trạng thái đơn hàng:
+                        </div>
+                        <div>
+                          {statusMap[orderDetail.status] || orderDetail.status}
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Lịch sử trạng thái:
+                        </div>
                         <ul className="text-xs text-gray-600 max-h-48 overflow-y-auto">
                           {paginatedOrderHistory.map((s, idx) => (
-                            <li key={idx}>- {statusMap[s.status] || s.status} ({new Date(s.date).toLocaleString('vi-VN')}) {s.note && `- ${s.note}`}</li>
+                            <li key={idx}>
+                              - {statusMap[s.status] || s.status} (
+                              {new Date(s.date).toLocaleString("vi-VN")}){" "}
+                              {s.note && `- ${s.note}`}
+                            </li>
                           ))}
                         </ul>
                         {/* Phân trang lịch sử trạng thái */}
@@ -2181,16 +2955,27 @@ const Profile: React.FC = () => {
                           <div className="flex justify-center items-center gap-2 mt-2">
                             <button
                               className="px-2 py-1 rounded border text-xs disabled:opacity-50"
-                              onClick={() => setOrderHistoryPage(p => Math.max(1, p - 1))}
+                              onClick={() =>
+                                setOrderHistoryPage((p) => Math.max(1, p - 1))
+                              }
                               disabled={orderHistoryPage === 1}
                             >
                               Trước
                             </button>
-                            <span className="mx-1 text-xs">Trang {orderHistoryPage} / {totalOrderHistoryPages}</span>
+                            <span className="mx-1 text-xs">
+                              Trang {orderHistoryPage} /{" "}
+                              {totalOrderHistoryPages}
+                            </span>
                             <button
                               className="px-2 py-1 rounded border text-xs disabled:opacity-50"
-                              onClick={() => setOrderHistoryPage(p => Math.min(totalOrderHistoryPages, p + 1))}
-                              disabled={orderHistoryPage === totalOrderHistoryPages}
+                              onClick={() =>
+                                setOrderHistoryPage((p) =>
+                                  Math.min(totalOrderHistoryPages, p + 1)
+                                )
+                              }
+                              disabled={
+                                orderHistoryPage === totalOrderHistoryPages
+                              }
                             >
                               Sau
                             </button>
@@ -2200,11 +2985,29 @@ const Profile: React.FC = () => {
                     );
                   })()}
                   <div className="mb-4">
-                    <div className="font-semibold mb-1">Phương thức thanh toán:</div>
+                    <div className="font-semibold mb-1">
+                      Phương thức thanh toán:
+                    </div>
                     <div>{orderDetail.paymentMethod}</div>
-                    <div>Trạng thái thanh toán: <span className={orderDetail.isPaid ? 'text-green-600' : 'text-red-600'}>{orderDetail.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</span></div>
+                    <div>
+                      Trạng thái thanh toán:{" "}
+                      <span
+                        className={
+                          orderDetail.isPaid ? "text-green-600" : "text-red-600"
+                        }
+                      >
+                        {orderDetail.isPaid
+                          ? "Đã thanh toán"
+                          : "Chưa thanh toán"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="mb-2 font-bold text-right">Tổng cộng: <span className="text-red-600">{orderDetail.totalPrice.toLocaleString()}₫</span></div>
+                  <div className="mb-2 font-bold text-right">
+                    Tổng cộng:{" "}
+                    <span className="text-red-600">
+                      {orderDetail.totalPrice.toLocaleString()}₫
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <div className="text-red-600">Không tìm thấy đơn hàng</div>
@@ -2217,15 +3020,22 @@ const Profile: React.FC = () => {
       {showSensitiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={() => setShowSensitiveModal(false)}>&times;</button>
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setShowSensitiveModal(false)}
+            >
+              &times;
+            </button>
             <h2 className="text-lg font-bold mb-4">Xác thực mật khẩu</h2>
             <form onSubmit={handleSensitiveProfileUpdate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nhập mật khẩu để xác nhận thay đổi</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nhập mật khẩu để xác nhận thay đổi
+                </label>
                 <input
                   type="password"
                   value={sensitivePassword}
-                  onChange={e => setSensitivePassword(e.target.value)}
+                  onChange={(e) => setSensitivePassword(e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -2236,7 +3046,7 @@ const Profile: React.FC = () => {
                   className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   disabled={sensitiveLoading}
                 >
-                  {sensitiveLoading ? 'Đang xác thực...' : 'Xác nhận'}
+                  {sensitiveLoading ? "Đang xác thực..." : "Xác nhận"}
                 </button>
               </div>
             </form>
@@ -2247,32 +3057,87 @@ const Profile: React.FC = () => {
       {showEditPayment && editPaymentForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-10 relative border border-gray-100">
-            <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl" onClick={() => setShowEditPayment(false)}>&times;</button>
-            <h2 className="text-xl font-bold mb-6 text-center">Xem/Sửa phương thức thanh toán</h2>
+            <button
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl"
+              onClick={() => setShowEditPayment(false)}
+            >
+              &times;
+            </button>
+            <h2 className="text-xl font-bold mb-6 text-center">
+              Xem/Sửa phương thức thanh toán
+            </h2>
             <form onSubmit={handleUpdatePaymentMethod} className="space-y-5">
-              {editPaymentForm.type === 'credit_card' && (
+              {editPaymentForm.type === "credit_card" && (
                 <div className="flex flex-col items-center mb-4">
-                  <img src={cardList.find(c => c.code === editPaymentForm.provider)?.logo || '/images/cards/visa.png'} alt={editPaymentForm.provider} className="w-20 h-20 object-contain mb-2" />
-                  <div className="font-semibold text-lg mb-1">{cardList.find(c => c.code === editPaymentForm.provider)?.name || editPaymentForm.provider}</div>
+                  <img
+                    src={
+                      cardList.find((c) => c.code === editPaymentForm.provider)
+                        ?.logo || "/images/cards/visa.png"
+                    }
+                    alt={editPaymentForm.provider}
+                    className="w-20 h-20 object-contain mb-2"
+                  />
+                  <div className="font-semibold text-lg mb-1">
+                    {cardList.find((c) => c.code === editPaymentForm.provider)
+                      ?.name || editPaymentForm.provider}
+                  </div>
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tên chủ thẻ</label>
-                <input type="text" value={editPaymentForm.name || ''} onChange={e => setEditPaymentForm(f => ({ ...f, name: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên chủ thẻ
+                </label>
+                <input
+                  type="text"
+                  value={editPaymentForm.name || ""}
+                  onChange={(e) =>
+                    setEditPaymentForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">4 số cuối</label>
-                <input type="text" value={editPaymentForm.last4 || ''} onChange={e => setEditPaymentForm(f => ({ ...f, last4: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" maxLength={4} required />
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  4 số cuối
+                </label>
+                <input
+                  type="text"
+                  value={editPaymentForm.last4 || ""}
+                  onChange={(e) =>
+                    setEditPaymentForm((f) => ({ ...f, last4: e.target.value }))
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  maxLength={4}
+                  required
+                />
               </div>
-              {editPaymentForm.type === 'credit_card' && (
+              {editPaymentForm.type === "credit_card" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Hết hạn (MM/YY)</label>
-                  <input type="text" value={editPaymentForm.expired || ''} onChange={e => setEditPaymentForm(f => ({ ...f, expired: e.target.value }))} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="MM/YY" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Hết hạn (MM/YY)
+                  </label>
+                  <input
+                    type="text"
+                    value={editPaymentForm.expired || ""}
+                    onChange={(e) =>
+                      setEditPaymentForm((f) => ({
+                        ...f,
+                        expired: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="MM/YY"
+                  />
                 </div>
               )}
               <div className="flex justify-end">
-                <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow" disabled={editPaymentLoading}>
-                  {editPaymentLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+                <button
+                  type="submit"
+                  className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow"
+                  disabled={editPaymentLoading}
+                >
+                  {editPaymentLoading ? "Đang lưu..." : "Lưu thay đổi"}
                 </button>
               </div>
             </form>
@@ -2283,15 +3148,22 @@ const Profile: React.FC = () => {
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={handleCloseCancelModal}>&times;</button>
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={handleCloseCancelModal}
+            >
+              &times;
+            </button>
             <h2 className="text-lg font-bold mb-4">Hủy đơn hàng</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lý do hủy đơn hàng</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lý do hủy đơn hàng
+              </label>
               <textarea
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 rows={3}
                 value={cancelReason}
-                onChange={e => setCancelReason(e.target.value)}
+                onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="Nhập lý do hủy..."
               />
             </div>
@@ -2317,15 +3189,22 @@ const Profile: React.FC = () => {
       {showRefundModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 relative">
-            <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-700" onClick={handleCloseRefundModal}>&times;</button>
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={handleCloseRefundModal}
+            >
+              &times;
+            </button>
             <h2 className="text-lg font-bold mb-4">Yêu cầu hoàn tiền</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lý do yêu cầu hoàn tiền</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lý do yêu cầu hoàn tiền
+              </label>
               <textarea
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
                 rows={3}
                 value={refundReason}
-                onChange={e => setRefundReason(e.target.value)}
+                onChange={(e) => setRefundReason(e.target.value)}
                 placeholder="Nhập lý do hoàn tiền..."
               />
             </div>
