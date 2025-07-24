@@ -218,22 +218,22 @@ export const createProduct = async(req, res) => {
             variants = variants.map((v, idx) => {
                 let colorObj = v.color;
                 if (typeof colorObj === 'string') {
-                  colorObj = { code: colorObj, name: '' };
+                    colorObj = { code: colorObj, name: '' };
                 } else if (typeof colorObj === 'object' && colorObj !== null) {
-                  if (typeof colorObj.code !== 'string') colorObj.code = '';
-                  if (typeof colorObj.name !== 'string') colorObj.name = '';
+                    if (typeof colorObj.code !== 'string') colorObj.code = '';
+                    if (typeof colorObj.name !== 'string') colorObj.name = '';
                 } else {
-                  colorObj = { code: '', name: '' };
+                    colorObj = { code: '', name: '' };
                 }
                 return {
                     ...v,
-                    color: { ...colorObj },
+                    color: {...colorObj },
                     size: typeof v.size === 'number' ? v.size : parseFloat(v.size) || 0,
                     length: typeof v.length === 'number' ? v.length : parseFloat(v.length) || 0,
                     width: typeof v.width === 'number' ? v.width : parseFloat(v.width) || 0,
                     height: typeof v.height === 'number' ? v.height : parseFloat(v.height) || 0,
                     weight: typeof v.weight === 'number' ? v.weight : parseFloat(v.weight) || 0,
-                    specifications: (typeof v.specifications === 'object' && v.specifications !== null) ? { ...v.specifications } : {},
+                    specifications: (typeof v.specifications === 'object' && v.specifications !== null) ? {...v.specifications } : {},
                     images: Array.isArray(v.images) ? v.images : [],
                     isActive: !!v.isActive,
                 };
@@ -373,21 +373,21 @@ export const updateProduct = async(req, res) => {
         if (specifications !== undefined) product.specifications = specifications;
         if (features !== undefined) product.features = features;
         if (variants !== undefined) {
-          const safeVariants = variants.map(variant => {
-            let color = variant.color;
-            if (typeof color === 'string') {
-              color = { code: color, name: '' };
-            } else if (typeof color === 'object' && color !== null) {
-              if (typeof color.code !== 'string') color.code = '';
-              if (typeof color.name !== 'string') color.name = '';
-            } else {
-              color = { code: '', name: '' };
-            }
-            return { ...variant, color: { ...color } };
-          });
-          console.log("Updating variants (safe):", JSON.stringify(safeVariants, null, 2));
-          product.variants = safeVariants;
-          product.markModified('variants');
+            const safeVariants = variants.map(variant => {
+                let color = variant.color;
+                if (typeof color === 'string') {
+                    color = { code: color, name: '' };
+                } else if (typeof color === 'object' && color !== null) {
+                    if (typeof color.code !== 'string') color.code = '';
+                    if (typeof color.name !== 'string') color.name = '';
+                } else {
+                    color = { code: '', name: '' };
+                }
+                return {...variant, color: {...color } };
+            });
+            console.log("Updating variants (safe):", JSON.stringify(safeVariants, null, 2));
+            product.variants = safeVariants;
+            product.markModified('variants');
         }
         if (isActive !== undefined) product.isActive = isActive;
         if (isFeatured !== undefined) product.isFeatured = isFeatured;

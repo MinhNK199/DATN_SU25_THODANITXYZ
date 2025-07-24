@@ -1,4 +1,4 @@
-import Address from "../models/Address";
+import Address from "../models/Address.js";
 import fs from 'fs';
 import path from 'path';
 
@@ -8,7 +8,7 @@ const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../note/Danh-s�
 // Helper function để mapping mã sang tên
 const mapCodeToName = (code, type) => {
     if (!code) return null;
-    
+
     const codeNum = Number(code);
     if (type === 'province') {
         const item = data.find(item => item["Mã TP"] === codeNum);
@@ -35,7 +35,7 @@ const addNamesToAddress = (address) => {
 };
 
 // Lấy tất cả địa chỉ của user
-export const getUserAddresses = async (req, res) => {
+export const getUserAddresses = async(req, res) => {
     try {
         const addresses = await Address.find({ user: req.user._id });
         const addressesWithNames = addresses.map(addNamesToAddress);
@@ -46,14 +46,14 @@ export const getUserAddresses = async (req, res) => {
 };
 
 // Lấy một địa chỉ theo id
-export const getAddressById = async (req, res) => {
+export const getAddressById = async(req, res) => {
     try {
         const address = await Address.findOne({
             _id: req.params.id,
             user: req.user._id,
         });
         if (!address) return res.status(404).json({ message: "Không tìm thấy địa chỉ" });
-        
+
         const addressWithNames = addNamesToAddress(address);
         res.json(addressWithNames);
     } catch (error) {
@@ -62,7 +62,7 @@ export const getAddressById = async (req, res) => {
 };
 
 // Tạo địa chỉ mới
-export const createAddress = async (req, res) => {
+export const createAddress = async(req, res) => {
     try {
         const {
             fullName,
@@ -100,7 +100,7 @@ export const createAddress = async (req, res) => {
 };
 
 // Cập nhật địa chỉ
-export const updateAddress = async (req, res) => {
+export const updateAddress = async(req, res) => {
     try {
         const {
             fullName,
@@ -142,14 +142,14 @@ export const updateAddress = async (req, res) => {
 };
 
 // Xóa địa chỉ
-export const deleteAddress = async (req, res) => {
+export const deleteAddress = async(req, res) => {
     try {
         const address = await Address.findOne({
             _id: req.params.id,
             user: req.user._id,
         });
         if (!address) return res.status(404).json({ message: "Không tìm thấy địa chỉ" });
-        
+
         // Kiểm tra nếu địa chỉ là mặc định
         if (address.isDefault) {
             // Kiểm tra xem có địa chỉ khác không
@@ -157,18 +157,18 @@ export const deleteAddress = async (req, res) => {
                 user: req.user._id,
                 _id: { $ne: req.params.id }
             });
-            
+
             if (otherAddresses.length === 0) {
-                return res.status(400).json({ 
-                    message: "Không thể xóa địa chỉ mặc định. Vui lòng thêm địa chỉ khác trước." 
+                return res.status(400).json({
+                    message: "Không thể xóa địa chỉ mặc định. Vui lòng thêm địa chỉ khác trước."
                 });
             }
-            
-            return res.status(400).json({ 
-                message: "Không thể xóa địa chỉ mặc định. Vui lòng đặt địa chỉ khác làm mặc định trước." 
+
+            return res.status(400).json({
+                message: "Không thể xóa địa chỉ mặc định. Vui lòng đặt địa chỉ khác làm mặc định trước."
             });
         }
-        
+
         await Address.findByIdAndDelete(req.params.id);
         res.json({ message: "Đã xóa địa chỉ thành công" });
     } catch (error) {
@@ -177,7 +177,7 @@ export const deleteAddress = async (req, res) => {
 };
 
 // Đặt địa chỉ mặc định
-export const setDefaultAddress = async (req, res) => {
+export const setDefaultAddress = async(req, res) => {
     try {
         const address = await Address.findOne({
             _id: req.params.id,
@@ -186,10 +186,7 @@ export const setDefaultAddress = async (req, res) => {
 
         if (!address) return res.status(404).json({ message: "Không tìm thấy địa chỉ" });
 
-        await Address.updateMany(
-            { user: req.user._id, _id: { $ne: address._id } },
-            { isDefault: false }
-        );
+        await Address.updateMany({ user: req.user._id, _id: { $ne: address._id } }, { isDefault: false });
 
         address.isDefault = true;
         const updatedAddress = await address.save();

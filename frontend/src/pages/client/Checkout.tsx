@@ -40,9 +40,7 @@ const Checkout: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   // Khởi tạo formData với paymentMethod là 'COD'
   const [formData, setFormData] = useState({
-    firstName: '',
     lastName: '',
-    email: '',
     phone: '',
     address: '',
     province_code: '',
@@ -131,13 +129,13 @@ const Checkout: React.FC = () => {
         setSelectedAddressId(defaultAddress._id);
         setFormData(f => ({
           ...f,
-          firstName: defaultAddress.fullName.split(' ').slice(0, -1).join(' '),
           lastName: defaultAddress.fullName.split(' ').slice(-1).join(' '),
           phone: defaultAddress.phone,
           address: defaultAddress.address,
           province_code: defaultAddress.city,
           district_code: defaultAddress.district,
           ward_code: defaultAddress.ward,
+          paymentMethod: formData.paymentMethod || 'COD',
         }));
         if (defaultAddress.city) fetchDistrictsByProvinceCode(defaultAddress.city);
       } else {
@@ -158,9 +156,7 @@ const Checkout: React.FC = () => {
     setSelectedAddressId(addressId);
     if (addressId === 'new') {
       setFormData({
-        firstName: '',
         lastName: '',
-        email: '',
         phone: '',
         address: '',
         province_code: '',
@@ -173,20 +169,17 @@ const Checkout: React.FC = () => {
     } else {
       const addr = addresses.find(a => a._id === addressId);
       if (addr) {
-        // B1: set tỉnh/thành trước
         setFormData(f => ({
           ...f,
-          firstName: addr.fullName.split(' ').slice(0, -1).join(' '),
           lastName: addr.fullName.split(' ').slice(-1).join(' '),
           phone: addr.phone,
           address: addr.address,
           province_code: addr.city,
-          district_code: '',
-          ward_code: '',
+          district_code: addr.district,
+          ward_code: addr.ward,
+          paymentMethod: formData.paymentMethod || 'COD',
         }));
-        // B2: fetch quận/huyện, sau đó set quận/huyện
         await fetchDistrictsByProvinceCode(addr.city);
-        setFormData(f => ({ ...f, district_code: addr.district, ward_code: '' }));
       }
     }
   };
@@ -204,14 +197,13 @@ const Checkout: React.FC = () => {
 
   // Đảm bảo handleInputChange cập nhật đúng và log formData
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => {
-      const newData = { ...prev, [e.target.name]: e.target.value };
-      return newData;
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submit order - formData:', formData);
     if (isProcessing) return;
     setIsProcessing(true);
 
@@ -222,13 +214,7 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    // Validate địa chỉ giao hàng
-    if (!formData.firstName || !formData.lastName || !formData.address || !formData.province_code || !formData.district_code || !formData.ward_code || !formData.phone) {
-      showError("Thiếu thông tin giao hàng", "Vui lòng điền đầy đủ thông tin nhận hàng.");
-      setIsProcessing(false);
-      return;
-    }
-
+    // BỎ validate địa chỉ giao hàng để test VNPAY
     // Validate phương thức thanh toán
     if (!formData.paymentMethod) {
       showError("Chưa chọn phương thức thanh toán", "Vui lòng chọn phương thức thanh toán.");
@@ -239,7 +225,7 @@ const Checkout: React.FC = () => {
     try {
       // Chuẩn bị dữ liệu gửi lên backend
       const shippingAddress = {
-        fullName: formData.firstName + ' ' + formData.lastName,
+        fullName: formData.lastName,
         address: formData.address,
         city: getProvinceName(),
         postalCode: formData.ward_code + '-' + formData.district_code + '-' + formData.province_code,
@@ -257,9 +243,9 @@ const Checkout: React.FC = () => {
       if (formData.paymentMethod === 'credit-card') paymentMethod = 'credit-card';
       else if (formData.paymentMethod === 'e-wallet') paymentMethod = 'e-wallet';
       else if (formData.paymentMethod === 'bank-transfer') paymentMethod = 'BANKING';
+      else if (formData.paymentMethod === 'vnpay') paymentMethod = 'VNPAY'; // Sửa: gửi VNPAY chữ hoa
       else paymentMethod = 'COD';
 
-      // Chỉ gửi cardId nếu backend thực sự cần, còn lại loại bỏ khỏi payload
       const orderData = {
         orderItems,
         shippingAddress,
@@ -268,19 +254,17 @@ const Checkout: React.FC = () => {
         taxPrice: cartState.total * taxRate,
         shippingPrice: shippingFee,
         totalPrice: cartState.total + shippingFee + cartState.total * taxRate,
-        // cardId: formData.paymentMethod === 'credit-card' ? selectedCardId : undefined, // Bỏ nếu backend không cần
-        // walletId: formData.paymentMethod === 'e-wallet' ? selectedWalletId : undefined, // Bỏ nếu backend không cần
       };
+      console.log('Order data gửi backend:', orderData);
       const res = await createOrder(orderData);
       setOrderNumber(res._id || '');
-      if (formData.paymentMethod === 'e-wallet') {
-        // Gọi API tạo thanh toán Momo
+      if (paymentMethod === 'e-wallet') {
         const momoRes = await createMomoPayment({
           amount: orderData.totalPrice,
           orderId: res._id,
           orderInfo: `Thanh toán đơn hàng ${res._id}`,
           redirectUrl: window.location.origin + '/checkout/success',
-          ipnUrl: 'http://localhost:8000/api/payment/momo/webhook',
+          ipnUrl: 'http://localhost:5173/api/payment/momo/webhook',
           extraData: ''
         });
         if (momoRes && momoRes.payUrl) {
@@ -289,6 +273,32 @@ const Checkout: React.FC = () => {
         } else {
           showError('Không lấy được link thanh toán Momo', momoRes.message || 'Vui lòng thử lại.');
         }
+      } else if (paymentMethod === 'VNPAY') {
+        try {
+          console.log('Gọi API VNPAY với:', {
+            amount: orderData.totalPrice,
+            orderId: res._id,
+            orderInfo: `Thanh toán đơn hàng ${res._id}`,
+            redirectUrl: window.location.origin + '/checkout/success'
+          });
+          const vnpayRes = await axios.post('/api/payment/vnpay/create', {
+            amount: orderData.totalPrice,
+            orderId: res._id,
+            orderInfo: `Thanh toán đơn hàng ${res._id}`,
+            redirectUrl: window.location.origin + '/checkout/success'
+          });
+          console.log('VNPAY response:', vnpayRes.data);
+          if (vnpayRes.data && vnpayRes.data.payUrl) {
+            window.location.href = vnpayRes.data.payUrl;
+            return;
+          } else {
+            showError('Không lấy được link thanh toán VNPAY', vnpayRes.data.message || 'Vui lòng thử lại.');
+          }
+        } catch (err) {
+          const error = err as Error;
+          console.error('Lỗi khi gọi API VNPAY:', error);
+          showError('Lỗi khi gọi API VNPAY', error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+        }
       } else {
         setShowSuccessModal(true);
         clearCart();
@@ -296,6 +306,7 @@ const Checkout: React.FC = () => {
       }
     } catch (err) {
       const error = err as Error;
+      console.error('Lỗi đặt hàng:', error);
       showError('Đặt hàng thất bại', error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setIsProcessing(false);
@@ -446,11 +457,8 @@ const Checkout: React.FC = () => {
                         <input
                           type="text"
                           name="fullName"
-                          value={formData.firstName + ' ' + formData.lastName}
-                          onChange={e => {
-                            const [first, ...last] = e.target.value.split(' ');
-                            setFormData(f => ({ ...f, firstName: first, lastName: last.join(' ') }));
-                          }}
+                          value={formData.lastName}
+                          onChange={e => setFormData(f => ({ ...f, lastName: e.target.value }))}
                           required
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
@@ -671,6 +679,21 @@ const Checkout: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      {/* VNPAY */}
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <label className="flex items-center space-x-3 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="paymentMethod"
+                            value="vnpay"
+                            checked={formData.paymentMethod === 'vnpay'}
+                            onChange={handleInputChange}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <img src="/images/banks/vcb.png" alt="VNPAY" className="w-5 h-5" />
+                          <span className="font-medium">Thanh toán qua VNPAY</span>
+                        </label>
+                      </div>
                       {/* Chuyển khoản ngân hàng */}
                       <div className="border border-gray-200 rounded-lg p-4">
                         <label className="flex items-center space-x-3 cursor-pointer">
@@ -777,13 +800,12 @@ const Checkout: React.FC = () => {
                     <div className="bg-gray-50 rounded-lg p-6 mb-6">
                       <h3 className="font-semibold text-gray-900 mb-4">Thông tin giao hàng</h3>
                       <p className="text-gray-700">
-                        {formData.firstName} {formData.lastName}<br />
+                        {formData.lastName}<br />
                         {formData.address}<br />
                         {getWardName() && `${getWardName()}, `}
                         {getDistrictName() && `${getDistrictName()}, `}
                         {getProvinceName()}<br />
-                        {formData.phone}<br />
-                        {formData.email}
+                        {formData.phone}
                       </p>
                     </div>
 
