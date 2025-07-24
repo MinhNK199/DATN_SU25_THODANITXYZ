@@ -39,6 +39,37 @@ export default function Login() {
       [e.target.name]: e.target.value,
     });
   };
+const login = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
+    try {
+     const id_token = tokenResponse.access_token;
+
+      const res = await axios.post("http://localhost:8000/api/auth/google", {
+        id_token,
+      });
+
+      const { token, user } = res.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      setCurrentUser(user);
+      setSuccess("Đăng nhập Google thành công!");
+
+      const role = user?.role;
+      if (role === "admin" || role === "superadmin") {
+        setShowRoleChoice(true);
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Lỗi đăng nhập Google:", err);
+      setError("Đăng nhập Google thất bại");
+    }
+  },
+  onError: () => {
+    setError("Đăng nhập Google thất bại");
+  },
+  flow: "implicit", // hoặc "auth-code" tùy backend
+});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -415,57 +446,29 @@ export default function Login() {
           </div>
 
           {/* Social Login */}
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            <GoogleLogin
-              onSuccess={async (credentialResponse) => {
-                try {
-                  const id_token = credentialResponse.credential;
+         <div className="mt-6 grid grid-cols-2 gap-4">
+    {/* Custom Google Login Button */}
+    <button
+      type="button"
+      onClick={() => login()}
+      disabled={isLoading}
+      className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <FaGoogle className="text-red-500 h-5 w-5" />
+      <span>Đăng nhập với Google</span>
+    </button>
 
-                  const res = await axios.post(
-                    "http://localhost:8000/api/auth/google",
-                    {
-                      id_token,
-                    }
-                  );
-
-                  const { token, user } = res.data;
-                  localStorage.setItem("token", token);
-                  localStorage.setItem("user", JSON.stringify(user));
-                  setCurrentUser(user);
-                  setSuccess("Đăng nhập Google thành công!");
-
-                  const role = user?.role;
-                  if (role === "admin" || role === "superadmin") {
-                    setShowRoleChoice(true);
-                  } else {
-                    navigate("/");
-                  }
-                } catch (err) {
-                  console.error("Lỗi đăng nhập Google:", err);
-                  setError("Đăng nhập Google thất bại");
-                }
-              }}
-              onError={() => {
-                setError("Đăng nhập Google thất bại");
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={handleFacebookLogin}
-              disabled={isLoading}
-              className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FaFacebook className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              disabled={isLoading}
-              className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FaApple className="h-5 w-5" />
-            </button>
-          </div>
+    {/* Facebook Login */}
+    <button
+      type="button"
+      onClick={handleFacebookLogin}
+      disabled={isLoading}
+      className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <FaFacebook className="text-blue-600 h-5 w-5" />
+      <span>Đăng nhập với Facebook</span>
+    </button>
+  </div>
 
           {/* Toggle Login/Register */}
           <div className="mt-6 text-center">
