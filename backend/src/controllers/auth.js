@@ -41,15 +41,6 @@ export const dangKy = async (req, res) => {
       emailVerificationExpires,
     });
 
-    // Gửi email xác thực
-    // const verifyUrl = `${process.env.CLIENT_URL || "http://localhost:3000"}/verify-email?token=${emailVerificationToken}&email=${encodeURIComponent(email)}`;
-    // const html = `<h2>Xác thực email TechTrend</h2><p>Chào ${name},</p><p>Vui lòng xác thực email bằng cách nhấn vào link sau:</p><a href="${verifyUrl}">${verifyUrl}</a><p>Link có hiệu lực trong 24h.</p>`;
-    // await sendMail({
-    //   to: email,
-    //   subject: "Xác thực email TechTrend",
-    //   html,
-    // });
-
     user.password = undefined;
     await logActivity({
       content: `Đăng ký tài khoản`,
@@ -393,19 +384,31 @@ export const verifyEmail = async (req, res) => {
 export const googleLogin = async (req, res) => {
   try {
     const { id_token } = req.body;
+
+    console.log("📥 Nhận id_token từ FE:", id_token); // ✅ Log token nhận
+
     if (!id_token) {
       return res.status(400).json({ message: "Thiếu id_token từ Google." });
     }
-    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    console.log("🔑 GOOGLE_CLIENT_ID:", process.env.GG_CLIENT_ID); // ✅ Log biến môi trường
+
+    const client = new OAuth2Client(process.env.GG_CLIENT_ID);
+
     const ticket = await client.verifyIdToken({
       idToken: id_token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: process.env.GG_CLIENT_ID,
     });
+
     const payload = ticket.getPayload();
+    console.log("✅ Payload từ Google:", payload); // ✅ Log response từ Google
+
     const { email, name, picture } = payload;
+
     if (!email) {
       return res.status(400).json({ message: "Không lấy được email từ Google." });
     }
+
     let user = await User.findOne({ email });
     if (!user) {
       user = await User.create({
@@ -413,16 +416,19 @@ export const googleLogin = async (req, res) => {
         email,
         avatar: picture,
         emailVerified: true,
-        password: Math.random().toString(36).slice(-8), // random password
+        password: Math.random().toString(36).slice(-8),
         role: "customer",
       });
     }
+
     if (!user.active) {
       return res.status(403).json({ message: "Tài khoản đang bị khóa." });
     }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
+
     return res.status(200).json({
       message: "Đăng nhập Google thành công!",
       token,
@@ -435,7 +441,11 @@ export const googleLogin = async (req, res) => {
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: "Đăng nhập Google thất bại", error: error.message });
+    console.error("❌ Lỗi khi đăng nhập Google:", error); // In toàn bộ lỗi
+    return res.status(500).json({
+      message: "Đăng nhập Google thất bại",
+      error: error.message,
+    });
   }
 };
 
