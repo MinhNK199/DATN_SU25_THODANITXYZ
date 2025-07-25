@@ -126,6 +126,22 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
         </label>
         {/* Không cần input số điện thoại cho ZaloPay */}
       </div>
+      {/* VNPAY */}
+      <div className="border border-gray-200 rounded-lg p-4">
+        <label className="flex items-center space-x-3 cursor-pointer">
+          <input
+            type="radio"
+            name="paymentMethod"
+            value="vnpay"
+            checked={formData.paymentMethod === 'vnpay'}
+            onChange={handleInputChange}
+            className="w-4 h-4 text-blue-600"
+          />
+          <img src="/images/wallets/vnpay.png" alt="VNPAY" className="w-5 h-5" />
+          <span className="font-medium">Thanh toán qua VNPAY</span>
+        </label>
+        {/* Không cần input số điện thoại cho VNPAY */}
+      </div>
       <div className="border border-gray-200 rounded-lg p-4">
         <label className="flex items-center space-x-3 cursor-pointer">
           <input

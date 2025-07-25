@@ -11,6 +11,9 @@ const vnp_ReturnUrl = 'http://localhost:5173/checkout/success'; // Đảm bảo 
 export const createVnpayPayment = (req, res) => {
     try {
         const { amount, orderId, orderInfo, redirectUrl } = req.body;
+        if (!amount || !orderId) {
+            return res.status(400).json({ payUrl: null, message: 'Thiếu thông tin số tiền hoặc mã đơn hàng.' });
+        }
         const ipAddr = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
         const date = new Date();
         const createDate = moment(date).format('YYYYMMDDHHmmss');
@@ -37,7 +40,8 @@ export const createVnpayPayment = (req, res) => {
         const paymentUrl = vnp_Url + '?' + qs.stringify(vnp_Params, { encode: false });
         res.json({ payUrl: paymentUrl });
     } catch (error) {
-        res.status(500).json({ message: 'Lỗi tạo thanh toán VNPAY', error: error.message });
+        console.error('VNPAY payment error:', error);
+        res.status(500).json({ payUrl: null, message: 'Lỗi tạo thanh toán VNPAY', error: error.message });
     }
 };
 
