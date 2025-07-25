@@ -59,11 +59,22 @@ export const updateBrand = async (req, res) => {
 export const deleteBrand = async (req, res) => {
     try {
         const brand = await Brand.findById(req.params.id);
-        if (!brand) return res.status(404).json({ message: "Không tìm thấy thương hiệu" });
-        await brand.remove();
+        if (!brand) {
+            return res.status(404).json({ message: "Không tìm thấy thương hiệu" });
+        }
+
+        // Kiểm tra nếu thương hiệu đang được sử dụng bởi sản phẩm
+        const productsUsingBrand = await Product.find({ brand: req.params.id });
+        if (productsUsingBrand.length > 0) {
+            return res.status(400).json({ message: "Không thể xóa thương hiệu vì đang được sử dụng" });
+        }
+
+        // Xóa thương hiệu
+        await Brand.findByIdAndDelete(req.params.id);
         res.json({ message: "Đã xóa thương hiệu thành công" });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("Lỗi xóa thương hiệu:", error);
+        res.status(500).json({ message: "Lỗi server, không thể xóa thương hiệu" });
     }
 };
 
