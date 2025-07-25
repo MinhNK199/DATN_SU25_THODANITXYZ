@@ -120,7 +120,9 @@ const Checkout: React.FC = () => {
   useEffect(() => {
     if (formData.district_code) {
       axios
-        .get(`https://provinces.open-api.vn/api/d/${formData.district_code}?depth=2`)
+        .get(
+          `https://provinces.open-api.vn/api/d/${formData.district_code}?depth=2`
+        )
         .then((r) => {
           setWards(r.data.wards || []);
         })
@@ -236,7 +238,12 @@ const Checkout: React.FC = () => {
       return;
     }
     if (formData.paymentMethod === "credit-card") {
-      if (!cardInfo.number || !cardInfo.name || !cardInfo.expiry || !cardInfo.cvv) {
+      if (
+        !cardInfo.number ||
+        !cardInfo.name ||
+        !cardInfo.expiry ||
+        !cardInfo.cvv
+      ) {
         alert("Vui lòng nhập đầy đủ thông tin thẻ!");
         return;
       }
@@ -338,16 +345,26 @@ const Checkout: React.FC = () => {
       } else if (formData.paymentMethod === "zalopay") {
         const yourToken = localStorage.getItem("token");
         const zaloRes = await axios.post(
-  "http://localhost:8000/api/order/zalo-pay",
-  { orderId: res._id },
-  { headers: { Authorization: `Bearer ${yourToken}` } }
-  
-);
+          "http://localhost:8000/api/order/zalo-pay",
+          { orderId: res._id },
+          { headers: { Authorization: `Bearer ${yourToken}` } }
+        );
+        // Sửa đoạn này:
         if (zaloRes.data && zaloRes.data.order_url) {
           window.location.href = zaloRes.data.order_url;
           return;
+        } else if (
+          zaloRes.data &&
+          zaloRes.data.data &&
+          zaloRes.data.data.order_url
+        ) {
+          window.location.href = zaloRes.data.data.order_url;
+          return;
         } else {
-          alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
+          alert(
+            "Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.\n" +
+              JSON.stringify(zaloRes.data)
+          );
         }
       } else if (
         formData.paymentMethod === "e-wallet" &&
@@ -364,8 +381,10 @@ const Checkout: React.FC = () => {
             window.location.href = vnpayRes.data.payUrl;
             return;
           } else {
-  alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.\n" + (zaloRes.data?.message || ""));
-}
+            alert(
+              "Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.\n"
+            );
+          }
         } catch (err) {
           const error = err as Error;
           alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
@@ -378,9 +397,12 @@ const Checkout: React.FC = () => {
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
         );
       }
-   } catch (err: any) {
-  alert("Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.\n" + (err?.response?.data?.message || err.message));
-} finally {
+    } catch (err: any) {
+      alert(
+        "Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.\n" +
+          (err?.response?.data?.message || err.message)
+      );
+    } finally {
       setIsProcessing(false);
     }
   };
