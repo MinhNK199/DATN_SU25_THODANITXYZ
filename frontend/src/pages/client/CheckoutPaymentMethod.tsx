@@ -110,90 +110,22 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
           </div>
         )}
       </div>
+      {/* ZaloPay */}
       <div className="border border-gray-200 rounded-lg p-4">
         <label className="flex items-center space-x-3 cursor-pointer">
           <input
             type="radio"
             name="paymentMethod"
-            value="e-wallet"
-            checked={formData.paymentMethod === 'e-wallet'}
-            onChange={e => {
-              handleInputChange(e);
-              setShowNewWalletForm(false);
-            }}
-            className="w-4 h-4 text-blue-600"
-          />
-          <FaPaypal className="w-5 h-5 text-blue-600" />
-          <span className="font-medium">Ví điện tử</span>
-        </label>
-        {formData.paymentMethod === 'e-wallet' && (
-          <div className="mt-4">
-            {(showNewWalletForm || true) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  value={walletInfo.type}
-                  onChange={e => setWalletInfo(w => ({ ...w, type: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  required
-                >
-                  <option value="">Chọn ví</option>
-                  <option value="momo">Momo</option>
-                  <option value="zalopay">ZaloPay</option>
-                  <option value="vnpay">VNPAY</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Số điện thoại ví"
-                  value={walletInfo.phone}
-                  onChange={e => setWalletInfo(w => ({ ...w, phone: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  required
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="border border-gray-200 rounded-lg p-4">
-        <label className="flex items-center space-x-3 cursor-pointer">
-          <input
-            type="radio"
-            name="paymentMethod"
-            value="vnpay"
-            checked={formData.paymentMethod === 'vnpay'}
+            value="zalopay"
+            checked={formData.paymentMethod === 'zalopay'}
             onChange={handleInputChange}
             className="w-4 h-4 text-blue-600"
           />
-          <img src="/images/banks/vcb.png" alt="VNPAY" className="w-5 h-5" />
-          <span className="font-medium">Thanh toán qua VNPAY</span>
+          <img src="/images/wallets/zalopay.png" alt="ZaloPay" className="w-5 h-5" />
+          <span className="font-medium">Thanh toán qua ZaloPay</span>
         </label>
+        {/* Không cần input số điện thoại cho ZaloPay */}
       </div>
-      <div className="border border-gray-200 rounded-lg p-4">
-  <label className="flex items-center space-x-3 cursor-pointer">
-    <input
-      type="radio"
-      name="paymentMethod"
-      value="zalopay"
-      checked={formData.paymentMethod === 'zalopay'}
-      onChange={handleInputChange}
-      className="w-4 h-4 text-blue-600"
-    />
-    <img src="/images/wallets/zalopay.png" alt="ZaloPay" className="w-5 h-5" />
-    <span className="font-medium">Thanh toán qua ZaloPay</span>
-  </label>
-  {formData.paymentMethod === 'zalopay' && (
-    <div className="mt-4">
-      <input
-        type="text"
-        placeholder="Số điện thoại ZaloPay"
-        value={walletInfo.phone}
-        onChange={e => setWalletInfo(w => ({ ...w, phone: e.target.value }))}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-        required
-      />
-    </div>
-  )}
-</div>
       <div className="border border-gray-200 rounded-lg p-4">
         <label className="flex items-center space-x-3 cursor-pointer">
           <input

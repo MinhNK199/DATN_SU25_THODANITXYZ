@@ -335,13 +335,14 @@ const Checkout: React.FC = () => {
         } else {
           alert("Không lấy được link thanh toán Momo. Vui lòng thử lại.");
         }
-      } else if (
-        formData.paymentMethod === "e-wallet" &&
-        walletInfo.type === "zalopay"
-      ) {
-        const zaloRes = await axios.post("/api/orders/create", {
-          orderId: res._id,
-        });
+      } else if (formData.paymentMethod === "zalopay") {
+        const yourToken = localStorage.getItem("token");
+        const zaloRes = await axios.post(
+  "http://localhost:8000/api/order/zalo-pay",
+  { orderId: res._id },
+  { headers: { Authorization: `Bearer ${yourToken}` } }
+  
+);
         if (zaloRes.data && zaloRes.data.order_url) {
           window.location.href = zaloRes.data.order_url;
           return;
@@ -363,8 +364,8 @@ const Checkout: React.FC = () => {
             window.location.href = vnpayRes.data.payUrl;
             return;
           } else {
-            alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
-          }
+  alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.\n" + (zaloRes.data?.message || ""));
+}
         } catch (err) {
           const error = err as Error;
           alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
@@ -377,9 +378,9 @@ const Checkout: React.FC = () => {
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
         );
       }
-    } catch (err: any) {
-      alert("Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.");
-    } finally {
+   } catch (err: any) {
+  alert("Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.\n" + (err?.response?.data?.message || err.message));
+} finally {
       setIsProcessing(false);
     }
   };

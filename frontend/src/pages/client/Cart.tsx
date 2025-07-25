@@ -28,7 +28,7 @@ const Cart: React.FC = () => {
   useEffect(() => {
     const fetchRecommended = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/product");
+        const res = await fetch("http://localhost:8000/api/product");
         const data = await res.json();
         // Chuẩn hóa dữ liệu sản phẩm gợi ý
         const normalized = (data.products || []).map((p: Product) => ({
