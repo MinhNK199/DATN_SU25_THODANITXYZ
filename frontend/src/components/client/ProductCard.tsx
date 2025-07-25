@@ -22,6 +22,7 @@ interface ProductCardProps {
     _id: string;
     name: string;
     price: number;
+    salePrice?: number;
     originalPrice?: number;
     image: string;
     brand:
@@ -36,7 +37,20 @@ interface ProductCardProps {
     isNew?: boolean;
     isHot?: boolean;
     stock: number;
-    variants?: { stock: number }[];
+    variants?: Array<{
+      _id: string;
+      name?: string;
+      price: number;
+      salePrice?: number;
+      stock: number;
+      images?: string[];
+      sku?: string;
+      color?: string;
+      size?: string;
+      weight?: number;
+      isActive?: boolean;
+      specifications?: Record<string, string>;
+    }>;
   };
 }
 
@@ -242,13 +256,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Brand Badge */}
         {/* Stock Status Badge */}
-        <div className="absolute top-3 right-3 transform translate-x-16">
-          <div className="bg-white bg-opacity-90 text-xs font-medium px-2 py-1 rounded-full">
-            {getStockStatus()}
-          </div>
-        </div>
 
         {/* Quick Actions */}
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -421,7 +429,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {filteredVariants.map((variant: any) => (
             <Popover
               key={variant._id}
-              content={
+              content={(
                 <div style={{ minWidth: 300 }}>
                   <div className="font-semibold mb-1 text-base">{variant.name || `${variant.color || ''} ${variant.size || ''}`}</div>
                   <div className="mb-2">
@@ -461,7 +469,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     </div>
                   )}
                 </div>
-              }
+              ) as React.ReactNode}
               placement="right"
             >
               <div
