@@ -14,7 +14,7 @@ import ProductCard from "../../components/client/ProductCard";
 import { useCart } from "../../contexts/CartContext";
 import cartApi, { getTaxConfig } from "../../services/cartApi";
 import { Product } from "../../interfaces/Product";
-import { Modal, Button, message } from 'antd';
+import { Modal, Button, message } from "antd";
 
 const Cart: React.FC = () => {
   const { state, updateQuantity, removeFromCart, clearCart, loadCart } =
@@ -36,7 +36,10 @@ const Cart: React.FC = () => {
           name: p.name,
           price: p.price,
           salePrice: p.salePrice,
-          images: p.images && p.images.length > 0 ? p.images : ["/placeholder-image.jpg"],
+          images:
+            p.images && p.images.length > 0
+              ? p.images
+              : ["/placeholder-image.jpg"],
           brand: p.brand,
           stock: p.stock ?? 0,
           variants: p.variants ?? [],
@@ -76,7 +79,9 @@ const Cart: React.FC = () => {
   const shipping = subtotal > 500000 ? 0 : 30000;
   const [taxRate, setTaxRate] = useState(0.08);
   useEffect(() => {
-    getTaxConfig().then(cfg => setTaxRate(cfg.rate)).catch(() => setTaxRate(0.08));
+    getTaxConfig()
+      .then((cfg) => setTaxRate(cfg.rate))
+      .catch(() => setTaxRate(0.08));
   }, []);
   const tax = subtotal * taxRate;
   const total = subtotal + shipping + tax;
@@ -136,14 +141,37 @@ const Cart: React.FC = () => {
                   // Ưu tiên lấy thông tin từ variantInfo nếu có
                   const variant = item.variantInfo;
                   const displayName = variant?.name || item.product.name;
-                  const displayImage = variant?.images?.[0] || item.product.images?.[0] || "/placeholder-image.jpg";
-                  const displayPrice = (variant?.salePrice && variant?.salePrice < variant?.price) ? variant.salePrice : (variant?.price ?? (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price));
-                  const displayOldPrice = (variant?.salePrice && variant?.salePrice < variant?.price) ? variant.price : (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.price : undefined);
+                  const displayImage =
+                    variant?.images?.[0] ||
+                    item.product.images?.[0] ||
+                    "/placeholder-image.jpg";
+                  const displayPrice =
+                    variant?.salePrice && variant?.salePrice < variant?.price
+                      ? variant.salePrice
+                      : variant?.price ??
+                        (item.product.salePrice &&
+                        item.product.salePrice < item.product.price
+                          ? item.product.salePrice
+                          : item.product.price);
+                  const displayOldPrice =
+                    variant?.salePrice && variant?.salePrice < variant?.price
+                      ? variant.price
+                      : item.product.salePrice &&
+                        item.product.salePrice < item.product.price
+                      ? item.product.price
+                      : undefined;
                   const displayStock = variant?.stock ?? item.product.stock;
                   const displayColor = variant?.color ?? null;
                   const displaySize = variant?.size ?? null;
                   const displaySKU = variant?.sku ?? null;
-                  const displaySpecifications = variant?.specifications && Object.keys(variant.specifications).length > 0 ? variant.specifications : (item.specifications && Object.keys(item.specifications).length > 0 ? item.specifications : null);
+                  const displaySpecifications =
+                    variant?.specifications &&
+                    Object.keys(variant.specifications).length > 0
+                      ? variant.specifications
+                      : item.specifications &&
+                        Object.keys(item.specifications).length > 0
+                      ? item.specifications
+                      : null;
                   return (
                     <div
                       key={item._id}
@@ -167,14 +195,20 @@ const Cart: React.FC = () => {
                                 {displayName}
                               </h3>
                               {/* Nút xem chi tiết */}
-                              <Button type="link" onClick={() => handleShowDetail(item)} style={{padding:0}}>
+                              <Button
+                                type="link"
+                                onClick={() => handleShowDetail(item)}
+                                style={{ padding: 0 }}
+                              >
                                 Xem chi tiết
                               </Button>
                               {/* Product Options */}
                               <div className="flex items-center space-x-4 mb-4">
                                 {displayColor && (
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-600">Màu:</span>
+                                    <span className="text-sm text-gray-600">
+                                      Màu:
+                                    </span>
                                     <div
                                       className="w-6 h-6 rounded-full border-2 border-gray-300"
                                       style={{ backgroundColor: displayColor }}
@@ -183,14 +217,22 @@ const Cart: React.FC = () => {
                                 )}
                                 {displaySize && (
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-600">Kích thước:</span>
-                                    <span className="text-sm font-medium">{displaySize}</span>
+                                    <span className="text-sm text-gray-600">
+                                      Kích thước:
+                                    </span>
+                                    <span className="text-sm font-medium">
+                                      {displaySize}
+                                    </span>
                                   </div>
                                 )}
                                 {displaySKU && (
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-sm text-gray-600">SKU:</span>
-                                    <span className="text-sm font-mono">{displaySKU}</span>
+                                    <span className="text-sm text-gray-600">
+                                      SKU:
+                                    </span>
+                                    <span className="text-sm font-mono">
+                                      {displaySKU}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -207,11 +249,16 @@ const Cart: React.FC = () => {
                                 )}
                                 {displayOldPrice && (
                                   <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-semibold">
-                                    Tiết kiệm {formatPrice(displayOldPrice - displayPrice)}
+                                    Tiết kiệm{" "}
+                                    {formatPrice(
+                                      displayOldPrice - displayPrice
+                                    )}
                                   </span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-600 mb-2">Tồn kho: {displayStock}</div>
+                              <div className="text-sm text-gray-600 mb-2">
+                                Tồn kho: {displayStock}
+                              </div>
                             </div>
 
                             {/* Quantity Controls */}
@@ -231,14 +278,20 @@ const Cart: React.FC = () => {
                                 </span>
                                 <button
                                   onClick={() => {
-                                    const maxStock = variant?.stock ?? item.product.stock;
+                                    const maxStock =
+                                      variant?.stock ?? item.product.stock;
                                     if (item.quantity >= maxStock) {
-                                      message.warning('Đã đạt số lượng tối đa tồn kho của biến thể này!');
+                                      message.warning(
+                                        "Đã đạt số lượng tối đa tồn kho của biến thể này!"
+                                      );
                                       return;
                                     }
                                     updateQuantity(item._id, item.quantity + 1);
                                   }}
-                                  disabled={item.quantity >= (variant?.stock ?? item.product.stock)}
+                                  disabled={
+                                    item.quantity >=
+                                    (variant?.stock ?? item.product.stock)
+                                  }
                                   className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
                                   <FaPlus className="w-3 h-3" />
@@ -261,8 +314,7 @@ const Cart: React.FC = () => {
                             <span className="text-sm text-gray-600">
                               {typeof displayStock === "number"
                                 ? (() => {
-                                    const remain =
-                                      displayStock - item.quantity;
+                                    const remain = displayStock - item.quantity;
                                     if (remain <= 0)
                                       return (
                                         <span className="text-red-600">
@@ -305,21 +357,30 @@ const Cart: React.FC = () => {
                             </span>
                           </div>
                           {/* Thông số kỹ thuật của biến thể nếu có */}
-                          {displaySpecifications && Object.keys(displaySpecifications).length > 0 && (
-                            <div className="mt-2">
-                              <span className="font-medium text-gray-700">Thông số kỹ thuật:</span>
-                              <table className="w-full border rounded-lg overflow-hidden mb-2 mt-1">
-                                <tbody>
-                                  {Object.entries(displaySpecifications).map(([key, value]) => (
-                                    <tr key={key}>
-                                      <td className="py-1 px-2 bg-gray-50 font-medium text-sm text-gray-700">{key}</td>
-                                      <td className="py-1 px-2 text-sm text-gray-600">{value}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
+                          {displaySpecifications &&
+                            Object.keys(displaySpecifications).length > 0 && (
+                              <div className="mt-2">
+                                <span className="font-medium text-gray-700">
+                                  Thông số kỹ thuật:
+                                </span>
+                                <table className="w-full border rounded-lg overflow-hidden mb-2 mt-1">
+                                  <tbody>
+                                    {Object.entries(displaySpecifications).map(
+                                      ([key, value]) => (
+                                        <tr key={key}>
+                                          <td className="py-1 px-2 bg-gray-50 font-medium text-sm text-gray-700">
+                                            {key}
+                                          </td>
+                                          <td className="py-1 px-2 text-sm text-gray-600">
+                                            {value}
+                                          </td>
+                                        </tr>
+                                      )
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -398,7 +459,7 @@ const Cart: React.FC = () => {
               {/* Checkout Button */}
               <Link
                 to="#"
-                onClick={e => {
+                onClick={(e) => {
                   e.preventDefault();
                   navigate("/checkout", {
                     state: {
@@ -406,8 +467,8 @@ const Cart: React.FC = () => {
                       savings,
                       shipping,
                       tax,
-                      total
-                    }
+                      total,
+                    },
                   });
                 }}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 mb-4"
@@ -439,23 +500,87 @@ const Cart: React.FC = () => {
             <div>
               <div className="flex flex-col items-center mb-4">
                 <img
-                  src={detailItem.variantInfo?.images?.[0] || detailItem.product.images?.[0] || "/placeholder-image.jpg"}
+                  src={
+                    detailItem.variantInfo?.images?.[0] ||
+                    detailItem.product.images?.[0] ||
+                    "/placeholder-image.jpg"
+                  }
                   alt={detailItem.variantInfo?.name || detailItem.product.name}
                   className="w-40 h-40 object-cover rounded-lg mb-2"
                 />
-                <div className="text-lg font-bold mb-1">{detailItem.variantInfo?.name || detailItem.product.name}</div>
-                <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice((detailItem.variantInfo?.salePrice && detailItem.variantInfo?.salePrice < detailItem.variantInfo?.price) ? detailItem.variantInfo.salePrice : (typeof detailItem.variantInfo?.price === 'number' ? detailItem.variantInfo.price : (detailItem.product.salePrice && detailItem.product.salePrice < detailItem.product.price ? detailItem.product.salePrice : detailItem.product.price)))}</span></div>
-                <div className="mb-1">Tồn kho: <span className="font-semibold">{typeof detailItem.variantInfo?.stock === 'number' ? detailItem.variantInfo.stock : detailItem.product.stock}</span></div>
-                <div className="mb-1">SKU: <span className="font-mono">{detailItem.variantInfo?.sku || detailItem.product.sku || 'N/A'}</span></div>
-                <div className="mb-1">Màu sắc: <span>{detailItem.variantInfo?.color || detailItem.product.color || 'N/A'}</span></div>
-                <div className="mb-1">Kích thước: <span>{detailItem.variantInfo?.size || detailItem.product.size || 'N/A'}</span></div>
-                <div className="mb-1">Cân nặng: <span>{typeof detailItem.variantInfo?.weight === 'number' ? detailItem.variantInfo.weight : (typeof detailItem.product.weight === 'number' ? detailItem.product.weight : 'N/A')}</span></div>
-                {detailItem.variantInfo?.specifications && Object.keys(detailItem.variantInfo.specifications).length > 0 ? (
+                <div className="text-lg font-bold mb-1">
+                  {detailItem.variantInfo?.name || detailItem.product.name}
+                </div>
+                <div className="mb-1">
+                  Giá:{" "}
+                  <span className="text-red-600 font-semibold">
+                    {formatPrice(
+                      detailItem.variantInfo?.salePrice &&
+                        detailItem.variantInfo?.salePrice <
+                          detailItem.variantInfo?.price
+                        ? detailItem.variantInfo.salePrice
+                        : typeof detailItem.variantInfo?.price === "number"
+                        ? detailItem.variantInfo.price
+                        : detailItem.product.salePrice &&
+                          detailItem.product.salePrice <
+                            detailItem.product.price
+                        ? detailItem.product.salePrice
+                        : detailItem.product.price
+                    )}
+                  </span>
+                </div>
+                <div className="mb-1">
+                  Tồn kho:{" "}
+                  <span className="font-semibold">
+                    {typeof detailItem.variantInfo?.stock === "number"
+                      ? detailItem.variantInfo.stock
+                      : detailItem.product.stock}
+                  </span>
+                </div>
+                <div className="mb-1">
+                  SKU:{" "}
+                  <span className="font-mono">
+                    {detailItem.variantInfo?.sku ||
+                      detailItem.product.sku ||
+                      "N/A"}
+                  </span>
+                </div>
+                <div className="mb-1">
+                  Màu sắc:{" "}
+                  <span>
+                    {detailItem.variantInfo?.color ||
+                      detailItem.product.color ||
+                      "N/A"}
+                  </span>
+                </div>
+                <div className="mb-1">
+                  Kích thước:{" "}
+                  <span>
+                    {detailItem.variantInfo?.size ||
+                      detailItem.product.size ||
+                      "N/A"}
+                  </span>
+                </div>
+                <div className="mb-1">
+                  Cân nặng:{" "}
+                  <span>
+                    {typeof detailItem.variantInfo?.weight === "number"
+                      ? detailItem.variantInfo.weight
+                      : typeof detailItem.product.weight === "number"
+                      ? detailItem.product.weight
+                      : "N/A"}
+                  </span>
+                </div>
+                {detailItem.variantInfo?.specifications &&
+                Object.keys(detailItem.variantInfo.specifications).length >
+                  0 ? (
                   <div className="mt-2 w-full">
                     <div className="font-medium mb-1">Thông số kỹ thuật:</div>
                     <table className="w-full text-xs">
                       <tbody>
-                        {Object.entries(detailItem.variantInfo.specifications).map(([key, value]) => (
+                        {Object.entries(
+                          detailItem.variantInfo.specifications
+                        ).map(([key, value]) => (
                           <tr key={key}>
                             <td className="pr-2 text-gray-600">{key}</td>
                             <td className="text-gray-800">{value}</td>
@@ -465,7 +590,9 @@ const Cart: React.FC = () => {
                     </table>
                   </div>
                 ) : (
-                  <div className="mt-2 text-gray-500">Biến thể này chưa có thông số kỹ thuật.</div>
+                  <div className="mt-2 text-gray-500">
+                    Biến thể này chưa có thông số kỹ thuật.
+                  </div>
                 )}
               </div>
             </div>
@@ -484,16 +611,14 @@ const Cart: React.FC = () => {
                     p &&
                     p._id &&
                     p.name &&
-                    p.images && p.images.length > 0 &&
+                    p.images &&
+                    p.images.length > 0 &&
                     typeof p.price === "number" &&
                     typeof p.averageRating === "number" &&
                     typeof p.numReviews === "number"
                 )
                 .map((product) => (
-                  <ProductCard
-                    key={product._id}
-                    product={product}
-                  />
+                  <ProductCard key={product._id} product={product} />
                 ))}
             </div>
           </div>
