@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  FaLock,
   FaCreditCard,
-  FaPaypal,
   FaTruck,
   FaArrowLeft,
   FaCheck,
@@ -13,7 +11,6 @@ import { useToast } from "../../components/client/ToastContainer";
 import OrderSuccessModal from "../../components/client/OrderSuccessModal";
 import axios from "axios";
 import userApi, { Address } from "../../services/userApi";
-import Select from "react-select";
 import { createOrder, createMomoPayment } from "../../services/orderApi";
 import { getTaxConfig } from "../../services/cartApi";
 import ScrollToTop from "../../components/ScrollToTop";
@@ -319,7 +316,7 @@ const Checkout: React.FC = () => {
       const res = await createOrder(orderData);
       setOrderNumber(res._id || "");
 
-      // Xử lý từng loại ví
+      // Xử lý từng loại thanh toán
       if (formData.paymentMethod === "e-wallet" && walletInfo.type === "momo") {
         const momoRes = await createMomoPayment({
           amount: orderData.totalPrice,
@@ -349,10 +346,7 @@ const Checkout: React.FC = () => {
         } else {
           alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
         }
-      } else if (
-        formData.paymentMethod === "e-wallet" &&
-        walletInfo.type === "vnpay"
-      ) {
+      } else if (formData.paymentMethod === "vnpay") {
         try {
           const vnpayRes = await axios.post("/api/payment/vnpay/create", {
             amount: orderData.totalPrice,
@@ -364,8 +358,27 @@ const Checkout: React.FC = () => {
             window.location.href = vnpayRes.data.payUrl;
             return;
           } else {
-  alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.\n" + (zaloRes.data?.message || ""));
-}
+            alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
+          }
+        } catch (err) {
+          const error = err as Error;
+          alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
+        }
+      } else if (formData.paymentMethod === "e-wallet" && walletInfo.type === "vnpay") {
+        // Trường hợp cũ nếu còn logic ví điện tử vnpay, chuyển hướng sang logic mới
+        try {
+          const vnpayRes = await axios.post("/api/payment/vnpay/create", {
+            amount: orderData.totalPrice,
+            orderId: res._id,
+            orderInfo: `Thanh toán đơn hàng ${res._id}`,
+            redirectUrl: window.location.origin + "/checkout/success",
+          });
+          if (vnpayRes.data && vnpayRes.data.payUrl) {
+            window.location.href = vnpayRes.data.payUrl;
+            return;
+          } else {
+            alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
+          }
         } catch (err) {
           const error = err as Error;
           alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
@@ -378,11 +391,17 @@ const Checkout: React.FC = () => {
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
         );
       }
-   } catch (err: any) {
-  alert("Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.\n" + (err?.response?.data?.message || err.message));
-} finally {
-      setIsProcessing(false);
-    }
+   } catch (err: unknown) {
+     let message = "Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.";
+     if (err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "message" in err.response.data) {
+       message += "\n" + err.response.data.message;
+     } else if (err instanceof Error) {
+       message += "\n" + err.message;
+     }
+     alert(message);
+   } finally {
+     setIsProcessing(false);
+   }
   };
 
   const steps = [
