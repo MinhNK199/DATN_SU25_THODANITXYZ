@@ -1,7 +1,20 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash, FaGoogle, FaFacebook, FaApple, FaEnvelope, FaLock, FaUser, FaCrown, FaUserTie } from 'react-icons/fa';
-import axios from 'axios';
+import React, { useState } from "react";
+import { useGoogleLogin } from "@react-oauth/google";
+import { GoogleLogin } from "@react-oauth/google";
+import { useNavigate } from "react-router-dom";
+import {
+  FaEye,
+  FaEyeSlash,
+  FaGoogle,
+  FaFacebook,
+  FaApple,
+  FaEnvelope,
+  FaLock,
+  FaUser,
+  FaCrown,
+  FaUserTie,
+} from "react-icons/fa";
+import axios from "axios";
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,18 +27,49 @@ export default function Login() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: '',
-    confirmPassword: ''
+    email: "",
+    password: "",
+    name: "",
+    confirmPassword: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
+const login = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
+    try {
+     const id_token = tokenResponse.access_token;
+
+      const res = await axios.post("http://localhost:8000/api/auth/google", {
+        id_token,
+      });
+
+      const { token, user } = res.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      setCurrentUser(user);
+      setSuccess("Đăng nhập Google thành công!");
+
+      const role = user?.role;
+      if (role === "admin" || role === "superadmin") {
+        setShowRoleChoice(true);
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Lỗi đăng nhập Google:", err);
+      setError("Đăng nhập Google thất bại");
+    }
+  },
+  onError: () => {
+    setError("Đăng nhập Google thất bại");
+  },
+  flow: "implicit", // hoặc "auth-code" tùy backend
+});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,28 +79,31 @@ export default function Login() {
 
     if (isLogin) {
       // Logic đăng nhập
-    try {
-        console.log("Đang gửi request đăng nhập:", { email: formData.email, password: formData.password });
-        
-      const res = await axios.post(
-        "http://localhost:8000/api/auth/login",
-          { email: formData.email, password: formData.password }
-      );
-        
-        console.log("Response từ server:", res.data);
-        
-      setSuccess(res.data.message || "Đăng nhập thành công!");
-      localStorage.setItem("token", res.data.token);
+      try {
+        console.log("Đang gửi request đăng nhập:", {
+          email: formData.email,
+          password: formData.password,
+        });
 
-      const user = res.data.user;
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+        const res = await axios.post("http://localhost:8000/api/auth/login", {
+          email: formData.email,
+          password: formData.password,
+        });
+
+        console.log("Response từ server:", res.data);
+
+        setSuccess(res.data.message || "Đăng nhập thành công!");
+        localStorage.setItem("token", res.data.token);
+
+        const user = res.data.user;
+        localStorage.setItem("user", JSON.stringify(res.data.user));
         setCurrentUser(user);
 
         console.log("User data:", user);
         console.log("User role:", user?.role);
 
-      const role = user?.role;
-        
+        const role = user?.role;
+
         // Kiểm tra role để quyết định chuyển hướng
         if (role === "admin" || role === "superadmin") {
           setShowRoleChoice(true);
@@ -64,18 +111,18 @@ export default function Login() {
           // User thường - chuyển về trang chủ
           setTimeout(() => {
             console.log("Chuyển hướng đến trang chủ");
-          navigate("/");
+            navigate("/");
           }, 1500);
         }
-        
       } catch (err: any) {
         console.error("Lỗi đăng nhập:", err);
         console.error("Error response:", err.response?.data);
-        
-        const errorMessage = err.response?.data?.details?.join(", ") ||
+
+        const errorMessage =
+          err.response?.data?.details?.join(", ") ||
           err.response?.data?.message ||
           "Đăng nhập thất bại!";
-        
+
         setError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -89,34 +136,42 @@ export default function Login() {
       }
 
       try {
-        console.log("Đang gửi request đăng ký:", { 
-          name: formData.name, 
-          email: formData.email, 
-          password: formData.password 
-        });
-        
-        const res = await axios.post("http://localhost:8000/api/auth/register", {
+        console.log("Đang gửi request đăng ký:", {
           name: formData.name,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
         });
-        
+
+        const res = await axios.post(
+          "http://localhost:8000/api/auth/register",
+          {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+          }
+        );
+
         console.log("Response từ server:", res.data);
-        
+
         setSuccess(res.data.message || "Đăng ký thành công!");
         setTimeout(() => {
           setIsLogin(true);
-          setFormData({ email: '', password: '', name: '', confirmPassword: '' });
+          setFormData({
+            email: "",
+            password: "",
+            name: "",
+            confirmPassword: "",
+          });
         }, 2000);
-        
-    } catch (err: any) {
+      } catch (err: any) {
         console.error("Lỗi đăng ký:", err);
         console.error("Error response:", err.response?.data);
-        
-        const errorMessage = err.response?.data?.details?.join(", ") ||
+
+        const errorMessage =
+          err.response?.data?.details?.join(", ") ||
           err.response?.data?.message ||
           "Đăng ký thất bại!";
-        
+
         setError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -124,11 +179,11 @@ export default function Login() {
     }
   };
   const handleFacebookLogin = () => {
-  window.location.href = "http://localhost:8000/api/auth/facebook";
-};
+    window.location.href = "http://localhost:8000/api/auth/facebook";
+  };
 
-  const handleRoleChoice = (choice: 'admin' | 'client') => {
-    if (choice === 'admin') {
+  const handleRoleChoice = (choice: "admin" | "client") => {
+    if (choice === "admin") {
       setTimeout(() => {
         navigate("/admin");
       }, 1000);
@@ -154,21 +209,22 @@ export default function Login() {
                 Chào mừng, {currentUser?.name}!
               </h2>
               <p className="text-gray-600">
-                Bạn có quyền truy cập Admin Dashboard. Bạn muốn truy cập vào đâu?
+                Bạn có quyền truy cập Admin Dashboard. Bạn muốn truy cập vào
+                đâu?
               </p>
             </div>
 
             <div className="space-y-4">
               <button
-                onClick={() => handleRoleChoice('admin')}
+                onClick={() => handleRoleChoice("admin")}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
               >
                 <FaCrown className="text-lg" />
                 <span>Admin Dashboard</span>
               </button>
-              
+
               <button
-                onClick={() => handleRoleChoice('client')}
+                onClick={() => handleRoleChoice("client")}
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-4 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2"
               >
                 <FaUserTie className="text-lg" />
@@ -190,13 +246,12 @@ export default function Login() {
             <span className="text-white text-2xl font-bold">E</span>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            {isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản'}
-        </h2>
+            {isLogin ? "Chào mừng trở lại" : "Tạo tài khoản"}
+          </h2>
           <p className="text-gray-600">
-            {isLogin 
-              ? 'Đăng nhập vào tài khoản để tiếp tục' 
-              : 'Tham gia cùng chúng tôi và bắt đầu mua sắm ngay hôm nay'
-            }
+            {isLogin
+              ? "Đăng nhập vào tài khoản để tiếp tục"
+              : "Tham gia cùng chúng tôi và bắt đầu mua sắm ngay hôm nay"}
           </p>
         </div>
 
@@ -217,7 +272,10 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Họ và tên
                 </label>
                 <div className="relative">
@@ -240,44 +298,50 @@ export default function Login() {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Địa chỉ email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaEnvelope className="h-5 w-5 text-gray-400" />
                 </div>
-            <input
+                <input
                   id="email"
-              name="email"
-              type="email"
-              required
+                  name="email"
+                  type="email"
+                  required
                   value={formData.email}
                   onChange={handleInputChange}
                   className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   placeholder="Nhập email của bạn"
                   disabled={isLoading}
-            />
-          </div>
-        </div>
+                />
+              </div>
+            </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Mật khẩu
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaLock className="h-5 w-5 text-gray-400" />
                 </div>
-            <input
+                <input
                   id="password"
-              name="password"
-                  type={showPassword ? 'text' : 'password'}
-              required
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
                   value={formData.password}
                   onChange={handleInputChange}
                   className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Nhập mật khẩu của bạn"
+                  placeholder="Nhập mật khẩu của bạn"
                   disabled={isLoading}
                 />
                 <button
@@ -297,7 +361,10 @@ export default function Login() {
 
             {!isLogin && (
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Xác nhận mật khẩu
                 </label>
                 <div className="relative">
@@ -307,16 +374,16 @@ export default function Login() {
                   <input
                     id="confirmPassword"
                     name="confirmPassword"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required={!isLogin}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     placeholder="Xác nhận mật khẩu của bạn"
                     disabled={isLoading}
-            />
-          </div>
-        </div>
+                  />
+                </div>
+              </div>
             )}
 
             {isLogin && (
@@ -329,7 +396,10 @@ export default function Login() {
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     disabled={isLoading}
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-700"
+                  >
                     Ghi nhớ đăng nhập
                   </label>
                 </div>
@@ -342,19 +412,22 @@ export default function Login() {
               </div>
             )}
 
-        <button
-          type="submit"
+            <button
+              type="submit"
               disabled={isLoading}
               className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl ${
-                isLoading 
-                  ? "bg-gray-400 cursor-not-allowed text-white" 
+                isLoading
+                  ? "bg-gray-400 cursor-not-allowed text-white"
                   : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
               }`}
             >
-              {isLoading 
-                ? (isLogin ? "Đang đăng nhập..." : "Đang đăng ký...") 
-                : (isLogin ? 'Đăng nhập' : 'Tạo tài khoản')
-              }
+              {isLoading
+                ? isLogin
+                  ? "Đang đăng nhập..."
+                  : "Đang đăng ký..."
+                : isLogin
+                ? "Đăng nhập"
+                : "Tạo tài khoản"}
             </button>
           </form>
 
@@ -365,37 +438,37 @@ export default function Login() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Hoặc tiếp tục với</span>
+                <span className="px-2 bg-white text-gray-500">
+                  Hoặc tiếp tục với
+                </span>
               </div>
             </div>
           </div>
 
           {/* Social Login */}
-          <div className="mt-6 grid grid-cols-3 gap-3">
-  <button 
-    type="button"
-    disabled={isLoading}
-    className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    <FaGoogle className="h-5 w-5" />
-  </button>
-  <button 
-    type="button"
-    onClick={handleFacebookLogin}
-    disabled={isLoading}
-    className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    <FaFacebook className="h-5 w-5" />
-  </button>
-  <button 
-    type="button"
-    disabled={isLoading}
-    className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    <FaApple className="h-5 w-5" />
-  </button>
-</div>
+         <div className="mt-6 grid grid-cols-2 gap-4">
+    {/* Custom Google Login Button */}
+    <button
+      type="button"
+      onClick={() => login()}
+      disabled={isLoading}
+      className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <FaGoogle className="text-red-500 h-5 w-5" />
+      <span>Đăng nhập với Google</span>
+    </button>
 
+    {/* Facebook Login */}
+    <button
+      type="button"
+      onClick={handleFacebookLogin}
+      disabled={isLoading}
+      className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <FaFacebook className="text-blue-600 h-5 w-5" />
+      <span>Đăng nhập với Facebook</span>
+    </button>
+  </div>
 
           {/* Toggle Login/Register */}
           <div className="mt-6 text-center">
@@ -405,15 +478,19 @@ export default function Login() {
                 setIsLogin(!isLogin);
                 setError(null);
                 setSuccess(null);
-                setFormData({ email: '', password: '', name: '', confirmPassword: '' });
+                setFormData({
+                  email: "",
+                  password: "",
+                  name: "",
+                  confirmPassword: "",
+                });
               }}
               className="text-blue-600 hover:text-blue-500 transition-colors font-medium"
               disabled={isLoading}
             >
-              {isLogin 
-                ? "Chưa có tài khoản? Đăng ký ngay" 
-                : "Đã có tài khoản? Đăng nhập"
-              }
+              {isLogin
+                ? "Chưa có tài khoản? Đăng ký ngay"
+                : "Đã có tài khoản? Đăng nhập"}
             </button>
           </div>
         </div>
