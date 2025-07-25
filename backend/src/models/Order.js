@@ -97,6 +97,7 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    zalopayTransId: { type: String },
     status: {
         type: String,
         required: true,
