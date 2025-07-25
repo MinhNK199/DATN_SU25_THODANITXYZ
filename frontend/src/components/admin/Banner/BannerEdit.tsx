@@ -5,6 +5,12 @@ import type { Banner } from "../../../interfaces/Banner";
 
 const API_URL = "http://localhost:8000/api/banner";
 
+const formatDateInput = (dateStr?: string | Date | null): string => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toISOString().split("T")[0]; // yyyy-MM-dd
+};
+
 const BannerEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -18,10 +24,15 @@ const BannerEdit: React.FC = () => {
   } = useForm<Banner>({
     defaultValues: {
       title: "",
+      subtitle: "",
+      description: "",
+      buttonText: "",
+      buttonLink: "",
+      badge: "",
+      features: [],
       image: { url: "", alt: "" },
-      link: "",
-      startDate: new Date(),
-      endDate: new Date(),
+      startDate: "",
+      endDate: "",
       position: "",
       isActive: true,
     },
@@ -35,30 +46,36 @@ const BannerEdit: React.FC = () => {
     };
   };
 
- useEffect(() => {
- const fetchBanner = async () => {
-  try {
-    const res = await fetch(`${API_URL}/${id}/active`, {
-      headers: getAuthHeader(),
-    });
+  useEffect(() => {
+    const fetchBanner = async () => {
+      try {
+        const res = await fetch(`${API_URL}/${id}/active`, {
+          headers: getAuthHeader(),
+        });
 
-    if (res.ok) {
-      const data = await res.json();
-      reset(data.banner); 
-    } else {
-      setMessage("❌ Không tìm thấy banner!");
-    }
-  } catch (error) {
-    setMessage("❌ Lỗi kết nối máy chủ!");
-  }
-};
+        if (res.ok) {
+          const data = await res.json();
+          const banner: Banner = data.banner;
 
+          reset({
+            ...banner,
+            startDate: formatDateInput(banner.startDate),
+            endDate: formatDateInput(banner.endDate),
+            image: {
+              url: banner.image?.url || "",
+              alt: banner.image?.alt || "",
+            },
+          });
+        } else {
+          setMessage("❌ Không tìm thấy banner!");
+        }
+      } catch (error) {
+        setMessage("❌ Lỗi kết nối máy chủ!");
+      }
+    };
 
-  if (id) {
-    fetchBanner();
-  }
-}, [id, reset]);
-
+    if (id) fetchBanner();
+  }, [id, reset]);
 
   const onSubmit = async (data: Banner) => {
     try {
@@ -67,6 +84,7 @@ const BannerEdit: React.FC = () => {
         headers: getAuthHeader(),
         body: JSON.stringify(data),
       });
+
       if (res.ok) {
         setMessage("✅ Cập nhật banner thành công!");
         setTimeout(() => navigate("/admin/banners"), 1000);
@@ -98,49 +116,40 @@ const BannerEdit: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Tiêu đề */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tiêu đề
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
           <input
             {...register("title", { required: "Tiêu đề không được để trống" })}
             className="w-full border px-4 py-2 rounded-lg"
             placeholder="Tiêu đề banner"
           />
-          {errors.title && (
-            <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
-          )}
+          {errors.title && <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>}
         </div>
 
+        {/* Link */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Link liên kết (nếu có)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Link liên kết (nếu có)</label>
           <input
-            {...register("link")}
+            {...register("buttonLink")}
             className="w-full border px-4 py-2 rounded-lg"
             placeholder="https://example.com"
           />
         </div>
 
+        {/* Hình ảnh */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL hình ảnh
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">URL hình ảnh</label>
           <input
             {...register("image.url", { required: "Ảnh không được để trống" })}
             className="w-full border px-4 py-2 rounded-lg"
             placeholder="https://image.url"
           />
-          {errors.image?.url && (
-            <p className="text-red-600 text-sm mt-1">{errors.image.url.message}</p>
-          )}
+          {errors.image?.url && <p className="text-red-600 text-sm mt-1">{errors.image.url.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Văn bản thay thế ảnh (alt)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Văn bản thay thế ảnh (alt)</label>
           <input
             {...register("image.alt")}
             className="w-full border px-4 py-2 rounded-lg"
@@ -148,50 +157,40 @@ const BannerEdit: React.FC = () => {
           />
         </div>
 
+        {/* Ngày bắt đầu / kết thúc */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày bắt đầu
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu</label>
             <input
               type="date"
               {...register("startDate", { required: "Bắt buộc chọn ngày bắt đầu" })}
               className="w-full border px-4 py-2 rounded-lg"
             />
-            {errors.startDate && (
-              <p className="text-red-600 text-sm mt-1">{errors.startDate.message}</p>
-            )}
+            {errors.startDate && <p className="text-red-600 text-sm mt-1">{errors.startDate.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày kết thúc
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày kết thúc</label>
             <input
               type="date"
-              {...register("endDate", { required: "Bắt buộc chọn ngày kết thúc" })}
+              {...register("endDate")}
               className="w-full border px-4 py-2 rounded-lg"
             />
-            {errors.endDate && (
-              <p className="text-red-600 text-sm mt-1">{errors.endDate.message}</p>
-            )}
           </div>
         </div>
 
+        {/* Vị trí */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Vị trí hiển thị
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Vị trí hiển thị</label>
           <input
             {...register("position", { required: "Vị trí không được để trống" })}
             className="w-full border px-4 py-2 rounded-lg"
             placeholder="home, footer, sidebar,..."
           />
-          {errors.position && (
-            <p className="text-red-600 text-sm mt-1">{errors.position.message}</p>
-          )}
+          {errors.position && <p className="text-red-600 text-sm mt-1">{errors.position.message}</p>}
         </div>
 
+        {/* Kích hoạt */}
         <div className="flex items-center">
           <input
             type="checkbox"

@@ -1,26 +1,40 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import type { Banner } from "../../../interfaces/Banner";
 
 const API_URL = "http://localhost:8000/api/banner";
 
 const BannerAdd: React.FC = () => {
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<Banner>({
-    defaultValues: {
-      title: "",
-      image: { url: "", alt: "" },
-      link: "",
-      startDate: new Date(),
-      endDate: new Date(),
-      isActive: true,
-      position: "",
-    },
-  });
+  register,
+  handleSubmit,
+  control,
+  formState: { errors },
+  reset,
+} = useForm<Banner>({
+  defaultValues: {
+    title: "",
+    subtitle: "",
+    description: "",
+    badge: "",
+    features: [""],
+    buttonText: "",
+    buttonLink: "",
+    image: { url: "", alt: "" },
+    isActive: true,
+    position: "",
+    startDate: "",
+    endDate: "",
+  },
+});
+
+
+const { fields, append, remove } = useFieldArray({
+  control,
+  name: "features",
+});
+
 
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
@@ -33,25 +47,35 @@ const BannerAdd: React.FC = () => {
     };
   };
 
-  const onSubmit = async (data: Banner) => {
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: getAuthHeader(),
-        body: JSON.stringify(data),
-      });
 
-      if (res.ok) {
-        setMessage("✅ Thêm banner thành công!");
-        setTimeout(() => navigate("/admin/banners"), 1000);
-      } else {
-        const err = await res.json();
-        setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
-      }
-    } catch (error) {
-      setMessage("❌ Lỗi kết nối máy chủ!");
+  const onSubmit = async (data: Banner) => {
+  try {
+    const now = new Date();
+    const payload = {
+      ...data,
+      startDate: now.toISOString(),
+      endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), 
+    };
+
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: getAuthHeader(),
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      setMessage("✅ Thêm banner thành công!");
+      reset();
+      setTimeout(() => navigate("/admin/banners"), 1000);
+    } else {
+      const err = await res.json();
+      setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
     }
-  };
+  } catch (error) {
+    setMessage("❌ Lỗi kết nối máy chủ!");
+  }
+};
+
 
   return (
     <div className="max-w-2xl mx-auto bg-white mt-10 rounded-xl shadow-lg p-8">
@@ -72,112 +96,120 @@ const BannerAdd: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Tiêu đề */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tiêu đề
-          </label>
+          <label className="block text-sm font-medium">Tiêu đề</label>
           <input
             {...register("title", { required: "Tiêu đề không được để trống" })}
-            className="w-full border px-4 py-2 rounded-lg"
-            placeholder="Tiêu đề banner"
+            className="w-full border px-4 py-2 rounded"
           />
           {errors.title && (
-            <p className="text-red-600 text-sm mt-1">{errors.title.message}</p>
+            <p className="text-red-600 text-sm">{errors.title.message}</p>
           )}
         </div>
 
+        {/* Subtitle, Description, Badge */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Link liên kết (nếu có)
-          </label>
-          <input
-            {...register("link")}
-            className="w-full border px-4 py-2 rounded-lg"
-            placeholder="https://example.com"
-          />
+          <label className="block text-sm font-medium">Phụ đề</label>
+          <input {...register("subtitle")} className="w-full border px-4 py-2 rounded" />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL hình ảnh
-          </label>
+          <label className="block text-sm font-medium">Mô tả</label>
+          <textarea {...register("description")} className="w-full border px-4 py-2 rounded" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Nhãn Badge</label>
+          <input {...register("badge")} className="w-full border px-4 py-2 rounded" />
+        </div>
+
+        {/* Button Text & Link */}
+        <div>
+          <label className="block text-sm font-medium">Nút CTA (Text)</label>
+          <input {...register("buttonText")} className="w-full border px-4 py-2 rounded" />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium">Link nút CTA</label>
+          <input {...register("buttonLink")} className="w-full border px-4 py-2 rounded" />
+        </div>
+
+        {/* Features */}
+        <div>
+          <label className="block text-sm font-medium">Tính năng nổi bật</label>
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex gap-2 mb-2">
+              <input
+                {...register(`features.${index}` as const, {
+                  required: "Không được để trống",
+                })}
+                className="w-full border px-4 py-2 rounded"
+              />
+              <button
+                type="button"
+                onClick={() => remove(index)}
+                className="text-red-500"
+              >
+                X
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => append("")}
+            className="text-blue-600 text-sm underline"
+          >
+            + Thêm tính năng
+          </button>
+        </div>
+
+        {/* Ảnh */}
+        <div>
+          <label className="block text-sm font-medium">Ảnh (URL)</label>
           <input
-            {...register("image.url", { required: "Ảnh không được để trống" })}
-            className="w-full border px-4 py-2 rounded-lg"
-            placeholder="https://image.url"
+            {...register("image.url", {
+              required: "Ảnh không được để trống",
+            })}
+            className="w-full border px-4 py-2 rounded"
           />
           {errors.image?.url && (
-            <p className="text-red-600 text-sm mt-1">{errors.image.url.message}</p>
+            <p className="text-red-600 text-sm">{errors.image.url.message}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Văn bản thay thế ảnh (alt)
-          </label>
-          <input
-            {...register("image.alt")}
-            className="w-full border px-4 py-2 rounded-lg"
-            placeholder="Alt text"
-          />
+          <label className="block text-sm font-medium">Ảnh (Alt)</label>
+          <input {...register("image.alt")} className="w-full border px-4 py-2 rounded" />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày bắt đầu
-            </label>
-            <input
-              type="date"
-              {...register("startDate", { required: "Bắt buộc chọn ngày bắt đầu" })}
-              className="w-full border px-4 py-2 rounded-lg"
-            />
-            {errors.startDate && (
-              <p className="text-red-600 text-sm mt-1">{errors.startDate.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày kết thúc
-            </label>
-            <input
-              type="date"
-              {...register("endDate", { required: "Bắt buộc chọn ngày kết thúc" })}
-              className="w-full border px-4 py-2 rounded-lg"
-            />
-            {errors.endDate && (
-              <p className="text-red-600 text-sm mt-1">{errors.endDate.message}</p>
-            )}
-          </div>
-        </div>
-
+        {/* Vị trí hiển thị */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Vị trí hiển thị
-          </label>
+          <label className="block text-sm font-medium">Vị trí hiển thị</label>
           <input
-            {...register("position", { required: "Vị trí không được để trống" })}
-            className="w-full border px-4 py-2 rounded-lg"
-            placeholder="home, footer, sidebar,..."
+            {...register("position", {
+              required: "Vị trí không được để trống",
+            })}
+            className="w-full border px-4 py-2 rounded"
           />
           {errors.position && (
-            <p className="text-red-600 text-sm mt-1">{errors.position.message}</p>
+            <p className="text-red-600 text-sm">{errors.position.message}</p>
           )}
         </div>
 
+        {/* Trạng thái hiển thị */}
         <div className="flex items-center">
           <input
             type="checkbox"
             {...register("isActive")}
             className="h-4 w-4 text-blue-600 border-gray-300 rounded"
           />
-          <label className="ml-2 block text-sm text-gray-700">Kích hoạt banner</label>
+          <label className="ml-2 block text-sm">Kích hoạt banner</label>
         </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
         >
           Thêm banner
         </button>

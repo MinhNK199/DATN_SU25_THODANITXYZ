@@ -7,21 +7,61 @@ const bannerSchema = new mongoose.Schema(
       required: [true, "Tiêu đề banner là bắt buộc"],
       trim: true,
     },
+    subtitle: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    buttonText: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    buttonLink: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    badge: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    features: {
+      type: [String],
+      default: [],
+    },
     image: {
       url: { type: String, required: [true, "URL ảnh là bắt buộc"] },
       alt: { type: String, default: "" },
       publicId: { type: String, default: "" },
     },
-    link: { type: String, default: "" },
-    startDate: { type: Date, required: [true, "Ngày bắt đầu hiển thị là bắt buộc"] },
-    endDate: { type: Date, required: [true, "Ngày kết thúc hiển thị là bắt buộc"] },
-    isActive: { type: Boolean, default: true },
-    position: { type: String, default: "homepage-top" },
+    startDate: {
+      type: Date,
+      required: [true, "Ngày bắt đầu hiển thị là bắt buộc"],
+    },
+    endDate: {
+      type: Date,
+      default: null,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    position: {
+      type: String,
+      default: "homepage-top",
+    },
   },
   { timestamps: true }
 );
 
-// Indexes to optimize date queries
+// Tạo index để tối ưu hóa truy vấn theo ngày
 bannerSchema.index({ startDate: 1, endDate: 1, isActive: 1 });
 
 const Banner = mongoose.model("Banner", bannerSchema);
