@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Banner } from "../../../interfaces/Banner";
-import {
-  FaPlus,
-  FaEdit,
-  FaTrash,
-  FaSearch,
-  FaFilter,
-  FaEye,
-} from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaEye } from "react-icons/fa";
 import {
   Input,
   Card,
@@ -21,11 +14,8 @@ import {
   Space,
   Select,
   Button,
-  Popover,
-  Checkbox,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import type { SearchProps } from "antd/es/input";
 
 const API_URL = "http://localhost:8000/api/banner";
 
@@ -45,7 +35,6 @@ const BannerList: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [deletedBanners, setDeletedBanners] = useState<Banner[]>([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
-  const [selectedRestore, setSelectedRestore] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const fetchBanners = async () => {
@@ -53,7 +42,17 @@ const BannerList: React.FC = () => {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      setBanners(data.banners || []);
+      console.log("Banner data:", data);
+
+      // Sửa ở đây: gán trực tiếp nếu data là array
+   if (Array.isArray(data.banners)) {
+  setBanners(data.banners);
+} else if (Array.isArray(data)) {
+  setBanners(data);
+} else {
+  message.error("Dữ liệu trả về không đúng định dạng!");
+}
+
     } catch (error) {
       message.error("Lỗi khi tải banner!");
     }
@@ -82,7 +81,7 @@ const BannerList: React.FC = () => {
     fetchBanners();
   }, []);
 
-  const handleSoftDelete = async (id: string) => {
+  const handleHardDelete = async (id: string) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -90,47 +89,32 @@ const BannerList: React.FC = () => {
         navigate("/login");
         return;
       }
-      const res = await fetch(
-        `http://localhost:8000/api/banner/${id}/soft-delete`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (res.ok) {
-        message.success("Đã chuyển banner vào thùng rác!");
-        fetchBanners();
-      } else if (res.status === 401) {
-        message.error("Phiên đăng nhập hết hạn!");
-        localStorage.removeItem("token");
-        navigate("/login");
-      } else {
-        const err = await res.json();
-        message.error(err.message || "Xóa banner thất bại!");
-      }
+
+      Modal.confirm({
+        title: "Bạn có chắc muốn xóa banner này?",
+        content: "Hành động này không thể hoàn tác!",
+        okText: "Xóa",
+        okType: "danger",
+        cancelText: "Hủy",
+        onOk: async () => {
+          const res = await fetch(`${API_URL}/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (res.ok) {
+            message.success("Đã xóa banner thành công!");
+            fetchBanners();
+          } else {
+            const err = await res.json();
+            message.error(err.message || "Xóa thất bại!");
+          }
+        },
+      });
     } catch (error) {
       message.error("Lỗi kết nối máy chủ!");
-    }
-  };
-
-  const handleRestore = async (ids: string[]) => {
-    try {
-      const token = localStorage.getItem("token");
-      for (const id of ids) {
-        await fetch(`http://localhost:8000/api/banner/${id}/restore`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-      message.success("Khôi phục thành công!");
-      setShowDeletedModal(false);
-      fetchBanners();
-    } catch (error) {
-      message.error("Lỗi khi khôi phục banner!");
     }
   };
 
@@ -164,7 +148,6 @@ const BannerList: React.FC = () => {
   const columns: ColumnsType<Banner> = [
     {
       title: "STT",
-      dataIndex: "index",
       key: "index",
       render: (_text, _record, index) => index + 1,
     },
@@ -173,10 +156,10 @@ const BannerList: React.FC = () => {
       dataIndex: "image",
       key: "image",
       width: 100,
-      render: (image: string) => (
+      render: (image) => (
         <img
-          src={image || "/placeholder.png"}
-          alt="Banner"
+          src={image?.url || "/placeholder.png"}
+          alt={image?.alt || "Banner"}
           className="w-16 h-16 object-cover rounded"
         />
       ),
@@ -192,38 +175,65 @@ const BannerList: React.FC = () => {
         </div>
       ),
     },
+
     {
-      title: "Link",
-      dataIndex: "link",
-      key: "link",
-      render: (text: string) => (
-        <div className="max-w-xs truncate">
-          <a
-            href={text}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
-          >
-            {text}
-          </a>
-        </div>
-      ),
+      title: "Nút",
+      dataIndex: "buttonText",
+      key: "buttonText",
+      render: (text?: string) => text || "—",
     },
     {
-  title: "Trạng thái",
-  dataIndex: "isActive",
-  key: "isActive",
-  render: (isActive: boolean) => (
-    <Tag color={isActive ? "green" : "red"}>
-      {isActive ? "Đang hiển thị" : "Đã ẩn"}
-    </Tag>
-  ),
-},
+      title: "Liên kết nút",
+      dataIndex: "buttonLink",
+      key: "buttonLink",
+      render: (link: string) =>
+        link ? (
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline"
+          >
+            {link}
+          </a>
+        ) : (
+          "—"
+        ),
+    },
+
+    {
+      title: "Ngày bắt đầu",
+      dataIndex: "startDate",
+      key: "startDate",
+      render: (date?: string) =>
+        date ? new Date(date).toLocaleDateString("vi-VN") : "—",
+    },
+    {
+      title: "Ngày kết thúc",
+      dataIndex: "endDate",
+      key: "endDate",
+      render: (date?: string | null) =>
+        date ? (
+          new Date(date).toLocaleDateString("vi-VN")
+        ) : (
+          <Tag color="green">Đang hoạt động</Tag>
+        ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
+      render: (isActive?: boolean) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Đang hiển thị" : "Đã ẩn"}
+        </Tag>
+      ),
+    },
 
     {
       title: "Thao tác",
       key: "action",
-      render: (_, record: Banner) => (
+      render: (_text, record: Banner) => (
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
             <Button
@@ -234,40 +244,20 @@ const BannerList: React.FC = () => {
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Link to={`/admin/banners/edit/${record._id}`}>
-              <Button type="primary" icon={<FaEdit />} />
+              <Button type="default" icon={<FaEdit />} />
             </Link>
           </Tooltip>
-          <Tooltip title="Xóa">
+          <Tooltip title="Xoá">
             <Button
               danger
               icon={<FaTrash />}
-              onClick={() => handleSoftDelete(record._id!)}
+              onClick={() => handleHardDelete(record._id!)}
             />
           </Tooltip>
         </Space>
       ),
     },
   ];
-
-  const deletedColumns: ColumnsType<Banner> = [
-    {
-      title: "Tiêu đề",
-      dataIndex: "title",
-      key: "title",
-    },
-    {
-      title: "Link",
-      dataIndex: "link",
-      key: "link",
-    },
-    {
-      title: "Ngày xóa",
-      dataIndex: "deletedAt",
-      key: "deletedAt",
-      render: (date: string) => new Date(date).toLocaleDateString(),
-    },
-  ];
-
   return (
     <div className="p-6">
       <Card className="mb-6">
@@ -280,14 +270,6 @@ const BannerList: React.FC = () => {
               onClick={() => navigate("/admin/banners/add")}
             >
               Thêm banner
-            </Button>
-            <Button
-              onClick={() => {
-                fetchDeletedBanners();
-                setShowDeletedModal(true);
-              }}
-            >
-              Thùng rác
             </Button>
           </div>
         </div>
@@ -330,73 +312,131 @@ const BannerList: React.FC = () => {
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
-        width={600}
+        width={700}
       >
         {selectedBanner && (
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold">Hình ảnh</h3>
               <img
-                src={selectedBanner.image?.url || ""}
+                src={selectedBanner.image?.url}
                 alt={selectedBanner.image?.alt || selectedBanner.title}
                 className="w-full h-48 object-cover rounded"
               />
             </div>
-            <div>
-              <h3 className="font-semibold">Tiêu đề</h3>
-              <p>{selectedBanner.title}</p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold">Tiêu đề</h3>
+                <p>{selectedBanner.title}</p>
+              </div>
+
+              {selectedBanner.subtitle && (
+                <div>
+                  <h3 className="font-semibold">Phụ đề</h3>
+                  <p>{selectedBanner.subtitle}</p>
+                </div>
+              )}
+
+              {selectedBanner.badge && (
+                <div>
+                  <h3 className="font-semibold">Nhãn</h3>
+                  <Tag color="magenta">{selectedBanner.badge}</Tag>
+                </div>
+              )}
+
+              {selectedBanner.position && (
+                <div>
+                  <h3 className="font-semibold">Vị trí hiển thị</h3>
+                  <Tag color="geekblue">{selectedBanner.position}</Tag>
+                </div>
+              )}
+
+              <div>
+                <h3 className="font-semibold">Trạng thái</h3>
+                <Badge
+                  status={selectedBanner.isActive ? "success" : "error"}
+                  text={selectedBanner.isActive ? "Đang hiển thị" : "Đã ẩn"}
+                />
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold">Link</h3>
-              <a
-                href={selectedBanner.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-500 hover:underline"
-              >
-                {selectedBanner.link}
-              </a>
-            </div>
-            <div>
-              <h3 className="font-semibold">Trạng thái</h3>
-              <Badge
-                status={selectedBanner.isActive ? "success" : "error"}
-                text={selectedBanner.isActive ? "Đang hiển thị" : "Đã ẩn"}
-              />
+
+            {selectedBanner.description && (
+              <div>
+                <h3 className="font-semibold">Mô tả</h3>
+                <p>{selectedBanner.description}</p>
+              </div>
+            )}
+
+            {Array.isArray(selectedBanner?.features) &&
+              selectedBanner.features.length > 0 && (
+                <div>
+                  <h3 className="font-semibold">Tính năng nổi bật</h3>
+                  <ul className="list-disc list-inside">
+                    {selectedBanner.features.map((feature, index) => (
+                      <li key={index}>{feature}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+            {(selectedBanner.buttonText || selectedBanner.buttonLink) && (
+              <div>
+                <h3 className="font-semibold">Nút hành động</h3>
+                {selectedBanner.buttonText && selectedBanner.buttonLink ? (
+                  <a
+                    href={selectedBanner.buttonLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button type="primary">{selectedBanner.buttonText}</Button>
+                  </a>
+                ) : (
+                  <span>—</span>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold">Ngày bắt đầu</h3>
+                <p>
+                  {selectedBanner.startDate
+                    ? new Date(selectedBanner.startDate).toLocaleDateString(
+                        "vi-VN"
+                      )
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold">Ngày kết thúc</h3>
+                <p>
+                  {selectedBanner.endDate ? (
+                    new Date(selectedBanner.endDate).toLocaleDateString("vi-VN")
+                  ) : (
+                    <Tag color="green">Đang hoạt động</Tag>
+                  )}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold">Ngày tạo</h3>
+                <p>
+                  {selectedBanner.createdAt
+                    ? new Date(selectedBanner.createdAt).toLocaleString("vi-VN")
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold">Cập nhật gần nhất</h3>
+                <p>
+                  {selectedBanner.updatedAt
+                    ? new Date(selectedBanner.updatedAt).toLocaleString("vi-VN")
+                    : "—"}
+                </p>
+              </div>
             </div>
           </div>
         )}
-      </Modal>
-
-      <Modal
-        title="Thùng rác"
-        open={showDeletedModal}
-        onCancel={() => setShowDeletedModal(false)}
-        width={800}
-        footer={[
-          <Button key="close" onClick={() => setShowDeletedModal(false)}>
-            Đóng
-          </Button>,
-          <Button
-            key="restore"
-            type="primary"
-            onClick={() => handleRestore(selectedRestore)}
-            disabled={selectedRestore.length === 0}
-          >
-            Khôi phục đã chọn
-          </Button>,
-        ]}
-      >
-        <Table
-          rowSelection={{
-            type: "checkbox",
-            onChange: (selectedRowKeys) =>
-              setSelectedRestore(selectedRowKeys as string[]),
-          }}
-          columns={deletedColumns}
-          dataSource={deletedBanners}
-          rowKey="_id"
-        />
       </Modal>
     </div>
   );

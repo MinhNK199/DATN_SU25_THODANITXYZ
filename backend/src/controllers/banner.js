@@ -1,51 +1,76 @@
-import Banner from '../models/Banner.js';
+import Banner from "../models/Banner.js";
+
+// Lấy tất cả banner đang hoạt động và trong thời gian hiển thị
+export const getAllBanners = async (req, res) => {
+  try {
+    const now = new Date();
+    const banners = await Banner.find({
+      isActive: true,
+      startDate: { $lte: now },
+      $or: [{ endDate: null }, { endDate: { $gte: now } }]
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(banners);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi lấy banner", error });
+  }
+};
 
 // Tạo banner mới
 export const createBanner = async (req, res) => {
   try {
-    const banner = new Banner(req.body);
-    await banner.save();
-    res.status(201).json({ success: true,message: 'Tạo banner thành công',banner });
-  } catch (error) {
-    console.error("Lỗi tạo banner:", error);
-    res.status(400).json({ success: false, message: error.message });
-  }
-};
+    const {
+      title,
+      subtitle,
+      description,
+      badge,
+      features,
+      buttonText,
+      buttonLink,
+      image,
+      startDate,
+      endDate,
+      isActive,
+      position,
+    } = req.body;
 
-// Lấy tất cả banners
-export const getBanners = async (req, res) => {
-  try {
-    const banners = await Banner.find().sort({ sortOrder: 1, createdAt: -1 });
-     res.status(200).json({
-      success: true,
-      message: 'Lấy danh sách banner thành công',
-      count: banners.length,
-      banners,
-    });
-  } catch (error) {
-    console.error("Lỗi lấy banners:", error);
-    res.status(500).json({ success: false, message: 'Lấy danh sách banner không thành công' });
-  }
-};
-
-// Lấy banners theo id
-export const getActiveBanners = async (req, res) => {
-  try {
-    const banner = await Banner.findById(req.params.id);
-     if (!banner) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy banner',
-      });
+    if (!title || !image?.url || !startDate) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
     }
-    res.status(200).json({
-      success: true,
-      message: 'Lấy banner thành công',
-      banner,
+
+    // 👉 Cập nhật tất cả banner đang hiển thị thành kết thúc
+    await Banner.updateMany(
+      {
+        isActive: true,
+        endDate: { $gte: new Date() }, // Chưa hết hạn
+      },
+      {
+        $set: {
+          isActive: false,
+          endDate: new Date(), // Gán ngày kết thúc là bây giờ
+        },
+      }
+    );
+
+    // 👉 Tạo banner mới
+    const newBanner = await Banner.create({
+      title,
+      subtitle,
+      description,
+      badge,
+      features,
+      buttonText,
+      buttonLink,
+      image,
+      startDate,
+      endDate,
+      isActive,
+      position,
     });
+
+    res.status(201).json(newBanner);
   } catch (error) {
-    console.error("Lỗi lấy banner theo ID:", error);
-    res.status(400).json({ success: false, message: 'Lỗi khi lấy banner' });
+    res.status(500).json({ message: "Lỗi khi tạo banner", error });
   }
 };
 
@@ -53,26 +78,36 @@ export const getActiveBanners = async (req, res) => {
 // Cập nhật banner
 export const updateBanner = async (req, res) => {
   try {
-    const banner = await Banner.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!banner) return res.status(404).json({ success: false, message: 'Không tìm thấy banner' });
-    res.status(200).json({ success: true, message: 'Cập nhật banner thành công',banner });
+    const banner = await Banner.findById(req.params.id);
+    if (!banner) return res.status(404).json({ message: "Không tìm thấy banner" });
+
+    const updated = await Banner.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    res.status(200).json(updated);
   } catch (error) {
-    console.error("Lỗi cập nhật banner:", error);
-    res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ message: "Lỗi khi cập nhật banner", error });
   }
 };
 
-// Xóa banner
+// Xoá banner
 export const deleteBanner = async (req, res) => {
   try {
-    const banner = await Banner.findByIdAndDelete(req.params.id);
-    if (!banner) return res.status(404).json({ success: false, message: 'Không tìm thấy banner' });
-    res.status(200).json({ success: true, message: 'Xóa banner thành công' });
+    const deleted = await Banner.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Không tìm thấy banner" });
+
+    res.status(200).json({ message: "Đã xoá banner" });
   } catch (error) {
-    console.error("Lỗi xóa banner:", error);
-    res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ message: "Lỗi khi xoá banner", error });
+  }
+};
+
+// Lấy banner theo ID
+export const getBannerById = async (req, res) => {
+  try {
+    const banner = await Banner.findById(req.params.id);
+    if (!banner) return res.status(404).json({ message: "Không tìm thấy banner" });
+
+    res.status(200).json(banner);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi khi lấy banner", error });
   }
 };
