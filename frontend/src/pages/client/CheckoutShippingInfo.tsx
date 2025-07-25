@@ -9,12 +9,14 @@ export interface FormDataType {
   province_code: string;
   district_code: string;
   ward_code: string;
+  paymentMethod: string;
 }
 
 interface Props {
   formData: FormDataType;
   setFormData: React.Dispatch<React.SetStateAction<FormDataType>>;
   addresses: Address[];
+   handleNextStepShipping: () => void;
   selectedAddressId: string;
   setSelectedAddressId: (id: string) => void;
   provinces: any[];
@@ -31,6 +33,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   formData,
   setFormData,
   addresses,
+   handleNextStepShipping,
   selectedAddressId,
   setSelectedAddressId,
   provinces,
@@ -175,7 +178,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
     <div className="mt-6">
       <button
         type="button"
-        onClick={() => setCurrentStep(2)}
+        onClick={handleNextStepShipping}
         className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg"
       >
         Tiếp tục

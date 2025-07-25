@@ -53,7 +53,7 @@ const Checkout: React.FC = () => {
     province_code: "",
     district_code: "",
     ward_code: "",
-    paymentMethod: "COD",
+    paymentMethod: "",
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -78,6 +78,10 @@ const Checkout: React.FC = () => {
   const [showNewCardForm, setShowNewCardForm] = useState<boolean>(false);
   const [showNewWalletForm, setShowNewWalletForm] = useState<boolean>(false);
   const [taxRate, setTaxRate] = useState(0.08);
+
+  const { state: cartState, clearCart } = useCart();
+  const navigate = useNavigate();
+  const { showSuccess } = useToast();
 
   useEffect(() => {
     axios
@@ -112,8 +116,15 @@ const Checkout: React.FC = () => {
     }
   }, [formData.province_code]);
 
+  // Load xã/phường khi chọn quận/huyện
   useEffect(() => {
     if (formData.district_code) {
+      axios
+        .get(`https://provinces.open-api.vn/api/d/${formData.district_code}?depth=2`)
+        .then((r) => {
+          setWards(r.data.wards || []);
+        })
+        .catch(() => setWards([]));
       setFormData((f) => ({ ...f, ward_code: "" }));
     } else {
       setWards([]);
@@ -140,7 +151,7 @@ const Checkout: React.FC = () => {
           province_code: defaultAddress.city,
           district_code: defaultAddress.district,
           ward_code: defaultAddress.ward,
-          paymentMethod: formData.paymentMethod || "COD",
+          paymentMethod: f.paymentMethod || "",
         }));
         if (defaultAddress.city)
           fetchDistrictsByProvinceCode(defaultAddress.city);
@@ -166,7 +177,7 @@ const Checkout: React.FC = () => {
         province_code: "",
         district_code: "",
         ward_code: "",
-        paymentMethod: "COD",
+        paymentMethod: "",
       });
       setDistricts([]);
       setWards([]);
@@ -181,16 +192,12 @@ const Checkout: React.FC = () => {
           province_code: addr.city,
           district_code: addr.district,
           ward_code: addr.ward,
-          paymentMethod: formData.paymentMethod || "COD",
+          paymentMethod: f.paymentMethod || "",
         }));
         await fetchDistrictsByProvinceCode(addr.city);
       }
     }
   };
-
-  const { state: cartState, clearCart } = useCart();
-  const navigate = useNavigate();
-  const { showSuccess, showError } = useToast();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -206,22 +213,67 @@ const Checkout: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // 1. Validate thông tin giao hàng
+  const handleNextStepShipping = () => {
+    if (
+      !formData.lastName ||
+      !formData.phone ||
+      !formData.address ||
+      !formData.province_code ||
+      !formData.district_code ||
+      !formData.ward_code
+    ) {
+      alert("Vui lòng nhập đầy đủ thông tin giao hàng!");
+      return;
+    }
+    setCurrentStep(2);
+  };
+
+  // 2. Validate phương thức thanh toán
+  const handleNextStepPayment = () => {
+    if (!formData.paymentMethod) {
+      alert("Vui lòng chọn phương thức thanh toán!");
+      return;
+    }
+    if (formData.paymentMethod === "credit-card") {
+      if (!cardInfo.number || !cardInfo.name || !cardInfo.expiry || !cardInfo.cvv) {
+        alert("Vui lòng nhập đầy đủ thông tin thẻ!");
+        return;
+      }
+    }
+    if (formData.paymentMethod === "e-wallet") {
+      if (!walletInfo.type) {
+        alert("Vui lòng chọn loại ví điện tử!");
+        return;
+      }
+      if (!walletInfo.phone) {
+        alert("Vui lòng nhập số điện thoại ví!");
+        return;
+      }
+    }
+    if (formData.paymentMethod === "bank-transfer") {
+      if (!bankTransferInfo.transactionId) {
+        alert("Vui lòng nhập mã giao dịch chuyển khoản!");
+        return;
+      }
+    }
+    setCurrentStep(3);
+  };
+
+  // 3. Đặt hàng
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return;
     setIsProcessing(true);
 
     if (!cartState.items || cartState.items.length === 0) {
-      showError("Giỏ hàng trống", "Vui lòng thêm sản phẩm vào giỏ hàng.");
+      alert("Vui lòng thêm sản phẩm vào giỏ hàng.");
       setIsProcessing(false);
       return;
     }
 
     if (!formData.paymentMethod) {
-      showError(
-        "Chưa chọn phương thức thanh toán",
-        "Vui lòng chọn phương thức thanh toán."
-      );
+      alert("Vui lòng chọn phương thức thanh toán.");
       setIsProcessing(false);
       return;
     }
@@ -250,10 +302,9 @@ const Checkout: React.FC = () => {
       if (formData.paymentMethod === "credit-card")
         paymentMethod = "credit-card";
       else if (formData.paymentMethod === "e-wallet")
-        paymentMethod = "e-wallet";
+        paymentMethod = walletInfo.type;
       else if (formData.paymentMethod === "bank-transfer")
         paymentMethod = "BANKING";
-      else if (formData.paymentMethod === "vnpay") paymentMethod = "VNPAY";
       else paymentMethod = "COD";
 
       const orderData = {
@@ -267,7 +318,9 @@ const Checkout: React.FC = () => {
       };
       const res = await createOrder(orderData);
       setOrderNumber(res._id || "");
-      if (paymentMethod === "e-wallet") {
+
+      // Xử lý từng loại ví
+      if (formData.paymentMethod === "e-wallet" && walletInfo.type === "momo") {
         const momoRes = await createMomoPayment({
           amount: orderData.totalPrice,
           orderId: res._id,
@@ -280,12 +333,25 @@ const Checkout: React.FC = () => {
           window.location.href = momoRes.payUrl;
           return;
         } else {
-          showError(
-            "Không lấy được link thanh toán Momo",
-            momoRes.message || "Vui lòng thử lại."
-          );
+          alert("Không lấy được link thanh toán Momo. Vui lòng thử lại.");
         }
-      } else if (paymentMethod === "VNPAY") {
+      } else if (
+        formData.paymentMethod === "e-wallet" &&
+        walletInfo.type === "zalopay"
+      ) {
+        const zaloRes = await axios.post("/api/orders/create", {
+          orderId: res._id,
+        });
+        if (zaloRes.data && zaloRes.data.order_url) {
+          window.location.href = zaloRes.data.order_url;
+          return;
+        } else {
+          alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
+        }
+      } else if (
+        formData.paymentMethod === "e-wallet" &&
+        walletInfo.type === "vnpay"
+      ) {
         try {
           const vnpayRes = await axios.post("/api/payment/vnpay/create", {
             amount: orderData.totalPrice,
@@ -297,17 +363,11 @@ const Checkout: React.FC = () => {
             window.location.href = vnpayRes.data.payUrl;
             return;
           } else {
-            showError(
-              "Không lấy được link thanh toán VNPAY",
-              vnpayRes.data.message || "Vui lòng thử lại."
-            );
+            alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
           }
         } catch (err) {
           const error = err as Error;
-          showError(
-            "Lỗi khi gọi API VNPAY",
-            error.message || "Có lỗi xảy ra, vui lòng thử lại."
-          );
+          alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
         }
       } else {
         setShowSuccessModal(true);
@@ -317,12 +377,8 @@ const Checkout: React.FC = () => {
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
         );
       }
-    } catch (err) {
-      const error = err as Error;
-      showError(
-        "Đặt hàng thất bại",
-        error.message || "Có lỗi xảy ra, vui lòng thử lại."
-      );
+    } catch (err: any) {
+      alert("Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.");
     } finally {
       setIsProcessing(false);
     }
@@ -454,8 +510,9 @@ const Checkout: React.FC = () => {
                     districtLoading={districtLoading}
                     handleSelectAddress={handleSelectAddress}
                     fetchDistrictsByProvinceCode={fetchDistrictsByProvinceCode}
-                    setCurrentStep={setCurrentStep}
+                    setCurrentStep={handleNextStepShipping}
                     handleInputChange={handleInputChange}
+                    handleNextStepShipping={handleNextStepShipping}
                   />
                 )}
                 {currentStep === 2 && (
@@ -473,7 +530,7 @@ const Checkout: React.FC = () => {
                     showNewWalletForm={showNewWalletForm}
                     setShowNewWalletForm={setShowNewWalletForm}
                     orderNumber={orderNumber}
-                    setCurrentStep={setCurrentStep}
+                    setCurrentStep={handleNextStepPayment}
                     handleInputChange={handleInputChange}
                   />
                 )}
