@@ -20,17 +20,17 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
 import { getCategoryById, updateCategory, fetchCategories } from './api';
-import { ICategory } from '../../../interfaces/Category';
+import { Category } from '../../../interfaces/Category';
 import slugify from 'slugify';
 
 const { Title, Paragraph } = Typography;
 const { TextArea } = Input;
 
-type FieldType = Omit<ICategory, '_id' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'deletedBy' | 'parent'> & {
+type FieldType = Omit<Category, '_id' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'deletedBy' | 'parent'> & {
     parent?: string | null;
 };
 
-const buildCategoryTree = (categories: ICategory[], parentId: string | null = null): any[] => {
+const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {
     return categories
         .filter(cat => (typeof cat.parent === 'string' ? cat.parent : cat.parent?._id) === parentId)
         .map(cat => ({
@@ -45,7 +45,7 @@ const CategoryEdit: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [categories, setCategories] = useState<ICategory[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 

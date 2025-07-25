@@ -21,14 +21,14 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, InfoCircleOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { createCategory, fetchCategories } from './api';
-import { ICategory } from '../../../interfaces/Category';
+import { Category } from '../../../interfaces/Category';
 import slugify from 'slugify';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Panel } = Collapse;
 
-type FieldType = Omit<ICategory, '_id' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'deletedBy' | 'parent'> & {
+type FieldType = Omit<Category, '_id' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'deletedBy' | 'parent'> & {
     parent?: string | null;
 };
 
@@ -51,7 +51,7 @@ const instructions = [
     }
 ];
 
-const buildCategoryTree = (categories: ICategory[], parentId: string | null = null): any[] => {
+const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {
     return categories
         .filter(cat => (typeof cat.parent === 'string' ? cat.parent : cat.parent?._id) === parentId)
         .map(cat => ({
@@ -64,7 +64,7 @@ const buildCategoryTree = (categories: ICategory[], parentId: string | null = nu
 const CategoryAdd: React.FC = () => {
     const [form] = Form.useForm<FieldType>();
     const [loading, setLoading] = useState(false);
-    const [categories, setCategories] = useState<ICategory[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
   const navigate = useNavigate();
     const [previewImage, setPreviewImage] = useState<string>('');
 
@@ -89,10 +89,14 @@ const CategoryAdd: React.FC = () => {
     const onFinish = async (values: FieldType) => {
         setLoading(true);
         try {
-            await createCategory({ ...values, slug: values.slug || slugify(values.name, { lower: true, strict: true }) });
+            const categoryData = {
+                ...values,
+                slug: values.slug || slugify(values.name, { lower: true, strict: true })
+            };
+            await createCategory(categoryData);
             message.success('Thêm danh mục thành công!');
             navigate('/admin/categories');
-        } catch (error: any) {
+        } catch (error: any) { 
             message.error(error.message || 'Thêm danh mục thất bại!');
         } finally {
             setLoading(false);
