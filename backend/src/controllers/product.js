@@ -221,22 +221,21 @@ export const createProduct = async (req, res) => {
                 if (typeof colorObj === 'string') {
                     colorObj = { code: colorObj, name: '' };
                 } else if (typeof colorObj === 'object' && colorObj !== null) {
-                    colorObj = {
-                        code: (typeof colorObj.code === 'string') ? colorObj.code : '',
-                        name: (typeof colorObj.name === 'string') ? colorObj.name : ''
-                    };
+                    if (typeof colorObj.code !== 'string') colorObj.code = '';
+                    if (typeof colorObj.name !== 'string') colorObj.name = '';
                 } else {
                     colorObj = { code: '', name: '' };
                 }
                 return {
                     ...v,
-                    color: colorObj,
+                    color: {...colorObj },
+
                     size: typeof v.size === 'number' ? v.size : parseFloat(v.size) || 0,
                     length: typeof v.length === 'number' ? v.length : parseFloat(v.length) || 0,
                     width: typeof v.width === 'number' ? v.width : parseFloat(v.width) || 0,
                     height: typeof v.height === 'number' ? v.height : parseFloat(v.height) || 0,
                     weight: typeof v.weight === 'number' ? v.weight : parseFloat(v.weight) || 0,
-                    specifications: (typeof v.specifications === 'object' && v.specifications !== null) ? { ...v.specifications } : {},
+                    specifications: (typeof v.specifications === 'object' && v.specifications !== null) ? {...v.specifications } : {},
                     images: Array.isArray(v.images) ? v.images : [],
                     isActive: !!v.isActive,
                 };
@@ -386,7 +385,7 @@ export const updateProduct = async (req, res) => {
                 } else {
                     color = { code: '', name: '' };
                 }
-                return { ...variant, color: { ...color } };
+                return {...variant, color: {...color } };
             });
             console.log("Updating variants (safe):", JSON.stringify(safeVariants, null, 2));
             product.variants = safeVariants;

@@ -35,7 +35,9 @@ const orderSchema = new mongoose.Schema({
                 'credit-card',
                 'e-wallet',
                 'credit_card',
-                'e_wallet'
+                'e_wallet',
+                'VNPAY',
+
             ],
             message: 'Phương thức thanh toán không hợp lệ',
         },
@@ -100,19 +102,19 @@ const orderSchema = new mongoose.Schema({
         required: true,
         enum: {
             values: [
-                'pending',            // Chờ xác nhận
-                'confirmed',          // Đã xác nhận
-                'processing',         // Đang xử lý
-                'shipped',            // Đang giao hàng
-                'delivered_success',  // Giao hàng thành công
-                'delivered_failed',   // Giao hàng thất bại
-                'completed',          // Thành công
-                'cancelled',          // Đã hủy
-                'returned',           // Hoàn hàng
-                'refund_requested',   // Yêu cầu hoàn tiền
-                'refunded',           // Hoàn tiền thành công
-                'paid_cod',           // Đã thanh toán COD
-                'paid_online'         // Đã thanh toán Online
+                'pending', // Chờ xác nhận
+                'confirmed', // Đã xác nhận
+                'processing', // Đang xử lý
+                'shipped', // Đang giao hàng
+                'delivered_success', // Giao hàng thành công
+                'delivered_failed', // Giao hàng thất bại
+                'completed', // Thành công
+                'cancelled', // Đã hủy
+                'returned', // Hoàn hàng
+                'refund_requested', // Yêu cầu hoàn tiền
+                'refunded', // Hoàn tiền thành công
+                'paid_cod', // Đã thanh toán COD
+                'paid_online' // Đã thanh toán Online
             ],
             message: 'Trạng thái đơn hàng không hợp lệ',
         },
