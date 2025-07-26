@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   Form,
   Input,
@@ -15,123 +18,298 @@ import {
   TreeSelect,
   Switch,
   Divider,
-  Alert,
-} from "antd";
-import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
-import { getCategories, getBrands } from "./api";
-import slugify from "slugify";
-import { Category } from "../../../interfaces/Category";
-import { Brand } from "../../../interfaces/Brand";
-import VariantManager from "./VariantManager";
-import SpecificationEditor from "./SpecificationEditor";
+} from "antd"
+import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons"
+import { getCategories, getBrands } from "./api"
+import slugify from "slugify"
+import type { Category } from "../../../interfaces/Category"
+import type { Brand } from "../../../interfaces/Brand"
+import VariantManager from "./VariantManager"
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const { Title, Text } = Typography
+const { Option } = Select
 
-const API_URL = "http://localhost:8000/api";
+const API_URL = "http://localhost:8000/api"
+
+// ENHANCED: Utility function để clean color data
+const cleanColorData = (colorData: any): { code: string; name: string } => {
+  console.log("🎨 Cleaning color data:", typeof colorData, colorData)
+
+  // Default color
+  const defaultColor = { code: "#000000", name: "Đen" }
+
+  if (!colorData) {
+    return defaultColor
+  }
+
+  // Nếu đã là object hợp lệ
+  if (typeof colorData === "object" && colorData !== null && !Array.isArray(colorData)) {
+    if (colorData.code && typeof colorData.code === "string") {
+      return {
+        code: colorData.code,
+        name: typeof colorData.name === "string" ? colorData.name : getColorNameByCode(colorData.code),
+      }
+    }
+  }
+
+  // Nếu là string
+  if (typeof colorData === "string") {
+    if (colorData === "[object Object]" || colorData === "undefined" || colorData === "null") {
+      return defaultColor
+    }
+
+    // Nếu là hex color
+    if (colorData.startsWith("#")) {
+      return {
+        code: colorData,
+        name: getColorNameByCode(colorData),
+      }
+    }
+  }
+
+  return defaultColor
+}
+
+// Helper function để lấy tên màu từ code
+const getColorNameByCode = (code: string): string => {
+  const colorMap: { [key: string]: string } = {
+    "#000000": "Đen",
+    "#FFFFFF": "Trắng",
+    "#FF0000": "Đỏ",
+    "#00FF00": "Xanh lá",
+    "#0000FF": "Xanh dương",
+    "#FFFF00": "Vàng",
+    "#FF00FF": "Tím",
+    "#00FFFF": "Xanh cyan",
+    "#FFA500": "Cam",
+    "#800080": "Tím đậm",
+    "#FFC0CB": "Hồng",
+    "#A52A2A": "Nâu",
+    "#808080": "Xám",
+    "#C0C0C0": "Bạc",
+    "#FFD700": "Vàng kim",
+    "#8B4513": "Nâu đậm",
+    "#4B0082": "Chàm",
+    "#FF1493": "Hồng đậm",
+    "#32CD32": "Xanh lime",
+    "#87CEEB": "Xanh sky",
+  }
+  return colorMap[code] || "Màu khác"
+}
+
+// ENHANCED: Utility function để validate và clean product data
+const validateAndCleanProductData = (productData: any) => {
+  console.log("🧹 Cleaning product data before sending to API...")
+  console.log("📥 Raw data:", productData)
+
+  const cleanedData = { ...productData }
+
+  // Validate và clean variants
+  if (cleanedData.variants && Array.isArray(cleanedData.variants)) {
+    cleanedData.variants = cleanedData.variants.map((variant: any, index: number) => {
+      console.log(`🔍 Cleaning variant ${index}:`, variant.name || "unnamed")
+
+      // CRITICAL: Clean color data
+      const cleanColor = cleanColorData(variant.color)
+
+      // Validate specifications object
+      let cleanSpecs = {}
+      if (variant.specifications && typeof variant.specifications === "object" && variant.specifications !== null) {
+        cleanSpecs = { ...variant.specifications }
+      }
+
+      const cleanedVariant = {
+        id: variant.id,
+        name: variant.name || "",
+        sku: variant.sku || "",
+        price: Number(variant.price) || 0,
+        salePrice: variant.salePrice ? Number(variant.salePrice) : undefined,
+        stock: Number(variant.stock) || 0,
+        color: cleanColor, // ĐẢM BẢO COLOR LÀ OBJECT HỢP LỆ
+        specifications: cleanSpecs, // ĐẢM BẢO SPECS LÀ OBJECT HỢP LỆ
+        size: Number(variant.size) || 0,
+        length: Number(variant.length) || 0,
+        width: Number(variant.width) || 0,
+        height: Number(variant.height) || 0,
+        weight: Number(variant.weight) || 0,
+        images: Array.isArray(variant.images) ? variant.images : [],
+        isActive: Boolean(variant.isActive),
+      }
+
+      console.log(`✅ Cleaned variant ${index}:`, {
+        name: cleanedVariant.name,
+        color: cleanedVariant.color,
+        specifications: cleanedVariant.specifications,
+      })
+
+      return cleanedVariant
+    })
+  }
+
+  console.log("✅ Final cleaned data ready for API:")
+  console.log(
+    "📤 Cleaned variants:",
+    cleanedData.variants?.map((v: any) => ({
+      name: v.name,
+      color: v.color,
+      specifications: v.specifications,
+    })),
+  )
+
+  return cleanedData
+}
 
 // Hàm chuyển đổi cấu trúc cây cho TreeSelect
-const buildCategoryTree = (
-  categories: Category[],
-  parentId: string | null = null
-): any[] => {
+const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {
   return categories
-    .filter(
-      (cat) => cat.parent === parentId || (parentId === null && !cat.parent)
-    )
+    .filter((cat) => cat.parent === parentId || (parentId === null && !cat.parent))
     .map((cat) => ({
       title: cat.name,
       value: cat._id,
       children: buildCategoryTree(categories, cat._id),
-    }));
-};
+    }))
+}
 
 const ProductAddPage: React.FC = () => {
-  const [form] = Form.useForm();
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [images, setImages] = useState<string[]>([""]);
-  const [previewImage, setPreviewImage] = useState<string>("");
-  const [variants, setVariants] = useState<any[]>([]);
-  const [specs, setSpecs] = useState<Record<string, string>>({});
+  const [form] = Form.useForm()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [brands, setBrands] = useState<Brand[]>([])
+  const [images, setImages] = useState<string[]>([""])
+  const [previewImage, setPreviewImage] = useState<string>("")
+  const [variants, setVariants] = useState<any[]>([])
+  const [specs, setSpecs] = useState<Record<string, string>>({})
   // Thêm state cho ảnh đại diện
-  const [mainImage, setMainImage] = useState<string>("");
+  const [mainImage, setMainImage] = useState<string>("")
 
   useEffect(() => {
-    const currentSpecs = form.getFieldValue("specifications");
-    if (currentSpecs && typeof currentSpecs === 'object') {
+    const currentSpecs = form.getFieldValue("specifications")
+    if (currentSpecs && typeof currentSpecs === "object") {
       form.setFieldsValue({
         specifications: Object.entries(currentSpecs)
           .map(([k, v]) => `${k}: ${v}`)
-          .join('\n')
-      });
+          .join("\n"),
+      })
     } else if (!currentSpecs) {
-      form.setFieldsValue({ specifications: '' });
+      form.setFieldsValue({ specifications: "" })
     }
-  }, [form]);
+  }, [form])
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [cats, brs] = await Promise.all([getCategories(), getBrands()]);
-        setCategories(cats);
-        setBrands(brs);
+        const [cats, brs] = await Promise.all([getCategories(), getBrands()])
+        setCategories(cats)
+        setBrands(brs)
       } catch (error) {
-        message.error("Không thể tải dữ liệu cho danh mục và thương hiệu.");
+        message.error("Không thể tải dữ liệu cho danh mục và thương hiệu.")
       }
-    };
-    fetchData();
-  }, []);
+    }
+    fetchData()
+  }, [])
 
-  const categoryTree = buildCategoryTree(categories);
+  const categoryTree = buildCategoryTree(categories)
+
+  // ENHANCED: handleVariantsChange với better validation cho ColorSelector
+  const handleVariantsChange = (newVariants: any[]) => {
+    console.log("🔄 Variants changed:", newVariants)
+
+    // CRITICAL: Đảm bảo color luôn là object hợp lệ cho ColorSelector
+    const cleanedVariants = newVariants.map((variant, index) => {
+      const cleanedVariant = { ...variant }
+
+      // CRITICAL: Validate color object structure cho ColorSelector
+      cleanedVariant.color = cleanColorData(variant.color)
+
+      // Validate specifications
+      if (!cleanedVariant.specifications || typeof cleanedVariant.specifications !== "object") {
+        cleanedVariant.specifications = {}
+      }
+
+      console.log(`✅ Validated variant ${index} for ColorSelector:`, {
+        name: cleanedVariant.name,
+        color: cleanedVariant.color,
+      })
+
+      return cleanedVariant
+    })
+
+    console.log("✅ Cleaned variants for ColorSelector:", cleanedVariants)
+    setVariants(cleanedVariants)
+  }
 
   const onFinish = async (values: any) => {
     if (variants.length < 1) {
-      message.error("Chưa có biến thể sản phẩm, vui lòng kiểm tra lại");
-      return;
+      message.error("Chưa có biến thể sản phẩm, vui lòng kiểm tra lại")
+      return
     }
     for (const v of variants) {
       if (!v.length || !v.width || !v.height) {
-        message.error("Mỗi biến thể phải nhập đủ Dài, Rộng, Cao");
-        return;
+        message.error("Mỗi biến thể phải nhập đủ Dài, Rộng, Cao")
+        return
       }
       if (!v.name || !v.sku || !v.price || v.price <= 0) {
-        message.error("Mỗi biến thể phải có tên, SKU và giá gốc > 0");
-        return;
+        message.error("Mỗi biến thể phải có tên, SKU và giá gốc > 0")
+        return
       }
     }
     // Lấy tổng tồn kho từ các biến thể
-    const totalStock = variants.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+    const totalStock = variants.reduce((sum, v) => sum + (Number.parseInt(v.stock, 10) || 0), 0)
     // Lấy giá gốc từ biến thể đầu tiên
-    const mainPrice = variants[0].price;
+    const mainPrice = variants[0].price
     // Gộp tất cả ảnh từ các biến thể
-    const allImages = variants.flatMap(v => Array.isArray(v.images) ? v.images.filter((img: string) => !!img) : []).filter(Boolean);
+    const allImages = variants
+      .flatMap((v) => (Array.isArray(v.images) ? v.images.filter((img: string) => !!img) : []))
+      .filter(Boolean)
     if (allImages.length < 1) {
-      message.error("Phải có ít nhất 1 hình ảnh sản phẩm");
-      return;
+      message.error("Phải có ít nhất 1 hình ảnh sản phẩm")
+      return
     }
-    setLoading(true);
+    setLoading(true)
     try {
-      const brandId =
-        typeof values.brand === "string" ? values.brand : values.brand?._id;
-      const categoryId =
-        typeof values.category === "string"
-          ? values.category
-          : values.category?._id;
+      const brandId = typeof values.brand === "string" ? values.brand : values.brand?._id
+      const categoryId = typeof values.category === "string" ? values.category : values.category?._id
 
-      // Log variants trước khi gửi
-      variants.forEach((v, idx) => {
-        console.log(`--- Variant ${idx} ---`);
-        console.log('typeof color:', typeof v.color, v.color, JSON.stringify(v.color));
-        console.log('typeof specifications:', typeof v.specifications, v.specifications, JSON.stringify(v.specifications));
-        console.log('typeof images:', typeof v.images, v.images);
-        console.log('typeof size:', typeof v.size, v.size);
-        console.log('typeof length:', typeof v.length, v.length);
-        console.log('typeof width:', typeof v.width, v.width);
-        console.log('typeof height:', typeof v.height, v.height);
-      });
-      console.log('Variants gửi lên:', variants);
+      // CRITICAL: Pre-process variants to ensure color is object before sending
+      const processedVariants = variants.map((v, idx) => {
+        console.log(`🔧 Pre-processing variant ${idx}:`, v.name)
+
+        // Ensure color is always a proper object
+        const finalColor = cleanColorData(v.color)
+
+        // Ensure specifications is always a proper object
+        let finalSpecs = {}
+        if (v.specifications && typeof v.specifications === "object") {
+          finalSpecs = { ...v.specifications }
+        }
+
+        const processedVariant = {
+          id: v.id,
+          name: v.name,
+          sku: v.sku,
+          price: v.price,
+          salePrice: v.salePrice,
+          stock: v.stock,
+          color: finalColor, // ALWAYS VALID OBJECT
+          specifications: finalSpecs, // ALWAYS OBJECT
+          size: typeof v.size === "number" ? v.size : Number.parseFloat(v.size) || 0,
+          length: typeof v.length === "number" ? v.length : Number.parseFloat(v.length) || 0,
+          width: typeof v.width === "number" ? v.width : Number.parseFloat(v.width) || 0,
+          height: typeof v.height === "number" ? v.height : Number.parseFloat(v.height) || 0,
+          weight: typeof v.weight === "number" ? v.weight : Number.parseFloat(v.weight) || 0,
+          images: Array.isArray(v.images) ? v.images : [],
+          isActive: !!v.isActive,
+        }
+
+        console.log(`✅ Pre-processed variant ${idx}:`, {
+          name: processedVariant.name,
+          color: processedVariant.color,
+          specifications: processedVariant.specifications,
+        })
+
+        return processedVariant
+      })
 
       const productData = {
         name: values.name,
@@ -145,86 +323,72 @@ const ProductAddPage: React.FC = () => {
         price: mainPrice, // BẮT BUỘC cho backend
         stock: totalStock, // BẮT BUỘC cho backend
         images: allImages, // Đảm bảo có ít nhất 1 ảnh
-        variants: variants.map(v => ({
-          id: v.id,
-          name: v.name,
-          sku: v.sku,
-          price: v.price,
-          salePrice: v.salePrice,
-          stock: v.stock,
-          color: (v.color && typeof v.color === 'object' && typeof v.color.code === 'string' && typeof v.color.name === 'string')
-            ? { code: v.color.code, name: v.color.name }
-            : { code: '', name: '' },
-          specifications: (v.specifications && typeof v.specifications === 'object') ? { ...v.specifications } : {},
-          size: typeof v.size === 'number' ? v.size : parseFloat(v.size) || 0,
-          length: typeof v.length === 'number' ? v.length : parseFloat(v.length) || 0,
-          width: typeof v.width === 'number' ? v.width : parseFloat(v.width) || 0,
-          height: typeof v.height === 'number' ? v.height : parseFloat(v.height) || 0,
-          weight: typeof v.weight === 'number' ? v.weight : parseFloat(v.weight) || 0,
-          images: Array.isArray(v.images) ? v.images : [],
-          isActive: !!v.isActive,
-        })),
+        variants: processedVariants, // Use pre-processed variants
         isActive: values.isActive,
         isFeatured: values.isFeatured,
-      };
+      }
 
-      // Log productData trước khi gửi
-      console.log('ProductData gửi lên:', productData);
+      console.log("🧹 Data before validation:", productData)
 
-      const token = localStorage.getItem("token");
+      // Validate and clean data
+      const cleanedData = validateAndCleanProductData(productData)
+
+      console.log("✅ Final data to submit:", cleanedData)
+
+      const token = localStorage.getItem("token")
       const response = await fetch(`${API_URL}/product`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(productData),
-      });
+        body: JSON.stringify(cleanedData),
+      })
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json()
         if (errorData.details && Array.isArray(errorData.details)) {
-          errorData.details.forEach((msg: string) => message.error(msg));
+          errorData.details.forEach((msg: string) => message.error(msg))
         } else if (
           errorData.message &&
           errorData.message.includes("duplicate key") &&
           errorData.message.includes("slug")
         ) {
-          message.error("Sản phẩm này đã tồn tại. Vui lòng chọn tên khác hoặc kiểm tra lại.");
+          message.error("Sản phẩm này đã tồn tại. Vui lòng chọn tên khác hoặc kiểm tra lại.")
         } else {
-          message.error(errorData.message || "Thêm sản phẩm thất bại.");
+          message.error(errorData.message || "Thêm sản phẩm thất bại.")
         }
-        console.error("Backend error:", errorData);
-        return;
+        console.error("Backend error:", errorData)
+        return
       }
-      message.success("Thêm sản phẩm thành công!");
-      navigate("/admin/products");
+      message.success("Thêm sản phẩm thành công!")
+      navigate("/admin/products")
     } catch (error) {
-      message.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+      message.error("Đã xảy ra lỗi. Vui lòng thử lại.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
-    const slug = slugify(name, { lower: true, strict: true });
-    form.setFieldsValue({ slug });
-  };
+    const name = e.target.value
+    const slug = slugify(name, { lower: true, strict: true })
+    form.setFieldsValue({ slug })
+  }
 
   // Hình ảnh: nhập link
   const handleImageChange = (value: string, idx: number) => {
-    const newImages = [...images];
-    newImages[idx] = value;
-    setImages(newImages);
-    if (idx === 0) setPreviewImage(value);
-  };
-  const addImageField = () => setImages([...images, ""]);
+    const newImages = [...images]
+    newImages[idx] = value
+    setImages(newImages)
+    if (idx === 0) setPreviewImage(value)
+  }
+  const addImageField = () => setImages([...images, ""])
   const removeImageField = (idx: number) => {
-    const newImages = images.filter((_, i) => i !== idx);
-    setImages(newImages);
-    if (idx === 0 && newImages.length > 0) setPreviewImage(newImages[0]);
-    if (newImages.length === 0) setPreviewImage("");
-  };
+    const newImages = images.filter((_, i) => i !== idx)
+    setImages(newImages)
+    if (idx === 0 && newImages.length > 0) setPreviewImage(newImages[0])
+    if (newImages.length === 0) setPreviewImage("")
+  }
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -235,9 +399,7 @@ const ProductAddPage: React.FC = () => {
           specifications: {},
         }}
         onFinish={onFinish}
-        onFinishFailed={() =>
-          message.error("Vui lòng kiểm tra lại các trường thông tin!")
-        }
+        onFinishFailed={() => message.error("Vui lòng kiểm tra lại các trường thông tin!")}
       >
         <Row gutter={24}>
           {/* Cột chính cho Form */}
@@ -247,14 +409,9 @@ const ProductAddPage: React.FC = () => {
               <Form.Item
                 name="name"
                 label="Tên sản phẩm"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên sản phẩm!" },
-                ]}
+                rules={[{ required: true, message: "Vui lòng nhập tên sản phẩm!" }]}
               >
-                <Input
-                  placeholder="VD: Iphone 15 Pro Max"
-                  onChange={handleNameChange}
-                />
+                <Input placeholder="VD: Iphone 15 Pro Max" onChange={handleNameChange} />
               </Form.Item>
               <Form.Item name="sku" label="SKU (Mã định danh sản phẩm)">
                 <Input placeholder="VD: ATN-001" />
@@ -263,14 +420,11 @@ const ProductAddPage: React.FC = () => {
                 <Input
                   placeholder="Nhập link ảnh đại diện..."
                   value={mainImage}
-                  onChange={e => setMainImage(e.target.value)}
+                  onChange={(e) => setMainImage(e.target.value)}
                 />
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
-                <Input.TextArea
-                  rows={6}
-                  placeholder="Nhập mô tả chi tiết cho sản phẩm..."
-                />
+                <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
               </Form.Item>
             </Card>
 
@@ -284,22 +438,14 @@ const ProductAddPage: React.FC = () => {
                 </Col>
                 <Col span={12}>
                   <Form.Item name="tags" label="Tags (phân cách bởi dấu phẩy)">
-                    <Select
-                      mode="tags"
-                      style={{ width: "100%" }}
-                      placeholder="VD: iphone, apple"
-                    />
+                    <Select mode="tags" style={{ width: "100%" }} placeholder="VD: iphone, apple" />
                   </Form.Item>
                 </Col>
               </Row>
-             
             </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
-              <VariantManager
-                variants={variants}
-                onVariantsChange={setVariants}
-              />
+              <VariantManager variants={variants} onVariantsChange={handleVariantsChange} />
             </Card>
           </Col>
 
@@ -323,14 +469,9 @@ const ProductAddPage: React.FC = () => {
               <Form.Item
                 name="brand"
                 label="Thương hiệu"
-                rules={[
-                  { required: true, message: "Vui lòng chọn thương hiệu!" },
-                ]}
+                rules={[{ required: true, message: "Vui lòng chọn thương hiệu!" }]}
               >
-                <Select
-                  placeholder="Chọn một thương hiệu"
-                  style={{ width: "100%" }}
-                >
+                <Select placeholder="Chọn một thương hiệu" style={{ width: "100%" }}>
                   {brands.map((brand) => (
                     <Option key={brand._id} value={brand._id}>
                       {brand.name}
@@ -340,21 +481,12 @@ const ProductAddPage: React.FC = () => {
               </Form.Item>
               <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item
-                    name="isFeatured"
-                    label="Nổi bật"
-                    valuePropName="checked"
-                  >
+                  <Form.Item name="isFeatured" label="Nổi bật" valuePropName="checked">
                     <Switch />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item
-                    name="isActive"
-                    label="Hiển thị"
-                    valuePropName="checked"
-                    initialValue={true}
-                  >
+                  <Form.Item name="isActive" label="Hiển thị" valuePropName="checked" initialValue={true}>
                     <Switch />
                   </Form.Item>
                 </Col>
@@ -365,7 +497,7 @@ const ProductAddPage: React.FC = () => {
               <Title level={4}>Xem trước ảnh</Title>
               {mainImage ? (
                 <img
-                  src={mainImage}
+                  src={mainImage || "/placeholder.svg"}
                   alt="Preview"
                   style={{
                     width: "100%",
@@ -423,7 +555,7 @@ const ProductAddPage: React.FC = () => {
         </Row>
       </Form>
     </div>
-  );
-};
+  )
+}
 
-export default ProductAddPage;
+export default ProductAddPage

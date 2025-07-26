@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Spin, Alert, Descriptions, Tag, Image, Space, Button, Row, Col, Typography } from 'antd';
-import { ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Spin, Alert, Descriptions, Tag, Image, Space, Button, Row, Col, Typography, Modal, Table } from 'antd';
+import { ArrowLeftOutlined, DeleteOutlined } from '@ant-design/icons';
 import { variantApi } from './api';
+import { message } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -13,7 +14,7 @@ interface Variant {
   price: number;
   salePrice?: number;
   stock: number;
-  color?: string;
+  color?: string | { code: string; name: string };
   size?: string;
   weight?: number;
   images: string[];
@@ -38,6 +39,7 @@ const VariantDetail: React.FC = () => {
     if (id) {
       variantApi.getVariantById(id)
         .then(data => {
+          console.log('Variant data from API:', data); // Debug: Kiểm tra dữ liệu từ API
           setVariant(data);
           setLoading(false);
         })
@@ -49,94 +51,159 @@ const VariantDetail: React.FC = () => {
     }
   }, [id]);
 
+  const handleDelete = () => {
+    if (!id) return;
+    Modal.confirm({
+      title: 'Xóa biến thể',
+      icon: <DeleteOutlined />,
+      content: 'Bạn có chắc muốn xóa biến thể này? Hành động này không thể hoàn tác.',
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await variantApi.deleteVariant(id);
+          message.success('Xóa biến thể thành công');
+          navigate('/admin/variants');
+        } catch (error: any) {
+          message.error(error.response?.data?.message || 'Không thể xóa biến thể');
+        }
+      },
+    });
+  };
+
   if (loading) return <div className="flex justify-center items-center h-screen"><Spin size="large" /></div>;
   if (error) return <Alert message="Lỗi" description={error} type="error" showIcon />;
   if (!variant) return <Alert message="Không tìm thấy biến thể" type="warning" showIcon />;
 
   const formatPrice = (price: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
+  // Chuẩn hóa specifications nếu null hoặc undefined
+  const specs = variant.specifications || {};
+
   return (
-    <div style={{ padding: 24, background: '#f0f2f5' }}>
-      <Card
-        bordered={false}
-        title={
-          <Title level={3} style={{ margin: 0 }}>
-            Chi tiết biến thể: {variant.name}
-          </Title>
-        }
-        extra={
-          <Space>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)}>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <Card className="shadow-lg rounded-xl mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <div>
+            <Title level={3} className="text-gray-900 mb-2">
+              Chi tiết biến thể: {variant.name}
+            </Title>
+            <Text type="secondary" className="block mb-4">
+              SKU: {variant.sku}
+            </Text>
+            <Space size="middle" className="mb-4">
+              <Tag color={variant.isActive ? 'success' : 'error'}>
+                {variant.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
+              </Tag>
+              <Tag color={variant.stock > 0 ? 'success' : 'warning'}>
+                {variant.stock > 0 ? `Còn ${variant.stock} sản phẩm` : 'Hết hàng'}
+              </Tag>
+            </Space>
+            <Text strong className="text-xl">
+              {variant.salePrice && variant.salePrice < variant.price
+                ? formatPrice(variant.salePrice)
+                : formatPrice(variant.price)}
+            </Text>
+            {variant.salePrice && variant.salePrice < variant.price && (
+              <Text delete type="secondary" className="ml-2">
+                {formatPrice(variant.price)}
+              </Text>
+            )}
+          </div>
+          <Space size="middle" className="mt-4 sm:mt-0">
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/variants')}>
               Quay lại
             </Button>
-            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/admin/variants/edit/${variant._id}`)}>
-              Chỉnh sửa
+            <Button
+              type="default"
+              onClick={() => navigate(`/admin/products/edit/${variant.product._id}`)}
+            >
+              Chỉnh sửa sản phẩm
+            </Button>
+            <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
+              Xóa
             </Button>
           </Space>
-        }
-      >
-        <Row gutter={[24, 24]}>
+        </div>
+
+        <Row gutter={[16, 16]}>
           <Col xs={24} md={8}>
-            <Title level={5}>Link hình ảnh</Title>
-            <Space direction="vertical" align="start" style={{width: '100%'}}>
-              {variant.images && variant.images.length > 0 ? (
-                variant.images.map((img, index) => (
-                  <a key={index} href={img} target="_blank" rel="noopener noreferrer">{img}</a>
-                ))
-              ) : (
-                <Text type="secondary">Không có hình ảnh</Text>
-              )}
-            </Space>
+            <Title level={5} className="text-gray-700 mb-4">
+              Hình ảnh
+            </Title>
+            <Image.PreviewGroup>
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {variant.images?.length ? (
+                  variant.images.map((img, index) => (
+                    <Image
+                      key={index}
+                      src={img}
+                      width={150}
+                      height={150}
+                      alt={`Hình ảnh ${index + 1}`}
+                      fallback="/placeholder.svg"
+                      className="rounded-lg border border-gray-200 object-cover hover:shadow-md transition-shadow"
+                      preview={{ src: img }}
+                    />
+                  ))
+                ) : (
+                  <Text type="secondary">Không có hình ảnh</Text>
+                )}
+              </Space>
+            </Image.PreviewGroup>
           </Col>
           <Col xs={24} md={16}>
-            <Descriptions bordered column={1} layout="horizontal">
-              <Descriptions.Item label="Tên biến thể">{variant.name}</Descriptions.Item>
-              <Descriptions.Item label="SKU">{variant.sku}</Descriptions.Item>
+            <Title level={5} className="text-gray-700 mb-4">
+              Thông tin chi tiết
+            </Title>
+            <Descriptions
+              bordered
+              column={{ xs: 1, sm: 2, md: 1 }}
+              layout="vertical"
+              className="mb-6"
+            >
               <Descriptions.Item label="Sản phẩm gốc">
-                <a onClick={() => navigate(`/admin/products/detail/${variant.product._id}`)}>{variant.product.name}</a>
+                <a onClick={() => navigate(`/admin/products/detail/${variant.product._id}`)} className="text-blue-600 hover:underline">
+                  {variant.product.name}
+                </a>
               </Descriptions.Item>
-              <Descriptions.Item label="Giá gốc">{formatPrice(variant.price)}</Descriptions.Item>
-              <Descriptions.Item label="Giá khuyến mãi">
-                {variant.salePrice ? formatPrice(variant.salePrice) : 'Không áp dụng'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tồn kho">
-                <Tag color={variant.stock > 0 ? 'success' : 'error'}>
-                  {variant.stock > 0 ? `Còn hàng (${variant.stock})` : 'Hết hàng'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">
-                <Tag color={variant.isActive ? 'green' : 'red'}>
-                  {variant.isActive ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Màu sắc">{variant.color || 'N/A'}</Descriptions.Item>
+              {/* <Descriptions.Item label="Màu sắc">
+                {typeof variant.color === 'object' && variant.color?.code ? (
+                  <Space>
+                    <span
+                      className="inline-block w-4 h-4 rounded-full border"
+                      style={{ backgroundColor: variant.color.code }}
+                    />
+                    <span>{variant.color.name || variant.color.code}</span>
+                  </Space>
+                ) : (
+                  <span>{variant.color || 'N/A'}</span>
+                )}
+              </Descriptions.Item> */}
               <Descriptions.Item label="Kích thước">{variant.size || 'N/A'}</Descriptions.Item>
-              <Descriptions.Item label="Cân nặng">{variant.weight ? `${variant.weight} kg` : 'N/A'}</Descriptions.Item>
+              <Descriptions.Item label="Cân nặng">{variant.weight ? `${variant.weight} gram` : 'N/A'}</Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">{new Date(variant.createdAt).toLocaleDateString('vi-VN')}</Descriptions.Item>
               <Descriptions.Item label="Cập nhật lần cuối">{new Date(variant.updatedAt).toLocaleDateString('vi-VN')}</Descriptions.Item>
             </Descriptions>
-            {/* Hiển thị thông số kỹ thuật nếu có */}
-            {variant.specifications && Object.keys(variant.specifications).length > 0 && (
-              <div style={{ marginTop: 24 }}>
-                <Title level={5}>Thông số kỹ thuật</Title>
-                <table className="w-full border rounded-lg overflow-hidden mb-4">
-                  <thead>
-                    <tr>
-                      <th className="py-2 px-4 text-left font-semibold">Thông số</th>
-                      <th className="py-2 px-4 text-center font-semibold">Giá trị</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(variant.specifications).map(([key, value]) => (
-                      <tr key={key}>
-                        <td className="py-2 px-4 bg-gray-50 font-medium">{key}</td>
-                        <td className="py-2 px-4 text-center">{value}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+
+            <div className="mt-6">
+              <Title level={5} className="text-gray-700 mb-4">
+                Thông số kỹ thuật
+              </Title>
+              <Table
+                dataSource={Object.entries(specs).length > 0 ? Object.entries(specs).map(([key, value]) => ({ key, value })) : [{ key: '', value: 'Không có thông số kỹ thuật' }]}
+                columns={[
+                  { title: 'Thông số', dataIndex: 'key', key: 'key', width: '40%', className: 'font-medium' },
+                  { title: 'Giá trị', dataIndex: 'value', key: 'value', className: 'text-center' },
+                ]}
+                pagination={false}
+                size="middle"
+                className="border rounded-lg shadow-sm"
+                rowClassName="hover:bg-gray-50"
+                locale={{ emptyText: 'Không có dữ liệu' }}
+              />
+            </div>
           </Col>
         </Row>
       </Card>
@@ -144,4 +211,4 @@ const VariantDetail: React.FC = () => {
   );
 };
 
-export default VariantDetail; 
+export default VariantDetail;

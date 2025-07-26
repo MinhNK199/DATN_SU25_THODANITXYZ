@@ -49,9 +49,7 @@ const ProductDetail: React.FC = () => {
       try {
         const data = await getProductById(id);
         setProduct(data);
-        if (data.images && data.images.length > 0) {
-          setMainImage(data.images[0]);
-        }
+        setMainImage(data.images?.[0] || "/placeholder.svg");
       } catch (error) {
         // message handled in api.ts
       } finally {
@@ -65,10 +63,10 @@ const ProductDetail: React.FC = () => {
   const handleSoftDelete = () => {
     if (!id) return;
     Modal.confirm({
-      title: "Bạn có chắc muốn xóa sản phẩm này?",
+      title: "Xóa sản phẩm",
       icon: <DeleteOutlined />,
       content: "Sản phẩm sẽ được chuyển vào thùng rác và có thể khôi phục sau.",
-      okText: "Đồng ý",
+      okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
       onOk: async () => {
@@ -91,9 +89,43 @@ const ProductDetail: React.FC = () => {
     }).format(price);
   };
 
+  // Hàm gộp thông số kỹ thuật từ product và variants
+  const mergeSpecifications = (
+    productSpecs?: Record<string, string>,
+    variants?: ProductVariant[]
+  ): Record<string, string> => {
+    const merged: Record<string, Set<string>> = {};
+
+    // Thu thập thông số từ product.specifications
+    if (productSpecs && typeof productSpecs === "object") {
+      Object.entries(productSpecs).forEach(([key, value]) => {
+        if (!merged[key]) merged[key] = new Set();
+        merged[key].add(value);
+      });
+    }
+
+    // Thu thập thông số từ variants[].specifications
+    variants?.forEach((variant) => {
+      if (variant.specifications && typeof variant.specifications === "object") {
+        Object.entries(variant.specifications).forEach(([key, value]) => {
+          if (!merged[key]) merged[key] = new Set();
+          merged[key].add(value);
+        });
+      }
+    });
+
+    // Chuyển Set thành chuỗi, nối các giá trị bằng dấu phẩy
+    const result: Record<string, string> = {};
+    Object.entries(merged).forEach(([key, valueSet]) => {
+      result[key] = Array.from(valueSet).join(", ");
+    });
+
+    return result;
+  };
+
   if (loading) {
     return (
-      <div className="p-6 bg-gray-100 min-h-screen flex justify-center items-center">
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <Spin size="large" />
       </div>
     );
@@ -101,16 +133,20 @@ const ProductDetail: React.FC = () => {
 
   if (!product) {
     return (
-      <div className="p-6 bg-gray-100 min-h-screen text-center">
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
         <Text>Không tìm thấy sản phẩm.</Text>
       </div>
     );
   }
 
   const categoryName =
-    typeof product.category === "object" ? product.category.name : "N/A";
+    typeof product.category === "object" && product.category?.name
+      ? product.category.name
+      : "N/A";
   const brandName =
-    typeof product.brand === "object" ? product.brand.name : "N/A";
+    typeof product.brand === "object" && product.brand?.name
+      ? product.brand.name
+      : "N/A";
 
   const variantColumns: ColumnsType<ProductVariant> = [
     { title: "SKU", dataIndex: "sku", key: "sku" },
@@ -123,8 +159,39 @@ const ProductDetail: React.FC = () => {
       render: formatPrice,
     },
     { title: "Tồn kho", dataIndex: "stock", key: "stock" },
-    { title: "Màu", dataIndex: "color", key: "color" },
-    { title: "Kích thước", dataIndex: "size", key: "size" },
+    // {
+    //   title: "Màu",
+    //   dataIndex: "color",
+    //   key: "color",
+    //   render: (color: string | { code: string; name: string }) => {
+    //     if (typeof color === "object" && color?.code) {
+    //       return (
+    //         <Space>
+    //           <span
+    //             className="inline-block w-4 h-4 rounded border"
+    //             style={{ backgroundColor: color.code }}
+    //           />
+    //           <span>{color.name || "N/A"}</span>
+    //         </Space>
+    //       );
+    //     }
+    //     return (
+    //       <Space>
+    //         <span
+    //           className="inline-block w-4 h-4 rounded border"
+    //           style={{ backgroundColor: color || "#000000" }}
+    //         />
+    //         <span>{color || "N/A"}</span>
+    //       </Space>
+    //     );
+    //   },
+    // },
+    {
+      title: "Kích thước",
+      dataIndex: "size",
+      key: "size",
+      render: (size) => size || "N/A",
+    },
     {
       title: "Trạng thái",
       dataIndex: "isActive",
@@ -144,37 +211,43 @@ const ProductDetail: React.FC = () => {
     label,
     children,
   }) => (
-    <div className="mb-2">
-      <Text type="secondary">{label}</Text>
-      <div className="font-semibold">
-        {children !== null && children !== undefined && children !== "" ? (
-          children
-        ) : (
-          <Text type="secondary">N/A</Text>
-        )}
+    <div className="mb-4">
+      <Text type="secondary" className="block text-sm">
+        {label}
+      </Text>
+      <div className="text-base font-medium">
+        {children !== null && children !== undefined && children !== ""
+          ? children
+          : <Text type="secondary">N/A</Text>}
       </div>
     </div>
   );
 
-  // Thay vì lấy trực tiếp product.dimensions và product.weight, lấy như sau:
-  const mainVariant = product.variants && product.variants.length > 0 ? product.variants[0] : {};
-  const length = product.dimensions?.length || mainVariant.length || 0;
-  const width = product.dimensions?.width || mainVariant.width || 0;
-  const height = product.dimensions?.height || mainVariant.height || 0;
-  const weight = product.weight || mainVariant.weight || 0;
+  const mainVariant = product.variants?.[0];
+  const length = product.dimensions?.length || mainVariant?.length || 0;
+  const width = product.dimensions?.width || mainVariant?.width || 0;
+  const height = product.dimensions?.height || mainVariant?.height || 0;
+  const weight = product.weight || mainVariant?.weight || 0;
+
+  // Gộp thông số kỹ thuật
+  const mergedSpecifications = mergeSpecifications(
+    product.specifications,
+    product.variants
+  );
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <Card className="bg-white shadow-lg rounded-xl mb-6">
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+      {/* Header Card */}
+      <Card className="mb-6 shadow-md rounded-lg">
         <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={3} className="!m-0">
-              Chi tiết sản phẩm
+          <Col xs={24} sm={18}>
+            <Title level={3} className="!mt-0">
+              {product.name}
             </Title>
-            <Text type="secondary">{product.name}</Text>
+            <Text type="secondary">{product.sku || "N/A"}</Text>
           </Col>
-          <Col>
-            <Space>
+          <Col xs={24} sm={6} className="text-right mt-4 sm:mt-0">
+            <Space direction="horizontal" size="middle" className="flex-wrap">
               <Button
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate("/admin/products")}
@@ -198,111 +271,119 @@ const ProductDetail: React.FC = () => {
             </Space>
           </Col>
         </Row>
+        <div className="mt-4">
+          {product.salePrice && product.salePrice < product.price ? (
+            <Space align="baseline">
+              <Text delete type="secondary" className="text-lg">
+                {formatPrice(product.price)}
+              </Text>
+              <Text type="danger" strong className="text-2xl">
+                {formatPrice(product.salePrice)}
+              </Text>
+              <Tag color="red">
+                -
+                {Math.round(
+                  ((product.price - product.salePrice) / product.price) * 100
+                )}
+                %
+              </Tag>
+            </Space>
+          ) : (
+            <Text strong className="text-2xl">
+              {formatPrice(product.price)}
+            </Text>
+          )}
+        </div>
       </Card>
 
-      <Row gutter={[24, 24]}>
+      <Row gutter={[16, 16]}>
+        {/* Left Column: Images and Status */}
         <Col xs={24} lg={8}>
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            <Card className="bg-white shadow-lg rounded-xl">
+            <Card className="shadow-md rounded-lg">
               <Image
                 width="100%"
+                height={300}
                 src={mainImage}
+                fallback="/placeholder.svg"
                 alt={product.name}
-                style={{
-                  borderRadius: "8px",
-                  border: "1px solid #f0f0f0",
-                  marginBottom: "16px",
-                }}
+                className="rounded-lg border border-gray-200 object-cover"
               />
-              <Image.PreviewGroup>
-                <Space wrap>
-                  {product.images.map((image, index) => (
-                    <Image
-                      key={index}
-                      src={image}
-                      width={60}
-                      height={60}
-                      alt={`${product.name} thumbnail ${index}`}
-                      onClick={() => setMainImage(image)}
-                      style={{
-                        borderRadius: "4px",
-                        border:
-                          mainImage === image
-                            ? "2px solid #1890ff"
-                            : "1px solid #d9d9d9",
-                        cursor: "pointer",
-                        objectFit: "cover",
-                      }}
-                      preview={{ src: image }}
-                    />
-                  ))}
-                </Space>
-              </Image.PreviewGroup>
-            </Card>
-            <Card className="bg-white shadow-lg rounded-xl">
-              <Title level={4}>Trạng thái</Title>
-              <InfoItem label="Hiển thị">
-                <Tag
-                  icon={
-                    product.isActive ? (
-                      <CheckCircleOutlined />
+              <div className="mt-4">
+                <Image.PreviewGroup>
+                  <Space wrap>
+                    {product.images?.length ? (
+                      product.images.map((image, index) => (
+                        <Image
+                          key={index}
+                          src={image}
+                          width={80}
+                          height={80}
+                          alt={`${product.name} thumbnail ${index}`}
+                          onClick={() => setMainImage(image)}
+                          className={`rounded-md border-2 cursor-pointer object-cover ${
+                            mainImage === image
+                              ? "border-blue-500"
+                              : "border-gray-200"
+                          }`}
+                          preview={{ src: image }}
+                        />
+                      ))
                     ) : (
-                      <CloseCircleOutlined />
-                    )
-                  }
-                  color={product.isActive ? "success" : "error"}
-                >
-                  {product.isActive ? "Đang bán" : "Ngừng bán"}
-                </Tag>
-              </InfoItem>
-              <InfoItem label="Nổi bật">
-                <Tag color={product.isFeatured ? "gold" : "default"}>
-                  {product.isFeatured ? "Sản phẩm nổi bật" : "Bình thường"}
-                </Tag>
-              </InfoItem>
-              <InfoItem label="Tồn kho">
-                <Tag color={product.stock > 0 ? "success" : "error"}>
-                  {product.stock > 0
-                    ? `Còn hàng (${product.stock})`
-                    : "Hết hàng"}
-                </Tag>
-              </InfoItem>
-              <InfoItem label="SKU">
-                {product.variants?.[0]?.sku || product.sku}
-              </InfoItem>
+                      <Text type="secondary">Không có hình ảnh</Text>
+                    )}
+                  </Space>
+                </Image.PreviewGroup>
+              </div>
+            </Card>
+            <Card className="shadow-md rounded-lg">
+              <Title level={4} className="!mb-4">
+                Trạng thái
+              </Title>
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <InfoItem label="Hiển thị">
+                    <Tag
+                      icon={
+                        product.isActive ? (
+                          <CheckCircleOutlined />
+                        ) : (
+                          <CloseCircleOutlined />
+                        )
+                      }
+                      color={product.isActive ? "success" : "error"}
+                    >
+                      {product.isActive ? "Đang bán" : "Ngừng bán"}
+                    </Tag>
+                  </InfoItem>
+                </Col>
+                <Col span={12}>
+                  <InfoItem label="Nổi bật">
+                    <Tag color={product.isFeatured ? "gold" : "default"}>
+                      {product.isFeatured ? "Nổi bật" : "Bình thường"}
+                    </Tag>
+                  </InfoItem>
+                </Col>
+                <Col span={12}>
+                  <InfoItem label="Tồn kho">
+                    <Tag color={product.stock > 0 ? "success" : "error"}>
+                      {product.stock > 0
+                        ? `Còn hàng (${product.stock})`
+                        : "Hết hàng"}
+                    </Tag>
+                  </InfoItem>
+                </Col>
+                <Col span={12}>
+                  <InfoItem label="SKU">{product.sku || "N/A"}</InfoItem>
+                </Col>
+              </Row>
             </Card>
           </Space>
         </Col>
 
+        {/* Right Column: Details */}
         <Col xs={24} lg={16}>
-          <Card className="bg-white shadow-lg rounded-xl h-full">
-            <Title level={2} style={{ marginTop: 0 }}>
-              {product.name}
-            </Title>
-            <div className="mb-4">
-              {product.salePrice && product.salePrice < product.price ? (
-                <Space align="baseline">
-                  <Text delete type="secondary" style={{ fontSize: "1.2rem" }}>
-                    {formatPrice(product.price)}
-                  </Text>
-                  <Text type="danger" strong style={{ fontSize: "2rem" }}>
-                    {formatPrice(product.salePrice)}
-                  </Text>
-                  <Tag color="red">
-                    -
-                    {Math.round(
-                      ((product.price - product.salePrice) / product.price) *
-                      100
-                    )}
-                    %
-                  </Tag>
-                </Space>
-              ) : (
-                <Text strong style={{ fontSize: "2rem" }}>
-                  {formatPrice(product.price)}
-                </Text>
-              )}
-            </div>
+          <Card className="shadow-md rounded-lg h-full">
             <Tabs
               defaultActiveKey="1"
               items={[
@@ -310,10 +391,9 @@ const ProductDetail: React.FC = () => {
                   key: "1",
                   label: "Tổng quan",
                   children: (
-                    <>
-                      <Row gutter={32}>
-                        <Col span={12}>
-                          <InfoItem label="Slug">{product.slug}</InfoItem>
+                    <div className="space-y-6">
+                      <Row gutter={[16, 16]}>
+                        <Col xs={24} sm={12}>
                           <InfoItem label="Danh mục">
                             <Tag color="blue">{categoryName}</Tag>
                           </InfoItem>
@@ -321,141 +401,122 @@ const ProductDetail: React.FC = () => {
                             <Tag color="geekblue">{brandName}</Tag>
                           </InfoItem>
                           <InfoItem label="Bảo hành">
-                            {product.warranty !== undefined &&
-                              product.warranty !== null ? (
-                              `${product.warranty} tháng`
-                            ) : (
-                              <Text type="secondary">N/A</Text>
-                            )}
+                            {product.warranty
+                              ? `${product.warranty} tháng`
+                              : "N/A"}
                           </InfoItem>
                           <InfoItem label="Cân nặng">
-                            {weight !== 0 ? `${weight} gram` : <Text type="secondary">N/A</Text>}
+                            {weight ? `${weight} gram` : "N/A"}
                           </InfoItem>
+                        </Col>
+                        <Col xs={24} sm={12}>
                           <InfoItem label="Kích thước">
-                            {`${length} x ${width} x ${height} (cm)`}
+                            {length || width || height
+                              ? `${length} x ${width} x ${height} cm`
+                              : "N/A"}
                           </InfoItem>
                           <InfoItem label="Tags">
-                            {product.tags && product.tags.length > 0 ? (
+                            {product.tags?.length ? (
                               product.tags.map((tag) => (
                                 <Tag key={tag}>{tag}</Tag>
                               ))
                             ) : (
-                              <Text type="secondary">Không có thẻ tag.</Text>
+                              <Text type="secondary">
+                                Không có thẻ tag
+                              </Text>
                             )}
                           </InfoItem>
-                        </Col>
-                        <Col span={12}>
                           <InfoItem label="Meta Title">
-                            {product.meta?.metaTitle}
+                            {product.meta?.metaTitle || "N/A"}
                           </InfoItem>
                           <InfoItem label="Meta Description">
-                            {product.meta?.metaDescription}
+                            {product.meta?.metaDescription || "N/A"}
                           </InfoItem>
                         </Col>
                       </Row>
                       <Divider />
                       <Title level={5}>Mô tả</Title>
-                      <Paragraph>
+                      <Paragraph className="text-base">
                         {product.description ||
                           "Chưa có mô tả cho sản phẩm này."}
                       </Paragraph>
-                    </>
+                    </div>
                   ),
                 },
                 {
                   key: "2",
-                  label: "Thông số & Tính năng",
+                  label: "Thông số kỹ thuật",
                   children: (
-                    <Row gutter={32}>
-                      <Col span={12}>
-                        <Title level={5}>Thông số kỹ thuật</Title>
-                        {product.specifications &&
-                          Object.keys(product.specifications).length > 0 ? (
-                          <table className="w-full border rounded-lg overflow-hidden mb-4">
-                            <thead>
-                              <tr className="bg-gradient-to-r from-blue-100 to-purple-100">
-                                <th className="py-2 px-4 text-left font-semibold text-blue-900 w-56">
-                                  Thông số
-                                </th>
-                                <th className="py-2 px-4 text-center font-semibold text-blue-900">
-                                  Giá trị
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {Object.entries(product.specifications).map(
-                                ([key, value]) => (
-                                  <tr
-                                    key={key}
-                                    className="border-b border-gray-100 hover:bg-blue-50 transition-colors"
-                                  >
-                                    <td className="py-2 px-4 bg-gray-50 font-medium text-gray-700">
-                                      {key}
-                                    </td>
-                                    <td className="py-2 px-4 text-center">
-                                      {value}
-                                    </td>
-                                  </tr>
-                                )
-                              )}
-                            </tbody>
-                          </table>
-                        ) : (
-                          <Text type="secondary">
-                            Không có thông số kỹ thuật.
-                          </Text>
-                        )}
-                      </Col>
-                      <Col span={12}>
-                        <Title level={5}>Tính năng nổi bật</Title>
-                        {product.features && product.features.length > 0 ? (
-                          <List
-                            dataSource={product.features}
-                            renderItem={(item) => (
-                              <List.Item>- {item}</List.Item>
-                            )}
-                          />
-                        ) : (
-                          <Text type="secondary">
-                            Không có tính năng nổi bật.
-                          </Text>
-                        )}
-                      </Col>
-                    </Row>
+                    <div>
+                      {Object.keys(mergedSpecifications).length > 0 ? (
+                        <Table
+                          dataSource={Object.entries(mergedSpecifications).map(
+                            ([key, value]) => ({
+                              key,
+                              value,
+                            })
+                          )}
+                          columns={[
+                            {
+                              title: "Thông số",
+                              dataIndex: "key",
+                              key: "key",
+                              width: "40%",
+                            },
+                            { title: "Giá trị", dataIndex: "value", key: "value" },
+                          ]}
+                          pagination={false}
+                          size="small"
+                          className="border rounded-lg"
+                        />
+                      ) : (
+                        <Text type="secondary">
+                          Không có thông số kỹ thuật.
+                        </Text>
+                      )}
+                    </div>
                   ),
                 },
-                {
-                  key: "3",
-                  label: `Biến thể (${product.variants?.length || 0})`,
-                  children: (
-                    <Table
-                      columns={variantColumns}
-                      dataSource={product.variants}
-                      rowKey="_id"
-                      pagination={false}
-                      size="small"
-                    />
-                  ),
-                },
+                // {
+                //   key: "3",
+                //   label: "Tính năng nổi bật",
+                //   children: (
+                //     <div>
+                //       {product.features?.length ? (
+                //         <List
+                //           dataSource={product.features}
+                //           renderItem={(item) => (
+                //             <List.Item className="text-base">
+                //               • {item}
+                //             </List.Item>
+                //           )}
+                //         />
+                //       ) : (
+                //         <Text type="secondary">
+                //           Không có tính năng nổi bật.
+                //         </Text>
+                //       )}
+                //     </div>
+                //   ),
+                // },
                 {
                   key: "4",
-                  label: "Tối ưu SEO",
+                  label: `Biến thể (${product.variants?.length || 0})`,
                   children: (
-                    <>
-                      <InfoItem label="Meta Title">
-                        {product.meta?.metaTitle}
-                      </InfoItem>
-                      <InfoItem label="Meta Description">
-                        {product.meta?.metaDescription}
-                      </InfoItem>
-                      <InfoItem label="Tags">
-                        {product.tags?.length ? (
-                          product.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)
-                        ) : (
-                          <Text type="secondary">Không có thẻ tag.</Text>
-                        )}
-                      </InfoItem>
-                    </>
+                    <div>
+                      {product.variants?.length ? (
+                        <Table
+                          columns={variantColumns}
+                          dataSource={product.variants}
+                          rowKey="_id"
+                          pagination={false}
+                          size="small"
+                          scroll={{ x: 800 }}
+                        />
+                      ) : (
+                        <Text type="secondary">Không có biến thể.</Text>
+                      )}
+                    </div>
                   ),
                 },
               ]}

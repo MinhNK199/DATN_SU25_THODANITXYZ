@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { SaveOutlined, ArrowLeftOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { SaveOutlined, ArrowLeftOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin, ColorPicker } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import axios from 'axios';
 import SpecificationEditor from '../products/SpecificationEditor';
@@ -17,7 +17,8 @@ interface VariantForm {
   price: number;
   salePrice?: number;
   stock: number;
-  color?: string;
+  color?: { code: string; name: string };
+  colorName?: string;
   size?: string;
   weight?: number;
   images: string[];
@@ -38,7 +39,6 @@ const VariantEdit: React.FC = () => {
   const [imageLinks, setImageLinks] = useState('');
   const [specifications, setSpecifications] = useState<Record<string, string>>({});
 
-  // Fetch variant data
   useEffect(() => {
     const fetchVariant = async () => {
       try {
@@ -47,10 +47,8 @@ const VariantEdit: React.FC = () => {
         const response = await axios.get(`http://localhost:8000/api/variant/${id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         const variant = response.data;
-        
-        // Convert images to fileList format
         const imageFiles: UploadFile[] = (variant.images || []).map((image: string, index: number) => ({
           uid: `-${index}`,
           name: `image-${index}`,
@@ -59,19 +57,19 @@ const VariantEdit: React.FC = () => {
           thumbUrl: image
         }));
         setFileList(imageFiles);
-        // Set image links textarea
         setImageLinks((variant.images || []).join('\n'));
-        
+
         form.setFieldsValue({
           name: variant.name || '',
           sku: variant.sku || '',
           price: variant.price || 0,
           salePrice: variant.salePrice,
           stock: variant.stock || 0,
-          color: variant.color || '#000000',
+          color: typeof variant.color === 'object' ? variant.color.code : variant.color || '#000000',
+          colorName: typeof variant.color === 'object' ? variant.color.name : '',
           size: variant.size || '',
           weight: variant.weight,
-          isActive: variant.isActive !== undefined ? variant.isActive : true,
+          isActive: variant.isActive ?? true,
           product: variant.product?._id || variant.product || ''
         });
         setSpecifications(variant.specifications || {});
@@ -89,7 +87,6 @@ const VariantEdit: React.FC = () => {
     }
   }, [id, navigate, form]);
 
-  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -103,8 +100,7 @@ const VariantEdit: React.FC = () => {
     fetchProducts();
   }, []);
 
-  // Handle form submission
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: VariantForm) => {
     if (!values.product) {
       message.error('Vui lòng chọn sản phẩm');
       return;
@@ -118,27 +114,30 @@ const VariantEdit: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      // Ưu tiên lấy link ảnh từ textarea nếu có
+
       let images: string[] = [];
       if (imageLinks.trim()) {
         images = imageLinks.split('\n').map(link => link.trim()).filter(link => link);
       } else {
         images = fileList.map(file => file.url || file.thumbUrl || '').filter(url => url);
+        if (fileList.length > 0 && images.length === 0) {
+          // Thay bằng API upload thực tế
+          images = fileList.map((_, index) => `https://example.com/uploaded/image-${index}.jpg`);
+        }
       }
+
       const formData = {
         ...values,
         images,
-        isActive: values.isActive !== undefined ? values.isActive : true,
+        isActive: values.isActive ?? true,
         specifications,
-        color: (typeof values.color === 'object' && typeof values.color.code === 'string' && typeof values.color.name === 'string')
-          ? { code: values.color.code, name: values.color.name }
-          : (typeof values.color === 'string' ? { code: values.color, name: values.colorName || '' } : { code: '', name: '' }),
+        color: values.color?.code ? { code: values.color.code, name: values.colorName || values.color.name || '' } : undefined,
       };
 
       await axios.put(`http://localhost:8000/api/variant/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       message.success('Cập nhật biến thể thành công');
       navigate('/admin/variants');
     } catch (error: any) {
@@ -149,7 +148,6 @@ const VariantEdit: React.FC = () => {
     }
   };
 
-  // Handle image upload
   const handleImageUpload = (info: any) => {
     setFileList(info.fileList);
   };
@@ -168,30 +166,24 @@ const VariantEdit: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-md rounded-lg">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Chỉnh sửa biến thể</h1>
               <p className="text-gray-600 mt-1">Cập nhật thông tin biến thể sản phẩm</p>
             </div>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/admin/variants')}
-            >
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/variants')}>
               Quay lại
             </Button>
           </div>
         </Card>
 
-        {/* Form */}
-        <Card>
+        <Card className="shadow-md rounded-lg">
           <Form
             form={form}
             layout="vertical"
             onFinish={handleSubmit}
           >
-            {/* Basic Information */}
             <Divider orientation="left">Thông tin cơ bản</Divider>
             <Row gutter={16}>
               <Col span={12}>
@@ -241,7 +233,6 @@ const VariantEdit: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Pricing */}
             <Divider orientation="left">Thông tin giá</Divider>
             <Row gutter={16}>
               <Col span={8}>
@@ -292,17 +283,33 @@ const VariantEdit: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Specifications */}
-            <Divider orientation="left">Thông số kỹ thuật</Divider>
+            <Divider orientation="left">Thông tin bổ sung</Divider>
             <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item label="Thông số kỹ thuật">
-                  <SpecificationEditor value={specifications} onChange={setSpecifications} />
+              <Col span={8}>
+                <Form.Item label="Màu sắc" name="color">
+                  <ColorPicker showText />
+                </Form.Item>
+                <Form.Item label="Tên màu" name="colorName">
+                  <Input placeholder="VD: Đen" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Kích thước" name="size">
+                  <Input placeholder="VD: M" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Cân nặng (gram)" name="weight">
+                  <InputNumber style={{ width: '100%' }} placeholder="0" min={0} />
                 </Form.Item>
               </Col>
             </Row>
 
-            {/* Images */}
+            <Divider orientation="left">Thông số kỹ thuật</Divider>
+            <Form.Item label="Thông số kỹ thuật">
+              <SpecificationEditor value={specifications} onChange={setSpecifications} />
+            </Form.Item>
+
             <Divider orientation="left">Ảnh sản phẩm</Divider>
             <Row gutter={16}>
               <Col span={24}>
@@ -338,7 +345,6 @@ const VariantEdit: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Actions */}
             <Divider />
             <div className="flex justify-end space-x-4">
               <Button onClick={() => navigate('/admin/variants')}>
@@ -360,4 +366,4 @@ const VariantEdit: React.FC = () => {
   );
 };
 
-export default VariantEdit; 
+export default VariantEdit;

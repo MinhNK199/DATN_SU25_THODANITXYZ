@@ -5,10 +5,6 @@ import {
   FaShoppingCart,
   FaEye,
   FaStar,
-  FaTruck,
-  FaShieldAlt,
-  FaClock,
-  FaCheck,
   FaBalanceScale,
 } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
@@ -24,29 +20,32 @@ interface ProductCardProps {
     price: number;
     salePrice?: number;
     originalPrice?: number;
-    image: string;
+    image?: string;
+    images?: string[];
     brand:
       | {
-          _id: string;
+          _id?: string;
           name: string;
         }
-      | string;
-    rating: number;
-    reviewCount: number;
+      | string
+      | null;
+    rating?: number;
+    reviewCount?: number;
+    averageRating?: number;
+    numReviews?: number;
     discount?: number;
     isNew?: boolean;
     isHot?: boolean;
     stock: number;
     variants?: Array<{
-      _id: string;
+      _id?: string;
       name?: string;
       price: number;
       salePrice?: number;
       stock: number;
       images?: string[];
       sku?: string;
-      color?: string;
-      size?: string;
+      size?: string | number;
       weight?: number;
       isActive?: boolean;
       specifications?: Record<string, string>;
@@ -58,15 +57,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [availableStock, setAvailableStock] = useState<number | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
-  const { addToCart, isInCart } = useCart();
+  const { addToCart } = useCart();
   const [isFavorite, setIsFavorite] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
-  const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined);
-  const [variantOptions, setVariantOptions] = useState<any[]>(product.variants || []);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [filterText, setFilterText] = useState('');
-  const [filterColor, setFilterColor] = useState<string | undefined>(undefined);
   const [filterSize, setFilterSize] = useState<string | undefined>(undefined);
 
   const formatPrice = (price: number) => {
@@ -76,7 +71,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }).format(price);
   };
 
-  // Lấy số lượng có sẵn khi component mount
   useEffect(() => {
     const fetchAvailability = async () => {
       try {
@@ -85,7 +79,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         setAvailableStock(availability.availableStock);
       } catch (error) {
         console.error("Error fetching product availability:", error);
-        setAvailableStock(getTotalStock(product)); // Fallback to total stock
+        setAvailableStock(getTotalStock(product));
       } finally {
         setStockLoading(false);
       }
@@ -96,8 +90,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const openVariantModal = () => {
     setShowVariantModal(true);
-    setSelectedColor(undefined);
-    setSelectedSize(undefined);
     setSelectedVariantId(undefined);
   };
 
@@ -105,33 +97,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setShowVariantModal(false);
   };
 
-  const handleVariantSelect = () => {
-    if (selectedVariantId) {
-      addToCart(product._id, 1, selectedVariantId);
-      setShowVariantModal(false);
+  const handleVariantSelect = async () => {
+    if (!selectedVariantId) {
+      toast.error("Vui lòng chọn một loại sản phẩm!");
+      return;
+    }
+    const validVariant = product.variants?.find(v => v._id === selectedVariantId);
+    if (!validVariant) {
+      toast.error("Loại sản phẩm không hợp lệ hoặc không tồn tại!");
+      return;
+    }
+    if (validVariant.stock <= 0) {
+      toast.error("Loại sản phẩm đã hết hàng!");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await addToCart(product._id, 1, selectedVariantId); // Gửi productId và variantId riêng biệt
+      toast.success("Đã thêm vào giỏ hàng!");
+      closeVariantModal();
+    } catch (error: any) {
+      console.error("Error adding to cart:", error);
+      toast.error(error.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng!");
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Lọc các lựa chọn hợp lệ dựa trên lựa chọn hiện tại
-  const colorList = Array.from(new Set((product.variants || []).map((v: any) => v.color).filter(Boolean)));
-  const sizeList = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
-
-  const filteredVariants = (product.variants || []).filter((variant: any) => {
-    const matchText = filterText ? (variant.name || '').toLowerCase().includes(filterText.toLowerCase()) : true;
-    const matchColor = filterColor ? variant.color === filterColor : true;
-    const matchSize = filterSize ? variant.size === filterSize : true;
-    return matchText && matchColor && matchSize;
-  });
-
-  useEffect(() => {
-    // Khi chọn đủ thuộc tính, xác định variantId hợp lệ
-    if (selectedColor && selectedSize) {
-      const found = (product.variants || []).find((v: any) => v.color === selectedColor && v.size === selectedSize);
-      setSelectedVariantId(found?._id);
-    } else {
-      setSelectedVariantId(undefined);
-    }
-  }, [selectedColor, selectedSize, product.variants]);
 
   const handleAddToCart = async () => {
     if (product.variants && product.variants.length > 0) {
@@ -141,12 +132,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setIsLoading(true);
     try {
       await addToCart(product._id, 1);
+      toast.success("Đã thêm vào giỏ hàng!");
     } catch (error) {
       console.error("Error adding to cart:", error);
+      toast.error("Không thể thêm sản phẩm vào giỏ hàng!");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const sizeList = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
+
+  const filteredVariants = (product.variants || []).filter((variant: any) => {
+    const matchText = filterText ? (variant.name || '').toLowerCase().includes(filterText.toLowerCase()) : true;
+    const matchSize = filterSize ? variant.size === filterSize : true;
+    return matchText && matchSize;
+  });
+
+  useEffect(() => {
+    setSelectedVariantId(undefined); // Reset khi filter thay đổi
+  }, [filterText, filterSize]);
+
   useEffect(() => {
     const checkIsFavorite = async () => {
       try {
@@ -184,7 +190,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     toast.success("Tính năng so sánh sẽ được phát triển sau");
   };
 
-  // Helper tính tổng stock
   const getTotalStock = (product: any) => {
     let total = product.stock || 0;
     if (product.variants && product.variants.length > 0) {
@@ -199,7 +204,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     if (stockLoading) {
       return <span className="text-gray-500 text-sm">Đang kiểm tra...</span>;
     }
-    const totalStock = getTotalStock(product);
     if (availableStock === null) {
       return <span className="text-gray-500 text-sm">Còn hàng</span>;
     }
@@ -216,28 +220,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const isOutOfStock = availableStock === 0;
 
-  // Tìm giá tốt nhất và trạng thái tồn kho tổng hợp
   const bestPrice = product.variants && product.variants.length > 0
     ? Math.min(...product.variants.map((v: any) => v.salePrice && v.salePrice > 0 && v.salePrice < v.price ? v.salePrice : v.price))
     : product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
-  const allColors = Array.from(new Set((product.variants || []).map((v: any) => v.color).filter(Boolean)));
-  const allSizes = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
-  const lowStock = (product.variants || []).some((v: any) => v.stock > 0 && v.stock <= 5);
-  const outOfStock = (product.variants || []).every((v: any) => v.stock === 0);
 
   return (
     <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
-      {/* Image Container */}
       <div className="relative overflow-hidden">
         <Link to={`/product/${product._id}`}>
           <img
-            src={product.image}
+            src={product.image || (product.images && product.images.length > 0 ? product.images[0] : '/placeholder-image.jpg')}
             alt={product.name}
             className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
           />
         </Link>
 
-        {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col space-y-2">
           {product.isNew && (
             <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
@@ -256,9 +253,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Stock Status Badge */}
-
-        {/* Quick Actions */}
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="flex space-x-2">
             <button
@@ -276,6 +270,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   ? "Đang thêm..."
                   : isOutOfStock
                   ? "Hết hàng"
+                  : product.variants && product.variants.length > 0
+                  ? "Chọn loại"
                   : "Thêm vào giỏ"}
               </span>
             </button>
@@ -305,43 +301,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
-      {/* Content */}
       <div className="p-4">
-        {/* Brand */}
         <div className="text-sm text-blue-600 font-medium mb-1">
   {product.brand && typeof product.brand === "object"
     ? product.brand.name
     : product.brand || "Không rõ thương hiệu"}
 </div>
 
-        {/* Product Name */}
         <Link to={`/product/${product._id}`}>
           <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        {/* Rating */}
         <div className="flex items-center space-x-1 mb-2">
           <div className="flex">
             {[...Array(5)].map((_, i) => (
               <FaStar
                 key={i}
                 className={`w-4 h-4 ${
-                  i < Math.floor(product.rating)
+                  i < Math.floor(product.rating || product.averageRating || 0)
                     ? "text-yellow-400 fill-current"
                     : "text-gray-300"
                 }`}
               />
             ))}
           </div>
-          <span className="text-sm text-gray-600">({product.reviewCount})</span>
+          <span className="text-sm text-gray-600">({product.reviewCount || product.numReviews || 0})</span>
         </div>
 
-        {/* Price */}
         <div className="flex items-center space-x-2 mb-3">
           <span className="text-xl font-bold text-gray-900">
-            {formatPrice(product.price)}
+            {formatPrice(bestPrice)}
           </span>
           {product.originalPrice && (
             <span className="text-sm text-gray-500 line-through">
@@ -350,10 +341,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Stock Status */}
         <div className="mb-3">{getStockStatus()}</div>
 
-        {/* Features */}
         <div className="space-y-1 mb-3">
           <div className="flex items-center text-xs text-gray-600">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -369,7 +358,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         </div>
 
-        {/* Add to Cart Button (Mobile) */}
         <button
           onClick={handleAddToCart}
           disabled={isLoading || isOutOfStock}
@@ -385,19 +373,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               ? "Đang thêm..."
               : isOutOfStock
               ? "Hết hàng"
+              : product.variants && product.variants.length > 0
+              ? "Chọn loại sản phẩm"
               : "Thêm vào giỏ hàng"}
           </span>
         </button>
       </div>
-      {/* Modal chọn biến thể */}
+
       <Modal
         open={showVariantModal}
         onCancel={closeVariantModal}
         footer={null}
         title={`Chọn loại sản phẩm cho ${product.name}`}
-        bodyStyle={{ maxHeight: 480, overflowY: 'auto', padding: 0 }}
+        styles={{ body: { maxHeight: 480, overflowY: 'auto', padding: 0 } }}
       >
-        {/* Filter nâng cao */}
         <div style={{ display: 'flex', gap: 8, padding: 16, paddingBottom: 0 }}>
           <Input
             placeholder="Tìm theo tên loại sản phẩm..."
@@ -405,14 +394,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             onChange={e => setFilterText(e.target.value)}
             style={{ width: 180 }}
             allowClear
-          />
-          <Select
-            placeholder="Lọc theo màu sắc"
-            value={filterColor}
-            onChange={setFilterColor}
-            allowClear
-            style={{ width: 120 }}
-            options={colorList.map(color => ({ label: color, value: color }))}
           />
           <Select
             placeholder="Lọc theo kích thước"
@@ -423,7 +404,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             options={sizeList.map(size => ({ label: size, value: size }))}
           />
         </div>
-        {/* Danh sách biến thể dọc */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, paddingTop: 8 }}>
           {filteredVariants.length === 0 && <div style={{ color: '#888', textAlign: 'center', padding: 32 }}>Không có loại sản phẩm phù hợp.</div>}
           {filteredVariants.map((variant: any) => (
@@ -431,7 +411,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               key={variant._id}
               content={(
                 <div style={{ minWidth: 300 }}>
-                  <div className="font-semibold mb-1 text-base">{variant.name || `${variant.color || ''} ${variant.size || ''}`}</div>
+                  <div className="font-semibold mb-1 text-base">{variant.name || `${variant.size || ''}`}</div>
                   <div className="mb-2">
                     <img
                       src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder-image.jpg'}
@@ -442,7 +422,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
                   <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
                   <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
-                  <div className="mb-1">Màu sắc: <span>{variant.color || 'N/A'}</span></div>
                   <div className="mb-1">Kích thước: <span>{variant.size || 'N/A'}</span></div>
                   <div className="mb-1">Cân nặng: <span>{variant.weight ? `${variant.weight}g` : 'N/A'}</span></div>
                   <div className="mb-1">Trạng thái: <span className={variant.isActive ? 'text-green-600' : 'text-red-600'}>{variant.isActive ? 'Hoạt động' : 'Ẩn'}</span></div>
@@ -461,7 +440,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                           {Object.entries(variant.specifications).map(([key, value]) => (
                             <tr key={key}>
                               <td className="pr-2 text-gray-600">{key}</td>
-                              <td className="text-gray-800">{value}</td>
+                              <td className="text-gray-800">{String(value)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -488,6 +467,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   cursor: variant.stock > 0 ? 'pointer' : 'not-allowed',
                 }}
                 className={variant.stock > 0 ? 'hover:shadow-lg transition-shadow' : ''}
+                onClick={() => variant.stock > 0 && setSelectedVariantId(variant._id)}
               >
                 <Badge.Ribbon
                   text={variant.stock === 0 ? 'Hết hàng' : variant.stock <= 5 ? 'Sắp hết hàng' : ''}
@@ -501,7 +481,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   />
                 </Badge.Ribbon>
                 <div style={{ flex: 1 }}>
-                  <div className="font-semibold text-base mb-1">{variant.name || `${variant.color || ''} ${variant.size || ''}`}</div>
+                  <div className="font-semibold text-base mb-1">{variant.name || `${variant.size || ''}`}</div>
                   <div className="mb-1">
                     {variant.salePrice && variant.salePrice < variant.price ? (
                       <>
@@ -513,11 +493,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     )}
                   </div>
                   <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
-                  {/* Hiển thị màu sắc nếu có */}
-                  {variant.color && (
-                    <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: '50%', background: variant.color, border: '1px solid #ccc', marginRight: 8, verticalAlign: 'middle' }} title={variant.color}></span>
-                  )}
-                  {/* Hiển thị size nếu có */}
                   {variant.size && (
                     <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
                   )}
@@ -525,22 +500,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 <Button
                   type="primary"
                   disabled={variant.stock <= 0}
-                  onClick={() => {
-                    addToCart(product._id, 1, variant._id);
-                    setShowVariantModal(false);
-                  }}
+                  onClick={() => variant.stock > 0 && setSelectedVariantId(variant._id)}
                   style={{ minWidth: 120, fontWeight: 600 }}
                 >
-                  {variant.stock > 0 ? 'Thêm vào giỏ' : 'Hết hàng'}
+                  Chọn
                 </Button>
               </div>
             </Popover>
           ))}
+        </div>
+        <div className="flex justify-center mt-6">
+          <Button
+            type="primary"
+            disabled={!selectedVariantId || isLoading}
+            onClick={handleVariantSelect}
+            loading={isLoading}
+            style={{ minWidth: 120 }}
+          >
+            Xác nhận
+          </Button>
         </div>
       </Modal>
     </div>
   );
 };
 
-export default ProductCard;
-
+export default ProductCard; 
