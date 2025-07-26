@@ -7,34 +7,30 @@ const API_URL = "http://localhost:8000/api/banner";
 
 const BannerAdd: React.FC = () => {
   const {
-  register,
-  handleSubmit,
-  control,
-  formState: { errors },
-  reset,
-} = useForm<Banner>({
-  defaultValues: {
-    title: "",
-    subtitle: "",
-    description: "",
-    badge: "",
-    features: [""],
-    buttonText: "",
-    buttonLink: "",
-    image: { url: "", alt: "" },
-    isActive: true,
-    position: "",
-    startDate: "",
-    endDate: "",
-  },
-});
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+    reset,
+  } = useForm<Banner>({
+    defaultValues: {
+      title: "",
+      subtitle: "",
+      description: "",
+      badge: "",
+      features: [""],
+      buttonText: "",
+      buttonLink: "",
+      image: " ",
+      isActive: true,
+      position: "",
+    },
+  });
 
-
-const { fields, append, remove } = useFieldArray({
-  control,
-  name: "features",
-});
-
+  const { fields, append, remove } = useFieldArray<any>({
+    control,
+    name: "features",
+  });
 
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
@@ -47,35 +43,28 @@ const { fields, append, remove } = useFieldArray({
     };
   };
 
-
   const onSubmit = async (data: Banner) => {
-  try {
-    const now = new Date();
-    const payload = {
-      ...data,
-      startDate: now.toISOString(),
-      endDate: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(), 
-    };
+    try {
+      const { startDate, endDate, ...safeData } = data;
 
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: getAuthHeader(),
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: getAuthHeader(),
+        body: JSON.stringify(safeData),
+      });
 
-    if (res.ok) {
-      setMessage("✅ Thêm banner thành công!");
-      reset();
-      setTimeout(() => navigate("/admin/banners"), 1000);
-    } else {
-      const err = await res.json();
-      setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
+      if (res.ok) {
+        setMessage("✅ Thêm banner thành công!");
+        reset();
+        setTimeout(() => navigate("/admin/banners"), 1000);
+      } else {
+        const err = await res.json();
+        setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
+      }
+    } catch (error) {
+      setMessage("❌ Lỗi kết nối máy chủ!");
     }
-  } catch (error) {
-    setMessage("❌ Lỗi kết nối máy chủ!");
-  }
-};
-
+  };
 
   return (
     <div className="max-w-2xl mx-auto bg-white mt-10 rounded-xl shadow-lg p-8">
@@ -96,7 +85,6 @@ const { fields, append, remove } = useFieldArray({
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Tiêu đề */}
         <div>
           <label className="block text-sm font-medium">Tiêu đề</label>
           <input
@@ -108,34 +96,68 @@ const { fields, append, remove } = useFieldArray({
           )}
         </div>
 
-        {/* Subtitle, Description, Badge */}
         <div>
           <label className="block text-sm font-medium">Phụ đề</label>
-          <input {...register("subtitle")} className="w-full border px-4 py-2 rounded" />
+          <input
+            {...register("subtitle")}
+            className="w-full border px-4 py-2 rounded"
+          />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Mô tả</label>
-          <textarea {...register("description")} className="w-full border px-4 py-2 rounded" />
-        </div>
+        <textarea
+          {...register("description", {
+            required: "Mô tả không được để trống",
+            validate: (value) => {
+              if (!value) return "Mô tả không được để trống";
+              return (
+                value.trim().length <= 50 ||
+                "Mô tả không được vượt quá 50 ký tự"
+              );
+            },
+          })}
+          className="w-full border px-4 py-2 rounded"
+        />
+        {errors.description && (
+          <p className="text-red-600 text-sm">{errors.description.message}</p>
+        )}
 
         <div>
           <label className="block text-sm font-medium">Nhãn Badge</label>
-          <input {...register("badge")} className="w-full border px-4 py-2 rounded" />
+          <input
+            {...register("badge", { required: "Badge không được để trống" })}
+            className="w-full border px-4 py-2 rounded"
+          />
+          {errors.badge && (
+            <p className="text-red-600 text-sm">{errors.badge.message}</p>
+          )}
         </div>
 
-        {/* Button Text & Link */}
         <div>
-          <label className="block text-sm font-medium">Nút CTA (Text)</label>
-          <input {...register("buttonText")} className="w-full border px-4 py-2 rounded" />
+          <label className="block text-sm font-medium">Nút link</label>
+          <input
+            {...register("buttonText", {
+              required: "Nội dung nút link không được để trống",
+            })}
+            className="w-full border px-4 py-2 rounded"
+          />
+          {errors.buttonText && (
+            <p className="text-red-600 text-sm">{errors.buttonText.message}</p>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Link nút CTA</label>
-          <input {...register("buttonLink")} className="w-full border px-4 py-2 rounded" />
+          <label className="block text-sm font-medium">Link liên kết</label>
+          <input
+            {...register("buttonLink", {
+              required: "Link liên kết không được để trống",
+            })}
+            className="w-full border px-4 py-2 rounded"
+          />
+          {errors.buttonLink && (
+            <p className="text-red-600 text-sm">{errors.buttonLink.message}</p>
+          )}
         </div>
 
-        {/* Features */}
         <div>
           <label className="block text-sm font-medium">Tính năng nổi bật</label>
           {fields.map((field, index) => (
@@ -164,26 +186,19 @@ const { fields, append, remove } = useFieldArray({
           </button>
         </div>
 
-        {/* Ảnh */}
         <div>
-          <label className="block text-sm font-medium">Ảnh (URL)</label>
+          <label className="block text-sm font-medium">Ảnh</label>
           <input
-            {...register("image.url", {
+            {...register("image", {
               required: "Ảnh không được để trống",
             })}
             className="w-full border px-4 py-2 rounded"
           />
-          {errors.image?.url && (
-            <p className="text-red-600 text-sm">{errors.image.url.message}</p>
+          {errors.image && (
+            <p className="text-red-600 text-sm">{errors.image.message}</p>
           )}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Ảnh (Alt)</label>
-          <input {...register("image.alt")} className="w-full border px-4 py-2 rounded" />
-        </div>
-
-        {/* Vị trí hiển thị */}
         <div>
           <label className="block text-sm font-medium">Vị trí hiển thị</label>
           <input
@@ -197,7 +212,6 @@ const { fields, append, remove } = useFieldArray({
           )}
         </div>
 
-        {/* Trạng thái hiển thị */}
         <div className="flex items-center">
           <input
             type="checkbox"
