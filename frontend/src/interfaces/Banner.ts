@@ -7,11 +7,8 @@ export interface Banner {
   buttonLink?: string;
   badge?: string;
   features: string[];
-  image: {
-    url: string;
-    alt?: string;
-  };
-  startDate?: string;
+  image: string;
+  startDate?: string ;
   endDate?: string | null;
   isActive?: boolean;
   position?: string;

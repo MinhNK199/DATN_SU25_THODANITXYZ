@@ -33,90 +33,68 @@ const BannerList: React.FC = () => {
   });
   const [selectedBanner, setSelectedBanner] = useState<Banner | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [deletedBanners, setDeletedBanners] = useState<Banner[]>([]);
-  const [showDeletedModal, setShowDeletedModal] = useState(false);
   const navigate = useNavigate();
 
-  const fetchBanners = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
-      console.log("Banner data:", data);
-
-      // Sửa ở đây: gán trực tiếp nếu data là array
-   if (Array.isArray(data.banners)) {
-  setBanners(data.banners);
-} else if (Array.isArray(data)) {
-  setBanners(data);
-} else {
-  message.error("Dữ liệu trả về không đúng định dạng!");
-}
-
-    } catch (error) {
-      message.error("Lỗi khi tải banner!");
+ const fetchBanners = async () => {
+  setLoading(true);
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    
+    if (Array.isArray(data.banners)) {
+      setBanners(data.banners);
+    } else if (Array.isArray(data)) {
+      setBanners(data);
+    } else {
+      message.error("Dữ liệu banner không đúng định dạng!");
     }
-    setLoading(false);
-  };
-
-  const fetchDeletedBanners = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(
-        "http://localhost:8000/api/banner?isActive=false",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const data = await res.json();
-      setDeletedBanners(data.banners || []);
-    } catch (error) {
-      message.error("Lỗi khi tải banner đã xóa!");
-    }
-  };
+  } catch (error) {
+    message.error("Lỗi khi tải danh sách banner!");
+  }
+  setLoading(false);
+};
 
   useEffect(() => {
     fetchBanners();
   }, []);
 
-  const handleHardDelete = async (id: string) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        message.error("Vui lòng đăng nhập lại!");
-        navigate("/login");
-        return;
+ const handleHardDelete = async (id: string) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    message.error("Bạn cần đăng nhập!");
+    navigate("/login");
+    return;
+  }
+
+  Modal.confirm({
+    title: "Bạn có chắc muốn xóa banner này?",
+    content: "Hành động này không thể hoàn tác.",
+    okText: "Xóa",
+    okType: "danger",
+    cancelText: "Hủy",
+    onOk: async () => {
+      try {
+        const res = await fetch(`${API_URL}/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          message.success("Xóa banner thành công!");
+          fetchBanners();
+        } else {
+          const err = await res.json();
+          message.error(err.message || "Xóa thất bại!");
+        }
+      } catch (err) {
+        message.error("Lỗi kết nối máy chủ!");
       }
+    },
+  });
+};
 
-      Modal.confirm({
-        title: "Bạn có chắc muốn xóa banner này?",
-        content: "Hành động này không thể hoàn tác!",
-        okText: "Xóa",
-        okType: "danger",
-        cancelText: "Hủy",
-        onOk: async () => {
-          const res = await fetch(`${API_URL}/${id}`, {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          if (res.ok) {
-            message.success("Đã xóa banner thành công!");
-            fetchBanners();
-          } else {
-            const err = await res.json();
-            message.error(err.message || "Xóa thất bại!");
-          }
-        },
-      });
-    } catch (error) {
-      message.error("Lỗi kết nối máy chủ!");
-    }
-  };
 
   const showBannerDetail = (banner: Banner) => {
     setSelectedBanner(banner);
@@ -156,13 +134,14 @@ const BannerList: React.FC = () => {
       dataIndex: "image",
       key: "image",
       width: 100,
-      render: (image) => (
-        <img
-          src={image?.url || "/placeholder.png"}
-          alt={image?.alt || "Banner"}
-          className="w-16 h-16 object-cover rounded"
-        />
-      ),
+     render: (image: string) => (
+  <img
+    src={image || "/placeholder.png"}
+    alt="Banner"
+    className="w-16 h-16 object-cover rounded"
+  />
+),
+
     },
     {
       title: "Tiêu đề",
@@ -175,60 +154,51 @@ const BannerList: React.FC = () => {
         </div>
       ),
     },
-
-    {
-      title: "Nút",
-      dataIndex: "buttonText",
-      key: "buttonText",
-      render: (text?: string) => text || "—",
-    },
-    {
-      title: "Liên kết nút",
-      dataIndex: "buttonLink",
-      key: "buttonLink",
-      render: (link: string) =>
-        link ? (
-          <a
-            href={link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 underline"
-          >
-            {link}
-          </a>
-        ) : (
-          "—"
-        ),
-    },
-
-    {
+     {
       title: "Ngày bắt đầu",
       dataIndex: "startDate",
       key: "startDate",
-      render: (date?: string) =>
+      render: (date: string) =>
         date ? new Date(date).toLocaleDateString("vi-VN") : "—",
     },
     {
       title: "Ngày kết thúc",
       dataIndex: "endDate",
       key: "endDate",
-      render: (date?: string | null) =>
+      render: (date: string | null) =>
         date ? (
           new Date(date).toLocaleDateString("vi-VN")
         ) : (
           <Tag color="green">Đang hoạt động</Tag>
         ),
     },
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      render: (isActive?: boolean) => (
-        <Tag color={isActive ? "green" : "red"}>
-          {isActive ? "Đang hiển thị" : "Đã ẩn"}
-        </Tag>
-      ),
-    },
+
+{
+  title: "Trạng thái",
+  key: "status",
+  render: (_: any, record: Banner) => {
+    const now = new Date();
+
+    const start = record.startDate ? new Date(record.startDate) : null;
+    const end = record.endDate ? new Date(record.endDate) : null;
+
+    const isVisible =
+      record.isActive &&
+      start !== null &&
+      start <= now &&
+      (!end || now <= end);
+
+    return (
+      <Tag color={isVisible ? "green" : "red"}>
+        {isVisible ? "Đang hiển thị" : "Đã ẩn"}
+      </Tag>
+    );
+  },
+},
+
+
+
+
 
     {
       title: "Thao tác",
@@ -319,8 +289,8 @@ const BannerList: React.FC = () => {
             <div>
               <h3 className="font-semibold">Hình ảnh</h3>
               <img
-                src={selectedBanner.image?.url}
-                alt={selectedBanner.image?.alt || selectedBanner.title}
+                src={selectedBanner.image}
+                alt={ selectedBanner.title}
                 className="w-full h-48 object-cover rounded"
               />
             </div>
@@ -382,7 +352,7 @@ const BannerList: React.FC = () => {
 
             {(selectedBanner.buttonText || selectedBanner.buttonLink) && (
               <div>
-                <h3 className="font-semibold">Nút hành động</h3>
+                <h3 className="font-semibold">Nút - Link</h3>
                 {selectedBanner.buttonText && selectedBanner.buttonLink ? (
                   <a
                     href={selectedBanner.buttonLink}

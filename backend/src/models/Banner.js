@@ -12,11 +12,12 @@ const bannerSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-    description: {
-      type: String,
-      default: "",
-      trim: true,
-    },
+   description: {
+    type: String,
+    default: "",
+    trim: true,
+    maxlength: [50, "Mô tả không được vượt quá 50 ký tự"],
+   },
     buttonText: {
       type: String,
       default: "",
@@ -36,11 +37,11 @@ const bannerSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    image: {
-      url: { type: String, required: [true, "URL ảnh là bắt buộc"] },
-      alt: { type: String, default: "" },
-      publicId: { type: String, default: "" },
-    },
+   image: {
+  type: String,
+  required: [true, "Ảnh là bắt buộc"],
+},
+
     startDate: {
       type: Date,
       required: [true, "Ngày bắt đầu hiển thị là bắt buộc"],

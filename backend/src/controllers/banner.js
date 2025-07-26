@@ -3,18 +3,13 @@ import Banner from "../models/Banner.js";
 // Lấy tất cả banner đang hoạt động và trong thời gian hiển thị
 export const getAllBanners = async (req, res) => {
   try {
-    const now = new Date();
-    const banners = await Banner.find({
-      isActive: true,
-      startDate: { $lte: now },
-      $or: [{ endDate: null }, { endDate: { $gte: now } }]
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json(banners);
+    const banners = await Banner.find().sort({ createdAt: -1 });
+    res.status(200).json({ banners }); // lưu ý trả về dưới dạng object
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi lấy banner", error });
   }
 };
+
 
 // Tạo banner mới
 export const createBanner = async (req, res) => {
@@ -28,32 +23,24 @@ export const createBanner = async (req, res) => {
       buttonText,
       buttonLink,
       image,
-      startDate,
-      endDate,
-      isActive,
+      isActive = true,
       position,
     } = req.body;
 
-    if (!title || !image?.url || !startDate) {
-      return res.status(400).json({ message: "Thiếu thông tin bắt buộc" });
+    // Kiểm tra thông tin bắt buộc
+    if (!title || !image|| !position) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc (title, image, position)" });
     }
 
-    // 👉 Cập nhật tất cả banner đang hiển thị thành kết thúc
-    await Banner.updateMany(
-      {
-        isActive: true,
-        endDate: { $gte: new Date() }, // Chưa hết hạn
-      },
-      {
-        $set: {
-          isActive: false,
-          endDate: new Date(), // Gán ngày kết thúc là bây giờ
-        },
-      }
-    );
+    // Cập nhật banner 
+   await Banner.findOneAndUpdate(
+  { endDate: null, position }, // Chỉ kết thúc banner ở vị trí hiện tại
+  { endDate: new Date() },
+  { sort: { startDate: -1 } }
+);
 
-    // 👉 Tạo banner mới
-    const newBanner = await Banner.create({
+    // Tạo banner mới với startDate là thời điểm hiện tại, endDate là null
+    const newBanner = new Banner({
       title,
       subtitle,
       description,
@@ -62,15 +49,23 @@ export const createBanner = async (req, res) => {
       buttonText,
       buttonLink,
       image,
-      startDate,
-      endDate,
       isActive,
       position,
+      startDate: new Date(),
+      endDate: null,
     });
 
-    res.status(201).json(newBanner);
+    await newBanner.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Tạo banner mới thành công và cập nhật banner cũ",
+      banner: newBanner,
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Lỗi khi tạo banner", error });
+    console.error("❌ Lỗi khi tạo banner:", error);
+    return res.status(500).json({ message: "Lỗi khi tạo banner", error: error.message });
   }
 };
 
