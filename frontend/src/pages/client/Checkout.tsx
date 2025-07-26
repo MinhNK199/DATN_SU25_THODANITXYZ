@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  FaCreditCard,
-  FaTruck,
-  FaArrowLeft,
-  FaCheck,
-} from "react-icons/fa";
+import { FaCreditCard, FaTruck, FaArrowLeft, FaCheck } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useToast } from "../../components/client/ToastContainer";
 import OrderSuccessModal from "../../components/client/OrderSuccessModal";
@@ -346,22 +341,26 @@ const Checkout: React.FC = () => {
           { orderId: res._id },
           { headers: { Authorization: `Bearer ${yourToken}` } }
         );
-        // Sửa đoạn này:
+
         if (zaloRes.data && zaloRes.data.order_url) {
-          window.location.href = zaloRes.data.order_url;
-          return;
-        } else if (
-          zaloRes.data &&
-          zaloRes.data.data &&
-          zaloRes.data.data.order_url
-        ) {
-          window.location.href = zaloRes.data.data.order_url;
+          // 🎯 MỞ ZALOPAY TRONG POPUP
+          const qrWindow = window.open(
+            zaloRes.data.order_url,
+            "zalopay_qr",
+            "width=500,height=700,scrollbars=yes,resizable=yes"
+          );
+
+          // 🎯 SAU 3 GIÂY ĐÓNG POPUP VÀ CHUYỂN VỀ SUCCESS
+          setTimeout(() => {
+            if (qrWindow && !qrWindow.closed) {
+              qrWindow.close();
+            }
+            window.location.href = `${window.location.origin}/checkout/success?orderId=${res._id}&paymentMethod=zalopay`;
+          }, 8000);
+
           return;
         } else {
-          alert(
-            "Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.\n" +
-              JSON.stringify(zaloRes.data)
-          );
+          alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
         }
       } else if (formData.paymentMethod === "vnpay") {
         try {
@@ -381,7 +380,10 @@ const Checkout: React.FC = () => {
           const error = err as Error;
           alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
         }
-      } else if (formData.paymentMethod === "e-wallet" && walletInfo.type === "vnpay") {
+      } else if (
+        formData.paymentMethod === "e-wallet" &&
+        walletInfo.type === "vnpay"
+      ) {
         // Trường hợp cũ nếu còn logic ví điện tử vnpay, chuyển hướng sang logic mới
         try {
           const vnpayRes = await axios.post("/api/payment/vnpay/create", {
@@ -395,7 +397,6 @@ const Checkout: React.FC = () => {
             return;
           } else {
             alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
-
           }
         } catch (err) {
           const error = err as Error;
@@ -409,18 +410,27 @@ const Checkout: React.FC = () => {
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
         );
       }
-   } catch (err: unknown) {
-     let message = "Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.";
-     if (err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "message" in err.response.data) {
-       message += "\n" + err.response.data.message;
-     } else if (err instanceof Error) {
-       message += "\n" + err.message;
-     }
-     alert(message);
-   } finally {
-     setIsProcessing(false);
-   }
-
+    } catch (err: unknown) {
+      let message = "Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.";
+      if (
+        err &&
+        typeof err === "object" &&
+        "response" in err &&
+        err.response &&
+        typeof err.response === "object" &&
+        "data" in err.response &&
+        err.response.data &&
+        typeof err.response.data === "object" &&
+        "message" in err.response.data
+      ) {
+        message += "\n" + err.response.data.message;
+      } else if (err instanceof Error) {
+        message += "\n" + err.message;
+      }
+      alert(message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const steps = [
