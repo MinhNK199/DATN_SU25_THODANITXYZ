@@ -27,6 +27,13 @@ export interface ProductDimensions {
     height: number;
 }
 
+// Giao diện cho meta data SEO
+export interface ProductMeta {
+    metaTitle?: string;
+    metaDescription?: string;
+    metaImage?: string;
+}
+
 // Giao diện chính cho sản phẩm
 export interface Product {
     _id: string;
@@ -37,7 +44,7 @@ export interface Product {
     salePrice?: number;
     images: string[];
     category: Category | string; // Có thể là object Category đầy đủ hoặc chỉ là ID
-    brand: IBrand | string | null;       // Có thể là object Brand đầy đủ hoặc chỉ là ID
+    brand: Brand | string | null;       // Có thể là object Brand đầy đủ hoặc chỉ là ID
     stock: number;
     variants: ProductVariant[];
     specifications?: Record<string, string>; // Sử dụng Record cho kiểu dữ liệu Map
@@ -51,6 +58,7 @@ export interface Product {
     weight?: number;
     dimensions?: ProductDimensions;
     warranty?: number; // Bảo hành (tính theo tháng)
+    meta?: ProductMeta; // Meta data cho SEO
     createdAt?: string;
     updatedAt?: string;
 }

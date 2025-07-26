@@ -50,7 +50,7 @@ export const restoreProduct = async (id: string): Promise<void> => {
         method: "PUT",
         headers: getAuthHeaders(),
     });
-    await handleResponse(response);
+    await handleResponse(response); 
 };
 
 export const hardDeleteProduct = async (id: string): Promise<void> => {

@@ -14,7 +14,7 @@ import ProductCard from "../../components/client/ProductCard";
 import { useCart } from "../../contexts/CartContext";
 import cartApi, { getTaxConfig } from "../../services/cartApi";
 import { Product } from "../../interfaces/Product";
-import { Modal, Button, message } from "antd";
+import { Modal, Button, Image, message } from "antd";
 
 const Cart: React.FC = () => {
   const { state, updateQuantity, removeFromCart, clearCart, loadCart } =
@@ -161,17 +161,9 @@ const Cart: React.FC = () => {
                       ? item.product.price
                       : undefined;
                   const displayStock = variant?.stock ?? item.product.stock;
-                  const displayColor = variant?.color ?? null;
-                  const displaySize = variant?.size ?? null;
-                  const displaySKU = variant?.sku ?? null;
-                  const displaySpecifications =
-                    variant?.specifications &&
-                    Object.keys(variant.specifications).length > 0
-                      ? variant.specifications
-                      : item.specifications &&
-                        Object.keys(item.specifications).length > 0
-                      ? item.specifications
-                      : null;
+                  const displayColor = variant?.color ?? item.product.color ?? null;
+                  const displaySize = variant?.size ?? item.product.size ?? null;
+                  const displaySKU = variant?.sku ?? item.product.sku ?? null;
                   return (
                     <div
                       key={item._id}
@@ -250,9 +242,7 @@ const Cart: React.FC = () => {
                                 {displayOldPrice && (
                                   <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-semibold">
                                     Tiết kiệm{" "}
-                                    {formatPrice(
-                                      displayOldPrice - displayPrice
-                                    )}
+                                    {formatPrice(displayOldPrice - displayPrice)}
                                   </span>
                                 )}
                               </div>
@@ -356,31 +346,6 @@ const Cart: React.FC = () => {
                                   })()}
                             </span>
                           </div>
-                          {/* Thông số kỹ thuật của biến thể nếu có */}
-                          {displaySpecifications &&
-                            Object.keys(displaySpecifications).length > 0 && (
-                              <div className="mt-2">
-                                <span className="font-medium text-gray-700">
-                                  Thông số kỹ thuật:
-                                </span>
-                                <table className="w-full border rounded-lg overflow-hidden mb-2 mt-1">
-                                  <tbody>
-                                    {Object.entries(displaySpecifications).map(
-                                      ([key, value]) => (
-                                        <tr key={key}>
-                                          <td className="py-1 px-2 bg-gray-50 font-medium text-sm text-gray-700">
-                                            {key}
-                                          </td>
-                                          <td className="py-1 px-2 text-sm text-gray-600">
-                                            {value}
-                                          </td>
-                                        </tr>
-                                      )
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
                         </div>
                       </div>
                     </div>
@@ -494,110 +459,120 @@ const Cart: React.FC = () => {
           open={detailModalOpen}
           onCancel={handleCloseDetail}
           footer={null}
-          title="Thông tin chi tiết sản phẩm"
+          title={`Thông tin chi tiết: ${detailItem?.product.name}`}
+          width={500}
+          styles={{ body: { maxHeight: 600, overflowY: "auto", padding: 16 } }}
         >
           {detailItem && (
-            <div>
-              <div className="flex flex-col items-center mb-4">
-                <img
+            <div className="space-y-4">
+              <div className="flex justify-center mb-4">
+                <Image
                   src={
                     detailItem.variantInfo?.images?.[0] ||
                     detailItem.product.images?.[0] ||
                     "/placeholder-image.jpg"
                   }
-                  alt={detailItem.variantInfo?.name || detailItem.product.name}
-                  className="w-40 h-40 object-cover rounded-lg mb-2"
+                  alt={detailItem.product.name}
+                  width={200}
+                  height={200}
+                  className="object-cover rounded-lg"
                 />
-                <div className="text-lg font-bold mb-1">
-                  {detailItem.variantInfo?.name || detailItem.product.name}
-                </div>
-                <div className="mb-1">
-                  Giá:{" "}
-                  <span className="text-red-600 font-semibold">
-                    {formatPrice(
-                      detailItem.variantInfo?.salePrice &&
-                        detailItem.variantInfo?.salePrice <
-                          detailItem.variantInfo?.price
-                        ? detailItem.variantInfo.salePrice
-                        : typeof detailItem.variantInfo?.price === "number"
-                        ? detailItem.variantInfo.price
-                        : detailItem.product.salePrice &&
-                          detailItem.product.salePrice <
-                            detailItem.product.price
-                        ? detailItem.product.salePrice
-                        : detailItem.product.price
-                    )}
-                  </span>
-                </div>
-                <div className="mb-1">
-                  Tồn kho:{" "}
-                  <span className="font-semibold">
-                    {typeof detailItem.variantInfo?.stock === "number"
-                      ? detailItem.variantInfo.stock
-                      : detailItem.product.stock}
-                  </span>
-                </div>
-                <div className="mb-1">
-                  SKU:{" "}
-                  <span className="font-mono">
-                    {detailItem.variantInfo?.sku ||
-                      detailItem.product.sku ||
-                      "N/A"}
-                  </span>
-                </div>
-                <div className="mb-1">
-                  Màu sắc:{" "}
-                  <span>
-                    {detailItem.variantInfo?.color ||
-                      detailItem.product.color ||
-                      "N/A"}
-                  </span>
-                </div>
-                <div className="mb-1">
-                  Kích thước:{" "}
-                  <span>
-                    {detailItem.variantInfo?.size ||
-                      detailItem.product.size ||
-                      "N/A"}
-                  </span>
-                </div>
-                <div className="mb-1">
-                  Cân nặng:{" "}
-                  <span>
-                    {typeof detailItem.variantInfo?.weight === "number"
-                      ? detailItem.variantInfo.weight
-                      : typeof detailItem.product.weight === "number"
-                      ? detailItem.product.weight
-                      : "N/A"}
-                  </span>
-                </div>
-                {detailItem.variantInfo?.specifications &&
-                Object.keys(detailItem.variantInfo.specifications).length >
-                  0 ? (
-                  <div className="mt-2 w-full">
-                    <div className="font-medium mb-1">Thông số kỹ thuật:</div>
-                    <table className="w-full text-xs">
-                      <tbody>
-                        {Object.entries(
-                          detailItem.variantInfo.specifications
-                        ).map(([key, value]) => (
-                          <tr key={key}>
-                            <td className="pr-2 text-gray-600">{key}</td>
-                            <td className="text-gray-800">{value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="mt-2 text-gray-500">
-                    Biến thể này chưa có thông số kỹ thuật.
-                  </div>
-                )}
               </div>
+              <div className="text-lg font-bold mb-2">
+                Tên sản phẩm: {detailItem.product.name}
+              </div>
+              {detailItem.variantInfo && (
+                <div className="mb-2">
+                  Loại sản phẩm:{" "}
+                  {detailItem.variantInfo.name ||
+                    detailItem.variantInfo.size ||
+                    "N/A"}
+                </div>
+              )}
+              <div className="mb-2">
+                Giá:{" "}
+                <span className="text-red-600 font-semibold">
+                  {formatPrice(
+                    detailItem.variantInfo?.salePrice &&
+                      detailItem.variantInfo?.salePrice <
+                        detailItem.variantInfo?.price
+                      ? detailItem.variantInfo.salePrice
+                      : detailItem.variantInfo?.price ??
+                        (detailItem.product.salePrice &&
+                        detailItem.product.salePrice < detailItem.product.price
+                          ? detailItem.product.salePrice
+                          : detailItem.product.price)
+                  )}
+                </span>
+              </div>
+              <div className="mb-2">
+                Số lượng: <span className="font-semibold">{detailItem.quantity}</span>
+              </div>
+              <div className="mb-2">
+                Tồn kho:{" "}
+                <span className="font-semibold">
+                  {detailItem.variantInfo?.stock ?? detailItem.product.stock}
+                </span>
+              </div>
+              <div className="mb-2">
+                SKU:{" "}
+                <span className="font-mono">
+                  {detailItem.variantInfo?.sku ?? detailItem.product.sku ?? "N/A"}
+                </span>
+              </div>
+              <div className="mb-2">
+                Màu sắc:{" "}
+                <span>
+                  {detailItem.variantInfo?.color ?? detailItem.product.color ?? "N/A"}
+                </span>
+              </div>
+              <div className="mb-2">
+                Kích thước:{" "}
+                <span>
+                  {detailItem.variantInfo?.size ?? detailItem.product.size ?? "N/A"}
+                </span>
+              </div>
+              <div className="mb-2">
+                Cân nặng:{" "}
+                <span>
+                  {typeof detailItem.variantInfo?.weight === "number"
+                    ? `${detailItem.variantInfo.weight}g`
+                    : typeof detailItem.product.weight === "number"
+                    ? `${detailItem.product.weight}g`
+                    : "N/A"}
+                </span>
+              </div>
+              {(detailItem.variantInfo?.specifications &&
+                Object.keys(detailItem.variantInfo.specifications).length > 0) ||
+              (detailItem.specifications &&
+                Object.keys(detailItem.specifications).length > 0) ? (
+                <div className="mt-2">
+                  <div className="font-medium mb-1">Thông số kỹ thuật:</div>
+                  <table className="w-full text-sm border rounded-lg">
+                    <tbody>
+                      {Object.entries(
+                        detailItem.variantInfo?.specifications ||
+                          detailItem.specifications || {}
+                      ).map(([key, value]) => (
+                        <tr key={key}>
+                          <td className="py-2 px-2 bg-gray-50 font-medium text-gray-700">
+                            {key}
+                          </td>
+                          <td className="py-2 px-2 text-gray-600">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-gray-500 mt-2">
+                  Sản phẩm này không có thông số kỹ thuật.
+                </div>
+              )}
             </div>
           )}
         </Modal>
+
         {/* Recommended Products */}
         {cartItems.length > 0 && (
           <div className="mt-16">

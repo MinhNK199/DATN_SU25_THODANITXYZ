@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin, ColorPicker } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import axios from 'axios';
 import SpecificationEditor from '../products/SpecificationEditor';
@@ -17,7 +17,8 @@ interface VariantForm {
   price: number;
   salePrice?: number;
   stock: number;
-  color?: string;
+  color?: { code: string; name: string };
+  colorName?: string;
   size?: string;
   weight?: number;
   images: string[];
@@ -36,7 +37,6 @@ const VariantAdd: React.FC = () => {
   const [imageLinks, setImageLinks] = useState('');
   const [specifications, setSpecifications] = useState<Record<string, string>>({});
 
-  // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -50,8 +50,7 @@ const VariantAdd: React.FC = () => {
     fetchProducts();
   }, []);
 
-  // Handle form submission
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: VariantForm) => {
     if (!values.product) {
       message.error('Vui lòng chọn sản phẩm');
       return;
@@ -65,30 +64,31 @@ const VariantAdd: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      
-      // Ưu tiên lấy link ảnh từ textarea nếu có
+
       let images: string[] = [];
       if (imageLinks.trim()) {
         images = imageLinks.split('\n').map(link => link.trim()).filter(link => link);
       } else {
-        // Convert fileList to image URLs (in real app, upload to server first)
+        // Giả lập upload ảnh (thay bằng API thực tế)
         images = fileList.map(file => file.url || file.thumbUrl || '').filter(url => url);
+        if (fileList.length > 0 && images.length === 0) {
+          // Thay bằng API upload thực tế
+          images = fileList.map((_, index) => `https://example.com/uploaded/image-${index}.jpg`);
+        }
       }
-      
+
       const formData = {
         ...values,
         images,
-        isActive: values.isActive !== undefined ? values.isActive : true,
+        isActive: values.isActive ?? true,
         specifications,
-        color: (typeof values.color === 'object' && typeof values.color.code === 'string' && typeof values.color.name === 'string')
-          ? { code: values.color.code, name: values.color.name }
-          : (typeof values.color === 'string' ? { code: values.color, name: values.colorName || '' } : { code: '', name: '' }),
+        color: values.color?.code ? { code: values.color.code, name: values.colorName || values.color.name || '' } : undefined,
       };
 
       await axios.post('http://localhost:8000/api/variant', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       message.success('Thêm biến thể thành công');
       navigate('/admin/variants');
     } catch (error: any) {
@@ -99,7 +99,6 @@ const VariantAdd: React.FC = () => {
     }
   };
 
-  // Handle image upload
   const handleImageUpload = (info: any) => {
     setFileList(info.fileList);
   };
@@ -107,24 +106,19 @@ const VariantAdd: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <Card className="mb-6">
+        <Card className="mb-6 shadow-md rounded-lg">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Thêm biến thể mới</h1>
               <p className="text-gray-600 mt-1">Tạo biến thể mới cho sản phẩm</p>
             </div>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/admin/variants')}
-            >
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/variants')}>
               Quay lại
             </Button>
           </div>
         </Card>
 
-        {/* Form */}
-        <Card>
+        <Card className="shadow-md rounded-lg">
           <Form
             form={form}
             layout="vertical"
@@ -132,10 +126,10 @@ const VariantAdd: React.FC = () => {
             initialValues={{
               isActive: true,
               price: 0,
-              stock: 0
+              stock: 0,
+              color: '#000000',
             }}
           >
-            {/* Basic Information */}
             <Divider orientation="left">Thông tin cơ bản</Divider>
             <Row gutter={16}>
               <Col span={12}>
@@ -185,7 +179,6 @@ const VariantAdd: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Pricing */}
             <Divider orientation="left">Thông tin giá</Divider>
             <Row gutter={16}>
               <Col span={8}>
@@ -236,13 +229,33 @@ const VariantAdd: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Specifications */}
+            <Divider orientation="left">Thông tin bổ sung</Divider>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item label="Màu sắc" name="color">
+                  <ColorPicker showText />
+                </Form.Item>
+                <Form.Item label="Tên màu" name="colorName">
+                  <Input placeholder="VD: Đen" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Kích thước" name="size">
+                  <Input placeholder="VD: M" />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item label="Cân nặng (gram)" name="weight">
+                  <InputNumber style={{ width: '100%' }} placeholder="0" min={0} />
+                </Form.Item>
+              </Col>
+            </Row>
+
             <Divider orientation="left">Thông số kỹ thuật</Divider>
             <Form.Item label="Thông số kỹ thuật">
               <SpecificationEditor value={specifications} onChange={setSpecifications} />
             </Form.Item>
 
-            {/* Ảnh sản phẩm */}
             <Divider orientation="left">Ảnh sản phẩm</Divider>
             <Row gutter={16}>
               <Col span={24}>
@@ -278,26 +291,6 @@ const VariantAdd: React.FC = () => {
               </Col>
             </Row>
 
-            {/* Images */}
-            <Divider orientation="left">Hình ảnh</Divider>
-            <Form.Item>
-              <Upload
-                listType="picture-card"
-                fileList={fileList}
-                onChange={handleImageUpload}
-                beforeUpload={() => false}
-                multiple
-              >
-                {fileList.length >= 8 ? null : (
-                  <div>
-                    <UploadOutlined />
-                    <div style={{ marginTop: 8 }}>Tải ảnh</div>
-                  </div>
-                )}
-              </Upload>
-            </Form.Item>
-
-            {/* Actions */}
             <Divider />
             <div className="flex justify-end space-x-4">
               <Button onClick={() => navigate('/admin/variants')}>
@@ -319,4 +312,4 @@ const VariantAdd: React.FC = () => {
   );
 };
 
-export default VariantAdd; 
+export default VariantAdd;
