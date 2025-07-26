@@ -71,7 +71,7 @@ const Checkout: React.FC = () => {
   const [showNewWalletForm, setShowNewWalletForm] = useState<boolean>(false);
   const [taxRate, setTaxRate] = useState(0.08);
 
-  const { state: cartState, clearCart } = useCart();
+  const { state: cartState, clearCart, removeOrderedItemsFromCart } = useCart();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
 
@@ -290,6 +290,7 @@ const Checkout: React.FC = () => {
           formData.province_code,
         phone: formData.phone,
       };
+      
       const orderItems = cartState.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
@@ -297,6 +298,7 @@ const Checkout: React.FC = () => {
         price: item.product.salePrice || item.product.price,
         product: item.product._id,
       }));
+
       let paymentMethod = "";
       if (formData.paymentMethod === "credit-card")
         paymentMethod = "credit-card";
@@ -315,8 +317,12 @@ const Checkout: React.FC = () => {
         shippingPrice: shippingFee,
         totalPrice: cartState.total + shippingFee + cartState.total * taxRate,
       };
+
       const res = await createOrder(orderData);
       setOrderNumber(res._id || "");
+
+      // ✅ Cập nhật giỏ hàng sau khi đặt hàng thành công
+      await removeOrderedItemsFromCart(orderItems);
 
       // Xử lý từng loại thanh toán
       if (formData.paymentMethod === "e-wallet" && walletInfo.type === "momo") {
@@ -356,7 +362,7 @@ const Checkout: React.FC = () => {
               qrWindow.close();
             }
             window.location.href = `${window.location.origin}/checkout/success?orderId=${res._id}&paymentMethod=zalopay`;
-          }, 8000);
+          }, 3000); // Giảm từ 8000 xuống 3000ms
 
           return;
         } else {
@@ -384,7 +390,6 @@ const Checkout: React.FC = () => {
         formData.paymentMethod === "e-wallet" &&
         walletInfo.type === "vnpay"
       ) {
-        // Trường hợp cũ nếu còn logic ví điện tử vnpay, chuyển hướng sang logic mới
         try {
           const vnpayRes = await axios.post("/api/payment/vnpay/create", {
             amount: orderData.totalPrice,
@@ -404,7 +409,7 @@ const Checkout: React.FC = () => {
         }
       } else {
         setShowSuccessModal(true);
-        clearCart();
+        // ✅ XÓA clearCart() vì đã xóa ở removeOrderedItemsFromCart
         showSuccess(
           "Đặt hàng thành công!",
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
