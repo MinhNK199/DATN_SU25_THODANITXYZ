@@ -3,18 +3,18 @@ import Notification from "../models/Notification";
 import { sendMail } from "../utils/mailer";
 import User from "../models/User";
 
+const paidMethods = [
+  "credit-card", 
+  "momo", 
+  "zalopay", 
+  "vnpay", 
+  "BANKING", 
+  "paid_online"
+];
 // Tạo đơn hàng mới
 export const createOrder = async (req, res) => {
   try {
-    // Thêm dòng này để khai báo paidMethods
-    const paidMethods = [
-      "BANKING",
-      "E-WALLET",
-      "credit-card",
-      "e-wallet",
-      "credit_card",
-      "e_wallet",
-    ];
+    // ...existing code...
     const {
       orderItems,
       shippingAddress,
@@ -45,14 +45,48 @@ export const createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
-    // const user = await User.findById(req.user._id);
-    // if (user && user.email) {
-    //   await sendMail({
-    //     to: user.email,
-    //     subject: 'Xác nhận đơn hàng tại TechTrend',
-    //     html: `<p>Cảm ơn bạn đã đặt hàng tại TechTrend!</p><p>Mã đơn hàng: <b>${createdOrder._id}</b></p>`
-    //   });
-    // }
+    
+    // ✅ THÊM: Xóa các sản phẩm đã đặt hàng khỏi giỏ hàng
+    try {
+      const cart = await Cart.findOne({ user: req.user._id });
+      if (cart) {
+        // Tạo danh sách các sản phẩm cần xóa khỏi giỏ hàng
+        const orderedProductIds = orderItems.map(item => ({
+          productId: item.product,
+          variantId: item.variantId || null
+        }));
+        
+        // Lọc ra các item trong giỏ hàng KHÔNG có trong đơn hàng vừa tạo
+        cart.items = cart.items.filter(cartItem => {
+          const matchFound = orderedProductIds.some(orderedItem => 
+            cartItem.product.toString() === orderedItem.productId.toString() &&
+            String(cartItem.variantId || '') === String(orderedItem.variantId || '')
+          );
+          return !matchFound; // Giữ lại những item KHÔNG có trong đơn hàng
+        });
+        
+        // Xóa reservations cho các sản phẩm đã đặt hàng
+        for (const orderedItem of orderedProductIds) {
+          await ProductReservation.updateMany(
+            {
+              product: orderedItem.productId,
+              user: req.user._id,
+              isActive: true
+            },
+            {
+              isActive: false
+            }
+          );
+        }
+        
+        await cart.save();
+        console.log(`✅ Đã xóa ${orderedProductIds.length} sản phẩm khỏi giỏ hàng của user ${req.user._id}`);
+      }
+    } catch (cartError) {
+      console.error("Lỗi khi cập nhật giỏ hàng:", cartError);
+      // Không throw error để không ảnh hưởng đến việc tạo đơn hàng
+    }
+
     res.status(201).json(createdOrder);
   } catch (error) {
     console.error("Lỗi khi tạo đơn hàng:", error);
@@ -152,7 +186,10 @@ export const updateOrderToDelivered = async (req, res) => {
 // Lấy đơn hàng của user hiện tại
 export const getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user._id });
+    // Sắp xếp theo createdAt giảm dần (mới nhất trước)
+    const orders = await Order.find({ user: req.user._id })
+      .sort({ createdAt: -1 }); // -1 = descending (mới nhất trước)
+    
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -172,8 +209,11 @@ export const getOrders = async (req, res) => {
       filter.status = req.query.status;
     }
 
-    // Lấy tất cả đơn hàng phù hợp trạng thái, populate user
-    let ordersQuery = Order.find(filter).populate("user", "id name");
+    // ✅ THÊM: Sắp xếp theo createdAt giảm dần (mới nhất trước)
+    let ordersQuery = Order.find(filter)
+      .populate("user", "id name")
+      .sort({ createdAt: -1 }); // -1 = descending (mới nhất trước)
+    
     const count = await Order.countDocuments(filter);
     let orders = await ordersQuery.limit(pageSize).skip(pageSize * (page - 1));
 

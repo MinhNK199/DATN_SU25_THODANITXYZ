@@ -27,6 +27,7 @@ const CartContext = createContext<{
   clearCart: () => Promise<void>;
   isInCart: (productId: string) => boolean;
   loadCart: () => Promise<void>;
+  removeOrderedItemsFromCart: (orderItems: any[]) => Promise<void>; // ✅ Thêm vào interface
 } | null>(null);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
@@ -262,6 +263,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return state.items.some(item => item.product._id === productId);
   }, [state.items]);
 
+  // ✅ DI CHUYỂN FUNCTION VÀO TRONG COMPONENT
+  const removeOrderedItemsFromCart = useCallback(async (orderItems: any[]) => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return;
+    }
+
+    try {
+      // Gọi API để lấy lại giỏ hàng mới sau khi đã xóa ở backend
+      const updatedCart = await cartApi.getCart();
+      dispatch({ type: 'LOAD_CART', payload: updatedCart });
+      
+      console.log(`✅ Đã cập nhật giỏ hàng sau khi đặt hàng`);
+    } catch (error: any) {
+      console.error('Error updating cart after order:', error);
+    }
+  }, []);
+
   const value = {
     state,
     addToCart,
@@ -269,7 +289,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateQuantity,
     clearCart,
     isInCart,
-    loadCart
+    loadCart, // ✅ Thêm dấu phẩy
+    removeOrderedItemsFromCart, // ✅ Function mới
   };
 
   return (
@@ -285,4 +306,4 @@ export const useCart = () => {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-}; 
+};
