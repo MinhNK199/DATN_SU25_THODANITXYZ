@@ -54,6 +54,7 @@ import LoginSuccess from './components/LoginSuccess';
 import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
 import BlogPage from './pages/admin/BlogPage';
+import CheckoutSuccess from './pages/client/CheckoutSuccess';
 
 function App() {
   return (
@@ -80,6 +81,7 @@ function App() {
               <Route path="product/:id" element={<ProductDetailClient />} />
               <Route path="cart" element={<Cart />} />
               <Route path="checkout" element={<Checkout />} />
+              <Route path="checkout/success" element={<CheckoutSuccess />} />
               <Route path="profile" element={<Profile />} />
               <Route path="about" element={<About />} />
               <Route path="contact" element={<Contact />} />
