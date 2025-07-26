@@ -18,12 +18,12 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { getCategoryById } from './api';
-import { ICategory } from '../../../interfaces/Category';
+import { Category } from '../../../interfaces/Category';
 
 const { Title, Text, Paragraph } = Typography;
 
 const CategoryDetail: React.FC = () => {
-    const [category, setCategory] = useState<ICategory | null>(null);
+    const [category, setCategory] = useState<Category | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { id } = useParams<{ id: string }>();

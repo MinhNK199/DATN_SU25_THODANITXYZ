@@ -190,11 +190,15 @@ const VariantList: React.FC = () => {
                       width: 14, 
                       height: 14, 
                       borderRadius: '50%', 
-                      backgroundColor: record.color,
+                      backgroundColor: typeof record.color === 'object' ? record.color.code : record.color,
                       border: '1px solid #d9d9d9'
                     }} 
                   />
-                  <Text type="secondary" style={{ fontSize: 12 }}>{record.color}</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {typeof record.color === 'object' && record.color !== null && 'name' in record.color && 'code' in record.color
+                      ? ((record.color as any).name || (record.color as any).code)
+                      : record.color}
+                  </Text>
                 </div>
               )}
               {record.size && <Text type="secondary" style={{ fontSize: 12 }}>Size: {record.size}</Text>}

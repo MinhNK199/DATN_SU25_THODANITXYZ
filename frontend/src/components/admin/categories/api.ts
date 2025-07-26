@@ -1,4 +1,4 @@
-import { Category } from "../../interfaces/Category";
+import { Category } from "../../../interfaces/Category";
 
 const API_URL = "http://localhost:8000/api/category";
 
