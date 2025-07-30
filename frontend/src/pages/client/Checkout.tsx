@@ -290,7 +290,7 @@ const Checkout: React.FC = () => {
           formData.province_code,
         phone: formData.phone,
       };
-      
+
       const orderItems = cartState.items.map((item) => ({
         name: item.product.name,
         quantity: item.quantity,
@@ -348,22 +348,9 @@ const Checkout: React.FC = () => {
           { headers: { Authorization: `Bearer ${yourToken}` } }
         );
 
-        if (zaloRes.data && zaloRes.data.order_url) {
-          // 🎯 MỞ ZALOPAY TRONG POPUP
-          const qrWindow = window.open(
-            zaloRes.data.order_url,
-            "zalopay_qr",
-            "width=500,height=700,scrollbars=yes,resizable=yes"
-          );
-
-          // 🎯 SAU 3 GIÂY ĐÓNG POPUP VÀ CHUYỂN VỀ SUCCESS
-          setTimeout(() => {
-            if (qrWindow && !qrWindow.closed) {
-              qrWindow.close();
-            }
-            window.location.href = `${window.location.origin}/checkout/success?orderId=${res._id}&paymentMethod=zalopay`;
-          }, 3000); // Giảm từ 8000 xuống 3000ms
-
+        if (zaloRes.data && zaloRes.data.data && zaloRes.data.data.order_url) {
+          console.log("ZaloPay URL:", zaloRes.data.data.order_url);
+          window.location.href = zaloRes.data.data.order_url;
           return;
         } else {
           alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");

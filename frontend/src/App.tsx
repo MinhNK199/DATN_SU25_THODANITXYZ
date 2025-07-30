@@ -83,7 +83,7 @@ function App() {
               <Route path="checkout" element={<Checkout />} />
               <Route path="checkout/success" element={<CheckoutSuccess />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="about" element={<About />} />
+              <Route path="about" element={<About />} />  
               <Route path="contact" element={<Contact />} />
               <Route path="faq" element={<FAQ />} />
               <Route path="compare" element={<ProductComparison />} />
