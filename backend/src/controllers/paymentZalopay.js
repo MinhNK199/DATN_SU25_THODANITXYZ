@@ -113,7 +113,6 @@ export const createZaloPayOrder = async (req, res) => {
 };
 
 export const zalopayCallback = async (req, res) => {
-  
   let result = {};
   
   console.log("🔔 ========== ZALOPAY CALLBACK START ==========");
@@ -129,6 +128,7 @@ export const zalopayCallback = async (req, res) => {
         test: true
       });
     }
+    
     let dataStr = req.body.data;
     let reqMac = req.body.mac;
     
@@ -147,9 +147,6 @@ export const zalopayCallback = async (req, res) => {
       let dataJson = JSON.parse(dataStr);
       console.log("✅ ZaloPay callback data:", dataJson);
       
-      // Import Order model
-      const Order = (await import("../models/Order.js")).default;
-      
       const order = await Order.findOne({
         zalopayTransId: dataJson["app_trans_id"],
       });
@@ -162,6 +159,7 @@ export const zalopayCallback = async (req, res) => {
           paymentMethod: order.paymentMethod
         });
 
+        // ✅ CHỈ GỌI confirmOrderAfterPayment - BỎ PHẦN MANUAL UPDATE
         await confirmOrderAfterPayment(order._id, {
           id: dataJson["zp_trans_id"],
           status: 'success',
@@ -170,56 +168,6 @@ export const zalopayCallback = async (req, res) => {
           app_trans_id: dataJson["app_trans_id"],
           amount: dataJson["amount"]
         });
-        
-        // ✅ CẬP NHẬT TRẠNG THÁI ĐƠN HÀNG
-        order.status = 'confirmed';
-        order.isPaid = true;
-        order.paidAt = new Date();
-        order.paymentStatus = 'paid';
-        order.paymentResult = {
-          id: dataJson["zp_trans_id"],
-          status: 'success',
-          method: 'zalopay',
-          update_time: new Date(),
-          app_trans_id: dataJson["app_trans_id"],
-          amount: dataJson["amount"]
-        };
-        
-        // Thêm vào lịch sử trạng thái
-        if (!order.statusHistory) order.statusHistory = [];
-        order.statusHistory.push({
-          status: 'confirmed',
-          note: 'Thanh toán ZaloPay thành công - Đơn hàng chờ xác nhận',
-          date: new Date()
-        });
-
-        await order.save();
-        
-        console.log(`✅ AFTER UPDATE - Order ${order._id}:`, {
-          status: order.status,
-          isPaid: order.isPaid,
-          paymentStatus: order.paymentStatus
-        });
-        
-        // ✅ XÓA GIỎ HÀNG
-        try {
-          const Cart = (await import("../models/Cart.js")).default;
-          const cart = await Cart.findOne({ user: order.user });
-          
-          if (cart && cart.items.length > 0) {
-            const orderedProductIds = order.orderItems.map(item => item.product.toString());
-            const originalCount = cart.items.length;
-            
-            cart.items = cart.items.filter(item => 
-              !orderedProductIds.includes(item.product.toString())
-            );
-            
-            await cart.save();
-            console.log(`🛒 Removed ${originalCount - cart.items.length} items from cart`);
-          }
-        } catch (cartError) {
-          console.error("❌ Cart update error:", cartError);
-        }
         
         console.log(`🎉 ZaloPay callback completed successfully for order ${order._id}`);
         
