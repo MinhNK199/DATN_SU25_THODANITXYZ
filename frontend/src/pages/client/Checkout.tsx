@@ -259,6 +259,19 @@ const Checkout: React.FC = () => {
     setCurrentStep(3);
   };
 
+  const handlePaymentFailure = async (orderId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        `http://localhost:8000/api/order/${orderId}/payment-failed`,
+        { reason: "Người dùng hủy thanh toán hoặc thanh toán thất bại" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      console.error("Lỗi cập nhật trạng thái thanh toán thất bại:", error);
+    }
+  };
+  // 3. Đặt hàng
   // 3. Đặt hàng
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,13 +313,21 @@ const Checkout: React.FC = () => {
       }));
 
       let paymentMethod = "";
-      if (formData.paymentMethod === "credit-card")
+      if (formData.paymentMethod === "credit-card") {
         paymentMethod = "credit-card";
-      else if (formData.paymentMethod === "e-wallet")
-        paymentMethod = walletInfo.type;
-      else if (formData.paymentMethod === "bank-transfer")
+      } else if (formData.paymentMethod === "e-wallet") {
+        paymentMethod = walletInfo.type; // momo, zalopay, vnpay
+      } else if (formData.paymentMethod === "bank-transfer") {
         paymentMethod = "BANKING";
-      else paymentMethod = "COD";
+      } else if (formData.paymentMethod === "zalopay") {
+        paymentMethod = "zalopay"; // ← THÊM CASE NÀY
+      } else if (formData.paymentMethod === "momo") {
+        paymentMethod = "momo";
+      } else if (formData.paymentMethod === "vnpay") {
+        paymentMethod = "vnpay";
+      } else {
+        paymentMethod = "COD";
+      }
 
       const orderData = {
         orderItems,
@@ -320,9 +341,13 @@ const Checkout: React.FC = () => {
 
       const res = await createOrder(orderData);
       setOrderNumber(res._id || "");
+      console.log("PaymentMethod before submit:", formData.paymentMethod);
+      console.log("Wallet info:", walletInfo);
 
-      // ✅ Cập nhật giỏ hàng sau khi đặt hàng thành công
-      await removeOrderedItemsFromCart(orderItems);
+      // ✅ CHỈ xóa giỏ hàng cho COD, online payment sẽ xóa sau khi thanh toán thành công
+      if (formData.paymentMethod === "cod") {
+        await removeOrderedItemsFromCart(orderItems);
+      }
 
       // Xử lý từng loại thanh toán
       if (formData.paymentMethod === "e-wallet" && walletInfo.type === "momo") {
@@ -331,13 +356,25 @@ const Checkout: React.FC = () => {
           orderId: res._id,
           orderInfo: `Thanh toán đơn hàng ${res._id}`,
           redirectUrl: window.location.origin + "/checkout/success",
-          ipnUrl: "http://localhost:5173/api/payment/momo/webhook",
+          ipnUrl: "http://localhost:8000/api/payment/momo/webhook",
           extraData: "",
         });
+
         if (momoRes && momoRes.payUrl) {
+          // Lưu thông tin để xử lý khi quay lại
+          localStorage.setItem(
+            "pendingOrder",
+            JSON.stringify({
+              orderId: res._id,
+              paymentMethod: "momo",
+              orderItems: orderItems,
+            })
+          );
           window.location.href = momoRes.payUrl;
           return;
         } else {
+          // Thanh toán thất bại - cập nhật trạng thái
+          await handlePaymentFailure(res._id);
           alert("Không lấy được link thanh toán Momo. Vui lòng thử lại.");
         }
       } else if (formData.paymentMethod === "zalopay") {
@@ -349,10 +386,18 @@ const Checkout: React.FC = () => {
         );
 
         if (zaloRes.data && zaloRes.data.data && zaloRes.data.data.order_url) {
-          console.log("ZaloPay URL:", zaloRes.data.data.order_url);
+          localStorage.setItem(
+            "pendingOrder",
+            JSON.stringify({
+              orderId: res._id,
+              paymentMethod: "zalopay",
+              orderItems: orderItems,
+            })
+          );
           window.location.href = zaloRes.data.data.order_url;
           return;
         } else {
+          await handlePaymentFailure(res._id);
           alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
         }
       } else if (formData.paymentMethod === "vnpay") {
@@ -363,13 +408,24 @@ const Checkout: React.FC = () => {
             orderInfo: `Thanh toán đơn hàng ${res._id}`,
             redirectUrl: window.location.origin + "/checkout/success",
           });
+
           if (vnpayRes.data && vnpayRes.data.payUrl) {
+            localStorage.setItem(
+              "pendingOrder",
+              JSON.stringify({
+                orderId: res._id,
+                paymentMethod: "vnpay",
+                orderItems: orderItems,
+              })
+            );
             window.location.href = vnpayRes.data.payUrl;
             return;
           } else {
+            await handlePaymentFailure(res._id);
             alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
           }
         } catch (err) {
+          await handlePaymentFailure(res._id);
           const error = err as Error;
           alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
         }
@@ -384,25 +440,63 @@ const Checkout: React.FC = () => {
             orderInfo: `Thanh toán đơn hàng ${res._id}`,
             redirectUrl: window.location.origin + "/checkout/success",
           });
+
           if (vnpayRes.data && vnpayRes.data.payUrl) {
+            localStorage.setItem(
+              "pendingOrder",
+              JSON.stringify({
+                orderId: res._id,
+                paymentMethod: "vnpay",
+                orderItems: orderItems,
+              })
+            );
             window.location.href = vnpayRes.data.payUrl;
             return;
           } else {
+            await handlePaymentFailure(res._id);
             alert("Không lấy được link thanh toán VNPAY. Vui lòng thử lại.");
           }
         } catch (err) {
+          await handlePaymentFailure(res._id);
           const error = err as Error;
           alert(error.message || "Có lỗi xảy ra, vui lòng thử lại.");
         }
+      } else if (
+        formData.paymentMethod === "e-wallet" &&
+        walletInfo.type === "zalopay"
+      ) {
+        const yourToken = localStorage.getItem("token");
+        const zaloRes = await axios.post(
+          "http://localhost:8000/api/order/zalo-pay",
+          { orderId: res._id },
+          { headers: { Authorization: `Bearer ${yourToken}` } }
+        );
+
+        if (zaloRes.data && zaloRes.data.data && zaloRes.data.data.order_url) {
+          localStorage.setItem(
+            "pendingOrder",
+            JSON.stringify({
+              orderId: res._id,
+              paymentMethod: "zalopay",
+              orderItems: orderItems,
+            })
+          );
+          window.location.href = zaloRes.data.data.order_url;
+          return;
+        } else {
+          await handlePaymentFailure(res._id);
+          alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
+        }
       } else {
+        // COD - hiển thị thành công ngay
         setShowSuccessModal(true);
-        // ✅ XÓA clearCart() vì đã xóa ở removeOrderedItemsFromCart
         showSuccess(
           "Đặt hàng thành công!",
           `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
         );
       }
     } catch (err: unknown) {
+      console.error("Lỗi đặt hàng:", err);
       let message = "Đặt hàng thất bại. Có lỗi xảy ra, vui lòng thử lại.";
       if (
         err &&
