@@ -65,7 +65,7 @@ export const createZaloPayOrder = async (req, res) => {
       amount: Math.round(order.totalPrice),
       description: `TechTrend - Thanh toán cho đơn hàng #${order._id}`,
       bank_code: "",
-  callback_url: "https://81d517e947da.ngrok-free.app/api/order/zalo-pay/callback",
+      callback_url: "link-Forwarding-ngrok/api/order/zalo-pay/callback",
     };
 
     const data =

@@ -227,6 +227,8 @@ const CheckoutSuccess: React.FC = () => {
   // ✅ Hàm hiển thị tên phương thức thanh toán
   const getPaymentMethodDisplay = () => {
     switch (paymentMethod) {
+      case "COD":
+      return "Thanh toán khi nhận hàng (COD)";
       case "zalopay":
         return "ZaloPay";
       case "momo":

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaCreditCard, FaTruck, FaArrowLeft, FaCheck } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useToast } from "../../components/client/ToastContainer";
-import OrderSuccessModal from "../../components/client/OrderSuccessModal";
 import axios from "axios";
 import userApi, { Address } from "../../services/userApi";
 import { createOrder, createMomoPayment } from "../../services/orderApi";
@@ -48,9 +47,7 @@ const Checkout: React.FC = () => {
     paymentMethod: "",
   });
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
-  const [redirectCountdown, setRedirectCountdown] = useState(5);
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
@@ -71,7 +68,7 @@ const Checkout: React.FC = () => {
   const [showNewWalletForm, setShowNewWalletForm] = useState<boolean>(false);
   const [taxRate, setTaxRate] = useState(0.08);
 
-  const { state: cartState, clearCart, removeOrderedItemsFromCart } = useCart();
+  const { state: cartState, removeOrderedItemsFromCart } = useCart();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
 
@@ -271,7 +268,7 @@ const Checkout: React.FC = () => {
       console.error("Lỗi cập nhật trạng thái thanh toán thất bại:", error);
     }
   };
-  // 3. Đặt hàng
+
   // 3. Đặt hàng
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,7 +317,7 @@ const Checkout: React.FC = () => {
       } else if (formData.paymentMethod === "bank-transfer") {
         paymentMethod = "BANKING";
       } else if (formData.paymentMethod === "zalopay") {
-        paymentMethod = "zalopay"; // ← THÊM CASE NÀY
+        paymentMethod = "zalopay";
       } else if (formData.paymentMethod === "momo") {
         paymentMethod = "momo";
       } else if (formData.paymentMethod === "vnpay") {
@@ -361,7 +358,6 @@ const Checkout: React.FC = () => {
         });
 
         if (momoRes && momoRes.payUrl) {
-          // Lưu thông tin để xử lý khi quay lại
           localStorage.setItem(
             "pendingOrder",
             JSON.stringify({
@@ -373,7 +369,6 @@ const Checkout: React.FC = () => {
           window.location.href = momoRes.payUrl;
           return;
         } else {
-          // Thanh toán thất bại - cập nhật trạng thái
           await handlePaymentFailure(res._id);
           alert("Không lấy được link thanh toán Momo. Vui lòng thử lại.");
         }
@@ -488,11 +483,9 @@ const Checkout: React.FC = () => {
           alert("Không lấy được link thanh toán ZaloPay. Vui lòng thử lại.");
         }
       } else {
-        // COD - hiển thị thành công ngay
-        setShowSuccessModal(true);
-        showSuccess(
-          "Đặt hàng thành công!",
-          `Đơn hàng ${res._id} đã được xác nhận và sẽ được giao trong 2-3 ngày.`
+        // ✅ COD - Chuyển đến trang CheckoutSuccess
+        navigate(
+          `/checkout/success?orderId=${res._id}&paymentMethod=COD&status=success`
         );
       }
     } catch (err: unknown) {
@@ -558,22 +551,6 @@ const Checkout: React.FC = () => {
       navigate("/");
     }
   }, [currentStep, cartState.items, navigate]);
-
-  useEffect(() => {
-    if (showSuccessModal) {
-      setRedirectCountdown(5);
-      const interval = setInterval(() => {
-        setRedirectCountdown((prev) => prev - 1);
-      }, 1000);
-      const timer = setTimeout(() => {
-        navigate("/");
-      }, 5000);
-      return () => {
-        clearTimeout(timer);
-        clearInterval(interval);
-      };
-    }
-  }, [showSuccessModal, navigate]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -734,18 +711,6 @@ const Checkout: React.FC = () => {
           </div>
         </div>
       </div>
-      <OrderSuccessModal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        orderNumber={orderNumber}
-        estimatedDelivery="2-3 ngày làm việc"
-      >
-        {showSuccessModal && (
-          <div className="text-center text-sm text-gray-500 mt-2">
-            Bạn sẽ được chuyển về trang chủ sau {redirectCountdown} giây...
-          </div>
-        )}
-      </OrderSuccessModal>
       <ScrollToTop />
     </div>
   );
