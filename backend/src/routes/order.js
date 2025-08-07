@@ -17,6 +17,7 @@ import {
 import { 
   createZaloPayOrder, 
   checkZaloPayStatus, 
+  checkZaloPayStatusByOrderId,
   cancelZaloPayPayment, 
   zalopayCallback
 } from "../controllers/paymentZalopay.js";
@@ -34,6 +35,7 @@ routerOrder.get("/", protect, getOrders);
 routerOrder.post("/zalo-pay", protect, createZaloPayOrder);
 routerOrder.post("/zalo-pay/callback", zalopayCallback);
 routerOrder.get("/zalo-pay/status/:app_trans_id", checkZaloPayStatus);
+routerOrder.get("/zalo-pay/status-by-order/:orderId", protect, checkZaloPayStatusByOrderId);
 routerOrder.post("/zalo-pay/cancel", protect, cancelZaloPayPayment);
 
 // ========== ORDER DETAIL & ACTIONS ==========
