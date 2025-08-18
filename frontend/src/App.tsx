@@ -34,7 +34,6 @@ import VariantEdit from "./components/admin/variants/VariantEdit";
 import VariantDetail from "./components/admin/variants/VariantDetail";
 import { Toaster } from "react-hot-toast";
 import Cart from './pages/client/Cart';
-import Profile from './pages/client/Profile';
 import ProductListClient from './pages/client/ProductList';
 import ProductDetailClient from './pages/client/ProductDetail';
 import About from './pages/client/About';
@@ -55,6 +54,16 @@ import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
 import BlogPage from './pages/admin/BlogPage';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
+
+// Import Profile components
+import ProfileLayout from './pages/client/profile/components/ProfileLayout';
+import PersonalInfo from './pages/client/profile/personal-info';
+import ChangePassword from './pages/client/profile/change-password';
+import Addresses from './pages/client/profile/addresses';
+import Orders from './pages/client/profile/orders';
+import OrderDetailProfile from './pages/client/profile/order-detail';
+import Wishlist from './pages/client/profile/wishlist';
+import Notifications from './pages/client/profile/notifications';
 
 function App() {
   return (
@@ -82,12 +91,23 @@ function App() {
               <Route path="cart" element={<Cart />} />
               <Route path="checkout" element={<Checkout />} />
               <Route path="checkout/success" element={<CheckoutSuccess />} />
-              <Route path="profile" element={<Profile />} />
               <Route path="about" element={<About />} />  
               <Route path="contact" element={<Contact />} />
               <Route path="faq" element={<FAQ />} />
               <Route path="compare" element={<ProductComparison />} />
               <Route path="reviews" element={<ProductReviews />} />
+              
+              {/* Profile nested routes */}
+              <Route path="profile" element={<ProfileLayout />}>
+                <Route index element={<PersonalInfo />} />
+                <Route path="personal-info" element={<PersonalInfo />} />
+                <Route path="change-password" element={<ChangePassword />} />
+                <Route path="addresses" element={<Addresses />} />
+                <Route path="orders" element={<Orders />} />
+                <Route path="orders/:id" element={<OrderDetailProfile />} />
+                <Route path="wishlist" element={<Wishlist />} />
+                <Route path="notifications" element={<Notifications />} />
+              </Route>
             </Route>
             
             {/* Admin Routes */}
