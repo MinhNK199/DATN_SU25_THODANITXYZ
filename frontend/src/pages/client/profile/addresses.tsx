@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import Select from 'react-select';
 import { Plus, MapPin, Edit2, Trash2, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../../api/axiosInstance';
+import axios from 'axios';
 
 interface Address {
   _id: string;
@@ -26,25 +28,47 @@ const Addresses = () => {
     fullName: '',
     phone: '',
     address: '',
-    city: '',
-    district: '',
-    ward: '',
+    province_code: '',
+    district_code: '',
+    ward_code: '',
     postalCode: '',
-    isDefault: false,
-    type: 'home',
-    note: ''
+    isDefault: false
   });
+
+  // State cho select động
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [districtLoading, setDistrictLoading] = useState(false);
+  const [wardLoading, setWardLoading] = useState(false);
 
   useEffect(() => {
     fetchAddresses();
+    fetchProvinces();
   }, []);
+
+  useEffect(() => {
+    if (formData.province_code) {
+      fetchDistricts(formData.province_code);
+    } else {
+      setDistricts([]);
+      setFormData(prev => ({ ...prev, district_code: '', ward_code: '' }));
+    }
+  }, [formData.province_code]);
+
+  useEffect(() => {
+    if (formData.district_code) {
+      fetchWards(formData.district_code);
+    } else {
+      setWards([]);
+      setFormData(prev => ({ ...prev, ward_code: '' }));
+    }
+  }, [formData.district_code]);
 
   const fetchAddresses = async () => {
     try {
       setIsLoading(true);
-      // ✅ Sửa endpoint theo backend route: /api/address
       const response = await axiosInstance.get('/address');
-      
       if (response.data) {
         setAddresses(Array.isArray(response.data) ? response.data : []);
       }
@@ -55,26 +79,75 @@ const Addresses = () => {
     }
   };
 
+  // Sử dụng provinces.open-api.vn
+  const fetchProvinces = async () => {
+    try {
+      const res = await axios.get('https://provinces.open-api.vn/api/p/');
+      setProvinces(res.data || []);
+    } catch {
+      setProvinces([]);
+    }
+  };
+  const fetchDistricts = async (provinceCode: string) => {
+    setDistrictLoading(true);
+    try {
+      const res = await axios.get(`https://provinces.open-api.vn/api/p/${provinceCode}?depth=2`);
+      setDistricts(res.data?.districts || []);
+    } catch {
+      setDistricts([]);
+    } finally {
+      setDistrictLoading(false);
+    }
+  };
+  const fetchWards = async (districtCode: string) => {
+    setWardLoading(true);
+    try {
+      const res = await axios.get(`https://provinces.open-api.vn/api/d/${districtCode}?depth=2`);
+      setWards(res.data?.wards || []);
+    } catch {
+      setWards([]);
+    } finally {
+      setWardLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
+      const provinceObj = provinces.find(p => String(p.code) === formData.province_code);
+      const districtObj = districts.find(d => String(d.code) === formData.district_code);
+      const wardObj = wards.find(w => String(w.code) === formData.ward_code);
+      const payload = {
+        ...formData,
+        city: formData.province_code,
+        cityName: provinceObj?.name || '',
+        district: formData.district_code,
+        districtName: districtObj?.name || '',
+        ward: formData.ward_code,
+        wardName: wardObj?.name || ''
+      };
       if (editingAddress) {
-        // ✅ Update address endpoint
-        const response = await axiosInstance.put(`/address/${editingAddress._id}`, formData);
+        const response = await axiosInstance.put(`/address/${editingAddress._id}`, payload);
         if (response.data) {
           toast.success('Cập nhật địa chỉ thành công');
           fetchAddresses();
         }
       } else {
-        // ✅ Create new address endpoint
-        const response = await axiosInstance.post('/address', formData);
+        // Nếu chọn là mặc định, set tất cả địa chỉ khác về false
+        if (payload.isDefault) {
+          await Promise.all(addresses.map(addr => {
+            if (addr.isDefault) {
+              return axiosInstance.put(`/address/${addr._id}`, { ...addr, isDefault: false });
+            }
+            return Promise.resolve();
+          }));
+        }
+        const response = await axiosInstance.post('/address', payload);
         if (response.data) {
           toast.success('Thêm địa chỉ thành công');
           fetchAddresses();
         }
       }
-      
       resetForm();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
@@ -87,22 +160,18 @@ const Addresses = () => {
       fullName: address.fullName,
       phone: address.phone,
       address: address.address,
-      city: address.city,
-      district: address.district,
-      ward: address.ward,
+      province_code: address.city || '',
+      district_code: address.district || '',
+      ward_code: address.ward || '',
       postalCode: address.postalCode || '',
-      isDefault: address.isDefault,
-      type: address.type || 'home',
-      note: address.note || ''
+      isDefault: address.isDefault
     });
     setShowForm(true);
   };
 
   const handleDelete = async (addressId: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) return;
-
     try {
-      // ✅ Delete address endpoint
       const response = await axiosInstance.delete(`/address/${addressId}`);
       if (response.data) {
         toast.success('Xóa địa chỉ thành công');
@@ -115,7 +184,6 @@ const Addresses = () => {
 
   const handleSetDefault = async (addressId: string) => {
     try {
-      // ✅ Set default address endpoint
       const response = await axiosInstance.put(`/address/${addressId}/default`);
       if (response.data) {
         toast.success('Đặt làm địa chỉ mặc định thành công');
@@ -126,20 +194,16 @@ const Addresses = () => {
     }
   };
 
-  // ...existing code for resetForm, handleInputChange, etc...
-
   const resetForm = () => {
     setFormData({
       fullName: '',
       phone: '',
       address: '',
-      city: '',
-      district: '',
-      ward: '',
+      province_code: '',
+      district_code: '',
+      ward_code: '',
       postalCode: '',
-      isDefault: false,
-      type: 'home',
-      note: ''
+      isDefault: false
     });
     setEditingAddress(null);
     setShowForm(false);
@@ -185,7 +249,6 @@ const Addresses = () => {
             <h3 className="text-lg font-semibold mb-4">
               {editingAddress ? 'Cập nhật địa chỉ' : 'Thêm địa chỉ mới'}
             </h3>
-            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -200,7 +263,6 @@ const Addresses = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Số điện thoại <span className="text-red-500">*</span>
@@ -214,7 +276,6 @@ const Addresses = () => {
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Địa chỉ cụ thể <span className="text-red-500">*</span>
@@ -229,81 +290,75 @@ const Addresses = () => {
                   required
                 />
               </div>
-
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tỉnh/Thành phố <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
+                  <Select
+                    options={provinces.map((p) => ({ value: String(p.code), label: p.name }))}
+                    value={
+                      provinces.find((p) => String(p.code) === formData.province_code)
+                        ? {
+                            value: formData.province_code,
+                            label:
+                              provinces.find((p) => String(p.code) === formData.province_code)?.name ?? ''
+                          }
+                        : null
+                    }
+                    onChange={option =>
+                      setFormData(prev => ({
+                        ...prev,
+                        province_code: option?.value || '',
+                        district_code: '',
+                        ward_code: ''
+                      }))
+                    }
+                    placeholder="Chọn tỉnh/thành phố..."
+                    isClearable
+                    classNamePrefix="react-select"
+                    noOptionsMessage={() => "Không tìm thấy"}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Quận/Huyện <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="district"
-                    value={formData.district}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
+                  <Select
+                    options={districts.map((d) => ({ value: String(d.code), label: d.name }))}
+                    isLoading={districtLoading}
+                    value={districts.find((d) => String(d.code) === formData.district_code)
+                      ? { value: formData.district_code, label: districts.find((d) => String(d.code) === formData.district_code)?.name ?? '' }
+                      : null}
+                    onChange={option => setFormData(prev => ({ ...prev, district_code: option?.value || '' }))}
+                    placeholder="Chọn quận/huyện..."
+                    isClearable
+                    isDisabled={!formData.province_code}
+                    classNamePrefix="react-select"
+                    noOptionsMessage={() => formData.province_code ? "Không tìm thấy" : "Chọn tỉnh/thành phố trước"}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phường/Xã <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="ward"
-                    value={formData.ward}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
+                  <Select
+                    options={wards.map((w) => ({ value: String(w.code), label: w.name }))}
+                    isLoading={wardLoading}
+                    value={wards.find((w) => String(w.code) === formData.ward_code)
+                      ? { value: formData.ward_code, label: wards.find((w) => String(w.code) === formData.ward_code)?.name ?? '' }
+                      : null}
+                    onChange={option => setFormData(prev => ({ ...prev, ward_code: option?.value || '' }))}
+                    placeholder="Chọn phường/xã..."
+                    isClearable
+                    isDisabled={!formData.district_code}
+                    classNamePrefix="react-select"
+                    noOptionsMessage={() => formData.district_code ? "Không tìm thấy" : "Chọn quận/huyện trước"}
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Loại địa chỉ
-                </label>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="home">Nhà riêng</option>
-                  <option value="office">Văn phòng</option>
-                  <option value="other">Khác</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ghi chú
-                </label>
-                <textarea
-                  name="note"
-                  value={formData.note}
-                  onChange={handleInputChange}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ghi chú thêm (tùy chọn)"
-                />
-              </div>
-
+              {/* Đã bỏ loại địa chỉ */}
+              {/* Đã bỏ trường ghi chú */}
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -316,7 +371,6 @@ const Addresses = () => {
                   Đặt làm địa chỉ mặc định
                 </label>
               </div>
-
               <div className="flex space-x-3 pt-4">
                 <button
                   type="button"
@@ -336,7 +390,6 @@ const Addresses = () => {
           </div>
         </div>
       )}
-
       {/* Addresses List */}
       {addresses.length === 0 ? (
         <div className="text-center py-12">
@@ -362,13 +415,12 @@ const Addresses = () => {
                     )}
                   </div>
                   <p className="text-gray-600 mb-1">
-                    {address.address}, {address.ward}, {address.district}, {address.city}
+                    {address.address}, {address.wardName || address.ward}, {address.districtName || address.district}, {address.cityName || address.city}
                   </p>
                   {address.note && (
                     <p className="text-sm text-gray-500">Ghi chú: {address.note}</p>
                   )}
                 </div>
-                
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleEdit(address)}
@@ -377,7 +429,6 @@ const Addresses = () => {
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  
                   {!address.isDefault && (
                     <button
                       onClick={() => handleSetDefault(address._id)}
@@ -387,7 +438,6 @@ const Addresses = () => {
                       <Star className="w-4 h-4" />
                     </button>
                   )}
-                  
                   <button
                     onClick={() => handleDelete(address._id)}
                     className="p-2 text-gray-400 hover:text-red-600 transition-colors"

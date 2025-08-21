@@ -16,7 +16,7 @@ interface Props {
   formData: FormDataType;
   setFormData: React.Dispatch<React.SetStateAction<FormDataType>>;
   addresses: Address[];
-   handleNextStepShipping: () => void;
+  handleNextStepShipping: () => void;
   selectedAddressId: string;
   setSelectedAddressId: (id: string) => void;
   provinces: any[];
@@ -33,7 +33,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   formData,
   setFormData,
   addresses,
-   handleNextStepShipping,
+  handleNextStepShipping,
   selectedAddressId,
   setSelectedAddressId,
   provinces,
@@ -63,8 +63,14 @@ const CheckoutShippingInfo: React.FC<Props> = ({
               />
               <span>
                 <span className="font-medium">{addr.fullName}</span> - {addr.phone} <br />
-                <span className="text-gray-500 text-sm">{addr.address}, {addr.wardName}, {addr.districtName}, {addr.cityName}</span>
-                {addr.isDefault && <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Mặc định</span>}
+                <span className="text-gray-500 text-sm">
+                  {addr.address}, {addr.wardName || addr.ward}, {addr.districtName || addr.district}, {addr.cityName || addr.city}
+                </span>
+                {addr.isDefault && (
+                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
+                    Mặc định
+                  </span>
+                )}
               </span>
             </label>
           ))}

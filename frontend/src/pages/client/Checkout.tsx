@@ -4,7 +4,8 @@ import { FaCreditCard, FaTruck, FaArrowLeft, FaCheck } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useToast } from "../../components/client/ToastContainer";
 import axios from "axios";
-import userApi, { Address } from "../../services/userApi";
+import userApi from "../../services/userApi";
+import { getAddresses } from "../../services/userApi";
 import { createOrder, createMomoPayment } from "../../services/orderApi";
 import { getTaxConfig } from "../../services/cartApi";
 import ScrollToTop from "../../components/ScrollToTop";
@@ -74,7 +75,7 @@ const Checkout: React.FC = () => {
 
   useEffect(() => {
     axios
-      .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
+      .get("https://provinces.open-api.vn/api/?depth=1")
       .then((r) => setProvinces(r.data))
       .catch(() => {});
     getTaxConfig()
@@ -105,13 +106,10 @@ const Checkout: React.FC = () => {
     }
   }, [formData.province_code]);
 
-  // Load xã/phường khi chọn quận/huyện
   useEffect(() => {
     if (formData.district_code) {
       axios
-        .get(
-          `https://provinces.open-api.vn/api/d/${formData.district_code}?depth=2`
-        )
+        .get(`https://provinces.open-api.vn/api/d/${formData.district_code}?depth=2`)
         .then((r) => {
           setWards(r.data.wards || []);
         })
@@ -123,13 +121,8 @@ const Checkout: React.FC = () => {
     }
   }, [formData.district_code]);
 
-  const userApiWithExtra = userApi as typeof userApi & {
-    getAddresses?: () => Promise<Address[]>;
-    getMyPaymentMethods?: () => Promise<{ methods: PaymentMethod[] }>;
-  };
-
   useEffect(() => {
-    userApiWithExtra.getAddresses?.().then((data: Address[]) => {
+    getAddresses().then((data: Address[]) => {
       setAddresses(data);
       const defaultAddress = data.find((a) => a.isDefault) || data[0];
       if (defaultAddress) {
@@ -151,12 +144,6 @@ const Checkout: React.FC = () => {
       }
     });
   }, []);
-
-  useEffect(() => {
-    if (currentStep === 2) {
-      userApiWithExtra.getMyPaymentMethods?.();
-    }
-  }, [currentStep]);
 
   const handleSelectAddress = async (addressId: string) => {
     setSelectedAddressId(addressId);
@@ -189,21 +176,21 @@ const Checkout: React.FC = () => {
       }
     }
   };
-
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(price);
-  };
-
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(price);
+};
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
-
   // 1. Validate thông tin giao hàng
   const handleNextStepShipping = () => {
     if (
@@ -610,23 +597,23 @@ const Checkout: React.FC = () => {
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <form onSubmit={handleSubmit}>
                 {currentStep === 1 && (
-                  <CheckoutShippingInfo
-                    formData={formData}
-                    setFormData={setFormData}
-                    addresses={addresses}
-                    selectedAddressId={selectedAddressId}
-                    setSelectedAddressId={setSelectedAddressId}
-                    provinces={provinces}
-                    districts={districts}
-                    wards={wards}
-                    districtLoading={districtLoading}
-                    handleSelectAddress={handleSelectAddress}
-                    fetchDistrictsByProvinceCode={fetchDistrictsByProvinceCode}
-                    setCurrentStep={handleNextStepShipping}
-                    handleInputChange={handleInputChange}
-                    handleNextStepShipping={handleNextStepShipping}
-                  />
-                )}
+        <CheckoutShippingInfo
+          formData={formData}
+          setFormData={setFormData}
+          addresses={addresses}
+          handleNextStepShipping={() => setCurrentStep(2)}
+          selectedAddressId={selectedAddressId}
+          setSelectedAddressId={setSelectedAddressId}
+          provinces={provinces}
+          districts={districts}
+          wards={wards}
+          districtLoading={districtLoading}
+          handleSelectAddress={handleSelectAddress}
+          fetchDistrictsByProvinceCode={fetchDistrictsByProvinceCode}
+          setCurrentStep={setCurrentStep}
+          handleInputChange={handleInputChange}
+        />
+      )}
                 {currentStep === 2 && (
                   <CheckoutPaymentMethod
                     formData={formData}

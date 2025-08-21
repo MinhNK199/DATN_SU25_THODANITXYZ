@@ -95,6 +95,17 @@ export interface Order {
   updatedAt: string;
 }
 
+export const getAddresses = async (): Promise<Address[]> => {
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/address", {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    }
+  });
+  if (!res.ok) throw new Error("Không lấy được địa chỉ");
+  return res.json();
+};
 // User API functions
 export const userApi = {
   // Lấy thông tin user hiện tại
