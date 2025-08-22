@@ -167,8 +167,8 @@ const validateAndCleanProductData = (productData: any) => {
       }
 
       const cleanedVariant = {
-        _id: variant._id,
-        id: variant.id,
+        // Chỉ giữ _id cho variant đã tồn tại, loại bỏ id để tránh lỗi ObjectId casting
+        ...(variant._id && { _id: variant._id }),
         name: variant.name || "",
         sku: variant.sku || "",
         price: Number(variant.price) || 0,
@@ -371,8 +371,8 @@ const ProductEdit: React.FC = () => {
         }
 
         const processedVariant = {
-          _id: variant._id,
-          id: variant.id,
+          // Chỉ giữ _id cho variant đã tồn tại, loại bỏ id để tránh lỗi ObjectId casting
+          ...(variant._id && { _id: variant._id }),
           name: variant.name,
           sku: variant.sku,
           price: variant.price,

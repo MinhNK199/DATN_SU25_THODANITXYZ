@@ -119,7 +119,7 @@ const validateAndCleanProductData = (productData: any) => {
       }
 
       const cleanedVariant = {
-        id: variant.id,
+        // Loại bỏ trường id để tránh lỗi ObjectId casting
         name: variant.name || "",
         sku: variant.sku || "",
         price: Number(variant.price) || 0,
@@ -285,7 +285,7 @@ const ProductAddPage: React.FC = () => {
         }
 
         const processedVariant = {
-          id: v.id,
+          // Loại bỏ trường id để tránh lỗi ObjectId casting
           name: v.name,
           sku: v.sku,
           price: v.price,
