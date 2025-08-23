@@ -31,6 +31,7 @@ import slugify from "slugify"
 import { getCategories, getBrands, getProductById, updateProduct } from "./api"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
+import { validateAllVariants, cleanColorData, validateAndCleanProductData } from "./utils/validation"
 
 const { TextArea } = Input
 const { Panel } = Collapse
@@ -340,8 +341,11 @@ const ProductEdit: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!id) return
-    if (variants.length < 1) {
-      message.error("Sản phẩm phải có ít nhất 1 biến thể!")
+    
+    // Validate variants using utility function
+    const validation = validateAllVariants(variants)
+    if (!validation.isValid) {
+      message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
       return
     }
     setSubmitting(true)

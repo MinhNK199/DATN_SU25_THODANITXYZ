@@ -3,13 +3,19 @@ import Joi from "joi";
 
 // Middleware cho express-validator
 export const validateRequest = (req, res, next) => {
+    console.log('🔍 Validating request:', req.method, req.path);
+    console.log('📦 Request body:', req.body);
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        console.log('❌ Validation errors:', errors.array());
         return res.status(400).json({
             error: "Dữ liệu không hợp lệ",
             details: errors.array().map(err => err.msg),
         });
     }
+
+    console.log('✅ Validation passed');
     next();
 };
 

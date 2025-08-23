@@ -38,6 +38,8 @@ const VariantEdit: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [imageLinks, setImageLinks] = useState('');
   const [specifications, setSpecifications] = useState<Record<string, string>>({});
+  const [colorValue, setColorValue] = useState<string>('#000000');
+  const [colorName, setColorName] = useState<string>('');
 
   useEffect(() => {
     const fetchVariant = async () => {
@@ -59,14 +61,21 @@ const VariantEdit: React.FC = () => {
         setFileList(imageFiles);
         setImageLinks((variant.images || []).join('\n'));
 
+        // Set color values
+        const colorCode = typeof variant.color === 'object' ? variant.color.code : variant.color || '#000000';
+        const colorNameValue = typeof variant.color === 'object' ? variant.color.name : '';
+        
+        setColorValue(colorCode);
+        setColorName(colorNameValue);
+        
         form.setFieldsValue({
           name: variant.name || '',
           sku: variant.sku || '',
           price: variant.price || 0,
           salePrice: variant.salePrice,
           stock: variant.stock || 0,
-          color: typeof variant.color === 'object' ? variant.color.code : variant.color || '#000000',
-          colorName: typeof variant.color === 'object' ? variant.color.name : '',
+          color: { code: colorCode, name: colorNameValue },
+          colorName: colorNameValue,
           size: variant.size || '',
           weight: variant.weight,
           isActive: variant.isActive ?? true,
@@ -126,12 +135,32 @@ const VariantEdit: React.FC = () => {
         }
       }
 
+      // Convert RGB to HEX if needed
+      const convertToHex = (color: string): string => {
+        if (color.startsWith('#')) return color;
+        if (color.startsWith('rgb')) {
+          const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (match) {
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+          }
+        }
+        return color;
+      };
+
+      const processedColor = colorValue ? {
+        code: convertToHex(colorValue),
+        name: colorName || ''
+      } : undefined;
+
       const formData = {
         ...values,
         images,
         isActive: values.isActive ?? true,
         specifications,
-        color: values.color?.code ? { code: values.color.code, name: values.colorName || values.color.name || '' } : undefined,
+        color: processedColor,
       };
 
       await axios.put(`http://localhost:8000/api/variant/${id}`, formData, {
@@ -285,12 +314,33 @@ const VariantEdit: React.FC = () => {
 
             <Divider orientation="left">Thông tin bổ sung</Divider>
             <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item label="Màu sắc" name="color">
-                  <ColorPicker showText />
-                </Form.Item>
-                <Form.Item label="Tên màu" name="colorName">
-                  <Input placeholder="VD: Đen" />
+              <Col span={12}>
+                <Form.Item label="Màu sắc">
+                  <div className="space-y-2">
+                    <ColorPicker 
+                      value={colorValue}
+                      onChange={(color, hex) => {
+                        setColorValue(hex || '#000000');
+                        form.setFieldsValue({ 
+                          color: { code: hex || '#000000', name: colorName || '' },
+                          colorName: colorName || ''
+                        });
+                      }}
+                      showText
+                      size="middle"
+                    />
+                    <Form.Item name="colorName" noStyle>
+                      <Input 
+                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)" 
+                        onChange={(e) => {
+                          setColorName(e.target.value);
+                          form.setFieldsValue({ 
+                            color: { code: colorValue || '#000000', name: e.target.value }
+                          });
+                        }}
+                      />
+                    </Form.Item>
+                  </div>
                 </Form.Item>
               </Col>
               <Col span={8}>
