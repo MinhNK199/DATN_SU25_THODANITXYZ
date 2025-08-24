@@ -104,11 +104,25 @@ export const getWardsByProvinceAPI = async (req, res) => {
 // Lấy tất cả địa chỉ của user
 export const getUserAddresses = async(req, res) => {
     try {
+        // Kiểm tra user có tồn tại không
+        if (!req.user || !req.user._id) {
+            return res.status(401).json({ 
+                message: "Không thể xác định người dùng",
+                error: "USER_NOT_FOUND"
+            });
+        }
+
         const addresses = await Address.find({ user: req.user._id });
         const addressesWithNames = await Promise.all(addresses.map(addNamesToAddress));
+        
+        console.log(`✅ Lấy ${addressesWithNames.length} địa chỉ cho user ${req.user._id}`);
         res.json(addressesWithNames);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('❌ Lỗi khi lấy địa chỉ:', error);
+        res.status(500).json({ 
+            message: "Lỗi khi lấy danh sách địa chỉ",
+            error: error.message 
+        });
     }
 };
 

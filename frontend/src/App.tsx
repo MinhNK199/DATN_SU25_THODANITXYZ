@@ -41,6 +41,9 @@ import About from './pages/client/About';
 import Contact from './pages/client/Contact';
 import FAQ from './pages/client/FAQ';
 import Checkout from './pages/client/Checkout';
+import CheckoutShippingPage from './pages/client/CheckoutShippingPage';
+import CheckoutPaymentPage from './pages/client/CheckoutPaymentPage';
+import CheckoutReviewPage from './pages/client/CheckoutReviewPage';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import ProductComparison from './components/client/ProductComparison';
@@ -94,9 +97,12 @@ function App() {
               <Route path="product/:id" element={<ProductDetailClient />} />
               <Route path="cart" element={<Cart />} />
                              <Route path="checkout" element={<Checkout />} />
-               <Route path="checkout/status" element={<CheckoutStatus />} />
-               <Route path="checkout/success" element={<CheckoutSuccess />} />
-               <Route path="checkout/failed" element={<CheckoutFailed />} />
+              <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
+              <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
+              <Route path="checkout/review" element={<CheckoutReviewPage />} />
+              <Route path="checkout/status" element={<CheckoutStatus />} />
+              <Route path="checkout/success" element={<CheckoutSuccess />} />
+              <Route path="checkout/failed" element={<CheckoutFailed />} />
               <Route path="about" element={<About />} />  
               <Route path="contact" element={<Contact />} />
               <Route path="faq" element={<FAQ />} />

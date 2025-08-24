@@ -59,8 +59,8 @@ export const createOrder = async (req, res) => {
           status: paymentMethod === "COD" ? "pending" : "draft",
           note:
             paymentMethod === "COD"
-              ? "Đơn hàng COD đã được tạo"
-              : `Đơn hàng ${paymentMethod} đang chờ thanh toán`,
+              ? "Đơn hàng COD đã được tạo - Chờ xác nhận từ admin"
+              : `Đơn hàng ${paymentMethod} đã được tạo - Chờ thanh toán online`,
           date: Date.now(),
         },
       ],
@@ -114,17 +114,24 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
     console.log(`📦 Order before update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
 
     // ✅ CẬP NHẬT TRẠNG THÁI THÀNH CÔNG
-    order.status = 'pending';
+    order.status = 'pending'; // Chờ xác nhận từ admin
     order.isPaid = true;
     order.paidAt = Date.now();
-    order.paymentStatus = 'paid';
+    order.paymentStatus = 'paid'; // Đã thanh toán thành công
     order.paymentResult = paymentInfo;
     
     // Thêm vào lịch sử trạng thái
     if (!order.statusHistory) order.statusHistory = [];
     order.statusHistory.push({
       status: 'pending',
-      note: `Thanh toán ${paymentInfo.method.toUpperCase()} thành công - Đơn hàng chờ xác nhận`,
+      note: `Thanh toán ${paymentInfo.method.toUpperCase()} thành công - Đơn hàng chờ xác nhận từ admin`,
+      date: Date.now()
+    });
+    
+    // Thêm vào lịch sử payment
+    order.statusHistory.push({
+      status: 'payment_success',
+      note: `Thanh toán ${paymentInfo.method.toUpperCase()} thành công - Số tiền: ${paymentInfo.amount || 'N/A'}`,
       date: Date.now()
     });
 
@@ -190,7 +197,17 @@ export const getOrderById = async (req, res) => {
     );
     if (!order)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    res.json(order);
+    
+    // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
+    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+    const statusInfo = getOrderStatusMessage(order);
+    
+    const orderWithStatus = {
+      ...order.toObject(),
+      statusInfo
+    };
+    
+    res.json(orderWithStatus);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -284,16 +301,31 @@ export const getMyOrders = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     console.log(`📋 Found ${orders.length} orders for user ${req.user._id}`);
-    console.log(`📊 Order details:`, orders.map(o => ({
+    
+    // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
+    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+    
+    const ordersWithStatus = orders.map(order => {
+      const orderObj = order.toObject();
+      const statusInfo = getOrderStatusMessage(order);
+      
+      return {
+        ...orderObj,
+        statusInfo
+      };
+    });
+    
+    console.log(`📊 Order details:`, ordersWithStatus.map(o => ({
       id: o._id.toString().slice(-6),
       method: o.paymentMethod,
       status: o.status,
       isPaid: o.isPaid,
       paymentStatus: o.paymentStatus,
+      statusInfo: o.statusInfo,
       createdAt: o.createdAt
     })));
     
-    res.json(orders);
+    res.json(ordersWithStatus);
   } catch (error) {
     console.error("❌ Lỗi getMyOrders:", error);
     res.status(500).json({ message: error.message });

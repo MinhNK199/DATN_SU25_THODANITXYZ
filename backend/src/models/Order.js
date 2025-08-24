@@ -114,9 +114,9 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         "draft", // Đơn hàng tạm (chưa thanh toán online)
-        "pending", // Chờ xác nhận
-        "confirmed", // Đã xác nhận
-        "processing", // Đang xử lý
+        "pending", // Chờ xác nhận từ admin
+        "confirmed", // Đã xác nhận từ admin
+        "processing", // Đang xử lý và đóng gói
         "shipped", // Đang giao hàng
         "delivered_success", // Giao hàng thành công
         "delivered_failed", // Giao hàng thất bại
