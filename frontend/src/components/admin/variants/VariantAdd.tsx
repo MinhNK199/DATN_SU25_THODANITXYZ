@@ -36,6 +36,8 @@ const VariantAdd: React.FC = () => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [imageLinks, setImageLinks] = useState('');
   const [specifications, setSpecifications] = useState<Record<string, string>>({});
+  const [colorValue, setColorValue] = useState<string>('#000000');
+  const [colorName, setColorName] = useState<string>('');
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -77,13 +79,41 @@ const VariantAdd: React.FC = () => {
         }
       }
 
+      // Convert RGB to HEX if needed
+      const convertToHex = (color: string): string => {
+        if (color.startsWith('#')) return color;
+        if (color.startsWith('rgb')) {
+          const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (match) {
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+          }
+        }
+        return color;
+      };
+
+      const processedColor = colorValue ? {
+        code: convertToHex(colorValue),
+        name: colorName || ''
+      } : undefined;
+
       const formData = {
         ...values,
         images,
         isActive: values.isActive ?? true,
         specifications,
-        color: values.color?.code ? { code: values.color.code, name: values.colorName || values.color.name || '' } : undefined,
+        color: processedColor,
+        // Ensure numeric fields are numbers
+        price: Number(values.price) || 0,
+        salePrice: values.salePrice ? Number(values.salePrice) : undefined,
+        stock: Number(values.stock) || 0,
+        weight: values.weight ? Number(values.weight) : undefined,
+        size: values.size ? Number(values.size) : undefined,
       };
+
+      console.log('🚀 Sending formData:', formData);
 
       await axios.post('http://localhost:8000/api/variant', formData, {
         headers: { Authorization: `Bearer ${token}` }
@@ -93,7 +123,14 @@ const VariantAdd: React.FC = () => {
       navigate('/admin/variants');
     } catch (error: any) {
       console.error('Error creating variant:', error);
-      message.error(error.response?.data?.message || 'Không thể thêm biến thể');
+      console.error('Error response:', error.response?.data);
+      console.error('Error details:', error.response?.data?.details);
+      
+      if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
+        message.error(`Lỗi validation:\n${error.response.data.details.join('\n')}`);
+      } else {
+        message.error(error.response?.data?.message || 'Không thể thêm biến thể');
+      }
     } finally {
       setLoading(false);
     }
@@ -163,7 +200,15 @@ const VariantAdd: React.FC = () => {
                 <Form.Item
                   label="SKU"
                   name="sku"
-                  rules={[{ required: true, message: 'Vui lòng nhập SKU' }]}
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập SKU' },
+                    { min: 2, message: 'SKU phải từ 2 ký tự trở lên' },
+                    { max: 50, message: 'SKU không được quá 50 ký tự' },
+                    { 
+                      pattern: /^[A-Za-z0-9\-_!@#$%^&*()]+$/, 
+                      message: 'SKU chỉ được chứa chữ cái, số và các ký tự: -_!@#$%^&*()' 
+                    }
+                  ]}
                 >
                   <Input placeholder="VD: IP15PM-TITAN-256" />
                 </Form.Item>
@@ -231,12 +276,33 @@ const VariantAdd: React.FC = () => {
 
             <Divider orientation="left">Thông tin bổ sung</Divider>
             <Row gutter={16}>
-              <Col span={8}>
-                <Form.Item label="Màu sắc" name="color">
-                  <ColorPicker showText />
-                </Form.Item>
-                <Form.Item label="Tên màu" name="colorName">
-                  <Input placeholder="VD: Đen" />
+              <Col span={12}>
+                <Form.Item label="Màu sắc">
+                  <div className="space-y-2">
+                    <ColorPicker 
+                      value={colorValue}
+                      onChange={(color, hex) => {
+                        setColorValue(hex || '#000000');
+                        form.setFieldsValue({ 
+                          color: { code: hex || '#000000', name: colorName || '' },
+                          colorName: colorName || ''
+                        });
+                      }}
+                      showText
+                      size="middle"
+                    />
+                    <Form.Item name="colorName" noStyle>
+                      <Input 
+                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)" 
+                        onChange={(e) => {
+                          setColorName(e.target.value);
+                          form.setFieldsValue({ 
+                            color: { code: colorValue || '#000000', name: e.target.value }
+                          });
+                        }}
+                      />
+                    </Form.Item>
+                  </div>
                 </Form.Item>
               </Col>
               <Col span={8}>

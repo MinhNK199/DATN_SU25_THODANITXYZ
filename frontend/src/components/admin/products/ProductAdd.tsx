@@ -25,139 +25,12 @@ import slugify from "slugify"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import VariantManager from "./VariantManager"
+import { validateAllVariants, cleanColorData, validateAndCleanProductData } from "./utils/validation"
 
 const { Title, Text } = Typography
 const { Option } = Select
 
 const API_URL = "http://localhost:8000/api"
-
-// ENHANCED: Utility function để clean color data
-const cleanColorData = (colorData: any): { code: string; name: string } => {
-  console.log("🎨 Cleaning color data:", typeof colorData, colorData)
-
-  // Default color
-  const defaultColor = { code: "#000000", name: "Đen" }
-
-  if (!colorData) {
-    return defaultColor
-  }
-
-  // Nếu đã là object hợp lệ
-  if (typeof colorData === "object" && colorData !== null && !Array.isArray(colorData)) {
-    if (colorData.code && typeof colorData.code === "string") {
-      return {
-        code: colorData.code,
-        name: typeof colorData.name === "string" ? colorData.name : getColorNameByCode(colorData.code),
-      }
-    }
-  }
-
-  // Nếu là string
-  if (typeof colorData === "string") {
-    if (colorData === "[object Object]" || colorData === "undefined" || colorData === "null") {
-      return defaultColor
-    }
-
-    // Nếu là hex color
-    if (colorData.startsWith("#")) {
-      return {
-        code: colorData,
-        name: getColorNameByCode(colorData),
-      }
-    }
-  }
-
-  return defaultColor
-}
-
-// Helper function để lấy tên màu từ code
-const getColorNameByCode = (code: string): string => {
-  const colorMap: { [key: string]: string } = {
-    "#000000": "Đen",
-    "#FFFFFF": "Trắng",
-    "#FF0000": "Đỏ",
-    "#00FF00": "Xanh lá",
-    "#0000FF": "Xanh dương",
-    "#FFFF00": "Vàng",
-    "#FF00FF": "Tím",
-    "#00FFFF": "Xanh cyan",
-    "#FFA500": "Cam",
-    "#800080": "Tím đậm",
-    "#FFC0CB": "Hồng",
-    "#A52A2A": "Nâu",
-    "#808080": "Xám",
-    "#C0C0C0": "Bạc",
-    "#FFD700": "Vàng kim",
-    "#8B4513": "Nâu đậm",
-    "#4B0082": "Chàm",
-    "#FF1493": "Hồng đậm",
-    "#32CD32": "Xanh lime",
-    "#87CEEB": "Xanh sky",
-  }
-  return colorMap[code] || "Màu khác"
-}
-
-// ENHANCED: Utility function để validate và clean product data
-const validateAndCleanProductData = (productData: any) => {
-  console.log("🧹 Cleaning product data before sending to API...")
-  console.log("📥 Raw data:", productData)
-
-  const cleanedData = { ...productData }
-
-  // Validate và clean variants
-  if (cleanedData.variants && Array.isArray(cleanedData.variants)) {
-    cleanedData.variants = cleanedData.variants.map((variant: any, index: number) => {
-      console.log(`🔍 Cleaning variant ${index}:`, variant.name || "unnamed")
-
-      // CRITICAL: Clean color data
-      const cleanColor = cleanColorData(variant.color)
-
-      // Validate specifications object
-      let cleanSpecs = {}
-      if (variant.specifications && typeof variant.specifications === "object" && variant.specifications !== null) {
-        cleanSpecs = { ...variant.specifications }
-      }
-
-      const cleanedVariant = {
-        id: variant.id,
-        name: variant.name || "",
-        sku: variant.sku || "",
-        price: Number(variant.price) || 0,
-        salePrice: variant.salePrice ? Number(variant.salePrice) : undefined,
-        stock: Number(variant.stock) || 0,
-        color: cleanColor, // ĐẢM BẢO COLOR LÀ OBJECT HỢP LỆ
-        specifications: cleanSpecs, // ĐẢM BẢO SPECS LÀ OBJECT HỢP LỆ
-        size: Number(variant.size) || 0,
-        length: Number(variant.length) || 0,
-        width: Number(variant.width) || 0,
-        height: Number(variant.height) || 0,
-        weight: Number(variant.weight) || 0,
-        images: Array.isArray(variant.images) ? variant.images : [],
-        isActive: Boolean(variant.isActive),
-      }
-
-      console.log(`✅ Cleaned variant ${index}:`, {
-        name: cleanedVariant.name,
-        color: cleanedVariant.color,
-        specifications: cleanedVariant.specifications,
-      })
-
-      return cleanedVariant
-    })
-  }
-
-  console.log("✅ Final cleaned data ready for API:")
-  console.log(
-    "📤 Cleaned variants:",
-    cleanedData.variants?.map((v: any) => ({
-      name: v.name,
-      color: v.color,
-      specifications: v.specifications,
-    })),
-  )
-
-  return cleanedData
-}
 
 // Hàm chuyển đổi cấu trúc cây cho TreeSelect
 const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {
@@ -240,19 +113,11 @@ const ProductAddPage: React.FC = () => {
   }
 
   const onFinish = async (values: any) => {
-    if (variants.length < 1) {
-      message.error("Chưa có biến thể sản phẩm, vui lòng kiểm tra lại")
+    // Validate variants using utility function
+    const validation = validateAllVariants(variants)
+    if (!validation.isValid) {
+      message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
       return
-    }
-    for (const v of variants) {
-      if (!v.length || !v.width || !v.height) {
-        message.error("Mỗi biến thể phải nhập đủ Dài, Rộng, Cao")
-        return
-      }
-      if (!v.name || !v.sku || !v.price || v.price <= 0) {
-        message.error("Mỗi biến thể phải có tên, SKU và giá gốc > 0")
-        return
-      }
     }
     // Lấy tổng tồn kho từ các biến thể
     const totalStock = variants.reduce((sum, v) => sum + (Number.parseInt(v.stock, 10) || 0), 0)
@@ -285,7 +150,7 @@ const ProductAddPage: React.FC = () => {
         }
 
         const processedVariant = {
-          id: v.id,
+          // Loại bỏ trường id để tránh lỗi ObjectId casting
           name: v.name,
           sku: v.sku,
           price: v.price,

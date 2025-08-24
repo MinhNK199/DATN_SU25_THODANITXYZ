@@ -1,233 +1,210 @@
 import mongoose from "mongoose"
 
 // Schema cho variant color - FIXED STRUCTURE
-const colorSchema = new mongoose.Schema(
-  {
+const colorSchema = new mongoose.Schema({
     code: {
-      type: String,
-      trim: true,
-      default: "#000000",
-      required: true,
+        type: String,
+        trim: true,
+        default: "#000000",
+        required: true,
     },
     name: {
-      type: String,
-      trim: true,
-      default: "",
+        type: String,
+        trim: true,
+        default: "",
     },
-  },
-  { _id: false },
-)
+}, { _id: false }, )
 
-const productVariantSchema = new mongoose.Schema(
-  {
+const productVariantSchema = new mongoose.Schema({
     name: {
-      type: String,
-      required: true,
-      trim: true,
+        type: String,
+        required: true,
+        trim: true,
     },
     sku: {
-      type: String,
-      unique: true,
-      sparse: true,
-      trim: true,
+        type: String,
+        trim: true,
+        required: true,
     },
     price: {
-      type: Number,
-      required: true,
-      min: 0,
+        type: Number,
+        required: true,
+        min: 0,
     },
     salePrice: {
-      type: Number,
-      min: 0,
+        type: Number,
+        min: 0,
     },
     stock: {
-      type: Number,
-      required: true,
-      min: 0,
-      default: 0,
+        type: Number,
+        required: true,
+        min: 0,
+        default: 0,
     },
     color: {
-      type: colorSchema,
-      default: () => ({ code: "#000000", name: "" }),
+        type: colorSchema,
+        default: () => ({ code: "#000000", name: "" }),
     },
     size: {
-      type: Number,
-      default: 0,
+        type: Number,
+        default: 0,
     },
     length: {
-      type: Number,
-      default: 0,
+        type: Number,
+        default: 0,
     },
     width: {
-      type: Number,
-      default: 0,
+        type: Number,
+        default: 0,
     },
     height: {
-      type: Number,
-      default: 0,
+        type: Number,
+        default: 0,
     },
     weight: {
-      type: Number,
-      min: 0,
-      default: 0,
+        type: Number,
+        min: 0,
+        default: 0,
     },
-    images: [
-      {
+    images: [{
         type: String,
-      },
-    ],
+    }, ],
     isActive: {
-      type: Boolean,
-      default: true,
+        type: Boolean,
+        default: true,
     },
     specifications: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
+        type: mongoose.Schema.Types.Mixed,
+        default: {},
     },
-  },
-  {
+}, {
     timestamps: true,
     versionKey: false,
-  },
-)
+}, )
 
-const productSchema = new mongoose.Schema(
-  {
+const productSchema = new mongoose.Schema({
     name: {
-      type: String,
-      required: [true, "Vui lòng nhập tên sản phẩm"],
-      trim: true,
-      index: true,
+        type: String,
+        required: [true, "Vui lòng nhập tên sản phẩm"],
+        trim: true,
+        index: true,
     },
     slug: {
-      type: String,
-      unique: true,
+        type: String,
+        unique: true,
     },
     description: {
-      type: String,
-      required: [true, "Vui lòng nhập mô tả sản phẩm"],
+        type: String,
+        required: [true, "Vui lòng nhập mô tả sản phẩm"],
     },
     price: {
-      type: Number,
-      required: [true, "Vui lòng nhập giá sản phẩm"],
-      min: [0, "Giá sản phẩm không được nhỏ hơn 0"],
-      index: true,
+        type: Number,
+        required: [true, "Vui lòng nhập giá sản phẩm"],
+        min: [0, "Giá sản phẩm không được nhỏ hơn 0"],
+        index: true,
     },
     salePrice: {
-      type: Number,
-      min: [0, "Giá khuyến mãi không được nhỏ hơn 0"],
+        type: Number,
+        min: [0, "Giá khuyến mãi không được nhỏ hơn 0"],
     },
-    images: [
-      {
+    images: [{
         type: String,
         required: [true, "Vui lòng thêm ảnh sản phẩm"],
-      },
-    ],
-    videos: [
-      {
+    }, ],
+    videos: [{
         type: String, // link YouTube, mp4, v.v.
-      },
-    ],
+    }, ],
     category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: [true, "Vui lòng chọn danh mục sản phẩm"],
-      index: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
+        required: [true, "Vui lòng chọn danh mục sản phẩm"],
+        index: true,
     },
     brand: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Brand",
-      required: [true, "Vui lòng chọn thương hiệu"],
-      index: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Brand",
+        required: [true, "Vui lòng chọn thương hiệu"],
+        index: true,
     },
     stock: {
-      type: Number,
-      required: [true, "Vui lòng nhập số lượng tồn kho"],
-      min: [0, "Số lượng tồn kho không được nhỏ hơn 0"],
-      default: 0,
-      index: true,
+        type: Number,
+        required: [true, "Vui lòng nhập số lượng tồn kho"],
+        min: [0, "Số lượng tồn kho không được nhỏ hơn 0"],
+        default: 0,
+        index: true,
     },
     variants: [productVariantSchema],
     specifications: {
-      type: mongoose.Schema.Types.Mixed,
-      default: {},
+        type: mongoose.Schema.Types.Mixed,
+        default: {},
     },
     features: [String],
-    ratings: [
-      {
+    ratings: [{
         user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
         },
         rating: {
-          type: Number,
-          min: [1, "Đánh giá tối thiểu là 1"],
-          max: [5, "Đánh giá tối đa là 5"],
+            type: Number,
+            min: [1, "Đánh giá tối thiểu là 1"],
+            max: [5, "Đánh giá tối đa là 5"],
         },
         review: String,
         date: {
-          type: Date,
-          default: Date.now,
+            type: Date,
+            default: Date.now,
         },
-      },
-    ],
+    }, ],
     averageRating: {
-      type: Number,
-      default: 0,
-      index: true,
+        type: Number,
+        default: 0,
+        index: true,
     },
     numReviews: {
-      type: Number,
-      default: 0,
+        type: Number,
+        default: 0,
     },
     isActive: {
-      type: Boolean,
-      default: true,
-      index: true,
+        type: Boolean,
+        default: true,
+        index: true,
     },
     isFeatured: {
-      type: Boolean,
-      default: false,
+        type: Boolean,
+        default: false,
     },
-    tags: [
-      {
+    tags: [{
         type: String,
         trim: true,
-      },
-    ],
+    }, ],
     meta: {
-      metaTitle: String,
-      metaDescription: String,
-      metaImage: String,
+        metaTitle: String,
+        metaDescription: String,
+        metaImage: String,
     },
-    questions: [
-      {
+    questions: [{
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         question: String,
         answer: String,
         createdAt: { type: Date, default: Date.now },
         answeredAt: Date,
-      },
-    ],
+    }, ],
     relatedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     flashSale: {
-      price: Number,
-      start: Date,
-      end: Date,
+        price: Number,
+        start: Date,
+        end: Date,
     },
-    discounts: [
-      {
+    discounts: [{
         type: {
-          type: String, // percentage, fixed, voucher...
+            type: String, // percentage, fixed, voucher...
         },
         value: Number,
         description: String,
         start: Date,
         end: Date,
-      },
-    ],
-    vouchers: [
-      {
+    }, ],
+    vouchers: [{
         code: { type: String, trim: true, required: true },
         discountType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
         value: { type: Number, default: 0 },
@@ -236,118 +213,115 @@ const productSchema = new mongoose.Schema(
         usageLimit: { type: Number, default: 0 }, // 0 = không giới hạn
         usedCount: { type: Number, default: 0 },
         minOrderValue: { type: Number, default: 0 },
-      },
-    ],
+    }, ],
     sku: {
-      type: String,
-      unique: true,
-      sparse: true,
+        type: String,
+        unique: true,
+        sparse: true,
     },
     weight: {
-      type: Number,
-      min: 0,
+        type: Number,
+        min: 0,
     },
     dimensions: {
-      length: Number,
-      width: Number,
-      height: Number,
+        length: Number,
+        width: Number,
+        height: Number,
     },
     warranty: {
-      type: Number,
-      min: 0,
+        type: Number,
+        min: 0,
     },
     createdAt: {
-      type: Date,
-      default: Date.now,
-      index: true,
+        type: Date,
+        default: Date.now,
+        index: true,
     },
     updatedAt: {
-      type: Date,
-      default: Date.now,
+        type: Date,
+        default: Date.now,
     },
-  },
-  {
+}, {
     timestamps: true,
     versionKey: false,
-  },
-)
+}, )
 
 // Pre-save middleware để validate và clean data - CRITICAL FIX
-productSchema.pre("save", function (next) {
-  console.log("🔧 Pre-save middleware running...")
+productSchema.pre("save", function(next) {
+    console.log("🔧 Pre-save middleware running...")
 
-  // Tạo slug tự động từ tên sản phẩm
-  if (this.name) {
-    this.slug = this.name
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9]/g, "-")
-      .replace(/-+/g, "-")
-  }
+    // Tạo slug tự động từ tên sản phẩm
+    if (this.name) {
+        this.slug = this.name
+            .toLowerCase()
+            .replace(/[^a-zA-Z0-9]/g, "-")
+            .replace(/-+/g, "-")
+    }
 
-  // Validate và clean variants
-  if (this.variants && Array.isArray(this.variants)) {
-    this.variants = this.variants.map((variant, index) => {
-      console.log(`🔧 Pre-save processing variant ${index}:`, variant.name)
+    // Validate và clean variants
+    if (this.variants && Array.isArray(this.variants)) {
+        this.variants = this.variants.map((variant, index) => {
+            console.log(`🔧 Pre-save processing variant ${index}:`, variant.name)
 
-      // Ensure color is always a proper object
-      if (!variant.color || typeof variant.color !== "object") {
-        console.log(`⚠️ Fixing invalid color for variant ${index}`)
-        variant.color = { code: "#000000", name: "" }
-      } else {
-        // Ensure color object has proper structure
-        if (typeof variant.color.code !== "string") {
-          variant.color.code = "#000000"
-        }
-        if (typeof variant.color.name !== "string") {
-          variant.color.name = ""
-        }
-      }
+            // Ensure color is always a proper object
+            if (!variant.color || typeof variant.color !== "object") {
+                console.log(`⚠️ Fixing invalid color for variant ${index}`)
+                variant.color = { code: "#000000", name: "" }
+            } else {
+                // Ensure color object has proper structure
+                if (typeof variant.color.code !== "string") {
+                    variant.color.code = "#000000"
+                }
+                if (typeof variant.color.name !== "string") {
+                    variant.color.name = ""
+                }
+            }
 
-      // Ensure specifications is always an object
-      if (!variant.specifications || typeof variant.specifications !== "object") {
-        console.log(`⚠️ Fixing invalid specifications for variant ${index}`)
-        variant.specifications = {}
-      }
+            // Ensure specifications is always an object
+            if (!variant.specifications || typeof variant.specifications !== "object") {
+                console.log(`⚠️ Fixing invalid specifications for variant ${index}`)
+                variant.specifications = {}
+            }
 
-      console.log(`✅ Pre-save cleaned variant ${index}:`, {
-        name: variant.name,
-        color: variant.color,
-        specifications: variant.specifications,
-      })
+            console.log(`✅ Pre-save cleaned variant ${index}:`, {
+                name: variant.name,
+                color: variant.color,
+                specifications: variant.specifications,
+            })
 
-      return variant
-    })
-  }
+            return variant
+        })
+    }
 
-  // Ensure main specifications is always an object
-  if (!this.specifications || typeof this.specifications !== "object") {
-    console.log("⚠️ Fixing invalid main specifications")
-    this.specifications = {}
-  }
+    // Ensure main specifications is always an object
+    if (!this.specifications || typeof this.specifications !== "object") {
+        console.log("⚠️ Fixing invalid main specifications")
+        this.specifications = {}
+    }
 
-  console.log("✅ Pre-save middleware completed")
-  next()
+    console.log("✅ Pre-save middleware completed")
+    next()
 })
 
 // Post-save middleware để log kết quả
 productSchema.post("save", (doc) => {
-  console.log("✅ Product saved successfully!")
-  if (doc.variants && doc.variants.length > 0) {
-    doc.variants.forEach((variant, index) => {
-      console.log(`📤 Saved variant ${index}:`, {
-        name: variant.name,
-        color: variant.color,
-        specifications: variant.specifications,
-      })
-    })
-  }
+    console.log("✅ Product saved successfully!")
+    if (doc.variants && doc.variants.length > 0) {
+        doc.variants.forEach((variant, index) => {
+            console.log(`📤 Saved variant ${index}:`, {
+                name: variant.name,
+                color: variant.color,
+                specifications: variant.specifications,
+            })
+        })
+    }
 })
 
 // Tạo compound index cho tìm kiếm nâng cao
 productSchema.index({
-  name: "text",
-  description: "text",
-  tags: "text",
+    name: "text",
+    description: "text",
+    tags: "text",
 })
 
 // Additional indexes for better performance
