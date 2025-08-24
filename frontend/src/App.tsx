@@ -33,6 +33,7 @@ import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
 import VariantDetail from "./components/admin/variants/VariantDetail";
 import { Toaster } from "react-hot-toast";
+import { NotificationProvider } from './components/client/ModernNotification';
 import Cart from './pages/client/Cart';
 import ProductListClient from './pages/client/ProductList';
 import ProductDetailClient from './pages/client/ProductDetail';
@@ -54,6 +55,8 @@ import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
 import BlogPage from './pages/admin/BlogPage';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
+import CheckoutFailed from './pages/client/CheckoutFailed';
+import CheckoutStatus from './pages/client/CheckoutStatus';
 
 // Import Profile components
 import ProfileLayout from './pages/client/profile/components/ProfileLayout';
@@ -68,10 +71,11 @@ import Notifications from './pages/client/profile/notifications';
 function App() {
   return (
     <div className="App">
-      <CartProvider>
-        <WishlistProvider>
-          <ScrollToTop />
-          <Routes>
+      <NotificationProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <ScrollToTop />
+            <Routes>
             {/* Test routes */}
             <Route path="/test-api" element={<TestAPI />} />
             <Route path="/test-login" element={<TestLogin />} />
@@ -89,8 +93,10 @@ function App() {
               <Route path="products" element={<ProductListClient />} />
               <Route path="product/:id" element={<ProductDetailClient />} />
               <Route path="cart" element={<Cart />} />
-              <Route path="checkout" element={<Checkout />} />
-              <Route path="checkout/success" element={<CheckoutSuccess />} />
+                             <Route path="checkout" element={<Checkout />} />
+               <Route path="checkout/status" element={<CheckoutStatus />} />
+               <Route path="checkout/success" element={<CheckoutSuccess />} />
+               <Route path="checkout/failed" element={<CheckoutFailed />} />
               <Route path="about" element={<About />} />  
               <Route path="contact" element={<Contact />} />
               <Route path="faq" element={<FAQ />} />
@@ -151,6 +157,7 @@ function App() {
           <Toaster />
         </WishlistProvider>
       </CartProvider>
+      </NotificationProvider>
     </div>
   );
 }

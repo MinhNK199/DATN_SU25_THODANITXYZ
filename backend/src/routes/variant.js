@@ -6,10 +6,10 @@ import {
     updateVariant,
     deleteVariant,
     getVariantStats
-} from "../controllers/variant";
-import { protect } from "../middlewares/authMiddleware";
-import { validateRequest } from "../middlewares/validateRequest";
-import { createVariantValidation, updateVariantValidation } from "../validation/variant";
+} from "../controllers/variant.js";
+import { protect } from "../middlewares/authMiddleware.js";
+import { validateRequest } from "../middlewares/validateRequest.js";
+import { createVariantValidation, updateVariantValidation } from "../validation/variant.js";
 
 const routerVariant = express.Router();
 

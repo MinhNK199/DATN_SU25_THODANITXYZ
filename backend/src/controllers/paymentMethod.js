@@ -1,4 +1,4 @@
-import PaymentMethod from "../models/PaymentMethod";
+import PaymentMethod from "../models/PaymentMethod.js";
 
 // Lấy danh sách phương thức thanh toán của user
 export const getMyPaymentMethods = async (req, res) => {

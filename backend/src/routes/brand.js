@@ -6,8 +6,8 @@ import {
     updateBrand,
     deleteBrand,
     getBrandProducts,
-} from "../controllers/brand";
-import { protect } from "../middlewares/authMiddleware";
+} from "../controllers/brand.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 
 const routerBrand = Router();

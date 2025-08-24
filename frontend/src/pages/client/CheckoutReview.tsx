@@ -1,12 +1,10 @@
 import React from "react";
-import { FaArrowLeft, FaLock } from "react-icons/fa";
+import { FaArrowLeft, FaCheck, FaTruck, FaCreditCard, FaMapMarkerAlt } from "react-icons/fa";
 
 interface Props {
   formData: any;
   cartState: any;
-  getProvinceName: () => string;
-  getDistrictName: () => string;
-  getWardName: () => string;
+  selectedAddress: any;
   isProcessing: boolean;
   setCurrentStep: (step: number) => void;
   handleSubmit: (e: React.FormEvent) => void;
@@ -17,94 +15,198 @@ interface Props {
 const CheckoutReview: React.FC<Props> = ({
   formData,
   cartState,
-  getProvinceName,
-  getDistrictName,
-  getWardName,
+  selectedAddress,
   isProcessing,
   setCurrentStep,
   handleSubmit,
   orderNumber,
   formatPrice,
-}) => (
-  <div>
-    <h2 className="text-2xl font-bold text-gray-900 mb-6">Xác nhận đơn hàng</h2>
-    <div className="bg-gray-50 rounded-lg p-6 mb-6">
-      <h3 className="font-semibold text-gray-900 mb-4">Tóm tắt đơn hàng</h3>
-      {cartState.items.length === 0 ? (
-        <div className="text-gray-500">Không có sản phẩm nào trong đơn hàng.</div>
-      ) : (
-        <div className="divide-y divide-gray-200">
-          {cartState.items.map((item: any) => {
-            const p = item.product;
-            const image = p.images && p.images.length > 0 ? p.images[0] : '/images/no-image.png';
-            const hasDiscount = p.salePrice && p.salePrice < p.price;
-            return (
-              <div key={item._id} className="flex items-center justify-between py-4">
-                <div className="flex items-center space-x-4">
-                  <img src={image} alt={p.name} className="w-16 h-16 object-cover rounded border" />
-                  <div>
-                    <div className="font-semibold text-gray-900 text-base">{p.name}</div>
-                    <div className="text-xs text-gray-500">Mã: {p._id}</div>
-                    {hasDiscount ? (
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-gray-400 line-through text-sm">{formatPrice(p.price)}</span>
-                        <span className="text-red-600 font-bold text-base">{formatPrice(p.salePrice!)}</span>
-                        <span className="text-xs text-green-600 font-semibold">-{Math.round(100 - (p.salePrice! / p.price) * 100)}%</span>
+}) => {
+  const getPaymentMethodIcon = () => {
+    switch (formData.paymentMethod) {
+      case 'cod':
+        return <FaTruck className="w-5 h-5 text-green-600" />;
+      case 'momo':
+        return <img src="/images/wallets/momo.png" alt="MoMo" className="w-5 h-5" />;
+      case 'zalopay':
+        return <img src="/images/wallets/zalopay.png" alt="ZaloPay" className="w-5 h-5" />;
+      case 'vnpay':
+        return <img src="/images/wallets/vnpay.png" alt="VNPAY" className="w-5 h-5" />;
+      default:
+        return <FaCreditCard className="w-5 h-5 text-blue-600" />;
+    }
+  };
+
+  const getPaymentMethodName = () => {
+    switch (formData.paymentMethod) {
+      case 'cod':
+        return 'Thanh toán khi nhận hàng';
+      case 'momo':
+        return 'Thanh toán qua MoMo';
+      case 'zalopay':
+        return 'Thanh toán qua ZaloPay';
+      case 'vnpay':
+        return 'Thanh toán qua VNPAY';
+      default:
+        return 'Phương thức thanh toán';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Order Details Section */}
+      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 px-6 py-5">
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <FaCheck className="w-5 h-5 mr-2" />
+            Chi tiết đơn hàng
+          </h3>
+          <p className="text-blue-100 text-sm mt-1">Xem lại thông tin chi tiết sản phẩm</p>
+        </div>
+        
+        <div className="p-6">
+          {cartState.items.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <FaCheck className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-gray-500">Không có sản phẩm nào trong đơn hàng.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-64 overflow-y-auto">
+              {cartState.items.slice(0, 3).map((item: any, index: number) => {
+                const p = item.product;
+                const image = p.images && p.images.length > 0 ? p.images[0] : '/images/no-image.png';
+                const hasDiscount = p.salePrice && p.salePrice < p.price;
+                return (
+                  <div key={item._id} className="flex items-center space-x-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
+                      <img 
+                        src={image} 
+                        alt={p.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-gray-900 mb-1 truncate">{p.name}</h4>
+                      {hasDiscount ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400 line-through text-xs">{formatPrice(p.price)}</span>
+                          <span className="text-red-600 font-bold text-sm">{formatPrice(p.salePrice!)}</span>
+                          <span className="bg-red-100 text-red-700 px-1 py-0.5 rounded text-xs font-semibold">
+                            -{Math.round(100 - (p.salePrice! / p.price) * 100)}%
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-900 font-bold text-sm">{formatPrice(p.price)}</span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold mb-1">
+                        SL: {item.quantity}
                       </div>
-                    ) : (
-                      <span className="text-gray-900 font-bold text-base">{formatPrice(p.price)}</span>
-                    )}
+                      <div className="text-sm font-bold text-gray-900">
+                        {formatPrice((p.salePrice || p.price) * item.quantity)}
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+              {cartState.items.length > 3 && (
+                <div className="text-center py-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                  <span className="text-blue-700 font-semibold text-sm">
+                    +{cartState.items.length - 3} sản phẩm khác
+                  </span>
                 </div>
-                <div className="flex flex-col items-end min-w-[120px]">
-                  <span className="text-gray-700 text-sm">Số lượng: <b>{item.quantity}</b></span>
-                  <span className="text-gray-900 font-semibold text-base mt-1">{formatPrice((p.salePrice || p.price) * item.quantity)}</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Shipping Information Section */}
+      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-6 py-5">
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <FaMapMarkerAlt className="w-5 h-5 mr-2" />
+            Thông tin giao hàng
+          </h3>
+          <p className="text-green-100 text-sm mt-1">Địa chỉ nhận hàng của bạn</p>
+        </div>
+        
+        <div className="p-6">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <FaMapMarkerAlt className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-gray-900 mb-1">
+                  {selectedAddress ? selectedAddress.fullName : formData.lastName}
+                </h4>
+                <div className="text-gray-700 text-sm space-y-1">
+                  <p>{selectedAddress ? selectedAddress.address : formData.address}</p>
+                  <p>
+                    {selectedAddress 
+                      ? `${selectedAddress.wardName || ''}, ${selectedAddress.cityName || ''}`
+                      : `${formData.ward_code}, ${formData.province_code}`
+                    }
+                  </p>
+                  <p className="font-semibold text-blue-600">
+                    📞 {selectedAddress ? selectedAddress.phone : formData.phone}
+                  </p>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          </div>
         </div>
-      )}
-    </div>
-    <div className="bg-gray-50 rounded-lg p-6 mb-6">
-      <h3 className="font-semibold text-gray-900 mb-4">Thông tin giao hàng</h3>
-      <p className="text-gray-700">
-        {formData.lastName}<br />
-        {formData.address}<br />
-        {getWardName() && `${getWardName()}, `}
-        {getDistrictName() && `${getDistrictName()}, `}
-        {getProvinceName()}<br />
-        {formData.phone}
-      </p>
-    </div>
-    <div className="flex space-x-4">
-      <button
-        type="button"
-        onClick={() => setCurrentStep(2)}
-        className="flex items-center space-x-2 bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
-      >
-        <FaArrowLeft className="w-4 h-4" />
-        <span>Quay lại</span>
-      </button>
-      <button
-        type="submit"
-        disabled={isProcessing}
-        className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isProcessing ? (
-          <div className="flex items-center justify-center">
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-            Đang xử lý...
+      </div>
+
+      {/* Payment Method Section */}
+      <div className="bg-white rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 px-6 py-5">
+          <h3 className="text-xl font-bold text-white flex items-center">
+            <FaCreditCard className="w-5 h-5 mr-2" />
+            Phương thức thanh toán
+          </h3>
+          <p className="text-purple-100 text-sm mt-1">Cách bạn sẽ thanh toán</p>
+        </div>
+        
+        <div className="p-6">
+          <div className="bg-gradient-to-r from-purple-50 to-violet-50 border-2 border-purple-200 rounded-xl p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                {getPaymentMethodIcon()}
+              </div>
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-gray-900">
+                  {getPaymentMethodName()}
+                </h4>
+                <p className="text-gray-600 text-sm">
+                  {formData.paymentMethod === 'cod' 
+                    ? 'Thanh toán bằng tiền mặt khi nhận hàng'
+                    : 'Thanh toán trực tuyến an toàn'
+                  }
+                </p>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="flex items-center justify-center space-x-2">
-            <FaLock className="w-4 h-4" />
-            <span>Đặt hàng an toàn</span>
-          </div>
-        )}
-      </button>
+        </div>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex pt-4">
+        <button
+          type="button"
+          onClick={() => setCurrentStep(2)}
+          className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold transition-all duration-300"
+        >
+          <FaArrowLeft className="w-4 h-4" />
+          <span>Quay lại</span>
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default CheckoutReview;

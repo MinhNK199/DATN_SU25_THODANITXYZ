@@ -56,11 +56,11 @@ import {
     createVoucher,
     checkVoucher,
     updateVoucherUsage
-} from "../controllers/product";
-import { protect } from "../middlewares/authMiddleware";
-import { validateRequest } from "../middlewares/validateRequest";
-import { createProductValidation, updateProductValidation } from "../validation/product";
-import upload from "../middlewares/updateMiddleware";
+} from "../controllers/product.js";
+import { protect } from "../middlewares/authMiddleware.js";
+import { validateRequest } from "../middlewares/validateRequest.js";
+import { createProductValidation, updateProductValidation } from "../validation/product.js";
+import upload from "../middlewares/updateMiddleware.js";
 
 const routerProduct = express.Router();
 

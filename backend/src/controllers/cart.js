@@ -1,7 +1,7 @@
-import Cart from "../models/Cart";
-import ProductReservation from "../models/ProductReservation";
-import Coupon from "../models/Coupon";
-import Product from "../models/Product";
+import Cart from "../models/Cart.js";
+import ProductReservation from "../models/ProductReservation.js";
+import Coupon from "../models/Coupon.js";
+import Product from "../models/Product.js";
 
 // Helper function để lấy số lượng có sẵn thực tế
 const getAvailableStock = async (productId) => {

@@ -52,14 +52,12 @@ export interface Address {
   phone: string;
   address: string;
   city: string;
-  district: string;
   ward: string;
-  postalCode: string;
+  postalCode?: string;
   isDefault: boolean;
-  type: string;
+  type: 'home' | 'work' | 'other';
   note?: string;
   cityName?: string;
-  districtName?: string;
   wardName?: string;
   createdAt: string;
   updatedAt: string;

@@ -1,15 +1,15 @@
 import express from "express";
 import passport from "passport";
 import jwt from "jsonwebtoken";
-import { validateRequestJoi } from "../middlewares/validateRequest";
-import { loginSchema, registerSchema } from "../validation/user";
-import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole, dangKyAdmin } from "../controllers/auth";
-import { checkAdmin, protect } from "../middlewares/authMiddleware";
-import { getActivityLogs, getMyActivityLogs } from "../utils/activityLog";
-import { verifyEmail } from "../controllers/auth";
-import { googleLogin } from "../controllers/auth";
-import { changePassword } from "../controllers/auth";
-import { changePasswordSchema } from "../validation/user";
+import { validateRequestJoi } from "../middlewares/validateRequest.js";
+import { loginSchema, registerSchema } from "../validation/user.js";
+import { dangKy, dangNhap, getAllUsers, getCurrentUser, getUserById, toggleUserStatus, updateUser, updateUserRole, dangKyAdmin } from "../controllers/auth.js";
+import { checkAdmin, protect } from "../middlewares/authMiddleware.js";
+import { getActivityLogs, getMyActivityLogs } from "../utils/activityLog.js";
+import { verifyEmail } from "../controllers/auth.js";
+import { googleLogin } from "../controllers/auth.js";
+import { changePassword } from "../controllers/auth.js";
+import { changePasswordSchema } from "../validation/user.js";
 
 const routerAuth = express.Router();
 routerAuth.post("/register", validateRequestJoi(registerSchema), dangKy);

@@ -1,5 +1,5 @@
-import Brand from "../models/Brand";
-import Product from "../models/Product";
+import Brand from "../models/Brand.js";
+import Product from "../models/Product.js";
 
 // Lấy tất cả thương hiệu
 export const getBrands = async (req, res) => {
