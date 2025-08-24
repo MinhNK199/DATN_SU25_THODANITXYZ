@@ -8,6 +8,7 @@ import "./config/passport.js";
 import router from "./routes/index.js";
 import connectDB from "./config/database.js";
 import { setupCleanupCron } from "./utils/cleanupJob.js";
+import { checkAndRefreshToken } from "./utils/tokenRefresh.js";
 
 const app = express();
 connectDB();
@@ -26,6 +27,10 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+// Token refresh middleware
+app.use(checkAndRefreshToken);
+
 app.use(passport.initialize());
 app.use("/api", router);
 

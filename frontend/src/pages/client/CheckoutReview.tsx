@@ -1,27 +1,31 @@
 import React from "react";
 import { FaArrowLeft, FaCheck, FaTruck, FaCreditCard, FaMapMarkerAlt } from "react-icons/fa";
+import { useCart } from "../../contexts/CartContext";
 
 interface Props {
-  formData: any;
-  cartState: any;
   selectedAddress: any;
-  isProcessing: boolean;
-  setCurrentStep: (step: number) => void;
-  handleSubmit: (e: React.FormEvent) => void;
-  orderNumber: string;
-  formatPrice: (price: number) => string;
+  formData: any;
+  cardInfo: { number: string; name: string; expiry: string; cvv: string };
+  walletInfo: { type: string; phone: string };
+  bankTransferInfo: { transactionId: string };
 }
 
 const CheckoutReview: React.FC<Props> = ({
-  formData,
-  cartState,
   selectedAddress,
-  isProcessing,
-  setCurrentStep,
-  handleSubmit,
-  orderNumber,
-  formatPrice,
+  formData,
+  cardInfo,
+  walletInfo,
+  bankTransferInfo,
 }) => {
+  const { state: cartState } = useCart();
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(price);
+  };
+
   const getPaymentMethodIcon = () => {
     switch (formData.paymentMethod) {
       case 'cod':
@@ -198,7 +202,10 @@ const CheckoutReview: React.FC<Props> = ({
       <div className="flex pt-4">
         <button
           type="button"
-          onClick={() => setCurrentStep(2)}
+          onClick={() => {
+            // Navigation is now handled by parent component
+            // This button can be removed or used for other purposes
+          }}
           className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold transition-all duration-300"
         >
           <FaArrowLeft className="w-4 h-4" />

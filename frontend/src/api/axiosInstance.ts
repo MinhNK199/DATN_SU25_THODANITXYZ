@@ -21,12 +21,30 @@ axiosInstance.interceptors.request.use(
 
 // Interceptor để xử lý response
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Kiểm tra xem có token mới không
+    const newToken = response.headers['x-new-token'];
+    if (newToken) {
+      localStorage.setItem('token', newToken);
+      console.log('🔄 Token đã được refresh tự động');
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const errorType = error.response?.data?.error;
+      
+      if (errorType === 'TOKEN_EXPIRED') {
+        console.log('❌ Token đã hết hạn, chuyển hướng đến trang đăng nhập');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      } else {
+        console.log('❌ Lỗi xác thực khác:', errorType);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

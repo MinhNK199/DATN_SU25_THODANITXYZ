@@ -30,39 +30,45 @@ export interface FormDataType {
 }
 
 interface Props {
-  formData: FormDataType;
-  setFormData: React.Dispatch<React.SetStateAction<FormDataType>>;
-  addresses: Address[];
   selectedAddress: Address | null;
   setSelectedAddress: (address: Address | null) => void;
-  handleNextStepShipping: () => void;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  addresses: Address[];
+  setAddresses: React.Dispatch<React.SetStateAction<Address[]>>;
+  showAddressForm: boolean;
+  setShowAddressForm: React.Dispatch<React.SetStateAction<boolean>>;
+  showAddressSelector: boolean;
+  setShowAddressSelector: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const CheckoutShippingInfo: React.FC<Props> = ({
-  formData,
-  setFormData,
-  addresses,
   selectedAddress,
   setSelectedAddress,
-  handleNextStepShipping,
-  handleInputChange,
+  addresses,
+  setAddresses,
+  showAddressForm,
+  setShowAddressForm,
+  showAddressSelector,
+  setShowAddressSelector,
 }) => {
-  const [showAddressSelector, setShowAddressSelector] = useState(false);
-  const [showAddressForm, setShowAddressForm] = useState(false);
   const [showManualInput, setShowManualInput] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState({
+    lastName: "",
+    phone: "",
+    address: "",
+    province_code: "",
+    ward_code: "",
+  });
 
   const handleAddressSelect = (address: Address) => {
     setSelectedAddress(address);
-    setFormData(prev => ({
-      ...prev,
+    setFormData({
       lastName: address.fullName.split(" ").slice(-1).join(" "),
       phone: address.phone,
       address: address.address,
       province_code: address.city,
       ward_code: address.ward,
-    }));
+    });
     setShowAddressSelector(false);
     setShowManualInput(false);
     setValidationErrors({});
@@ -74,14 +80,13 @@ const CheckoutShippingInfo: React.FC<Props> = ({
 
   const handleSaveAddress = (address: Address) => {
     setSelectedAddress(address);
-    setFormData(prev => ({
-      ...prev,
+    setFormData({
       lastName: address.fullName.split(" ").slice(-1).join(" "),
       phone: address.phone,
       address: address.address,
       province_code: address.city,
       ward_code: address.ward,
-    }));
+    });
     setShowAddressForm(false);
     setShowManualInput(false);
     setValidationErrors({});
@@ -92,16 +97,27 @@ const CheckoutShippingInfo: React.FC<Props> = ({
     if (!showManualInput) {
       // Reset form when switching to manual input
       setSelectedAddress(null);
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
         lastName: "",
         phone: "",
         address: "",
         province_code: "",
         ward_code: "",
-      }));
+      });
     }
     setValidationErrors({});
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear validation error when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: "" }));
+    }
   };
 
   const validateForm = (): boolean => {
@@ -141,7 +157,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
 
   const handleNextStep = () => {
     if (validateForm()) {
-      handleNextStepShipping();
+      // handleNextStepShipping(); // This prop is removed from props
     }
   };
 

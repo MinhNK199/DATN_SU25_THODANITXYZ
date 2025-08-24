@@ -34,7 +34,25 @@ export const protect = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('Token không hợp lệ:', error);
-        res.status(401).json({ message: "Token không hợp lệ" });
+        
+        // Xử lý riêng cho từng loại lỗi
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ 
+                message: "Token đã hết hạn, vui lòng đăng nhập lại",
+                error: "TOKEN_EXPIRED",
+                expiredAt: error.expiredAt
+            });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ 
+                message: "Token không hợp lệ",
+                error: "INVALID_TOKEN"
+            });
+        } else {
+            return res.status(401).json({ 
+                message: "Token không hợp lệ",
+                error: "TOKEN_ERROR"
+            });
+        }
     }
 };
 

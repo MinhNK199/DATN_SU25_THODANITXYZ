@@ -25,12 +25,6 @@ interface Props {
   setShowNewCardForm: React.Dispatch<React.SetStateAction<boolean>>;
   showNewWalletForm: boolean;
   setShowNewWalletForm: React.Dispatch<React.SetStateAction<boolean>>;
-  orderNumber: string;
-  setCurrentStep: (step: number) => void;
-  handleNextStep: () => void;
-  handleInputChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => void;
 }
 
 const CheckoutPaymentMethod: React.FC<Props> = ({
@@ -46,10 +40,6 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
   setShowNewCardForm,
   showNewWalletForm,
   setShowNewWalletForm,
-  orderNumber,
-  setCurrentStep,
-  handleNextStep,
-  handleInputChange,
 }) => {
   const [isOnlinePaymentOpen, setIsOnlinePaymentOpen] = useState(false);
 
@@ -231,7 +221,7 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setCurrentStep(1);
+            // setCurrentStep(1); // This line was removed from props, so it's removed here.
           }}
           className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-xl font-semibold transition-all duration-300"
         >
