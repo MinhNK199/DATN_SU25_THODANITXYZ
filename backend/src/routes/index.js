@@ -1,26 +1,26 @@
 import { Router } from "express";
-import routerAuth from "./auth";
-import routerAddress from "./address";
-import routerBrand from "./brand";
-import routerCart from "./cart";
-import routerCategory from "./category";
-import routerCoupon from "./coupon";
-import routerNotifi from "./notification";
-import routerOrder from "./order";
-import routerProduct from "./product";
-import routerBill from "./bill";
-import routerBanner from "./banner"
-import routerRating from "./rating";
-import routerVariant from "./variant";
-import routerRecommendation from "./recommendation";
-import paymentMethodRouter from "./paymentMethod";
+import routerAuth from "./auth.js";
+import routerAddress from "./address.js";
+import routerBrand from "./brand.js";
+import routerCart from "./cart.js";
+import routerCategory from "./category.js";
+import routerCoupon from "./coupon.js";
+import routerNotifi from "./notification.js";
+import routerOrder from "./order.js";
+import routerProduct from "./product.js";
+import routerBill from "./bill.js";
+import routerBanner from "./banner.js"
+import routerRating from "./rating.js";
+import routerVariant from "./variant.js";
+import routerRecommendation from "./recommendation.js";
+import paymentMethodRouter from "./paymentMethod.js";
 import paymentMomoRouter from './paymentMomo.js';
 import paymentVnpayRouter from './paymentVnpay.js';
-import { runCleanupNow } from "../utils/cleanupJob";
-import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig';
-import { protect, checkAdmin } from '../middlewares/authMiddleware';
+import { runCleanupNow } from "../utils/cleanupJob.js";
+import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig.js';
+import { protect, checkAdmin } from '../middlewares/authMiddleware.js';
 import routerBlog from "./blog.js";
-const provinceController = require('../controllers/provinceController');
+import { getProvinces, getWards, getDistricts } from '../controllers/provinceController.js';
 
 const router = Router();
 router.use("/auth", routerAuth);
@@ -41,9 +41,9 @@ router.use("/payment-methods", paymentMethodRouter);
 router.use('/payment/momo', paymentMomoRouter);
 router.use('/payment/vnpay', paymentVnpayRouter);
 router.use("/blogs", routerBlog);
-router.get('/provinces', provinceController.getProvinces);
-router.get('/wards', provinceController.getWards);
-router.get('/districts', provinceController.getDistricts);
+router.get('/provinces', getProvinces);
+router.get('/wards', getWards);
+router.get('/districts', getDistricts);
 router.get('/tax', getTaxConfig);
 router.put('/tax', protect, checkAdmin(['Superadmin']), updateTaxConfig);
 

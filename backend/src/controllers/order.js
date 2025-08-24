@@ -1,7 +1,7 @@
-import Order from "../models/Order";
-import Notification from "../models/Notification";
-import { sendMail } from "../utils/mailer";
-import User from "../models/User";
+import Order from "../models/Order.js";
+import Notification from "../models/Notification.js";
+import { sendMail } from "../utils/mailer.js";
+import User from "../models/User.js";
 
 const paidMethods = [
   "credit-card",
@@ -111,7 +111,7 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
       throw new Error("Không tìm thấy đơn hàng");
     }
 
-    console.log(`📦 Order before update: status=${order.status}, isPaid=${order.isPaid}`);
+    console.log(`📦 Order before update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
 
     // ✅ CẬP NHẬT TRẠNG THÁI THÀNH CÔNG
     order.status = 'pending';
@@ -131,6 +131,7 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
     await order.save();
     console.log(`✅ Order after update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
     console.log(`✅ Đơn hàng giờ sẽ hiển thị trong profile và admin panel`);
+    console.log(`✅ Payment method: ${order.paymentMethod}, Total: ${order.totalPrice}`);
 
     // ✅ XÓA SẢN PHẨM KHỎI GIỎ HÀNG KHI THANH TOÁN THÀNH CÔNG
     try {
@@ -276,11 +277,11 @@ export const getMyOrders = async (req, res) => {
   try {
     console.log(`🔍 getMyOrders called for user: ${req.user._id}`);
     
-    // ✅ LOGIC ĐơN GIẢN: Hiển thị tất cả đơn hàng TRỪ draft và payment_failed
+    // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng TRỪ payment_failed (bao gồm cả draft đã thanh toán)
     const orders = await Order.find({
-  user: req.user._id,
-  status: { $ne: 'draft' } // Loại trừ draft
-}).sort({ createdAt: -1 });
+      user: req.user._id,
+      status: { $ne: 'payment_failed' } // Chỉ loại trừ payment_failed
+    }).sort({ createdAt: -1 });
 
     console.log(`📋 Found ${orders.length} orders for user ${req.user._id}`);
     console.log(`📊 Order details:`, orders.map(o => ({
@@ -306,10 +307,10 @@ export const getOrders = async (req, res) => {
     const pageSize = 10;
     const page = Number(req.query.page) || 1;
 
-    // ✅ LOGIC ĐƠN GIẢN: Hiển thị tất cả đơn hàng TRỪ draft và payment_failed
+    // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng TRỪ payment_failed (bao gồm cả draft đã thanh toán)
     let filter = {
       status: { 
-        $nin: ['draft', 'payment_failed'] // Loại trừ draft và payment_failed
+        $ne: 'payment_failed' // Chỉ loại trừ payment_failed
       }
     };
 
@@ -337,20 +338,22 @@ export const getOrders = async (req, res) => {
     orders = orders.map((order) => {
       const orderObj = order.toObject();
 
-      // Xử lý hiển thị payment status
-      if (["zalopay", "momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
-        if (order.isPaid && order.paymentStatus === "paid") {
-          orderObj.displayPaymentStatus = `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
-        } else if (order.paymentStatus === "failed") {
-          orderObj.displayPaymentStatus = "Thanh toán thất bại";
-        } else {
-          orderObj.displayPaymentStatus = "Chưa thanh toán";
-        }
-      } else if (order.paymentMethod === "COD") {
-        orderObj.displayPaymentStatus = order.isPaid
-          ? "Đã thanh toán COD"
-          : "Chưa thanh toán COD";
-      }
+             // Xử lý hiển thị payment status
+       if (["zalopay", "momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
+         if (order.isPaid && order.paymentStatus === "paid") {
+           orderObj.displayPaymentStatus = `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
+         } else if (order.paymentStatus === "failed") {
+           orderObj.displayPaymentStatus = "Thanh toán thất bại";
+         } else if (order.paymentStatus === "awaiting_payment" || order.paymentStatus === "pending") {
+           orderObj.displayPaymentStatus = "Chưa thanh toán";
+         } else {
+           orderObj.displayPaymentStatus = "Chưa thanh toán";
+         }
+       } else if (order.paymentMethod === "COD") {
+         orderObj.displayPaymentStatus = order.isPaid
+           ? "Đã thanh toán COD"
+           : "Chưa thanh toán COD";
+       }
 
       return orderObj;
     });

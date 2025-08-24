@@ -109,6 +109,7 @@ const orderSchema = new mongoose.Schema(
       default: 0,
     },
     zalopayTransId: { type: String },
+    vnpayTransId: { type: String },
     status: {
       type: String,
       enum: [

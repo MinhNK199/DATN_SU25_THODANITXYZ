@@ -12,8 +12,8 @@ import {
     restoreCategory,
     getDeletedCategories,
     getDeletedCategoriesCount
-} from "../controllers/category";
-import { protect } from "../middlewares/authMiddleware";
+} from "../controllers/category.js";
+import { protect } from "../middlewares/authMiddleware.js";
 import { validateCreateCategory, validateUpdateCategory } from "../validation/category.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 

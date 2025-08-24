@@ -7,8 +7,8 @@ import {
     markAllNotificationsAsRead,
     deleteNotification,
     getUnreadNotificationCount
-} from "../controllers/notification";
-import { protect } from "../middlewares/authMiddleware";
+} from "../controllers/notification.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 const routerNotifi = express.Router();
 

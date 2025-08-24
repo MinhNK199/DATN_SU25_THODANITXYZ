@@ -1,4 +1,4 @@
-import TaxConfig from '../models/TaxConfig';
+import TaxConfig from '../models/TaxConfig.js';
 
 // Lấy giá trị thuế hiện tại
 export const getTaxConfig = async (req, res) => {

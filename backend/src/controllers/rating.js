@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import Product from '../models/Product';
-import Order from '../models/Order';
-import Rating from '../models/Rating';
-import { containsBadWords, filterBadWords } from '../utils/BadWords';
+import Product from '../models/Product.js';
+import Order from '../models/Order.js';
+import Rating from '../models/Rating.js';
+import { containsBadWords, filterBadWords } from '../utils/BadWords.js';
 import Sentiment from 'sentiment';
 
 // Lấy danh sách đánh giá

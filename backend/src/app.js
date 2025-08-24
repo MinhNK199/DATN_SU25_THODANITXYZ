@@ -5,9 +5,9 @@ import express from "express";
 import cors from "cors";
 import passport from "passport";
 import "./config/passport.js";
-import router from "./routes";
-import connectDB from "./config/database";
-import { setupCleanupCron } from "./utils/cleanupJob";
+import router from "./routes/index.js";
+import connectDB from "./config/database.js";
+import { setupCleanupCron } from "./utils/cleanupJob.js";
 
 const app = express();
 connectDB();

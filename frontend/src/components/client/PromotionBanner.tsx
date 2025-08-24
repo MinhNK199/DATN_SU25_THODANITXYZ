@@ -38,7 +38,20 @@ const PromotionBanner: React.FC = () => {
     seconds: 30
   });
 
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Kiểm tra xem đã hiển thị banner chưa
+  useEffect(() => {
+    const hasShownBanner = localStorage.getItem('promotionBannerShown');
+    const token = localStorage.getItem('token');
+    
+    // Chỉ hiển thị nếu đã đăng nhập và chưa hiển thị banner
+    if (token && !hasShownBanner) {
+      setIsVisible(true);
+      // Đánh dấu đã hiển thị banner
+      localStorage.setItem('promotionBannerShown', 'true');
+    }
+  }, []);
 
   // Countdown timer - commented out for UI only
   // useEffect(() => {

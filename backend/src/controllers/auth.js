@@ -1,9 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "../models/User";
-import { logActivity } from "../utils/activityLog";
+import User from "../models/User.js";
+import { logActivity } from "../utils/activityLog.js";
 import crypto from "crypto";
-import { sendMail } from "../utils/mailer";
+import { sendMail } from "../utils/mailer.js";
 import axios from "axios";
 import { OAuth2Client } from "google-auth-library";
 

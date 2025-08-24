@@ -1,10 +1,14 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Đọc file JSON hành chính một lần khi khởi động
 const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../note/Danh-sách-cấp-tỉnh-kèm-theo-quận-huyện_-phường-xã-___09_07_2025.json')));
 
-exports.getProvinces = (req, res) => {
+export const getProvinces = (req, res) => {
   // Lấy tất cả các tỉnh/thành phố duy nhất theo mã
   const provinceMap = new Map();
   data.forEach(item => {
@@ -16,7 +20,7 @@ exports.getProvinces = (req, res) => {
   res.json(provinces);
 };
 
-exports.getWards = (req, res) => {
+export const getWards = (req, res) => {
   const provinceCode = Number(req.query.provinceCode);
   const districtCode = req.query.districtCode ? Number(req.query.districtCode) : null;
   if (!provinceCode) return res.status(400).json({ error: 'provinceCode is required' });
@@ -33,7 +37,7 @@ exports.getWards = (req, res) => {
   res.json(wards);
 };
 
-exports.getDistricts = (req, res) => {
+export const getDistricts = (req, res) => {
   const provinceCode = Number(req.query.provinceCode);
   if (!provinceCode) return res.status(400).json({ error: 'provinceCode is required' });
   // Lấy danh sách quận/huyện không trùng theo mã tỉnh

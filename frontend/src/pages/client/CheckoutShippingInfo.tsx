@@ -1,13 +1,30 @@
-import React from "react";
-import Select from "react-select";
+import React, { useState } from "react";
+import { FaMapMarkerAlt, FaPlus, FaEdit } from "react-icons/fa";
 import { Address } from "../../services/userApi";
+import AddressSelector from "../../components/client/AddressSelector";
+import AddressForm from "../../components/client/AddressForm";
+
+// Local interface for form data
+interface FormAddress {
+  _id?: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  cityName?: string;
+  ward: string;
+  wardName?: string;
+  postalCode?: string;
+  isDefault: boolean;
+  type: 'home' | 'work' | 'other';
+  note?: string;
+}
 
 export interface FormDataType {
   lastName: string;
   phone: string;
   address: string;
   province_code: string;
-  district_code: string;
   ward_code: string;
   paymentMethod: string;
 }
@@ -16,16 +33,9 @@ interface Props {
   formData: FormDataType;
   setFormData: React.Dispatch<React.SetStateAction<FormDataType>>;
   addresses: Address[];
+  selectedAddress: Address | null;
+  setSelectedAddress: (address: Address | null) => void;
   handleNextStepShipping: () => void;
-  selectedAddressId: string;
-  setSelectedAddressId: (id: string) => void;
-  provinces: any[];
-  districts: any[];
-  wards: any[];
-  districtLoading: boolean;
-  handleSelectAddress: (id: string) => void;
-  fetchDistrictsByProvinceCode: (code: string) => void;
-  setCurrentStep: (step: number) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
 }
 
@@ -33,164 +43,426 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   formData,
   setFormData,
   addresses,
+  selectedAddress,
+  setSelectedAddress,
   handleNextStepShipping,
-  selectedAddressId,
-  setSelectedAddressId,
-  provinces,
-  districts,
-  wards,
-  districtLoading,
-  handleSelectAddress,
-  fetchDistrictsByProvinceCode,
-  setCurrentStep,
   handleInputChange,
-}) => (
-  <div>
-    <h2 className="text-2xl font-bold text-gray-900 mb-6">Thông tin giao hàng</h2>
-    {addresses.length > 0 && (
-      <div className="mb-4">
-        <div className="font-semibold mb-2">Chọn địa chỉ đã lưu:</div>
-        <div className="space-y-2">
-          {addresses.map(addr => (
-            <label key={addr._id} className="flex items-center cursor-pointer">
-              <input
-                type="radio"
-                name="address-select"
-                value={addr._id}
-                checked={selectedAddressId === addr._id}
-                onChange={() => handleSelectAddress(addr._id)}
-                className="mr-2"
-              />
-              <span>
-                <span className="font-medium">{addr.fullName}</span> - {addr.phone} <br />
-                <span className="text-gray-500 text-sm">
-                  {addr.address}, {addr.wardName || addr.ward}, {addr.districtName || addr.district}, {addr.cityName || addr.city}
-                </span>
-                {addr.isDefault && (
-                  <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-                    Mặc định
-                  </span>
-                )}
-              </span>
-            </label>
-          ))}
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="address-select"
-              value="new"
-              checked={selectedAddressId === 'new'}
-              onChange={() => handleSelectAddress('new')}
-              className="mr-2"
-            />
-            <span className="font-medium text-blue-600">Địa chỉ mới</span>
-          </label>
+}) => {
+  const [showAddressSelector, setShowAddressSelector] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  const handleAddressSelect = (address: Address) => {
+    setSelectedAddress(address);
+    setFormData(prev => ({
+      ...prev,
+      lastName: address.fullName.split(" ").slice(-1).join(" "),
+      phone: address.phone,
+      address: address.address,
+      province_code: address.city,
+      ward_code: address.ward,
+    }));
+    setShowAddressSelector(false);
+    setShowManualInput(false);
+    setValidationErrors({});
+  };
+
+  const handleAddNewAddress = () => {
+    setShowAddressForm(true);
+  };
+
+  const handleSaveAddress = (address: Address) => {
+    setSelectedAddress(address);
+    setFormData(prev => ({
+      ...prev,
+      lastName: address.fullName.split(" ").slice(-1).join(" "),
+      phone: address.phone,
+      address: address.address,
+      province_code: address.city,
+      ward_code: address.ward,
+    }));
+    setShowAddressForm(false);
+    setShowManualInput(false);
+    setValidationErrors({});
+  };
+
+  const handleManualInputToggle = () => {
+    setShowManualInput(!showManualInput);
+    if (!showManualInput) {
+      // Reset form when switching to manual input
+      setSelectedAddress(null);
+      setFormData(prev => ({
+        ...prev,
+        lastName: "",
+        phone: "",
+        address: "",
+        province_code: "",
+        ward_code: "",
+      }));
+    }
+    setValidationErrors({});
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    // Nếu chọn địa chỉ từ danh sách
+    if (selectedAddress && !showManualInput) {
+      // Không cần validate vì đã có địa chỉ đầy đủ
+    } else {
+      // Validate cho manual input
+      if (!formData.lastName.trim()) {
+        errors.lastName = "Vui lòng nhập họ và tên";
+      }
+
+      if (!formData.phone.trim()) {
+        errors.phone = "Vui lòng nhập số điện thoại";
+      } else if (!/^[0-9]{10,11}$/.test(formData.phone.replace(/\s/g, ''))) {
+        errors.phone = "Số điện thoại không hợp lệ (10-11 số)";
+      }
+
+      if (!formData.address.trim()) {
+        errors.address = "Vui lòng nhập địa chỉ chi tiết";
+      }
+
+      if (!formData.province_code) {
+        errors.province_code = "Vui lòng chọn tỉnh/thành phố";
+      }
+
+      if (!formData.ward_code) {
+        errors.ward_code = "Vui lòng chọn phường/xã";
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNextStep = () => {
+    if (validateForm()) {
+      handleNextStepShipping();
+    }
+  };
+
+  const getProvinceName = (code: string) => {
+    // Tìm tên tỉnh từ selectedAddress hoặc từ API
+    if (selectedAddress && selectedAddress.cityName) {
+      return selectedAddress.cityName;
+    }
+    return code;
+  };
+
+  const getWardName = (code: string) => {
+    // Tìm tên phường/xã từ selectedAddress hoặc từ API
+    if (selectedAddress && selectedAddress.wardName) {
+      return selectedAddress.wardName;
+    }
+    return code;
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Address Selection */}
+      <div>
+        <div className="flex items-center justify-between mb-8">
+          <h4 className="text-2xl font-bold text-gray-900 flex items-center">
+            <span className="mr-4 text-3xl">📍</span>
+            Địa chỉ giao hàng
+          </h4>
+          <div className="flex items-center space-x-6">
+            <button
+              type="button"
+              onClick={() => setShowAddressSelector(true)}
+              className={`inline-flex items-center px-6 py-3 rounded-2xl font-semibold text-base transition-all duration-300 shadow-lg hover:shadow-xl ${
+                selectedAddress && !showManualInput 
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700' 
+                  : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300'
+              }`}
+            >
+              <FaPlus className="mr-3 text-lg" />
+              {selectedAddress && !showManualInput ? 'Thay đổi địa chỉ' : 'Chọn địa chỉ có sẵn'}
+            </button>
+            <div className="w-px h-8 bg-gray-300"></div>
+            <button
+              type="button"
+              onClick={handleManualInputToggle}
+              className={`inline-flex items-center px-6 py-3 rounded-2xl font-semibold text-base transition-all duration-300 shadow-lg hover:shadow-xl ${
+                showManualInput 
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700' 
+                  : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300'
+              }`}
+            >
+              <FaEdit className="mr-3 text-lg" />
+              {showManualInput ? 'Đang nhập thủ công' : 'Nhập địa chỉ mới'}
+            </button>
+          </div>
         </div>
+
+        {selectedAddress && !showManualInput ? (
+          <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 rounded-3xl p-8 shadow-lg">
+            <div className="flex items-start space-x-6">
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center shadow-lg">
+                  <FaMapMarkerAlt className="text-green-600 text-2xl" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center space-x-4 mb-3">
+                  <span className="text-2xl font-bold text-gray-900">{selectedAddress.fullName}</span>
+                  <span className="text-gray-400 text-xl">•</span>
+                  <span className="text-gray-600 font-semibold text-lg">{selectedAddress.phone}</span>
+                  {selectedAddress.isDefault && (
+                    <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-200 shadow-md">
+                      ⭐ Mặc định
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-700 text-lg mb-3 font-medium">{selectedAddress.address}</p>
+                <div className="flex items-center space-x-3 text-base text-gray-600">
+                  <span className="font-semibold">{selectedAddress.wardName || selectedAddress.ward}</span>
+                  <span className="text-gray-400">•</span>
+                  <span className="font-semibold">{selectedAddress.cityName || selectedAddress.city}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : showManualInput ? (
+          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border-2 border-blue-200 rounded-3xl p-8 shadow-lg">
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center shadow-lg">
+                <FaEdit className="text-blue-600 text-xl" />
+              </div>
+              <div>
+                <h5 className="text-xl font-bold text-blue-800">Đang nhập địa chỉ thủ công</h5>
+                <p className="text-base text-blue-600">Vui lòng điền đầy đủ thông tin bên dưới</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-16 border-2 border-dashed border-gray-300 rounded-3xl bg-gradient-to-br from-gray-50 to-gray-100">
+            <div className="mb-8">
+              <div className="w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <FaMapMarkerAlt className="text-gray-400 text-4xl" />
+              </div>
+              <h5 className="text-2xl font-bold text-gray-700 mb-3">Chưa có địa chỉ nào được chọn</h5>
+              <p className="text-gray-500 text-lg">Vui lòng chọn địa chỉ có sẵn hoặc nhập địa chỉ mới</p>
+            </div>
+            <div className="flex items-center justify-center space-x-6">
+              <button
+                type="button"
+                onClick={() => setShowAddressSelector(true)}
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-lg"
+              >
+                <FaPlus className="mr-3 text-xl" />
+                Chọn địa chỉ có sẵn
+              </button>
+              <span className="text-gray-400 font-bold text-lg">hoặc</span>
+              <button
+                type="button"
+                onClick={handleManualInputToggle}
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-gray-600 via-gray-700 to-gray-800 text-white rounded-2xl hover:from-gray-700 hover:via-gray-800 hover:to-gray-900 transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-lg"
+              >
+                <FaEdit className="mr-3 text-xl" />
+                Nhập địa chỉ mới
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    )}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Họ và tên *</label>
-        <input
-          type="text"
-          name="fullName"
-          value={formData.lastName}
-          onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-          required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Số điện thoại *</label>
-        <input
-          type="tel"
-          name="phone"
-          value={formData.phone}
-          onChange={handleInputChange}
-          required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ (số nhà, tên đường...)</label>
-        <input
-          type="text"
-          name="address"
-          value={formData.address}
-          onChange={handleInputChange}
-          required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Tỉnh/Thành phố</label>
-        <Select
-          options={provinces.map((p) => ({ value: String(p.code), label: p.name }))}
-          value={
-            provinces.find((p) => String(p.code) === formData.province_code)
-              ? {
-                  value: formData.province_code,
-                  label:
-                    provinces.find((p) => String(p.code) === formData.province_code)?.name ?? ''
-                }
-              : null
-          }
-          onChange={option =>
-            setFormData(prev => ({
-              ...prev,
-              province_code: option?.value || '',
-              district_code: '',
-              ward_code: ''
-            }))
-          }
-          placeholder="Chọn tỉnh/thành phố..."
-          isClearable
-          classNamePrefix="react-select"
-          noOptionsMessage={() => "Không tìm thấy"}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Quận/Huyện</label>
-        <Select
-          options={districts.map((d) => ({ value: String(d.code), label: d.name }))}
-          isLoading={districtLoading}
-          value={districts.find((d) => String(d.code) === formData.district_code)
-            ? { value: formData.district_code, label: districts.find((d) => String(d.code) === formData.district_code)?.name ?? '' }
-            : null}
-          onChange={option => setFormData(prev => ({ ...prev, district_code: option?.value || '' }))}
-          placeholder="Chọn quận/huyện..."
-          isClearable
-          isDisabled={!formData.province_code}
-          classNamePrefix="react-select"
-          noOptionsMessage={() => formData.province_code ? "Không tìm thấy" : "Chọn tỉnh/thành phố trước"}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Xã/Phường/Thị trấn</label>
-        <Select
-          options={wards.map((w) => ({ value: String(w.code), label: w.name }))}
-          value={wards.find((w) => String(w.code) === formData.ward_code)
-            ? { value: formData.ward_code, label: wards.find((w) => String(w.code) === formData.ward_code)?.name ?? '' }
-            : null}
-          onChange={option => setFormData(prev => ({ ...prev, ward_code: option?.value || '' }))}
-          placeholder="Chọn xã/phường/thị trấn..."
-          isClearable
-          isDisabled={!formData.district_code}
-          classNamePrefix="react-select"
-          noOptionsMessage={() => formData.district_code ? "Không tìm thấy" : "Chọn quận/huyện trước"}
-        />
-      </div>
+
+      {/* Manual Input Fields */}
+      {showManualInput && (
+        <div className="bg-white rounded-3xl border-2 border-gray-200 p-8 shadow-xl">
+          <div className="flex items-center space-x-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center shadow-lg">
+              <span className="text-blue-600 text-2xl">✏️</span>
+            </div>
+            <div>
+              <h4 className="text-2xl font-bold text-gray-900">Thông tin giao hàng</h4>
+              <p className="text-lg text-gray-600">Điền đầy đủ thông tin để đảm bảo giao hàng chính xác</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label className="block text-lg font-bold text-gray-700 mb-4">
+                Họ và tên <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
+                  validationErrors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                placeholder="Nhập họ và tên đầy đủ"
+              />
+              {validationErrors.lastName && (
+                <p className="mt-3 text-base text-red-600 flex items-center">
+                  <span className="mr-2 text-lg">⚠️</span>
+                  {validationErrors.lastName}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-lg font-bold text-gray-700 mb-4">
+                Số điện thoại <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
+                  validationErrors.phone ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                placeholder="VD: 0123456789"
+              />
+              {validationErrors.phone && (
+                <p className="mt-3 text-base text-red-600 flex items-center">
+                  <span className="mr-2 text-lg">⚠️</span>
+                  {validationErrors.phone}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <label className="block text-lg font-bold text-gray-700 mb-4">
+              Địa chỉ chi tiết <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleInputChange}
+              className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
+                validationErrors.address ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+              }`}
+              placeholder="Số nhà, tên đường, phường/xã, quận/huyện"
+            />
+            {validationErrors.address && (
+              <p className="mt-3 text-base text-red-600 flex items-center">
+                <span className="mr-2 text-lg">⚠️</span>
+                {validationErrors.address}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+            <div>
+              <label className="block text-lg font-bold text-gray-700 mb-4">
+                Tỉnh/Thành phố <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="province_code"
+                value={formData.province_code}
+                onChange={handleInputChange}
+                className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
+                  validationErrors.province_code ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                placeholder="VD: TP. Hồ Chí Minh"
+              />
+              {validationErrors.province_code && (
+                <p className="mt-3 text-base text-red-600 flex items-center">
+                  <span className="mr-2 text-lg">⚠️</span>
+                  {validationErrors.province_code}
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <label className="block text-lg font-bold text-gray-700 mb-4">
+                Phường/Xã <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="ward_code"
+                value={formData.ward_code}
+                onChange={handleInputChange}
+                className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
+                  validationErrors.ward_code ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                placeholder="VD: Phường 1, Quận 1"
+              />
+              {validationErrors.ward_code && (
+                <p className="mt-3 text-base text-red-600 flex items-center">
+                  <span className="mr-2 text-lg">⚠️</span>
+                  {validationErrors.ward_code}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Validation Summary */}
+      {Object.keys(validationErrors).length > 0 && (
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-2xl p-6 mb-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span className="text-red-600 text-lg">⚠️</span>
+            </div>
+            <div>
+              <h4 className="text-red-800 font-semibold">Vui lòng sửa các lỗi sau:</h4>
+              <p className="text-sm text-red-600">Để tiếp tục, hãy điền đầy đủ thông tin bắt buộc</p>
+            </div>
+          </div>
+          <ul className="text-red-700 text-sm space-y-2">
+            {Object.entries(validationErrors).map(([field, error]) => (
+              <li key={field} className="flex items-center">
+                <span className="mr-2">•</span>
+                {error}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Note: Continue button has been moved to Order Summary section for better layout balance */}
+
+      {/* Address Selector Modal */}
+      {showAddressSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-lg">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Chọn địa chỉ giao hàng</h3>
+                <button
+                  onClick={() => setShowAddressSelector(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+              
+              <AddressSelector
+                selectedAddress={selectedAddress}
+                onAddressSelect={handleAddressSelect}
+                onAddNewAddress={handleAddNewAddress}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Address Form Modal */}
+      {showAddressForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <AddressForm
+              onSave={handleSaveAddress}
+              onCancel={() => setShowAddressForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
-    <div className="mt-6">
-      <button
-        type="button"
-        onClick={handleNextStepShipping}
-        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 hover:shadow-lg"
-      >
-        Tiếp tục
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 export default CheckoutShippingInfo;

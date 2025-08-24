@@ -46,6 +46,7 @@ routerOrder.put("/:id/status", protect, updateOrderStatus);
 routerOrder.put("/:id/paid-cod", protect, updateOrderToPaidCOD);
 routerOrder.put("/:id/refund-request", protect, requestRefund);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
+routerOrder.put("/:id/cancel", protect, handlePaymentFailed);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
 // Route để cập nhật thanh toán thất bại
