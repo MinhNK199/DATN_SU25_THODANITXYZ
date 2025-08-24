@@ -14,6 +14,7 @@ export interface ProductVariant {
     weight?: number;
     images?: string[];
     isActive?: boolean;
+    description?: string;
     specifications?: Record<string, string>;
     length?: number;
     width?: number;

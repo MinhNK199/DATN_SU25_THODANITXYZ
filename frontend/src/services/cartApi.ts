@@ -44,6 +44,8 @@ export interface CartItem {
     images: string[];
     stock: number;
     availableStock?: number;
+    specifications?: Record<string, string>;
+    description?: string;
   };
   quantity: number;
   price: number;
