@@ -117,7 +117,6 @@ const CategoryDetail: React.FC = () => {
                         <Card className="bg-white shadow-lg rounded-xl">
                             <Title level={4}>Thông tin chung</Title>
                              <Row gutter={16}>
-                                <Col span={12}><InfoItem label="ID">{category._id}</InfoItem></Col>
                                 <Col span={12}><InfoItem label="Slug">{category.slug}</InfoItem></Col>
                                 <Col span={12}>
                                     <InfoItem label="Trạng thái">

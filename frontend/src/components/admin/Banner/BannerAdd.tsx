@@ -1,39 +1,41 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm, useFieldArray } from "react-hook-form";
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  Switch,
+  message,
+  Typography,
+  Space,
+  Row,
+  Col,
+  Image,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  PlusOutlined,
+  MinusCircleOutlined,
+} from "@ant-design/icons";
 import type { Banner } from "../../../interfaces/Banner";
+
+const { Title } = Typography;
+const { TextArea } = Input;
 
 const API_URL = "http://localhost:8000/api/banner";
 
 const BannerAdd: React.FC = () => {
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-    reset,
-  } = useForm<Banner>({
-    defaultValues: {
-      title: "",
-      subtitle: "",
-      description: "",
-      badge: "",
-      features: [""],
-      buttonText: "",
-      buttonLink: "",
-      image: " ",
-      isActive: true,
-      position: "",
-    },
-  });
-
-  const { fields, append, remove } = useFieldArray<any>({
-    control,
-    name: "features",
-  });
-
-  const [message, setMessage] = useState("");
+  const [form] = Form.useForm<Banner>();
+  const [loading, setLoading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string>("");
   const navigate = useNavigate();
+
+  const watchedImageUrl = Form.useWatch("image", form);
+
+  useEffect(() => {
+    setPreviewImage(watchedImageUrl);
+  }, [watchedImageUrl]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -43,10 +45,10 @@ const BannerAdd: React.FC = () => {
     };
   };
 
-  const onSubmit = async (data: Banner) => {
+  const onFinish = async (values: Banner) => {
+    setLoading(true);
     try {
-      const { startDate, endDate, ...safeData } = data;
-
+      const { startDate, endDate, ...safeData } = values;
       const res = await fetch(API_URL, {
         method: "POST",
         headers: getAuthHeader(),
@@ -54,180 +56,206 @@ const BannerAdd: React.FC = () => {
       });
 
       if (res.ok) {
-        setMessage("✅ Thêm banner thành công!");
-        reset();
-        setTimeout(() => navigate("/admin/banners"), 1000);
+        message.success("✅ Thêm banner thành công!");
+        navigate("/admin/banners");
       } else {
         const err = await res.json();
-        setMessage(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
+        message.error(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
       }
     } catch (error) {
-      setMessage("❌ Lỗi kết nối máy chủ!");
+      message.error("❌ Lỗi kết nối máy chủ!");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white mt-10 rounded-xl shadow-lg p-8">
-      <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        ➕ Thêm banner mới
-      </h2>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={{
+          isActive: true,
+          features: [""],
+        }}
+      >
+        <Row gutter={[24, 24]}>
+          {/* Main Content */}
+          <Col xs={24} lg={16}>
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              {/* Thông tin cơ bản */}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Thông tin cơ bản</Title>
+                <Form.Item
+                  name="title"
+                  label="Tiêu đề"
+                  rules={[{ required: true, message: "Vui lòng nhập tiêu đề!" }]}
+                >
+                  <Input placeholder="Nhập tiêu đề" />
+                </Form.Item>
 
-      {message && (
-        <div
-          className={`mb-4 text-sm text-center py-2 px-4 rounded ${
-            message.includes("✅")
-              ? "text-green-700 bg-green-100"
-              : "text-red-700 bg-red-100"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+                <Form.Item name="subtitle" label="Phụ đề">
+                  <Input placeholder="Nhập phụ đề" />
+                </Form.Item>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Tiêu đề</label>
-          <input
-            {...register("title", { required: "Tiêu đề không được để trống" })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.title && (
-            <p className="text-red-600 text-sm">{errors.title.message}</p>
-          )}
-        </div>
+                <Form.Item
+                  name="description"
+                  label="Mô tả"
+                  rules={[
+                    { required: true, message: "Mô tả không được để trống!" },
+                    { max: 50, message: "Mô tả không vượt quá 50 ký tự" },
+                  ]}
+                >
+                  <TextArea rows={3} placeholder="Nhập mô tả ngắn" />
+                </Form.Item>
 
-        <div>
-          <label className="block text-sm font-medium">Phụ đề</label>
-          <input
-            {...register("subtitle")}
-            className="w-full border px-4 py-2 rounded"
-          />
-        </div>
+                <Form.Item
+                  name="badge"
+                  label="Badge"
+                  rules={[{ required: true, message: "Badge không được để trống!" }]}
+                >
+                  <Input placeholder="Ví dụ: HOT, NEW..." />
+                </Form.Item>
+              </Card>
 
-        <textarea
-          {...register("description", {
-            required: "Mô tả không được để trống",
-            validate: (value) => {
-              if (!value) return "Mô tả không được để trống";
-              return (
-                value.trim().length <= 50 ||
-                "Mô tả không được vượt quá 50 ký tự"
-              );
-            },
-          })}
-          className="w-full border px-4 py-2 rounded"
-        />
-        {errors.description && (
-          <p className="text-red-600 text-sm">{errors.description.message}</p>
-        )}
+              {/* Nút & Liên kết */}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Nút & Liên kết</Title>
+                <Form.Item
+                  name="buttonText"
+                  label="Nội dung nút"
+                  rules={[{ required: true, message: "Nội dung nút không được để trống!" }]}
+                >
+                  <Input placeholder="VD: Xem ngay" />
+                </Form.Item>
+                <Form.Item
+                  name="buttonLink"
+                  label="Đường dẫn"
+                  rules={[{ required: true, message: "Link không được để trống!" }]}
+                >
+                  <Input placeholder="https://example.com" />
+                </Form.Item>
+              </Card>
 
-        <div>
-          <label className="block text-sm font-medium">Nhãn Badge</label>
-          <input
-            {...register("badge", { required: "Badge không được để trống" })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.badge && (
-            <p className="text-red-600 text-sm">{errors.badge.message}</p>
-          )}
-        </div>
+              {/* Features */}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Tính năng nổi bật</Title>
+                <Form.List name="features">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map((field, index) => (
+                        <Space key={field.key} align="baseline">
+                          <Form.Item
+                            {...field}
+                            rules={[{ required: true, message: "Không được để trống" }]}
+                          >
+                            <Input placeholder={`Tính năng ${index + 1}`} />
+                          </Form.Item>
+                          <MinusCircleOutlined
+                            onClick={() => remove(field.name)}
+                            style={{ color: "red" }}
+                          />
+                        </Space>
+                      ))}
+                      <Form.Item>
+                        <Button type="dashed" onClick={() => add()} block>
+                          + Thêm tính năng
+                        </Button>
+                      </Form.Item>
+                    </>
+                  )}
+                </Form.List>
+              </Card>
+            </Space>
+          </Col>
 
-        <div>
-          <label className="block text-sm font-medium">Nút link</label>
-          <input
-            {...register("buttonText", {
-              required: "Nội dung nút link không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.buttonText && (
-            <p className="text-red-600 text-sm">{errors.buttonText.message}</p>
-          )}
-        </div>
+          {/* Sidebar */}
+          <Col xs={24} lg={8}>
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              {/* Ảnh */}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Ảnh</Title>
+                <Form.Item
+                  name="image"
+                  label="URL Ảnh"
+                  rules={[{ required: true, message: "Ảnh không được để trống!" }]}
+                >
+                  <Input placeholder="https://example.com/banner.jpg" />
+                </Form.Item>
+                <Image
+                  src={previewImage || "/placeholder.png"}
+                  fallback="/placeholder.png"
+                  alt="Xem trước hình ảnh"
+                  style={{
+                    width: "100%",
+                    aspectRatio: "16/9",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                  }}
+                />
+              </Card>
 
-        <div>
-          <label className="block text-sm font-medium">Link liên kết</label>
-          <input
-            {...register("buttonLink", {
-              required: "Link liên kết không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.buttonLink && (
-            <p className="text-red-600 text-sm">{errors.buttonLink.message}</p>
-          )}
-        </div>
+              {/* Vị trí & Trạng thái */}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Vị trí & Trạng thái</Title>
+                <Form.Item
+                  name="position"
+                  label="Vị trí hiển thị"
+                  rules={[{ required: true, message: "Vị trí không được để trống!" }]}
+                >
+                  <Input placeholder="VD: homepage-top, sidebar, ..." />
+                </Form.Item>
+                <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">
+                  <Switch checkedChildren="Hoạt động" unCheckedChildren="Ẩn" />
+                </Form.Item>
+              </Card>
 
-        <div>
-          <label className="block text-sm font-medium">Tính năng nổi bật</label>
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2 mb-2">
-              <input
-                {...register(`features.${index}` as const, {
-                  required: "Không được để trống",
-                })}
-                className="w-full border px-4 py-2 rounded"
-              />
-              <button
-                type="button"
-                onClick={() => remove(index)}
-                className="text-red-500"
-              >
-                X
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => append("")}
-            className="text-blue-600 text-sm underline"
-          >
-            + Thêm tính năng
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Ảnh</label>
-          <input
-            {...register("image", {
-              required: "Ảnh không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.image && (
-            <p className="text-red-600 text-sm">{errors.image.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Vị trí hiển thị</label>
-          <input
-            {...register("position", {
-              required: "Vị trí không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.position && (
-            <p className="text-red-600 text-sm">{errors.position.message}</p>
-          )}
-        </div>
-
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            {...register("isActive")}
-            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-          />
-          <label className="ml-2 block text-sm">Kích hoạt banner</label>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
-        >
-          Thêm banner
-        </button>
-      </form>
+              {/* Action */}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Hành động</Title>
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={loading}
+                    icon={<PlusOutlined />}
+                    shape="round"
+                    size="large"
+                    block
+                    style={{
+                      background: "#fff",
+                      color: "#1677ff",
+                      border: "2px solid #1677ff",
+                      fontWeight: 600,
+                      boxShadow: "0 2px 8px rgba(22,119,255,0.08)",
+                    }}
+                  >
+                    Lưu banner
+                  </Button>
+                  <Button
+                    type="default"
+                    icon={<ArrowLeftOutlined />}
+                    htmlType="button"
+                    onClick={() => navigate("/admin/banners")}
+                    shape="round"
+                    size="large"
+                    block
+                    style={{
+                      background: "#fff",
+                      color: "#888",
+                      border: "2px solid #bbb",
+                      fontWeight: 500,
+                    }}
+                  >
+                    Quay lại
+                  </Button>
+                </Space>
+              </Card>
+            </Space>
+          </Col>
+        </Row>
+      </Form>
     </div>
   );
 };

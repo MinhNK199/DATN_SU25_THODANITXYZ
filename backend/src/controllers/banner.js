@@ -3,12 +3,27 @@ import Banner from "../models/Banner.js";
 // Lấy tất cả banner đang hoạt động và trong thời gian hiển thị
 export const getAllBanners = async (req, res) => {
   try {
-    const banners = await Banner.find().sort({ createdAt: -1 });
-    res.status(200).json({ banners }); // lưu ý trả về dưới dạng object
+    const { status } = req.query; // "all" | "active" | "inactive"
+    const now = new Date();
+
+    let filter = {};
+
+    if (status === "active") {
+      
+      filter = { isActive: true, $or: [{ endDate: null }, { endDate: { $gte: now } }] };
+    } else if (status === "inactive") {
+
+      filter = { $or: [{ isActive: false }, { endDate: { $lt: now } }] };
+    }
+
+
+    const banners = await Banner.find(filter).sort({ createdAt: -1 });
+    res.status(200).json({ banners });
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi lấy banner", error });
   }
 };
+
 
 
 // Tạo banner mới
@@ -73,15 +88,34 @@ export const createBanner = async (req, res) => {
 // Cập nhật banner
 export const updateBanner = async (req, res) => {
   try {
+    const { isActive } = req.body;
     const banner = await Banner.findById(req.params.id);
-    if (!banner) return res.status(404).json({ message: "Không tìm thấy banner" });
+
+    if (!banner) {
+      return res.status(404).json({ message: "Không tìm thấy banner" });
+    }
+
+    if (typeof isActive !== "undefined" && isActive === false && !banner.endDate) {
+      req.body.endDate = new Date();
+    }
+
+    if (typeof isActive !== "undefined" && isActive === true && banner.endDate) {
+      req.body.endDate = null;
+      req.body.startDate = new Date(); 
+    }
 
     const updated = await Banner.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.status(200).json(updated);
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật banner thành công",
+      banner: updated,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi cập nhật banner", error });
   }
 };
+
 
 // Xoá banner
 export const deleteBanner = async (req, res) => {
