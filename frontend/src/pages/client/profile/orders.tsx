@@ -25,9 +25,11 @@ interface Order {
   orderNumber?: string;
   orderItems: OrderItem[];
   totalPrice: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'shipping' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed';
+  status: 'draft' | 'pending' | 'confirmed' | 'processing' | 'shipping' | 'delivered' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'awaiting_payment';
   paymentMethod: string;
+  isPaid?: boolean;
+  paidAt?: string;
   shippingAddress: {
     fullName: string;
     phone?: string;
@@ -50,6 +52,18 @@ const Orders = () => {
 
   useEffect(() => {
     fetchOrders();
+    
+    // ✅ Lắng nghe event khi có order mới được tạo
+    const handleOrderUpdated = () => {
+      console.log("🔄 Orders component received orderUpdated event");
+      fetchOrders();
+    };
+    
+    window.addEventListener('orderUpdated', handleOrderUpdated);
+    
+    return () => {
+      window.removeEventListener('orderUpdated', handleOrderUpdated);
+    };
   }, []);
 
   const fetchOrders = async () => {
@@ -83,6 +97,7 @@ const Orders = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      case 'draft': return 'Đang tạo';
       case 'pending': return 'Chờ xác nhận';
       case 'confirmed': return 'Đã xác nhận';
       case 'processing': return 'Đang xử lý';
@@ -90,6 +105,25 @@ const Orders = () => {
       case 'delivered': return 'Đã giao';
       case 'cancelled': return 'Đã hủy';
       default: return 'Không xác định';
+    }
+  };
+
+  // ✅ Hàm hiển thị trạng thái thanh toán
+  const getPaymentStatusText = (order: Order) => {
+    if (order.paymentMethod === "COD") {
+      return order.paymentStatus === "paid" ? "Đã thanh toán COD" : "Chưa thanh toán COD";
+    } else {
+      if (order.paymentStatus === "paid") {
+        return `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
+      } else if (order.paymentStatus === "failed") {
+        return "Thanh toán thất bại";
+      } else if (order.paymentStatus === "awaiting_payment") {
+        return "Chưa thanh toán";
+      } else if (order.paymentStatus === "pending") {
+        return "Chưa thanh toán";
+      } else {
+        return "Chưa thanh toán";
+      }
     }
   };
 
@@ -223,6 +257,13 @@ const Orders = () => {
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                     {getStatusIcon(order.status)}
                     <span className="ml-2">{getStatusText(order.status)}</span>
+                  </span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                    order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                    order.paymentStatus === 'failed' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    <span className="ml-2">{getPaymentStatusText(order)}</span>
                   </span>
                   <Link to={`/profile/orders/${order._id}`} className="inline-flex items-center text-blue-600 hover:text-blue-700 text-sm font-medium">
                     <Eye className="w-4 h-4 mr-1" /> Xem chi tiết

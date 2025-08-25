@@ -6,7 +6,7 @@ import Brand from "../models/Brand.js"
 import User from "../models/User.js"
 import Order from "../models/Order.js"
 import mongoose from "mongoose"
-const removeAccents = require("remove-accents")
+import removeAccents from "remove-accents";
 
 // Helper function để xử lý color object - FIXED
 const processColorData = (colorData) => {

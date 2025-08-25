@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { protect } from "../middlewares/authMiddleware";
-import { analyzeSentiment, createRating, deleteRating, getRatings, replyRating, updateRating } from "../controllers/rating";
+import { protect } from "../middlewares/authMiddleware.js";
+import { analyzeSentiment, createRating, deleteRating, getRatings, replyRating, updateRating } from "../controllers/rating.js";
 
 const router = Router();
 

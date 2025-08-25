@@ -6,8 +6,8 @@ import {
     updateCoupon,
     deleteCoupon,
     validateCoupon
-} from "../controllers/coupon";
-import { protect } from "../middlewares/authMiddleware";
+} from "../controllers/coupon.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 const routerCoupon = express.Router();
 

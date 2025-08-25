@@ -7,8 +7,8 @@ import {
     clearCart,
     applyCoupon,
     getProductAvailability
-} from "../controllers/cart";
-import { protect } from "../middlewares/authMiddleware";
+} from "../controllers/cart.js";
+import { protect } from "../middlewares/authMiddleware.js";
 
 
 const routerCart = express.Router();

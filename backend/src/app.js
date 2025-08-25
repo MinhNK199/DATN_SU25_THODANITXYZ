@@ -5,11 +5,18 @@ import express from "express";
 import cors from "cors";
 import passport from "passport";
 import "./config/passport.js";
+<<<<<<< HEAD
 import router from "./routes";
 import connectDB from "./config/database";
 import { setupCleanupCron } from "./utils/cleanupJob";
 import fs from 'fs';
 import path from 'path';
+=======
+import router from "./routes/index.js";
+import connectDB from "./config/database.js";
+import { setupCleanupCron } from "./utils/cleanupJob.js";
+import { checkAndRefreshToken } from "./utils/tokenRefresh.js";
+>>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
 
 const app = express();
 
@@ -43,6 +50,12 @@ app.use((req, res, next) => {
     next();
 });
 
+<<<<<<< HEAD
+=======
+// Token refresh middleware
+app.use(checkAndRefreshToken);
+
+>>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
 app.use(passport.initialize());
 
 // Serve static files từ thư mục uploads

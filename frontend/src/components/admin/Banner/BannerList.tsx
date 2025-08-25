@@ -5,7 +5,6 @@ import { FaPlus, FaEdit, FaTrash, FaSearch, FaEye } from "react-icons/fa";
 import {
   Input,
   Card,
-  Badge,
   Tooltip,
   Modal,
   message,
@@ -14,8 +13,15 @@ import {
   Space,
   Select,
   Button,
+  Row,
+  Col,
+  Typography,
+  Divider,
+  Image,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+
+const { Title, Text, Paragraph } = Typography;
 
 const API_URL = "http://localhost:8000/api/banner";
 
@@ -23,6 +29,17 @@ interface SearchParams {
   title: string;
   status: "all" | "active" | "inactive";
 }
+
+// Component nhỏ hiển thị nhãn + giá trị
+const InfoItem: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <div className="mb-2">
+    <Text strong>{label}: </Text>
+    {children}
+  </div>
+);
 
 const BannerList: React.FC = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -35,66 +52,65 @@ const BannerList: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const navigate = useNavigate();
 
- const fetchBanners = async () => {
-  setLoading(true);
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    
-    if (Array.isArray(data.banners)) {
-      setBanners(data.banners);
-    } else if (Array.isArray(data)) {
-      setBanners(data);
-    } else {
-      message.error("Dữ liệu banner không đúng định dạng!");
+  const fetchBanners = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      if (Array.isArray(data.banners)) {
+        setBanners(data.banners);
+      } else if (Array.isArray(data)) {
+        setBanners(data);
+      } else {
+        message.error("Dữ liệu banner không đúng định dạng!");
+      }
+    } catch (error) {
+      message.error("Lỗi khi tải danh sách banner!");
     }
-  } catch (error) {
-    message.error("Lỗi khi tải danh sách banner!");
-  }
-  setLoading(false);
-};
+    setLoading(false);
+  };
 
   useEffect(() => {
     fetchBanners();
   }, []);
 
- const handleHardDelete = async (id: string) => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    message.error("Bạn cần đăng nhập!");
-    navigate("/login");
-    return;
-  }
+  const handleHardDelete = async (id: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      message.error("Bạn cần đăng nhập!");
+      navigate("/login");
+      return;
+    }
 
-  Modal.confirm({
-    title: "Bạn có chắc muốn xóa banner này?",
-    content: "Hành động này không thể hoàn tác.",
-    okText: "Xóa",
-    okType: "danger",
-    cancelText: "Hủy",
-    onOk: async () => {
-      try {
-        const res = await fetch(`${API_URL}/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    Modal.confirm({
+      title: "Bạn có chắc muốn xóa banner này?",
+      content: "Hành động này không thể hoàn tác.",
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const res = await fetch(`${API_URL}/${id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
 
-        if (res.ok) {
-          message.success("Xóa banner thành công!");
-          fetchBanners();
-        } else {
-          const err = await res.json();
-          message.error(err.message || "Xóa thất bại!");
+          if (res.ok) {
+            message.success("Xóa banner thành công!");
+            fetchBanners();
+          } else {
+            const err = await res.json();
+            message.error(err.message || "Xóa thất bại!");
+          }
+        } catch (err) {
+          message.error("Lỗi kết nối máy chủ!");
         }
-      } catch (err) {
-        message.error("Lỗi kết nối máy chủ!");
-      }
-    },
-  });
-};
-
+      },
+    });
+  };
 
   const showBannerDetail = (banner: Banner) => {
     setSelectedBanner(banner);
@@ -113,12 +129,21 @@ const BannerList: React.FC = () => {
     const titleMatch = banner.title
       .toLowerCase()
       .includes(searchParams.title.toLowerCase());
+
+    const now = new Date();
+    const start = banner.startDate ? new Date(banner.startDate) : null;
+    const end = banner.endDate ? new Date(banner.endDate) : null;
+
+    // banner hiển thị khi: isActive=true, đã tới ngày start, và chưa hết end
+    const isVisible =
+      banner.isActive && start !== null && start <= now && (!end || now <= end);
+
     const statusMatch =
       searchParams.status === "all"
         ? true
         : searchParams.status === "active"
-        ? banner.isActive
-        : !banner.isActive;
+        ? isVisible
+        : !isVisible;
 
     return titleMatch && statusMatch;
   });
@@ -134,14 +159,13 @@ const BannerList: React.FC = () => {
       dataIndex: "image",
       key: "image",
       width: 100,
-     render: (image: string) => (
-  <img
-    src={image || "/placeholder.png"}
-    alt="Banner"
-    className="w-16 h-16 object-cover rounded"
-  />
-),
-
+      render: (image: string) => (
+        <img
+          src={image || "/placeholder.png"}
+          alt="Banner"
+          className="w-16 h-16 object-cover rounded"
+        />
+      ),
     },
     {
       title: "Tiêu đề",
@@ -154,7 +178,7 @@ const BannerList: React.FC = () => {
         </div>
       ),
     },
-     {
+    {
       title: "Ngày bắt đầu",
       dataIndex: "startDate",
       key: "startDate",
@@ -172,34 +196,27 @@ const BannerList: React.FC = () => {
           <Tag color="green">Đang hoạt động</Tag>
         ),
     },
+    {
+      title: "Trạng thái",
+      key: "status",
+      render: (_: any, record: Banner) => {
+        const now = new Date();
+        const start = record.startDate ? new Date(record.startDate) : null;
+        const end = record.endDate ? new Date(record.endDate) : null;
 
-{
-  title: "Trạng thái",
-  key: "status",
-  render: (_: any, record: Banner) => {
-    const now = new Date();
+        const isVisible =
+          record.isActive &&
+          start !== null &&
+          start <= now &&
+          (!end || now <= end);
 
-    const start = record.startDate ? new Date(record.startDate) : null;
-    const end = record.endDate ? new Date(record.endDate) : null;
-
-    const isVisible =
-      record.isActive &&
-      start !== null &&
-      start <= now &&
-      (!end || now <= end);
-
-    return (
-      <Tag color={isVisible ? "green" : "red"}>
-        {isVisible ? "Đang hiển thị" : "Đã ẩn"}
-      </Tag>
-    );
-  },
-},
-
-
-
-
-
+        return (
+          <Tag color={isVisible ? "green" : "red"}>
+            {isVisible ? "Đang hiển thị" : "Đã ẩn"}
+          </Tag>
+        );
+      },
+    },
     {
       title: "Thao tác",
       key: "action",
@@ -228,20 +245,19 @@ const BannerList: React.FC = () => {
       ),
     },
   ];
+
   return (
     <div className="p-6">
       <Card className="mb-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Quản lý banner</h1>
-          <div className="flex gap-2">
-            <Button
-              type="primary"
-              icon={<FaPlus />}
-              onClick={() => navigate("/admin/banners/add")}
-            >
-              Thêm banner
-            </Button>
-          </div>
+          <Button
+            type="primary"
+            icon={<FaPlus />}
+            onClick={() => navigate("/admin/banners/add")}
+          >
+            Thêm banner
+          </Button>
         </div>
 
         <div className="flex gap-4 mb-4">
@@ -277,134 +293,168 @@ const BannerList: React.FC = () => {
         />
       </Card>
 
+      {/* Modal chi tiết banner */}
       <Modal
-        title="Chi tiết banner"
+        title={null}
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={null}
-        width={700}
+        width={900}
       >
         {selectedBanner && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold">Hình ảnh</h3>
-              <img
-                src={selectedBanner.image}
-                alt={ selectedBanner.title}
-                className="w-full h-48 object-cover rounded"
-              />
-            </div>
+          <div className="p-4 bg-gray-100">
+            <Card className="bg-white shadow-lg rounded-xl mb-6">
+              <Row justify="space-between" align="middle">
+                <Col>
+                  <Title level={3} className="!m-0">
+                    Chi tiết banner:&nbsp;{selectedBanner.title}
+                  </Title>
+                </Col>
+                <Col>
+                  <Space>
+                    <Button onClick={() => setIsModalVisible(false)}>
+                      Đóng
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<FaEdit />}
+                      onClick={() =>
+                        navigate(`/admin/banners/edit/${selectedBanner._id}`)
+                      }
+                    >
+                      Chỉnh sửa
+                    </Button>
+                  </Space>
+                </Col>
+              </Row>
+            </Card>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-semibold">Tiêu đề</h3>
-                <p>{selectedBanner.title}</p>
-              </div>
+            <Row gutter={[24, 24]}>
+              {/* Hình ảnh + mô tả */}
+              <Col xs={24} lg={10}>
+                <Card className="bg-white shadow-lg rounded-xl h-full">
+                  <Title level={4}>Hình ảnh</Title>
+                  <Image
+                    width="100%"
+                    src={selectedBanner.image || "/placeholder.png"}
+                    alt={selectedBanner.title}
+                    style={{
+                      borderRadius: "8px",
+                      border: "1px solid #f0f0f0",
+                      aspectRatio: "4/3",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <Divider />
+                  <Paragraph>
+                    {selectedBanner.description || (
+                      <Text type="secondary">
+                        Chưa có mô tả cho banner này.
+                      </Text>
+                    )}
+                  </Paragraph>
+                </Card>
+              </Col>
 
-              {selectedBanner.subtitle && (
-                <div>
-                  <h3 className="font-semibold">Phụ đề</h3>
-                  <p>{selectedBanner.subtitle}</p>
-                </div>
-              )}
+              {/* Thông tin chi tiết */}
+              <Col xs={24} lg={14}>
+                <Space
+                  direction="vertical"
+                  size="large"
+                  style={{ width: "100%" }}
+                >
+                  {/* Thông tin chung */}
+                  <Card className="bg-white shadow-lg rounded-xl">
+                    <Title level={4}>Thông tin chung</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <InfoItem label="Phụ đề">
+                          {selectedBanner.subtitle || (
+                            <Text type="secondary">N/A</Text>
+                          )}
+                        </InfoItem>
+                      </Col>
+                      <Col span={12}>
+                        <InfoItem label="Trạng thái">
+                          <Tag
+                            color={selectedBanner.isActive ? "green" : "red"}
+                          >
+                            {selectedBanner.isActive
+                              ? "Đang hiển thị"
+                              : "Đã ẩn"}
+                          </Tag>
+                        </InfoItem>
+                      </Col>
+                      <Col span={12}>
+                        <InfoItem label="Vị trí hiển thị">
+                          <Tag color="geekblue">
+                            {selectedBanner.position || "N/A"}
+                          </Tag>
+                        </InfoItem>
+                      </Col>
+                    </Row>
+                  </Card>
 
-              {selectedBanner.badge && (
-                <div>
-                  <h3 className="font-semibold">Nhãn</h3>
-                  <Tag color="magenta">{selectedBanner.badge}</Tag>
-                </div>
-              )}
+                  {/* Thông tin hiển thị */}
+                  <Card className="bg-white shadow-lg rounded-xl">
+                    <Title level={4}>Thông tin hiển thị</Title>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <InfoItem label="Ngày bắt đầu">
+                          {selectedBanner.startDate
+                            ? new Date(
+                                selectedBanner.startDate
+                              ).toLocaleDateString("vi-VN")
+                            : "—"}
+                        </InfoItem>
+                      </Col>
+                      <Col span={12}>
+                        <InfoItem label="Ngày kết thúc">
+                          {selectedBanner.endDate ? (
+                            new Date(selectedBanner.endDate).toLocaleDateString(
+                              "vi-VN"
+                            )
+                          ) : (
+                            <Tag color="green">Đang hoạt động</Tag>
+                          )}
+                        </InfoItem>
+                      </Col>
+                    </Row>
+                  </Card>
 
-              {selectedBanner.position && (
-                <div>
-                  <h3 className="font-semibold">Vị trí hiển thị</h3>
-                  <Tag color="geekblue">{selectedBanner.position}</Tag>
-                </div>
-              )}
+                  {/* Button + Link */}
+                  <Card className="bg-white shadow-lg rounded-xl">
+                    <Title level={4}>Nút & Liên kết</Title>
+                    {selectedBanner.buttonText && selectedBanner.buttonLink ? (
+                      <a
+                        href={selectedBanner.buttonLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button type="primary">
+                          {selectedBanner.buttonText}
+                        </Button>
+                      </a>
+                    ) : (
+                      <Text type="secondary">Chưa có nút hoặc link</Text>
+                    )}
+                  </Card>
 
-              <div>
-                <h3 className="font-semibold">Trạng thái</h3>
-                <Badge
-                  status={selectedBanner.isActive ? "success" : "error"}
-                  text={selectedBanner.isActive ? "Đang hiển thị" : "Đã ẩn"}
-                />
-              </div>
-            </div>
-
-            {selectedBanner.description && (
-              <div>
-                <h3 className="font-semibold">Mô tả</h3>
-                <p>{selectedBanner.description}</p>
-              </div>
-            )}
-
-            {Array.isArray(selectedBanner?.features) &&
-              selectedBanner.features.length > 0 && (
-                <div>
-                  <h3 className="font-semibold">Tính năng nổi bật</h3>
-                  <ul className="list-disc list-inside">
-                    {selectedBanner.features.map((feature, index) => (
-                      <li key={index}>{feature}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-            {(selectedBanner.buttonText || selectedBanner.buttonLink) && (
-              <div>
-                <h3 className="font-semibold">Nút - Link</h3>
-                {selectedBanner.buttonText && selectedBanner.buttonLink ? (
-                  <a
-                    href={selectedBanner.buttonLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button type="primary">{selectedBanner.buttonText}</Button>
-                  </a>
-                ) : (
-                  <span>—</span>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h3 className="font-semibold">Ngày bắt đầu</h3>
-                <p>
-                  {selectedBanner.startDate
-                    ? new Date(selectedBanner.startDate).toLocaleDateString(
-                        "vi-VN"
-                      )
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold">Ngày kết thúc</h3>
-                <p>
-                  {selectedBanner.endDate ? (
-                    new Date(selectedBanner.endDate).toLocaleDateString("vi-VN")
-                  ) : (
-                    <Tag color="green">Đang hoạt động</Tag>
-                  )}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold">Ngày tạo</h3>
-                <p>
-                  {selectedBanner.createdAt
-                    ? new Date(selectedBanner.createdAt).toLocaleString("vi-VN")
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold">Cập nhật gần nhất</h3>
-                <p>
-                  {selectedBanner.updatedAt
-                    ? new Date(selectedBanner.updatedAt).toLocaleString("vi-VN")
-                    : "—"}
-                </p>
-              </div>
-            </div>
+                  {/* Tính năng nổi bật */}
+                  {Array.isArray(selectedBanner.features) &&
+                    selectedBanner.features.length > 0 && (
+                      <Card className="bg-white shadow-lg rounded-xl">
+                        <Title level={4}>Tính năng nổi bật</Title>
+                        <ul className="list-disc list-inside">
+                          {selectedBanner.features.map((feature, index) => (
+                            <li key={index}>{feature}</li>
+                          ))}
+                        </ul>
+                      </Card>
+                    )}
+                </Space>
+              </Col>
+            </Row>
           </div>
         )}
       </Modal>

@@ -7,10 +7,10 @@ import CryptoJS from "crypto-js";
 import Order from "../models/Order.js";
 
 const config = {
-  app_id: "2553",
-  key1: "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL",
-  key2: "kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz",
-  endpoint: "https://sb-openapi.zalopay.vn/v2/create",
+  app_id:  "2553",
+  key1:  "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL",
+  key2:  "kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz",
+  endpoint:  "https://sb-openapi.zalopay.vn/v2/create",
 };
 
 export const createZaloPayOrder = async (req, res) => {
@@ -61,7 +61,7 @@ export const createZaloPayOrder = async (req, res) => {
       amount: Math.round(order.totalPrice),
       description: `TechTrend - Thanh toán cho đơn hàng #${order._id}`,
       bank_code: "",
-      callback_url: "https://d092865179dc.ngrok-free.app/api/order/zalo-pay/callback",
+      callback_url:  "https://5da33d70ec21.ngrok-free.app/api/order/zalo-pay/callback",
     };
 
     const data =
@@ -110,15 +110,12 @@ export const createZaloPayOrder = async (req, res) => {
 };
 
 export const zalopayCallback = async (req, res) => {
-  let result = {};
-  
   console.log("🔔 ========== ZALOPAY CALLBACK START ==========");
   console.log("📥 Request body:", req.body);
-  console.log("📥 Request headers:", req.headers);
   
   try {
-    // ✅ XỬ LÝ CALLBACK TỪ ZALOPAY
-    if (!req.body || !req.body.data || !req.body.mac) {
+    // ✅ Validate callback data
+    if (!req.body?.data || !req.body?.mac) {
       console.log("⚠️ Invalid callback data - missing required fields");
       return res.json({ 
         return_code: -1, 
@@ -126,10 +123,11 @@ export const zalopayCallback = async (req, res) => {
       });
     }
     
-    let dataStr = req.body.data;
-    let reqMac = req.body.mac;
+    // ✅ Verify MAC signature
+    const dataStr = req.body.data;
+    const reqMac = req.body.mac;
+    const mac = CryptoJS.HmacSHA256(dataStr, config.key2).toString();
     
-    let mac = CryptoJS.HmacSHA256(dataStr, config.key2).toString();
     console.log("🔐 MAC verification:", { 
       received: reqMac, 
       calculated: mac, 
@@ -138,67 +136,83 @@ export const zalopayCallback = async (req, res) => {
     
     if (reqMac !== mac) {
       console.error("❌ ZaloPay MAC verification failed");
-      result.return_code = -1;
-      result.return_message = "mac not equal";
-    } else {
-      let dataJson = JSON.parse(dataStr);
-      console.log("✅ ZaloPay callback data:", dataJson);
-      
-      const order = await Order.findOne({
-        zalopayTransId: dataJson["app_trans_id"],
+      return res.json({ 
+        return_code: -1, 
+        return_message: "mac not equal" 
+      });
+    }
+    
+    // ✅ Parse callback data
+    const dataJson = JSON.parse(dataStr);
+    console.log("✅ ZaloPay callback data:", dataJson);
+    
+    // ✅ Find order by transaction ID
+    const order = await Order.findOne({
+      zalopayTransId: dataJson.app_trans_id,
+    });
+    
+    if (!order) {
+      console.error(`❌ Order not found for ZaloPay transaction: ${dataJson.app_trans_id}`);
+      return res.json({ 
+        return_code: 1, 
+        return_message: "success" 
+      });
+    }
+    
+    console.log(`🔍 BEFORE UPDATE - Order ${order._id}:`, {
+      status: order.status,
+      isPaid: order.isPaid,
+      paymentStatus: order.paymentStatus,
+      paymentMethod: order.paymentMethod
+    });
+
+    // ✅ Process payment result
+    if (dataJson.return_code === 1) {
+      // ✅ Payment successful
+      await confirmOrderAfterPayment(order._id, {
+        id: dataJson.zp_trans_id || dataJson.app_trans_id,
+        status: 'success',
+        method: 'zalopay',
+        update_time: new Date(),
+        app_trans_id: dataJson.app_trans_id,
+        amount: dataJson.amount
       });
       
-      if (order) {
-        console.log(`🔍 BEFORE UPDATE - Order ${order._id}:`, {
-          status: order.status,
-          isPaid: order.isPaid,
-          paymentStatus: order.paymentStatus,
-          paymentMethod: order.paymentMethod
-        });
-
-        // ✅ XỬ LÝ THANH TOÁN THÀNH CÔNG
-        try {
-          await confirmOrderAfterPayment(order._id, {
-            id: dataJson["zp_trans_id"] || dataJson["app_trans_id"],
-            status: 'success',
-            method: 'zalopay',
-            update_time: new Date(),
-            app_trans_id: dataJson["app_trans_id"],
-            amount: dataJson["amount"]
-          });
-          
-          console.log(`🎉 ZaloPay payment confirmed successfully for order ${order._id}`);
-          
-          // ✅ KIỂM TRA LẠI SAU KHI CẬP NHẬT
-          const updatedOrder = await Order.findById(order._id);
-          console.log(`🔍 AFTER UPDATE - Order ${updatedOrder._id}:`, {
-            status: updatedOrder.status,
-            isPaid: updatedOrder.isPaid,
-            paymentStatus: updatedOrder.paymentStatus,
-            paymentMethod: updatedOrder.paymentMethod
-          });
-          
-        } catch (confirmError) {
-          console.error("❌ Error confirming ZaloPay payment:", confirmError);
-        }
-        
-      } else {
-        console.error(`❌ Order not found for ZaloPay transaction: ${dataJson["app_trans_id"]}`);
-      }
+      console.log(`🎉 ZaloPay payment confirmed successfully for order ${order._id}`);
+    } else {
+      // ❌ Payment failed
+      console.log(`❌ ZaloPay payment failed for order ${order._id}, return_code: ${dataJson.return_code}`);
       
-      result.return_code = 1;
-      result.return_message = "success";
+      order.status = 'cancelled';
+      order.paymentStatus = 'failed';
+      order.isPaid = false;
+      order.statusHistory.push({
+        status: 'cancelled',
+        note: `ZaloPay payment failed: ${dataJson.return_code}`,
+        date: Date.now(),
+      });
+      await order.save();
     }
-  } catch (ex) {
-    console.error('❌ ZaloPay callback error:', ex);
-    result.return_code = 0;
-    result.return_message = ex.message;
+    
+    // ✅ Check order after update
+    const updatedOrder = await Order.findById(order._id);
+    console.log(`🔍 AFTER UPDATE - Order ${updatedOrder._id}:`, {
+      status: updatedOrder.status,
+      isPaid: updatedOrder.isPaid,
+      paymentStatus: updatedOrder.paymentStatus,
+      paymentMethod: updatedOrder.paymentMethod
+    });
+    
+    console.log("🔔 ========== ZALOPAY CALLBACK END ==========");
+    res.json({ return_code: 1, return_message: "success" });
+    
+  } catch (error) {
+    console.error('❌ ZaloPay callback error:', error);
+    res.json({ 
+      return_code: 0, 
+      return_message: error.message 
+    });
   }
-  
-  console.log("📤 ZaloPay callback response:", result);
-  console.log("🔔 ========== ZALOPAY CALLBACK END ==========");
-  
-  res.json(result);
 };
 
 // ✅ HÀM KIỂM TRA TRẠNG THÁI VÀ ĐỒNG BỘ
@@ -316,6 +330,7 @@ export const checkZaloPayStatusByOrderId = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng ZaloPay" });
     }
 
+    // ✅ Query ZaloPay transaction status
     const postData = {
       app_id: config.app_id,
       app_trans_id: order.zalopayTransId,
@@ -329,7 +344,9 @@ export const checkZaloPayStatusByOrderId = async (req, res) => {
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
 
-    // Nếu ZaloPay báo thành công nhưng đơn hàng chưa cập nhật
+    console.log("ZaloPay status check result:", result.data);
+
+    // ✅ If ZaloPay reports success but order not updated
     if (result.data.return_code === 1 && !order.isPaid) {
       await confirmOrderAfterPayment(order._id, {
         id: result.data.zp_trans_id || order.zalopayTransId,
@@ -354,6 +371,7 @@ export const checkZaloPayStatusByOrderId = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('ZaloPay status check error:', error);
     res.status(500).json({ message: "Lỗi kiểm tra ZaloPay", error: error.message });
   }
 };

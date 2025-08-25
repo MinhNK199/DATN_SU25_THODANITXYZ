@@ -1,6 +1,6 @@
-import Cart from "../models/Cart";
-import ProductReservation from "../models/ProductReservation";
-import Order from "../models/Order";
+import Cart from "../models/Cart.js";
+import ProductReservation from "../models/ProductReservation.js";
+import Order from "../models/Order.js";
 
 // Cleanup job chạy mỗi giờ
 export const runCleanupJob = async () => {

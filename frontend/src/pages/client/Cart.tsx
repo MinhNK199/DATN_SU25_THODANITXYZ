@@ -426,7 +426,7 @@ const Cart: React.FC = () => {
                 to="#"
                 onClick={(e) => {
                   e.preventDefault();
-                  navigate("/checkout", {
+                  navigate("/checkout/shipping", {
                     state: {
                       subtotal,
                       savings,

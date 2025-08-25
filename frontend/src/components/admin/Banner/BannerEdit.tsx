@@ -1,50 +1,42 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useForm, useFieldArray } from "react-hook-form";
+import {
+  Card,
+  Form,
+  Input,
+  Button,
+  Switch,
+  message,
+  Typography,
+  Spin,
+  Alert,
+  Space,
+  Row,
+  Col,
+  Image,
+} from "antd";
+import { ArrowLeftOutlined, PlusOutlined } from "@ant-design/icons";
 import type { Banner } from "../../../interfaces/Banner";
+
+const { Title } = Typography;
+const { TextArea } = Input;
 
 const API_URL = "http://localhost:8000/api/banner";
 
-const formatDateInput = (dateStr?: string | Date | null): string => {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  const offset = date.getTimezoneOffset();
-  date.setMinutes(date.getMinutes() - offset);
-  return date.toISOString().split("T")[0];
-};
-
 const BannerEdit: React.FC = () => {
+  const [form] = Form.useForm<Banner>();
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [message, setMessage] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    control,
-    formState: { errors },
-  } = useForm<Banner>({
-    defaultValues: {
-      title: "",
-      subtitle: "",
-      description: "",
-      badge: "",
-      buttonText: "",
-      buttonLink: "",
-      features: [""],
-      image: " ",
-      isActive: true,
-      position: "",
-      startDate: "",
-      endDate: "",
-    },
-  });
+  const [previewImage, setPreviewImage] = useState<string>("");
 
-  const { fields, append, remove } = useFieldArray<any>({
-    control,
-    name: "features",
-  });
+  const watchedImageUrl = Form.useWatch("image", form);
+  useEffect(() => {
+    setPreviewImage(watchedImageUrl || "");
+  }, [watchedImageUrl]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -56,212 +48,227 @@ const BannerEdit: React.FC = () => {
 
   useEffect(() => {
     const fetchBanner = async () => {
+      if (!id) {
+        setError("ID banner không hợp lệ");
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await fetch(`${API_URL}/${id}`, {
-          headers: getAuthHeader(),
-        });
+        const res = await fetch(`${API_URL}/${id}`, { headers: getAuthHeader() });
         if (res.ok) {
           const data = await res.json();
           const banner: Banner = data.banner || data;
-          reset({
+          form.setFieldsValue({
             ...banner,
-            startDate: formatDateInput(banner.startDate),
-            endDate: formatDateInput(banner.endDate),
-
-            image: banner.image || "",
-
             features: banner.features?.length ? banner.features : [""],
           });
+          setPreviewImage(banner.image || "");
         } else {
-          setMessage("❌ Không tìm thấy banner!");
+          setError("Không tìm thấy banner");
         }
-      } catch {
-        setMessage("❌ Lỗi kết nối máy chủ!");
+      } catch (err) {
+        setError("Lỗi khi tải banner");
+      } finally {
+        setLoading(false);
       }
     };
-    if (id) fetchBanner();
-  }, [id, reset]);
+    fetchBanner();
+  }, [id, form]);
 
-  const onSubmit = async (data: Banner) => {
+  const onFinish = async (values: Banner) => {
+    if (!id) return;
+    setSubmitting(true);
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: getAuthHeader(),
-        body: JSON.stringify(data),
+        body: JSON.stringify(values),
       });
-
       if (res.ok) {
-        setMessage("✅ Cập nhật banner thành công!");
-        setTimeout(() => navigate("/admin/banners"), 1000);
+        message.success("Cập nhật banner thành công!");
+        setTimeout(() => navigate("/admin/banners"), 800);
       } else {
         const err = await res.json();
-        setMessage(`❌ Cập nhật thất bại: ${err.message || "Lỗi máy chủ"}`);
+        message.error(err.message || "Lỗi cập nhật banner!");
       }
     } catch {
-      setMessage("❌ Lỗi kết nối máy chủ!");
+      message.error("Không thể kết nối máy chủ");
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="p-6 bg-gray-100 min-h-screen flex justify-center items-center">
+        <Spin size="large" tip="Đang tải dữ liệu..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 bg-gray-100 min-h-screen">
+        <Alert message="Lỗi" description={error} type="error" showIcon />
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto bg-white mt-10 rounded-xl shadow-lg p-8">
-      <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        ✏️ Chỉnh sửa banner
-      </h2>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        onFinishFailed={() =>
+          message.error("Vui lòng kiểm tra lại các trường thông tin!")
+        }
+      >
+        <Row gutter={[24, 24]}>
+          {/* Main Content */}
+          <Col xs={24} lg={16}>
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Thông tin cơ bản</Title>
+                <Form.Item
+                  name="title"
+                  label="Tiêu đề"
+                  rules={[{ required: true, message: "Tiêu đề không được để trống!" }]}
+                >
+                  <Input placeholder="Nhập tiêu đề banner" />
+                </Form.Item>
+                <Form.Item name="subtitle" label="Phụ đề">
+                  <Input placeholder="Nhập phụ đề banner" />
+                </Form.Item>
+                <Form.Item
+                  name="description"
+                  label="Mô tả"
+                  rules={[{ required: true, message: "Mô tả không được để trống!" }]}
+                >
+                  <TextArea rows={3} maxLength={50} showCount placeholder="Mô tả ngắn gọn (<= 50 ký tự)" />
+                </Form.Item>
+                <Form.Item
+                  name="badge"
+                  label="Badge"
+                  rules={[{ required: true, message: "Badge không được để trống!" }]}
+                >
+                  <Input placeholder="Ví dụ: NEW, HOT..." />
+                </Form.Item>
+              </Card>
 
-      {message && (
-        <div
-          className={`mb-4 text-sm text-center py-2 px-4 rounded ${
-            message.includes("✅")
-              ? "text-green-700 bg-green-100"
-              : "text-red-700 bg-red-100"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Nút hành động</Title>
+                <Form.Item
+                  name="buttonText"
+                  label="Nội dung nút"
+                  rules={[{ required: true, message: "Nội dung nút không được để trống!" }]}
+                >
+                  <Input placeholder="Ví dụ: Xem thêm" />
+                </Form.Item>
+                <Form.Item
+                  name="buttonLink"
+                  label="Link liên kết"
+                  rules={[{ required: true, message: "Link không được để trống!" }]}
+                >
+                  <Input placeholder="https://example.com" />
+                </Form.Item>
+              </Card>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Tiêu đề</label>
-          <input
-            {...register("title", { required: "Tiêu đề không được để trống" })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.title && (
-            <p className="text-red-600 text-sm">{errors.title.message}</p>
-          )}
-        </div>
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Tính năng nổi bật</Title>
+                <Form.List name="features">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map((field, index) => (
+                        <Space key={field.key} align="baseline" style={{ display: "flex", marginBottom: 8 }}>
+                          <Form.Item
+                            {...field}
+                            rules={[{ required: true, message: "Không được để trống" }]}
+                          >
+                            <Input placeholder={`Tính năng ${index + 1}`} />
+                          </Form.Item>
+                          <Button danger onClick={() => remove(field.name)}>X</Button>
+                        </Space>
+                      ))}
+                      <Button type="dashed" onClick={() => add("")} block>
+                        + Thêm tính năng
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
+              </Card>
+            </Space>
+          </Col>
 
-        <div>
-          <label className="block text-sm font-medium">Phụ đề</label>
-          <input
-            {...register("subtitle")}
-            className="w-full border px-4 py-2 rounded"
-          />
-        </div>
-        <textarea
-          {...register("description", {
-            required: "Mô tả không được để trống",
-            validate: (value) => {
-              if (!value) return "Mô tả không được để trống";
-              return (
-                value.trim().length <= 50 ||
-                "Mô tả không được vượt quá 50 ký tự"
-              );
-            },
-          })}
-          className="w-full border px-4 py-2 rounded"
-        />
-        {errors.description && (
-          <p className="text-red-600 text-sm">{errors.description.message}</p>
-        )}
-        <div>
-          <label className="block text-sm font-medium">Nhãn Badge</label>
-          <input
-            {...register("badge", { required: "Badge không được để trống" })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.badge && (
-            <p className="text-red-600 text-sm">{errors.badge.message}</p>
-          )}
-        </div>
+          {/* Sidebar */}
+          <Col xs={24} lg={8}>
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Hình ảnh</Title>
+                <Form.Item
+                  name="image"
+                  label="URL ảnh"
+                  rules={[{ required: true, message: "Ảnh không được để trống!" }]}
+                >
+                  <Input placeholder="https://example.com/banner.jpg" />
+                </Form.Item>
+                <Image
+                  src={previewImage || "/placeholder.png"}
+                  fallback="/placeholder.png"
+                  alt="Xem trước banner"
+                  style={{
+                    width: "100%",
+                    aspectRatio: "16/9",
+                    objectFit: "cover",
+                    borderRadius: "8px",
+                  }}
+                />
+              </Card>
 
-        <div>
-          <label className="block text-sm font-medium">Nút link</label>
-          <input
-            {...register("buttonText", {
-              required: "Nội dung nút link không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.buttonText && (
-            <p className="text-red-600 text-sm">{errors.buttonText.message}</p>
-          )}
-        </div>
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Cấu hình</Title>
+                <Form.Item
+                  name="position"
+                  label="Vị trí"
+                  rules={[{ required: true, message: "Vị trí không được để trống!" }]}
+                >
+                  <Input placeholder="Ví dụ: home-top, sidebar, footer..." />
+                </Form.Item>
+                <Form.Item name="isActive" label="Trạng thái" valuePropName="checked">
+                  <Switch checkedChildren="Hoạt động" unCheckedChildren="Ẩn" />
+                </Form.Item>
+              </Card>
 
-        <div>
-          <label className="block text-sm font-medium">Link liên kết</label>
-          <input
-            {...register("buttonLink", {
-              required: "Link liên kết không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.buttonLink && (
-            <p className="text-red-600 text-sm">{errors.buttonLink.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Tính năng nổi bật</label>
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2 mb-2">
-              <input
-                {...register(`features.${index}` as const, {
-                  required: "Không được để trống",
-                })}
-                className="w-full border px-4 py-2 rounded"
-              />
-              <button
-                type="button"
-                onClick={() => remove(index)}
-                className="text-red-500"
-              >
-                X
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => append("")}
-            className="text-blue-600 text-sm underline"
-          >
-            + Thêm tính năng
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Ảnh</label>
-          <input
-            {...register("image", {
-              required: "Ảnh không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.image && (
-            <p className="text-red-600 text-sm">{errors.image.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Vị trí hiển thị</label>
-          <input
-            {...register("position", {
-              required: "Vị trí không được để trống",
-            })}
-            className="w-full border px-4 py-2 rounded"
-          />
-          {errors.position && (
-            <p className="text-red-600 text-sm">{errors.position.message}</p>
-          )}
-        </div>
-
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            {...register("isActive")}
-            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
-          />
-          <label className="ml-2 block text-sm">Kích hoạt banner</label>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700"
-        >
-          Cập nhật banner
-        </button>
-      </form>
+              <Card className="shadow-lg rounded-xl">
+                <Title level={4}>Hành động</Title>
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={submitting}
+                    icon={<PlusOutlined />}
+                    shape="round"
+                    size="large"
+                    block
+                  >
+                    Lưu thay đổi
+                  </Button>
+                  <Button
+                    type="default"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => navigate("/admin/banners")}
+                    shape="round"
+                    size="large"
+                    block
+                  >
+                    Quay lại
+                  </Button>
+                </Space>
+              </Card>
+            </Space>
+          </Col>
+        </Row>
+      </Form>
     </div>
   );
 };
