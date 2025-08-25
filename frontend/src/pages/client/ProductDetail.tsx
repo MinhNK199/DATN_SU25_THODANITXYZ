@@ -564,7 +564,7 @@ const ProductDetail: React.FC = () => {
                   <div className="font-semibold mb-1 text-base">{variant.name || `${variant.size || ''}`}</div>
                   <div className="mb-2">
                     <img
-                      src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder-image.jpg'}
+                      src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder.svg'}
                       alt="variant-large"
                       style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee', marginBottom: 8 }}
                     />
@@ -625,7 +625,7 @@ const ProductDetail: React.FC = () => {
                   style={{ display: variant.stock > 5 ? 'none' : undefined }}
                 >
                   <img
-                    src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder-image.jpg'}
+                    src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder.svg'}
                     alt="variant"
                     style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee' }}
                   />

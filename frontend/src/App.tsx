@@ -54,6 +54,8 @@ import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
 import BlogPage from './pages/admin/BlogPage';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
+import BlogList from './pages/client/BlogList';
+import BlogDetail from './pages/client/BlogDetail';
 
 // Import Profile components
 import ProfileLayout from './pages/client/profile/components/ProfileLayout';
@@ -96,6 +98,8 @@ function App() {
               <Route path="faq" element={<FAQ />} />
               <Route path="compare" element={<ProductComparison />} />
               <Route path="reviews" element={<ProductReviews />} />
+              <Route path="blogs" element={<BlogList />} />
+              <Route path="blog/:slug" element={<BlogDetail />} />
               
               {/* Profile nested routes */}
               <Route path="profile" element={<ProfileLayout />}>

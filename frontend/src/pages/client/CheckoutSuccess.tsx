@@ -61,10 +61,10 @@ const CheckoutSuccess: React.FC = () => {
     }, 3000); // Đợi 3 giây cho callback xử lý
     
   } else {
-    // ❌ Thanh toán ZaloPay thất bại
-    await axios.delete(`http://localhost:8000/api/order/${orderId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+         // ❌ Thanh toán ZaloPay thất bại
+     await axios.delete(`/api/order/${orderId}`, {
+       headers: { Authorization: `Bearer ${token}` },
+     });
     showError("Thanh toán ZaloPay thất bại", "Đơn hàng đã bị hủy");
     navigate("/checkout?error=payment_cancelled");
     return;
@@ -89,10 +89,10 @@ const CheckoutSuccess: React.FC = () => {
             }
             await fetchOrderDetails();
           } else {
-            // ❌ Thanh toán Momo thất bại
-            await axios.delete(`http://localhost:8000/api/order/${orderId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+                         // ❌ Thanh toán Momo thất bại
+             await axios.delete(`/api/order/${orderId}`, {
+               headers: { Authorization: `Bearer ${token}` },
+             });
             showError("Thanh toán Momo thất bại", "Đơn hàng đã bị hủy");
             navigate("/checkout?error=payment_cancelled");
             return;
@@ -116,10 +116,10 @@ const CheckoutSuccess: React.FC = () => {
             }
             await fetchOrderDetails();
           } else {
-            // ❌ Thanh toán VNPAY thất bại
-            await axios.delete(`http://localhost:8000/api/order/${orderId}`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
+                         // ❌ Thanh toán VNPAY thất bại
+             await axios.delete(`/api/order/${orderId}`, {
+               headers: { Authorization: `Bearer ${token}` },
+             });
             showError("Thanh toán VNPAY thất bại", "Đơn hàng đã bị hủy");
             navigate("/checkout?error=payment_cancelled");
             return;
@@ -168,11 +168,11 @@ const CheckoutSuccess: React.FC = () => {
       const token = localStorage.getItem("token");
       const productIds = orderItems.map((item) => item.product);
 
-      await axios.post(
-        `http://localhost:8000/api/cart/remove-multiple`,
-        { productIds },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+             await axios.post(
+         `/api/cart/remove-multiple`,
+         { productIds },
+         { headers: { Authorization: `Bearer ${token}` } }
+       );
 
       console.log("✅ Đã xóa sản phẩm khỏi giỏ hàng sau thanh toán thành công");
     } catch (error) {
@@ -186,12 +186,12 @@ const CheckoutSuccess: React.FC = () => {
       const token = localStorage.getItem("token");
       console.log("🔄 Fetching order details for:", orderId);
 
-      const response = await axios.get(
-        `http://localhost:8000/api/order/${orderId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+             const response = await axios.get(
+         `/api/order/${orderId}`,
+         {
+           headers: { Authorization: `Bearer ${token}` },
+         }
+       );
 
       console.log("📦 Order details received:", {
         id: response.data._id,
@@ -225,10 +225,10 @@ const CheckoutSuccess: React.FC = () => {
   };
 
   // ✅ Hàm hiển thị tên phương thức thanh toán
-  const getPaymentMethodDisplay = () => {
+    const getPaymentMethodDisplay = () => {
     switch (paymentMethod) {
       case "COD":
-      return "Thanh toán khi nhận hàng (COD)";
+        return "Thanh toán khi nhận hàng (COD)";
       case "zalopay":
         return "ZaloPay";
       case "momo":
@@ -237,8 +237,6 @@ const CheckoutSuccess: React.FC = () => {
         return "VNPAY";
       case "credit-card":
         return "Thẻ tín dụng";
-      case "COD":
-        return "Thanh toán khi nhận hàng";
       default:
         return paymentMethod || "Không xác định";
     }

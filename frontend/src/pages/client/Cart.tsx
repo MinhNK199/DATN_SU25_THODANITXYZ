@@ -39,7 +39,7 @@ const Cart: React.FC = () => {
           images:
             p.images && p.images.length > 0
               ? p.images
-              : ["/placeholder-image.jpg"],
+              : ["/placeholder.svg"],
           brand: p.brand,
           stock: p.stock ?? 0,
           variants: p.variants ?? [],
@@ -144,7 +144,7 @@ const Cart: React.FC = () => {
                   const displayImage =
                     variant?.images?.[0] ||
                     item.product.images?.[0] ||
-                    "/placeholder-image.jpg";
+                    "/placeholder.svg";
                   const displayPrice =
                     variant?.salePrice && variant?.salePrice < variant?.price
                       ? variant.salePrice
@@ -470,7 +470,7 @@ const Cart: React.FC = () => {
                   src={
                     detailItem.variantInfo?.images?.[0] ||
                     detailItem.product.images?.[0] ||
-                    "/placeholder-image.jpg"
+                    "/placeholder.svg"
                   }
                   alt={detailItem.product.name}
                   width={200}

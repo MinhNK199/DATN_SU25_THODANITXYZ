@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import HeroSlider from '../../components/client/HeroSlider';
 import ProductCard from '../../components/client/ProductCard';
 import RecommendationList from '../../components/client/RecommendationList';
+import BlogSection from '../../components/client/BlogSection';
 import { FaGift, FaTruck, FaShieldAlt, FaHeadset, FaStar, FaUsers, FaAward } from 'react-icons/fa';
 
 const Home: React.FC = () => {
@@ -197,6 +198,9 @@ const Home: React.FC = () => {
           <RecommendationList />
         </div>
       </section>
+
+      {/* Blog Section */}
+      <BlogSection />
 
       {/* Stats Section */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">

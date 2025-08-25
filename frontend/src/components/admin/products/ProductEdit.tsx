@@ -58,67 +58,6 @@ interface ProductVariant {
   specifications?: { [key: string]: string }
 }
 
-// ENHANCED: Utility function để clean color data từ database
-const cleanColorData = (colorData: any): { code: string; name: string } => {
-  console.log("🎨 Cleaning color data:", typeof colorData, colorData)
-
-  // Default color
-  const defaultColor = { code: "#000000", name: "Đen" }
-
-  if (!colorData) {
-    console.log("⚠️ No color data, using default")
-    return defaultColor
-  }
-
-  // Nếu đã là object hợp lệ
-  if (typeof colorData === "object" && colorData !== null && !Array.isArray(colorData)) {
-    if (colorData.code && typeof colorData.code === "string") {
-      const result = {
-        code: colorData.code,
-        name: typeof colorData.name === "string" ? colorData.name : getColorNameByCode(colorData.code),
-      }
-      console.log("✅ Valid color object:", result)
-      return result
-    }
-  }
-
-  // Nếu là string
-  if (typeof colorData === "string") {
-    if (colorData === "[object Object]" || colorData === "undefined" || colorData === "null") {
-      console.log("⚠️ Invalid color string, using default")
-      return defaultColor
-    }
-
-    // Nếu là hex color
-    if (colorData.startsWith("#")) {
-      const result = {
-        code: colorData,
-        name: getColorNameByCode(colorData),
-      }
-      console.log("✅ Color from hex string:", result)
-      return result
-    }
-
-    // Thử parse JSON
-    try {
-      const parsed = JSON.parse(colorData)
-      if (parsed && typeof parsed === "object" && parsed.code) {
-        const result = {
-          code: parsed.code,
-          name: parsed.name || getColorNameByCode(parsed.code),
-        }
-        console.log("✅ Color from JSON string:", result)
-        return result
-      }
-    } catch (e) {
-      console.log("⚠️ Failed to parse color JSON")
-    }
-  }
-
-  console.log("⚠️ Fallback to default color")
-  return defaultColor
-}
-
 // Helper function để lấy tên màu từ code
 const getColorNameByCode = (code: string): string => {
   const colorMap: { [key: string]: string } = {
@@ -144,69 +83,6 @@ const getColorNameByCode = (code: string): string => {
     "#87CEEB": "Xanh sky",
   }
   return colorMap[code] || "Màu khác"
-}
-
-// ENHANCED: Utility function để validate và clean product data
-const validateAndCleanProductData = (productData: any) => {
-  console.log("🧹 Cleaning product data before sending to API...")
-  console.log("📥 Raw data:", productData)
-
-  const cleanedData = { ...productData }
-
-  // Validate và clean variants
-  if (cleanedData.variants && Array.isArray(cleanedData.variants)) {
-    cleanedData.variants = cleanedData.variants.map((variant: any, index: number) => {
-      console.log(`🔍 Cleaning variant ${index}:`, variant.name || "unnamed")
-
-      // CRITICAL: Clean color data
-      const cleanColor = cleanColorData(variant.color)
-
-      // Validate specifications object
-      let cleanSpecs = {}
-      if (variant.specifications && typeof variant.specifications === "object" && variant.specifications !== null) {
-        cleanSpecs = { ...variant.specifications }
-      }
-
-      const cleanedVariant = {
-        // Chỉ giữ _id cho variant đã tồn tại, loại bỏ id để tránh lỗi ObjectId casting
-        ...(variant._id && { _id: variant._id }),
-        name: variant.name || "",
-        sku: variant.sku || "",
-        price: Number(variant.price) || 0,
-        salePrice: variant.salePrice ? Number(variant.salePrice) : undefined,
-        stock: Number(variant.stock) || 0,
-        color: cleanColor, // ĐẢM BẢO COLOR LÀ OBJECT HỢP LỆ
-        specifications: cleanSpecs, // ĐẢM BẢO SPECS LÀ OBJECT HỢP LỆ
-        size: Number(variant.size) || 0,
-        length: Number(variant.length) || 0,
-        width: Number(variant.width) || 0,
-        height: Number(variant.height) || 0,
-        weight: Number(variant.weight) || 0,
-        images: Array.isArray(variant.images) ? variant.images : [],
-        isActive: Boolean(variant.isActive),
-      }
-
-      console.log(`✅ Cleaned variant ${index}:`, {
-        name: cleanedVariant.name,
-        color: cleanedVariant.color,
-        specifications: cleanedVariant.specifications,
-      })
-
-      return cleanedVariant
-    })
-  }
-
-  console.log("✅ Final cleaned data ready for API:")
-  console.log(
-    "📤 Cleaned variants:",
-    cleanedData.variants?.map((v: any) => ({
-      name: v.name,
-      color: v.color,
-      specifications: v.specifications,
-    })),
-  )
-
-  return cleanedData
 }
 
 const ProductEdit: React.FC = () => {

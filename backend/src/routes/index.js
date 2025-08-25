@@ -20,6 +20,7 @@ import { runCleanupNow } from "../utils/cleanupJob";
 import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig';
 import { protect, checkAdmin } from '../middlewares/authMiddleware';
 import routerBlog from "./blog.js";
+import routerUpload from "./upload.js";
 const provinceController = require('../controllers/provinceController');
 
 const router = Router();
@@ -40,7 +41,8 @@ router.use("/recommendation", routerRecommendation);
 router.use("/payment-methods", paymentMethodRouter);
 router.use('/payment/momo', paymentMomoRouter);
 router.use('/payment/vnpay', paymentVnpayRouter);
-router.use("/blogs", routerBlog);
+router.use("/blog", routerBlog);
+router.use("/upload", routerUpload);
 router.get('/provinces', provinceController.getProvinces);
 router.get('/wards', provinceController.getWards);
 router.get('/districts', provinceController.getDistricts);

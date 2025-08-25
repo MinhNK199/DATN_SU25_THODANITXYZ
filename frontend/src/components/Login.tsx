@@ -85,7 +85,7 @@ const login = useGoogleLogin({
           password: formData.password,
         });
 
-        const res = await axios.post("http://localhost:8000/api/auth/login", {
+        const res = await axios.post("/api/auth/login", {
           email: formData.email,
           password: formData.password,
         });
@@ -143,7 +143,7 @@ const login = useGoogleLogin({
         });
 
         const res = await axios.post(
-          "http://localhost:8000/api/auth/register",
+          "/api/auth/register",
           {
             name: formData.name,
             email: formData.email,

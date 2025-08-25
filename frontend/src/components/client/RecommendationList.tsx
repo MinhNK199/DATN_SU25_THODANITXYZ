@@ -30,7 +30,7 @@ function RecommendationList() {
               style={{ cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
             >
               <img
-                src={product.images?.[0] || '/default-product.png'}
+                src={product.images?.[0] || '/placeholder.svg'}
                 alt={product.name}
                 className={styles["product-image"]}
               />

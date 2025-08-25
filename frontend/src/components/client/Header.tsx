@@ -418,7 +418,7 @@ const Header: React.FC = () => {
                       <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 mb-3">
                         {cartState.items.slice(0, 2).map(item => (
                             <div key={item._id} className="flex items-center py-2 gap-3">
-                              <img src={item.product.images && item.product.images[0] ? item.product.images[0] : '/placeholder-image.jpg'} alt={item.product.name} className="w-14 h-14 object-contain rounded-lg border" />
+                              <img src={item.product.images && item.product.images[0] ? item.product.images[0] : '/placeholder.svg'} alt={item.product.name} className="w-14 h-14 object-contain rounded-lg border" />
                             <div className="flex-1">
                                 <div className="font-medium text-gray-900 line-clamp-1">{item.product.name}</div>
                               <div className="text-sm text-gray-500">Số lượng: {item.quantity}</div>
