@@ -5,18 +5,12 @@ import express from "express";
 import cors from "cors";
 import passport from "passport";
 import "./config/passport.js";
-<<<<<<< HEAD
-import router from "./routes";
-import connectDB from "./config/database";
-import { setupCleanupCron } from "./utils/cleanupJob";
-import fs from 'fs';
-import path from 'path';
-=======
 import router from "./routes/index.js";
 import connectDB from "./config/database.js";
 import { setupCleanupCron } from "./utils/cleanupJob.js";
 import { checkAndRefreshToken } from "./utils/tokenRefresh.js";
->>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 
@@ -50,12 +44,9 @@ app.use((req, res, next) => {
     next();
 });
 
-<<<<<<< HEAD
-=======
 // Token refresh middleware
 app.use(checkAndRefreshToken);
 
->>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
 app.use(passport.initialize());
 
 // Serve static files từ thư mục uploads
@@ -74,7 +65,7 @@ app.get('/', (req, res) => {
 app.use("/api", router);
 
 // Khởi động server
-const PORT = 9000; // Cố định port 9000
+const PORT = 8000; // Cố định port 8000
 app.listen(PORT, async () => {
     console.log(`🚀 Server đã được khởi động thành công!`);
     console.log(`📍 Port: ${PORT}`);

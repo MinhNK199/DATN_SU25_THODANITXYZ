@@ -58,6 +58,23 @@ const orderSchema = new mongoose.Schema(
       status: String,
       update_time: String,
       email_address: String,
+      method: String,
+      amount: Number,
+      // Thông tin đặc biệt cho từng phương thức thanh toán
+      cardLast4: String, // Credit card
+      cardType: String, // VISA, MASTERCARD, etc.
+      bankCode: String, // VNPay, MoMo
+      payType: String, // MoMo
+      orderType: String, // MoMo
+      transType: String, // MoMo
+      extraData: String, // MoMo, ZaloPay
+      app_trans_id: String, // ZaloPay
+      zp_trans_id: String, // ZaloPay
+      vnp_TransactionNo: String, // VNPay
+      vnp_BankCode: String, // VNPay
+      vnp_PayDate: String, // VNPay
+      failure_reason: String, // Khi thanh toán thất bại
+      failure_time: String, // Thời gian thất bại
     },
     itemsPrice: {
       type: Number,
@@ -103,13 +120,6 @@ const orderSchema = new mongoose.Schema(
     deliveredAt: {
       type: Date,
     },
-    // Số lần giao lại khi giao hàng thất bại
-    retryDeliveryCount: {
-      type: Number,
-      default: 0,
-    },
-    zalopayTransId: { type: String },
-    vnpayTransId: { type: String },
     status: {
       type: String,
       enum: [
@@ -120,6 +130,9 @@ const orderSchema = new mongoose.Schema(
         "shipped", // Đang giao hàng
         "delivered_success", // Giao hàng thành công
         "delivered_failed", // Giao hàng thất bại
+        "partially_delivered", // Giao hàng một phần
+        "returned", // Hoàn hàng
+        "on_hold", // Tạm dừng xử lý
         "completed", // Hoàn thành
         "cancelled", // Đã hủy
         "refund_requested", // Yêu cầu hoàn tiền
@@ -133,6 +146,38 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "awaiting_payment", "paid", "failed", "cancelled"],
       default: "pending",
     },
+    // Thêm fields mới cho delivery tracking
+    estimatedDeliveryDate: {
+      type: Date,
+    },
+    actualDeliveryDate: {
+      type: Date,
+    },
+    deliveryPerson: {
+      name: String,
+      phone: String,
+      id: String,
+    },
+    deliveryNotes: String,
+    customerRating: {
+      rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+      },
+      comment: String,
+      date: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+    // Số lần giao lại khi giao hàng thất bại
+    retryDeliveryCount: {
+      type: Number,
+      default: 0,
+    },
+    zalopayTransId: { type: String },
+    vnpayTransId: { type: String },
     statusHistory: [
       {
         status: {

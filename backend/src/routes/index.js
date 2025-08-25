@@ -16,16 +16,12 @@ import routerRecommendation from "./recommendation.js";
 import paymentMethodRouter from "./paymentMethod.js";
 import paymentMomoRouter from './paymentMomo.js';
 import paymentVnpayRouter from './paymentVnpay.js';
+import paymentCreditCardRouter from './paymentCreditCard.js';
 import { runCleanupNow } from "../utils/cleanupJob.js";
 import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig.js';
 import { protect, checkAdmin } from '../middlewares/authMiddleware.js';
 import routerBlog from "./blog.js";
-<<<<<<< HEAD
-import routerUpload from "./upload.js";
-const provinceController = require('../controllers/provinceController');
-=======
 import { getProvinces, getWards, getDistricts } from '../controllers/provinceController.js';
->>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
 
 const router = Router();
 router.use("/auth", routerAuth);
@@ -45,18 +41,11 @@ router.use("/recommendation", routerRecommendation);
 router.use("/payment-methods", paymentMethodRouter);
 router.use('/payment/momo', paymentMomoRouter);
 router.use('/payment/vnpay', paymentVnpayRouter);
-<<<<<<< HEAD
-router.use("/blog", routerBlog);
-router.use("/upload", routerUpload);
-router.get('/provinces', provinceController.getProvinces);
-router.get('/wards', provinceController.getWards);
-router.get('/districts', provinceController.getDistricts);
-=======
+router.use('/payment/credit-card', paymentCreditCardRouter);
 router.use("/blogs", routerBlog);
 router.get('/provinces', getProvinces);
 router.get('/wards', getWards);
 router.get('/districts', getDistricts);
->>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
 router.get('/tax', getTaxConfig);
 router.put('/tax', protect, checkAdmin(['Superadmin']), updateTaxConfig);
 

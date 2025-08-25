@@ -233,7 +233,7 @@ const OrderList: React.FC = () => {
             <Option value="pending">Chờ xác nhận</Option>
             <Option value="processing">Đang xử lý</Option>
             <Option value="shipped">Đang giao</Option>
-            <Option value="delivered">Đã giao</Option>
+            <Option value="delivered_success">Đã giao</Option>
             <Option value="cancelled">Đã hủy</Option>
           </Select>
         </Col>

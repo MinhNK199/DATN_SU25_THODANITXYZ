@@ -42,58 +42,109 @@ const { TextArea } = Input;
 const { Step } = Steps;
 
 const statusOptions = {
+  draft: "Đang tạo",
   pending: "Chờ xác nhận",
   confirmed: "Đã xác nhận",
   processing: "Đang xử lý",
   shipped: "Đang giao hàng",
   delivered_success: "Giao hàng thành công",
   delivered_failed: "Giao hàng thất bại",
+  partially_delivered: "Giao hàng một phần",
+  returned: "Hoàn hàng",
+  on_hold: "Tạm dừng",
   completed: "Thành công",
   cancelled: "Đã hủy",
-  returned: "Hoàn hàng",
   refund_requested: "Yêu cầu hoàn tiền",
   refunded: "Hoàn tiền thành công",
+  payment_failed: "Thanh toán thất bại",
 };
 
+// ✅ CẬP NHẬT: Logic transitions nhất quán với backend
 const nextStatusOptions = (currentStatus: string) => {
-  switch (currentStatus) {
-    case "pending":
-      return ["confirmed", "cancelled"];
-    case "confirmed":
-      return ["processing", "cancelled"];
-    case "processing":
-      return ["shipped", "cancelled"];
-    case "shipped":
-      return ["delivered_success", "delivered_failed"];
-    case "delivered_success":
-      return ["completed", "returned", "refund_requested"];
-    case "delivered_failed":
-      return ["cancelled"];
-    case "returned":
-      return ["refund_requested"];
-    case "refund_requested":
-      return ["refunded"];
-    default:
-      return [];
-  }
+  const transitions = {
+    draft: ["pending", "cancelled"],
+    pending: ["confirmed", "cancelled", "on_hold"],
+    confirmed: ["processing", "cancelled", "on_hold"],
+    processing: ["shipped", "cancelled", "on_hold"],
+    shipped: ["delivered_success", "delivered_failed", "partially_delivered"],
+    delivered_success: ["completed", "returned"],
+    delivered_failed: ["shipped", "cancelled"],
+    partially_delivered: ["shipped", "delivered_success"],
+    returned: ["refund_requested", "refunded"],
+    on_hold: ["processing", "cancelled"],
+    refund_requested: ["refunded", "delivered_success"],
+    completed: [],
+    cancelled: [],
+    refunded: [],
+    payment_failed: ["cancelled"],
+  };
+  return transitions[currentStatus] || [];
+};
+
+// ✅ THÊM: Hàm lấy màu sắc cho từng trạng thái
+const getStatusColor = (status: string) => {
+  const colorMap = {
+    draft: "#6B7280",
+    pending: "#3B82F6",
+    confirmed: "#10B981",
+    processing: "#F59E0B",
+    shipped: "#8B5CF6",
+    delivered_success: "#059669",
+    delivered_failed: "#DC2626",
+    partially_delivered: "#F97316",
+    returned: "#7C3AED",
+    on_hold: "#6B7280",
+    completed: "#059669",
+    cancelled: "#DC2626",
+    refund_requested: "#F59E0B",
+    refunded: "#3B82F6",
+    payment_failed: "#DC2626",
+  };
+  return colorMap[status] || "#6B7280";
+};
+
+// ✅ THÊM: Hàm lấy icon cho từng trạng thái
+const getStatusIcon = (status: string) => {
+  const iconMap = {
+    draft: "📝",
+    pending: "⏳",
+    confirmed: "✅",
+    processing: "📦",
+    shipped: "🚚",
+    delivered_success: "🎉",
+    delivered_failed: "❌",
+    partially_delivered: "📦",
+    returned: "↩️",
+    on_hold: "⏸️",
+    completed: "🏆",
+    cancelled: "🚫",
+    refund_requested: "💰",
+    refunded: "💸",
+    payment_failed: "💳",
+  };
+  return iconMap[status] || "❓";
 };
 
 const getStepStatus = (
   orderStatus: string,
   stepStatus: string
 ): "finish" | "process" | "wait" | "error" => {
-  // Cập nhật các bước chính cho hiển thị tiến trình
+  // ✅ CẬP NHẬT: Các bước chính cho hiển thị tiến trình
   const statusOrder = [
+    "draft",
     "pending",
     "confirmed",
     "processing",
     "shipped",
     "delivered_success",
-    "refund_requested", // Thêm bước này
     "completed",
   ];
-  if (orderStatus === "cancelled" || orderStatus === "delivered_failed")
+  
+  if (orderStatus === "cancelled" || orderStatus === "delivered_failed" || orderStatus === "payment_failed")
     return "error";
+    
+  if (orderStatus === "on_hold") return "wait";
+  
   const currentIndex = statusOrder.indexOf(orderStatus);
   const stepIndex = statusOrder.indexOf(stepStatus);
 
@@ -218,12 +269,12 @@ const OrderDetail: React.FC = () => {
 
   const availableNextStatuses = nextStatusOptions(order.status);
   const currentStep = [
+    "draft",
     "pending",
     "confirmed",
     "processing",
     "shipped",
     "delivered_success",
-    "refund_requested",
     "completed",
   ].indexOf(order.status);
 
@@ -237,11 +288,16 @@ const OrderDetail: React.FC = () => {
         <Steps
           current={currentStep}
           status={
-            order.status === "cancelled" || order.status === "delivered_failed"
+            order.status === "cancelled" || order.status === "delivered_failed" || order.status === "payment_failed"
               ? "error"
               : undefined
           }
         >
+          <Step
+            title="Đang tạo"
+            status={getStepStatus(order.status, "draft")}
+            icon={<FaBox />}
+          />
           <Step
             title="Chờ xác nhận"
             status={getStepStatus(order.status, "pending")}
@@ -390,7 +446,7 @@ const OrderDetail: React.FC = () => {
           >
             <Descriptions bordered column={1} size="small">
               <Descriptions.Item label="Trạng thái hiện tại">
-                <Tag color="blue">
+                <Tag color={getStatusColor(order.status)}>
                   {statusOptions[order.status as keyof typeof statusOptions]}
                 </Tag>
               </Descriptions.Item>
@@ -421,7 +477,7 @@ const OrderDetail: React.FC = () => {
                           );
                         }
                       }}
-                      disabled={["delivered_failed", "cancelled"].includes(
+                      disabled={["delivered_failed", "cancelled", "payment_failed"].includes(
                         order.status
                       )}
                     >

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ShoppingBag, Search, Filter, Eye, Package, Truck,
-  CheckCircle, XCircle, Clock
+  CheckCircle, XCircle, Clock, RotateCcw, Pause, DollarSign
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../../../api/axiosInstance';
@@ -25,7 +25,7 @@ interface Order {
   orderNumber?: string;
   orderItems: OrderItem[];
   totalPrice: number;
-  status: 'draft' | 'pending' | 'confirmed' | 'processing' | 'shipping' | 'delivered' | 'cancelled';
+  status: 'draft' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered_success' | 'delivered_failed' | 'partially_delivered' | 'returned' | 'on_hold' | 'completed' | 'cancelled' | 'refund_requested' | 'refunded' | 'payment_failed';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'awaiting_payment';
   paymentMethod: string;
   isPaid?: boolean;
@@ -40,6 +40,14 @@ interface Order {
   };
   createdAt: string;
   updatedAt: string;
+  estimatedDeliveryDate?: string;
+  deliveryPerson?: string;
+  deliveryNotes?: string;
+  statusHistory?: {
+    status: string;
+    date: string;
+    note?: string;
+  }[];
 }
 
 const Orders = () => {
@@ -85,12 +93,21 @@ const Orders = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'draft': return <Clock className="w-4 h-4 text-gray-500" />;
       case 'pending': return <Clock className="w-4 h-4 text-yellow-500" />;
       case 'confirmed': return <CheckCircle className="w-4 h-4 text-blue-500" />;
       case 'processing': return <Package className="w-4 h-4 text-purple-500" />;
-      case 'shipping': return <Truck className="w-4 h-4 text-orange-500" />;
-      case 'delivered': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'shipped': return <Truck className="w-4 h-4 text-orange-500" />;
+      case 'delivered_success': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'delivered_failed': return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'partially_delivered': return <Package className="w-4 h-4 text-orange-500" />;
+      case 'returned': return <RotateCcw className="w-4 h-4 text-purple-500" />;
+      case 'on_hold': return <Pause className="w-4 h-4 text-gray-500" />;
+      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'cancelled': return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'refund_requested': return <DollarSign className="w-4 h-4 text-yellow-500" />;
+      case 'refunded': return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      case 'payment_failed': return <XCircle className="w-4 h-4 text-red-500" />;
       default: return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
@@ -101,9 +118,17 @@ const Orders = () => {
       case 'pending': return 'Chờ xác nhận';
       case 'confirmed': return 'Đã xác nhận';
       case 'processing': return 'Đang xử lý';
-      case 'shipping': return 'Đang giao hàng';
-      case 'delivered': return 'Đã giao';
+      case 'shipped': return 'Đang giao hàng';
+      case 'delivered_success': return 'Giao hàng thành công';
+      case 'delivered_failed': return 'Giao hàng thất bại';
+      case 'partially_delivered': return 'Giao hàng một phần';
+      case 'returned': return 'Hoàn hàng';
+      case 'on_hold': return 'Tạm dừng';
+      case 'completed': return 'Thành công';
       case 'cancelled': return 'Đã hủy';
+      case 'refund_requested': return 'Yêu cầu hoàn tiền';
+      case 'refunded': return 'Hoàn tiền thành công';
+      case 'payment_failed': return 'Thanh toán thất bại';
       default: return 'Không xác định';
     }
   };
@@ -129,14 +154,49 @@ const Orders = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'draft': return 'bg-gray-100 text-gray-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'confirmed': return 'bg-blue-100 text-blue-800';
       case 'processing': return 'bg-purple-100 text-purple-800';
-      case 'shipping': return 'bg-orange-100 text-orange-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'shipped': return 'bg-orange-100 text-orange-800';
+      case 'delivered_success': return 'bg-green-100 text-green-800';
+      case 'delivered_failed': return 'bg-red-100 text-red-800';
+      case 'partially_delivered': return 'bg-orange-100 text-orange-800';
+      case 'returned': return 'bg-purple-100 text-purple-800';
+      case 'on_hold': return 'bg-gray-100 text-gray-800';
+      case 'completed': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'refund_requested': return 'bg-yellow-100 text-yellow-800';
+      case 'refunded': return 'bg-blue-100 text-blue-800';
+      case 'payment_failed': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  // ✅ THÊM: Hàm hiển thị thông tin giao hàng
+  const getDeliveryInfo = (order: Order) => {
+    if (order.status === 'shipped' && order.estimatedDeliveryDate) {
+      return {
+        estimatedDate: new Date(order.estimatedDeliveryDate).toLocaleDateString('vi-VN'),
+        deliveryPerson: order.deliveryPerson,
+        notes: order.deliveryNotes
+      };
+    }
+    return null;
+  };
+
+  // ✅ THÊM: Hàm hiển thị timeline đơn hàng
+  const getOrderTimeline = (order: Order) => {
+    if (!order.statusHistory || order.statusHistory.length === 0) return [];
+    
+    return order.statusHistory.map((history, index) => ({
+      id: index,
+      status: history.status,
+      text: getStatusText(history.status),
+      date: new Date(history.date).toLocaleString('vi-VN'),
+      note: history.note || '',
+      isLatest: index === order.statusHistory.length - 1
+    }));
   };
 
   const filteredOrders = React.useMemo(() => {
@@ -207,8 +267,8 @@ const Orders = () => {
               <option value="pending">Chờ xác nhận</option>
               <option value="confirmed">Đã xác nhận</option>
               <option value="processing">Đang xử lý</option>
-              <option value="shipping">Đang giao hàng</option>
-              <option value="delivered">Đã giao</option>
+              <option value="shipped">Đang giao hàng</option>
+              <option value="delivered_success">Đã giao</option>
               <option value="cancelled">Đã hủy</option>
             </select>
           </div>

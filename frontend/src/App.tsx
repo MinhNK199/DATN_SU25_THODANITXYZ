@@ -58,13 +58,10 @@ import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
 import BlogPage from './pages/admin/BlogPage';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
-<<<<<<< HEAD
 import BlogList from './pages/client/BlogList';
 import BlogDetail from './pages/client/BlogDetail';
-=======
 import CheckoutFailed from './pages/client/CheckoutFailed';
 import CheckoutStatus from './pages/client/CheckoutStatus';
->>>>>>> f02c39049ad512ebf3b7dfa5f69c0d7abaf47e53
 
 // Import Profile components
 import ProfileLayout from './pages/client/profile/components/ProfileLayout';
