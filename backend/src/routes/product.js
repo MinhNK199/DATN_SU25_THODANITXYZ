@@ -60,7 +60,7 @@ import {
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { createProductValidation, updateProductValidation } from "../validation/product.js";
-import upload from "../middlewares/updateMiddleware.js";
+// import upload from "../middlewares/updateMiddleware.js";
 
 const routerProduct = express.Router();
 
@@ -94,7 +94,7 @@ routerProduct.post("/:id/variants", protect, addProductVariant);
 routerProduct.put("/:productId/variants/:variantId", protect, updateProductVariant);
 routerProduct.delete("/:productId/variants/:variantId", protect, deleteProductVariant);
 
-routerProduct.post("/import", protect, upload.single('file'), importProductsFromExcel);
+// routerProduct.post("/import", protect, upload.single('file'), importProductsFromExcel);
 routerProduct.post("/:id/reviews", protect, createProductReview);
 routerProduct.post("/:id/videos", protect, addProductVideo);
 routerProduct.delete("/:id/videos/:videoIndex", protect, deleteProductVideo);

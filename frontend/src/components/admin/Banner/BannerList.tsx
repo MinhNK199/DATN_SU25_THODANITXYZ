@@ -24,6 +24,7 @@ import type { ColumnsType } from "antd/es/table";
 const { Title, Text, Paragraph } = Typography;
 
 const API_URL = "http://localhost:8000/api/banner";
+const UPLOADS_URL = "http://localhost:8000";
 
 interface SearchParams {
   title: string;
@@ -114,7 +115,7 @@ const BannerList: React.FC = () => {
 
   const showBannerDetail = (banner: Banner) => {
     setSelectedBanner(banner);
-    setIsModalVisible(true);
+setIsModalVisible(true);
   };
 
   const handleSearch = (value: string) => {
@@ -124,6 +125,12 @@ const BannerList: React.FC = () => {
   const handleStatusChange = (value: "all" | "active" | "inactive") => {
     setSearchParams((prev) => ({ ...prev, status: value }));
   };
+  // ảnh hiển thị
+const getImageSrc = (image?: string) => {
+  if (!image) return "/placeholder.png";
+  if (image.startsWith("http")) return image;
+  return `${UPLOADS_URL}${image}`;
+};
 
   const filteredBanners = banners.filter((banner) => {
     const titleMatch = banner.title
@@ -155,18 +162,18 @@ const BannerList: React.FC = () => {
       render: (_text, _record, index) => index + 1,
     },
     {
-      title: "Hình ảnh",
-      dataIndex: "image",
-      key: "image",
-      width: 100,
-      render: (image: string) => (
-        <img
-          src={image || "/placeholder.png"}
-          alt="Banner"
-          className="w-16 h-16 object-cover rounded"
-        />
-      ),
-    },
+    title: "Hình ảnh",
+    dataIndex: "image",
+    key: "image",
+    width: 100,
+    render: (image: string) => (
+      <img
+        src={getImageSrc(image)}
+        alt="Banner"
+        className="w-16 h-16 object-cover rounded"
+      />
+    ),
+  },
     {
       title: "Tiêu đề",
       dataIndex: "title",
@@ -215,7 +222,7 @@ const BannerList: React.FC = () => {
             {isVisible ? "Đang hiển thị" : "Đã ẩn"}
           </Tag>
         );
-      },
+},
     },
     {
       title: "Thao tác",
@@ -314,7 +321,7 @@ const BannerList: React.FC = () => {
                   <Space>
                     <Button onClick={() => setIsModalVisible(false)}>
                       Đóng
-                    </Button>
+</Button>
                     <Button
                       type="primary"
                       icon={<FaEdit />}
@@ -334,17 +341,18 @@ const BannerList: React.FC = () => {
               <Col xs={24} lg={10}>
                 <Card className="bg-white shadow-lg rounded-xl h-full">
                   <Title level={4}>Hình ảnh</Title>
-                  <Image
-                    width="100%"
-                    src={selectedBanner.image || "/placeholder.png"}
-                    alt={selectedBanner.title}
-                    style={{
-                      borderRadius: "8px",
-                      border: "1px solid #f0f0f0",
-                      aspectRatio: "4/3",
-                      objectFit: "cover",
-                    }}
-                  />
+                   <Image
+      width="100%"
+      src={getImageSrc(selectedBanner.image)}
+      alt={selectedBanner.title}
+      style={{
+        borderRadius: "8px",
+        border: "1px solid #f0f0f0",
+        aspectRatio: "4/3",
+        objectFit: "cover",
+      }}
+    />
+
                   <Divider />
                   <Paragraph>
                     {selectedBanner.description || (
@@ -396,7 +404,7 @@ const BannerList: React.FC = () => {
                   </Card>
 
                   {/* Thông tin hiển thị */}
-                  <Card className="bg-white shadow-lg rounded-xl">
+<Card className="bg-white shadow-lg rounded-xl">
                     <Title level={4}>Thông tin hiển thị</Title>
                     <Row gutter={16}>
                       <Col span={12}>
