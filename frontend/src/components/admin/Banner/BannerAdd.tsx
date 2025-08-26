@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -11,12 +11,13 @@ import {
   Space,
   Row,
   Col,
-  Image,
+  Upload,
 } from "antd";
 import {
   ArrowLeftOutlined,
   PlusOutlined,
   MinusCircleOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import type { Banner } from "../../../interfaces/Banner";
 
@@ -28,31 +29,43 @@ const API_URL = "http://localhost:8000/api/banner";
 const BannerAdd: React.FC = () => {
   const [form] = Form.useForm<Banner>();
   const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string>("");
   const navigate = useNavigate();
-
-  const watchedImageUrl = Form.useWatch("image", form);
-
-  useEffect(() => {
-    setPreviewImage(watchedImageUrl);
-  }, [watchedImageUrl]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
     return {
-      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     };
   };
 
   const onFinish = async (values: Banner) => {
+    if (!file) {
+      message.error("❌ Vui lòng chọn ảnh!");
+      return;
+    }
+
     setLoading(true);
     try {
-      const { startDate, endDate, ...safeData } = values;
+      const formData = new FormData();
+
+      // thêm dữ liệu text
+      Object.entries(values).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((item) => formData.append(`${key}[]`, item));
+        } else {
+          formData.append(key, value as any);
+        }
+      });
+
+      // thêm ảnh
+      formData.append("image", file);
+
       const res = await fetch(API_URL, {
         method: "POST",
         headers: getAuthHeader(),
-        body: JSON.stringify(safeData),
+        body: formData,
       });
 
       if (res.ok) {
@@ -96,7 +109,7 @@ const BannerAdd: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item name="subtitle" label="Phụ đề">
-                  <Input placeholder="Nhập phụ đề" />
+<Input placeholder="Nhập phụ đề" />
                 </Form.Item>
 
                 <Form.Item
@@ -141,31 +154,33 @@ const BannerAdd: React.FC = () => {
               {/* Features */}
               <Card className="shadow-lg rounded-xl">
                 <Title level={4}>Tính năng nổi bật</Title>
-                <Form.List name="features">
-                  {(fields, { add, remove }) => (
-                    <>
-                      {fields.map((field, index) => (
-                        <Space key={field.key} align="baseline">
-                          <Form.Item
-                            {...field}
-                            rules={[{ required: true, message: "Không được để trống" }]}
-                          >
-                            <Input placeholder={`Tính năng ${index + 1}`} />
-                          </Form.Item>
-                          <MinusCircleOutlined
-                            onClick={() => remove(field.name)}
-                            style={{ color: "red" }}
-                          />
-                        </Space>
-                      ))}
-                      <Form.Item>
-                        <Button type="dashed" onClick={() => add()} block>
-                          + Thêm tính năng
-                        </Button>
-                      </Form.Item>
-                    </>
-                  )}
-                </Form.List>
+               <Form.List name="features">
+  {(fields, { add, remove }) => (
+    <>
+      {fields.map((field, index) => (
+        <Space key={field.key} align="baseline">
+          <Form.Item
+            name={field.name}
+            fieldKey={field.fieldKey}
+            rules={[{ required: true, message: "Không được để trống" }]}
+          >
+            <Input placeholder={`Tính năng ${index + 1}`} />
+          </Form.Item>
+          <MinusCircleOutlined
+            onClick={() => remove(field.name)}
+            style={{ color: "red" }}
+          />
+        </Space>
+      ))}
+      <Form.Item>
+        <Button type="dashed" onClick={() => add()} block>
+          + Thêm tính năng
+        </Button>
+      </Form.Item>
+    </>
+  )}
+</Form.List>
+
               </Card>
             </Space>
           </Col>
@@ -174,27 +189,33 @@ const BannerAdd: React.FC = () => {
           <Col xs={24} lg={8}>
             <Space direction="vertical" size="large" style={{ width: "100%" }}>
               {/* Ảnh */}
-              <Card className="shadow-lg rounded-xl">
-                <Title level={4}>Ảnh</Title>
-                <Form.Item
-                  name="image"
-                  label="URL Ảnh"
-                  rules={[{ required: true, message: "Ảnh không được để trống!" }]}
-                >
-                  <Input placeholder="https://example.com/banner.jpg" />
-                </Form.Item>
-                <Image
-                  src={previewImage || "/placeholder.png"}
-                  fallback="/placeholder.png"
-                  alt="Xem trước hình ảnh"
-                  style={{
-                    width: "100%",
-                    aspectRatio: "16/9",
-                    objectFit: "cover",
-                    borderRadius: "8px",
-                  }}
-                />
-              </Card>
+           <Card className="shadow-lg rounded-xl">
+  <Title level={4}>Ảnh</Title>
+  <Upload
+    name="image" // <-- Thêm dòng này để tên trường là "image"
+    beforeUpload={(file) => {
+      setFile(file);
+setPreviewImage(URL.createObjectURL(file));
+      return false;
+    }}
+    maxCount={1}
+    accept="image/*"
+    showUploadList={false}
+  >
+    <Button icon={<UploadOutlined />}>Chọn ảnh</Button>
+  </Upload>
+  {previewImage && (
+    <img
+      src={previewImage}
+      alt="Xem trước hình ảnh"
+      style={{
+        width: "100%",
+        
+        height: "auto",
+      }}
+    />
+  )}
+</Card>
 
               {/* Vị trí & Trạng thái */}
               <Card className="shadow-lg rounded-xl">
