@@ -60,7 +60,8 @@ import {
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { createProductValidation, updateProductValidation } from "../validation/product.js";
-// import upload from "../middlewares/updateMiddleware.js";
+import { uploadImage } from "../controllers/upload.js";
+import { normalizeProductBody } from "../middlewares/normalizeProductBody.js";
 
 const routerProduct = express.Router();
 
@@ -82,7 +83,7 @@ routerProduct.get("/:id", getProductById);
 routerProduct.get("/:id/variant-stats", protect, getVariantStats);
 
 routerProduct.get("/", getProducts);
-routerProduct.post("/", protect, createProductValidation, validateRequest, createProduct);
+routerProduct.post("/", protect, uploadImage, normalizeProductBody, createProductValidation, validateRequest, createProduct);
 routerProduct.put("/:id", protect, updateProductValidation, validateRequest, updateProduct);
 routerProduct.delete("/:id", protect, deleteProduct);
 routerProduct.put("/:id/soft-delete", protect, softDeleteProduct);
@@ -91,6 +92,7 @@ routerProduct.delete("/:id/hard-delete", protect, hardDeleteProduct);
 
 // Product variants
 routerProduct.post("/:id/variants", protect, addProductVariant);
+routerProduct.post("/:id/variants", protect, uploadImage, addProductVariant);
 routerProduct.put("/:productId/variants/:variantId", protect, updateProductVariant);
 routerProduct.delete("/:productId/variants/:variantId", protect, deleteProductVariant);
 

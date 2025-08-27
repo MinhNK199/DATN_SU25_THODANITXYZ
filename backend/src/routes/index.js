@@ -12,6 +12,7 @@ import routerBill from "./bill.js";
 import routerBanner from "./banner.js"
 import routerRating from "./rating.js";
 import routerVariant from "./variant.js";
+import routerUpload from "./upload.js";
 import routerRecommendation from "./recommendation.js";
 import paymentMethodRouter from "./paymentMethod.js";
 import paymentMomoRouter from './paymentMomo.js';
@@ -37,6 +38,7 @@ router.use("/bill", routerBill);
 router.use("/banner", routerBanner);
 router.use("/rating", routerRating);
 router.use("/variant", routerVariant);
+router.use("/upload", routerUpload);
 router.use("/recommendation", routerRecommendation);
 router.use("/payment-methods", paymentMethodRouter);
 router.use('/payment/momo', paymentMomoRouter);

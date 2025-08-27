@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useRef } from "react"
 import { Button, Input, InputNumber, Switch, Row, Col, Card, Space, Tooltip, ColorPicker, message, Select } from "antd"
 import { FaPlus, FaTrash } from "react-icons/fa"
 import SpecificationEditor from "./SpecificationEditor"
@@ -44,8 +45,9 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       errors.push("Chiều cao phải lớn hơn 0")
     }
     
-    if (!variant.images?.length || variant.images.every(img => !img.trim())) {
-      errors.push("Phải có ít nhất 1 hình ảnh")
+    // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
+    if (!variant.imageFile) {
+      errors.push("Phải upload ít nhất 1 ảnh biến thể")
     }
     
     return {
@@ -69,6 +71,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       height: 0,
       weight: 0,
       images: [],
+      imageFile: null,
       isActive: true,
       specifications: {},
     }
@@ -126,7 +129,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       })),
     )
 
-    onVariantsChange(updatedVariants)
+  onVariantsChange(updatedVariants)
   }
 
   const removeVariant = (id: string) => {
@@ -449,35 +452,43 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               <Row gutter={16}>
                 <Col span={24}>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Hình ảnh *:</label>
-                    <Input
-                      placeholder="Link hình ảnh (cách nhau bởi dấu phẩy)"
-                      value={variant.images?.join(",") || ""}
-                      onChange={(e) =>
-                        updateVariant(
-                          variant.id,
-                          "images",
-                          e.target.value
-                            .split(",")
-                            .map((s: string) => s.trim())
-                            .filter(Boolean),
-                        )
-                      }
-                      status={!variant.images?.length || variant.images.every(img => !img.trim()) ? "error" : undefined}
+                    <label className="text-sm font-medium">Ảnh biến thể:</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0] || null;
+                        updateVariant(variant.id, "imageFile", file);
+                        if (file) {
+                          const formData = new FormData();
+                          formData.append('image', file);
+                          const token = localStorage.getItem('token');
+                          try {
+                            const res = await fetch('http://localhost:8000/api/upload/image', {
+                              method: 'POST',
+                              headers: { Authorization: `Bearer ${token}` },
+                              body: formData,
+                            });
+                            const data = await res.json();
+                            if (data.url) {
+                              updateVariant(variant.id, "images", [data.url]);
+                            } else {
+                              message.error('Upload ảnh thất bại!');
+                            }
+                          } catch (err) {
+                            message.error('Upload ảnh thất bại!');
+                          }
+                        } else {
+                          updateVariant(variant.id, "images", []);
+                        }
+                      }}
                     />
-                    {Array.isArray(variant.images) && variant.images[0] && (
-                      <div style={{ marginTop: 8 }}>
-                        <img
-                          src={variant.images[0] || "/placeholder.svg"}
-                          alt="Preview"
-                          style={{
-                            maxWidth: 120,
-                            maxHeight: 120,
-                            borderRadius: 8,
-                            border: "1px solid #eee",
-                          }}
-                        />
-                      </div>
+                    {variant.imageFile && (
+                      <img
+                        src={URL.createObjectURL(variant.imageFile)}
+                        alt="Preview"
+                        style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8, border: "1px solid #eee", marginTop: 8 }}
+                      />
                     )}
                   </div>
                 </Col>

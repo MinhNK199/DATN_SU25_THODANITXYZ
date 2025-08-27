@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin, ColorPicker } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin, ColorPicker, Image } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import axios from 'axios';
 import SpecificationEditor from '../products/SpecificationEditor';
@@ -34,7 +34,7 @@ const VariantAdd: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [imageLinks, setImageLinks] = useState('');
+  // Xóa nhập link ảnh, chỉ dùng file upload
   const [specifications, setSpecifications] = useState<Record<string, string>>({});
   const [colorValue, setColorValue] = useState<string>('#000000');
   const [colorName, setColorName] = useState<string>('');
@@ -68,14 +68,19 @@ const VariantAdd: React.FC = () => {
       const token = localStorage.getItem('token');
 
       let images: string[] = [];
-      if (imageLinks.trim()) {
-        images = imageLinks.split('\n').map(link => link.trim()).filter(link => link);
-      } else {
-        // Giả lập upload ảnh (thay bằng API thực tế)
-        images = fileList.map(file => file.url || file.thumbUrl || '').filter(url => url);
-        if (fileList.length > 0 && images.length === 0) {
-          // Thay bằng API upload thực tế
-          images = fileList.map((_, index) => `https://example.com/uploaded/image-${index}.jpg`);
+      // Upload từng file lên server và lấy đường dẫn trả về
+      if (fileList.length > 0) {
+        for (const file of fileList) {
+          if (file.originFileObj) {
+            const formData = new FormData();
+            formData.append('image', file.originFileObj);
+            const uploadRes = await axios.post('http://localhost:8000/api/upload/image', formData, {
+              headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }
+            });
+            if (uploadRes.data && uploadRes.data.url) {
+              images.push(uploadRes.data.url);
+            }
+          }
         }
       }
 
@@ -322,23 +327,10 @@ const VariantAdd: React.FC = () => {
               <SpecificationEditor value={specifications} onChange={setSpecifications} />
             </Form.Item>
 
-            <Divider orientation="left">Ảnh sản phẩm</Divider>
+            <Divider orientation="left">Ảnh biến thể</Divider>
             <Row gutter={16}>
               <Col span={24}>
-                <Form.Item label="Link ảnh (mỗi dòng 1 link, ưu tiên dùng nếu có)">
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
-                    value={imageLinks}
-                    onChange={e => setImageLinks(e.target.value)}
-                  />
-                  <div style={{ color: '#888', fontSize: 12 }}>
-                    Nếu nhập link ảnh ở đây, hệ thống sẽ dùng các link này làm ảnh cho biến thể. Nếu để trống, sẽ dùng ảnh upload bên dưới.
-                  </div>
-                </Form.Item>
-              </Col>
-              <Col span={24}>
-                <Form.Item label="Upload ảnh (không bắt buộc, chỉ dùng nếu không nhập link ảnh)">
+                <Form.Item label="Upload ảnh biến thể">
                   <Upload
                     listType="picture-card"
                     fileList={fileList}
@@ -353,6 +345,19 @@ const VariantAdd: React.FC = () => {
                       </div>
                     )}
                   </Upload>
+                  {/* Hiển thị preview ảnh đã chọn */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                    {fileList.map((file, idx) => (
+                      <Image
+                        key={idx}
+                        src={file.thumbUrl || file.url}
+                        width={100}
+                        height={100}
+                        style={{ borderRadius: 8, border: '1px solid #eee' }}
+                        alt={`Ảnh biến thể ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
                 </Form.Item>
               </Col>
             </Row>

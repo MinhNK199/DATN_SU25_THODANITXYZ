@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Form,
@@ -53,8 +53,9 @@ const ProductAddPage: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>("")
   const [variants, setVariants] = useState<any[]>([])
   const [specs, setSpecs] = useState<Record<string, string>>({})
-  // Thêm state cho ảnh đại diện
-  const [mainImage, setMainImage] = useState<string>("")
+  // Thêm state cho file ảnh đại diện
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null)
+  const mainImageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const currentSpecs = form.getFieldValue("specifications")
@@ -113,22 +114,9 @@ const ProductAddPage: React.FC = () => {
   }
 
   const onFinish = async (values: any) => {
-    // Validate variants using utility function
     const validation = validateAllVariants(variants)
     if (!validation.isValid) {
       message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
-      return
-    }
-    // Lấy tổng tồn kho từ các biến thể
-    const totalStock = variants.reduce((sum, v) => sum + (Number.parseInt(v.stock, 10) || 0), 0)
-    // Lấy giá gốc từ biến thể đầu tiên
-    const mainPrice = variants[0].price
-    // Gộp tất cả ảnh từ các biến thể
-    const allImages = variants
-      .flatMap((v) => (Array.isArray(v.images) ? v.images.filter((img: string) => !!img) : []))
-      .filter(Boolean)
-    if (allImages.length < 1) {
-      message.error("Phải có ít nhất 1 hình ảnh sản phẩm")
       return
     }
     setLoading(true)
@@ -136,93 +124,52 @@ const ProductAddPage: React.FC = () => {
       const brandId = typeof values.brand === "string" ? values.brand : values.brand?._id
       const categoryId = typeof values.category === "string" ? values.category : values.category?._id
 
-      // CRITICAL: Pre-process variants to ensure color is object before sending
-      const processedVariants = variants.map((v, idx) => {
-        console.log(`🔧 Pre-processing variant ${idx}:`, v.name)
+      // Tạo FormData
+      const formData = new FormData()
+      // Đảm bảo các trường bắt buộc và đúng kiểu
+  // Đảm bảo các trường bắt buộc luôn có giá trị hợp lệ
+  const productName = values.name?.trim() || "";
+  const productDescription = values.description?.trim() || "";
+  const productPrice = variants[0]?.price ? Number(variants[0].price) : 0;
+  const productStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  const productCategory = categoryId || (typeof values.category === "string" ? values.category : "");
+  const productBrand = brandId || (typeof values.brand === "string" ? values.brand : "");
 
-        // Ensure color is always a proper object
-        const finalColor = cleanColorData(v.color)
+  formData.append("name", productName);
+  formData.append("description", productDescription);
+  formData.append("price", String(productPrice));
+  formData.append("stock", String(productStock));
+  formData.append("category", productCategory);
+  formData.append("brand", productBrand);
+      formData.append("sku", values.sku || "")
+      formData.append("warranty", String(values.warranty || 0))
+      formData.append("isActive", String(values.isActive))
+      formData.append("isFeatured", String(values.isFeatured))
+      if (values.tags) formData.append("tags", JSON.stringify(values.tags))
 
-        // Ensure specifications is always a proper object
-        let finalSpecs = {}
-        if (v.specifications && typeof v.specifications === "object") {
-          finalSpecs = { ...v.specifications }
-        }
-
-        const processedVariant = {
-          // Loại bỏ trường id để tránh lỗi ObjectId casting
-          name: v.name,
-          sku: v.sku,
-          price: v.price,
-          salePrice: v.salePrice,
-          stock: v.stock,
-          color: finalColor, // ALWAYS VALID OBJECT
-          specifications: finalSpecs, // ALWAYS OBJECT
-          size: typeof v.size === "number" ? v.size : Number.parseFloat(v.size) || 0,
-          length: typeof v.length === "number" ? v.length : Number.parseFloat(v.length) || 0,
-          width: typeof v.width === "number" ? v.width : Number.parseFloat(v.width) || 0,
-          height: typeof v.height === "number" ? v.height : Number.parseFloat(v.height) || 0,
-          weight: typeof v.weight === "number" ? v.weight : Number.parseFloat(v.weight) || 0,
-          images: Array.isArray(v.images) ? v.images : [],
-          isActive: !!v.isActive,
-        }
-
-        console.log(`✅ Pre-processed variant ${idx}:`, {
-          name: processedVariant.name,
-          color: processedVariant.color,
-          specifications: processedVariant.specifications,
-        })
-
-        return processedVariant
-      })
-
-      const productData = {
-        name: values.name,
-        sku: values.sku,
-        description: values.description || "", // Không bắt buộc nhập
-        mainImage: mainImage,
-        warranty: values.warranty,
-        tags: values.tags || [],
-        brand: brandId,
-        category: categoryId,
-        price: mainPrice, // BẮT BUỘC cho backend
-        stock: totalStock, // BẮT BUỘC cho backend
-        images: allImages, // Đảm bảo có ít nhất 1 ảnh
-        variants: processedVariants, // Use pre-processed variants
-        isActive: values.isActive,
-        isFeatured: values.isFeatured,
+      // Ảnh đại diện
+      if (mainImageFile) {
+        formData.append("image", mainImageFile)
       }
 
-      console.log("🧹 Data before validation:", productData)
+      // Biến thể
+      formData.append("variants", JSON.stringify(variants.map((v) => {
+        const { images, imageFile, ...rest } = v;
+        return rest;
+      })))
 
-      // Validate and clean data
-      const cleanedData = validateAndCleanProductData(productData)
-
-      console.log("✅ Final data to submit:", cleanedData)
-
+      // Gửi request
       const token = localStorage.getItem("token")
       const response = await fetch(`${API_URL}/product`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(cleanedData),
+        body: formData,
       })
       if (!response.ok) {
         const errorData = await response.json()
-        if (errorData.details && Array.isArray(errorData.details)) {
-          errorData.details.forEach((msg: string) => message.error(msg))
-        } else if (
-          errorData.message &&
-          errorData.message.includes("duplicate key") &&
-          errorData.message.includes("slug")
-        ) {
-          message.error("Sản phẩm này đã tồn tại. Vui lòng chọn tên khác hoặc kiểm tra lại.")
-        } else {
-          message.error(errorData.message || "Thêm sản phẩm thất bại.")
-        }
-        console.error("Backend error:", errorData)
+        message.error(errorData.message || "Thêm sản phẩm thất bại.")
         return
       }
       message.success("Thêm sản phẩm thành công!")
@@ -240,19 +187,10 @@ const ProductAddPage: React.FC = () => {
     form.setFieldsValue({ slug })
   }
 
-  // Hình ảnh: nhập link
-  const handleImageChange = (value: string, idx: number) => {
-    const newImages = [...images]
-    newImages[idx] = value
-    setImages(newImages)
-    if (idx === 0) setPreviewImage(value)
-  }
-  const addImageField = () => setImages([...images, ""])
-  const removeImageField = (idx: number) => {
-    const newImages = images.filter((_, i) => i !== idx)
-    setImages(newImages)
-    if (idx === 0 && newImages.length > 0) setPreviewImage(newImages[0])
-    if (newImages.length === 0) setPreviewImage("")
+  // Xử lý chọn file ảnh đại diện
+  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setMainImageFile(file)
   }
 
   return (
@@ -281,12 +219,20 @@ const ProductAddPage: React.FC = () => {
               <Form.Item name="sku" label="SKU (Mã định danh sản phẩm)">
                 <Input placeholder="VD: ATN-001" />
               </Form.Item>
-              <Form.Item name="mainImage" label="Link ảnh đại diện">
-                <Input
-                  placeholder="Nhập link ảnh đại diện..."
-                  value={mainImage}
-                  onChange={(e) => setMainImage(e.target.value)}
+              <Form.Item label="Ảnh đại diện sản phẩm">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={mainImageInputRef}
+                  onChange={handleMainImageChange}
                 />
+                {mainImageFile && (
+                  <img
+                    src={URL.createObjectURL(mainImageFile)}
+                    alt="Preview"
+                    style={{ width: "100%", maxHeight: 200, marginTop: 8, borderRadius: 8 }}
+                  />
+                )}
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
@@ -357,18 +303,12 @@ const ProductAddPage: React.FC = () => {
                 </Col>
               </Row>
 
-              <Divider />
-
-              <Title level={4}>Xem trước ảnh</Title>
-              {mainImage ? (
+              {/* Xem trước ảnh đại diện */}
+              {mainImageFile ? (
                 <img
-                  src={mainImage || "/placeholder.svg"}
+                  src={URL.createObjectURL(mainImageFile)}
                   alt="Preview"
-                  style={{
-                    width: "100%",
-                    borderRadius: "8px",
-                    marginBottom: "1rem",
-                  }}
+                  style={{ width: "100%", borderRadius: "8px", marginBottom: "1rem" }}
                 />
               ) : (
                 <div className="h-48 flex items-center justify-center bg-gray-200 rounded-lg mb-4">
