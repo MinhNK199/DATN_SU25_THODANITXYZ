@@ -6,9 +6,12 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Hàm lấy token
+// Hàm lấy header xác thực (bỏ qua nếu không có token hợp lệ)
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
+  if (!token || token === "null" || token === "undefined") {
+    return {};
+  }
   return {
     headers: {
       Authorization: `Bearer ${token}`,

@@ -25,7 +25,8 @@ const BlogSection: React.FC = () => {
     const fetchBlogs = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/blog/public/published?limit=5');
+        // Sửa URL: backend mount tại /api/blogs/public/published
+        const response = await fetch('/api/blogs/public/published?limit=5');
         if (!response.ok) {
           throw new Error('Lỗi khi tải dữ liệu blog');
         }
@@ -57,6 +58,15 @@ const BlogSection: React.FC = () => {
       )
     );
     return brandTags[0] || tags[0] || 'Công nghệ';
+  };
+
+  // Chuẩn hóa URL ảnh (thêm host nếu là đường dẫn tương đối)
+  const getImageUrl = (url?: string) => {
+    if (!url || url.trim() === '') return '/placeholder.png';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Mặc định backend chạy ở cổng 8000
+    const normalized = url.replace(/^\/+/, '');
+    return `http://localhost:8000/${normalized}`;
   };
 
   if (loading) {
@@ -120,7 +130,7 @@ const BlogSection: React.FC = () => {
               {/* Image Container */}
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={blog.coverImage || '/default-blog.jpg'}
+                  src={getImageUrl(blog.coverImage)}
                   alt={blog.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />

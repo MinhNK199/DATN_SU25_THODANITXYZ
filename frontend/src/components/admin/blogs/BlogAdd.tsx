@@ -245,7 +245,8 @@ const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
         'Authorization': `Bearer ${localStorage.getItem('token')?.substring(0, 20)}...`
       });
       
-      const response = await fetch('/api/blog', {
+      // Sửa URL: backend mount tại /api/blogs
+      const response = await fetch('/api/blogs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
