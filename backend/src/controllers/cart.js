@@ -7,7 +7,7 @@ import Product from "../models/Product.js";
 const getAvailableStock = async (productId) => {
     const product = await Product.findById(productId);
     if (!product) return 0;
-    
+
     const reservedQuantity = await ProductReservation.getReservedQuantity(productId);
     return Math.max(0, product.stock - reservedQuantity);
 };
@@ -16,9 +16,16 @@ const getAvailableStock = async (productId) => {
 export const getCart = async (req, res) => {
     try {
         const cart = await Cart.findOne({ user: req.user._id })
-            .populate('items.product', 'name price salePrice images stock variants')
+            .populate({
+                path: 'items.product',
+                select: 'name price salePrice images stock variants',
+                populate: {
+                    path: 'variants',
+                    select: 'name price salePrice stock images color size weight sku specifications'
+                }
+            })
             .populate('coupon', 'code value type');
-        
+
         if (cart) {
             // Lọc bỏ các item mà product bị null (sản phẩm đã bị xóa khỏi DB)
             cart.items = cart.items.filter(item => item.product);
@@ -27,7 +34,7 @@ export const getCart = async (req, res) => {
                 if (!item.product) continue;
                 const availableStock = await getAvailableStock(item.product._id);
                 item.product.availableStock = availableStock;
-                
+
                 // Nếu số lượng trong giỏ hàng vượt quá số lượng có sẵn, cập nhật lại
                 if (item.quantity > availableStock) {
                     item.quantity = availableStock;
@@ -69,8 +76,15 @@ export const getCart = async (req, res) => {
             }
             // Lưu lại giỏ hàng nếu có thay đổi
             await cart.save();
-            // Populate lại để đảm bảo có variants
-            await cart.populate('items.product', 'name price salePrice images stock variants');
+            // Populate lại để đảm bảo có variants với đầy đủ thông tin
+            await cart.populate({
+                path: 'items.product',
+                select: 'name price salePrice images stock variants',
+                populate: {
+                    path: 'variants',
+                    select: 'name price salePrice stock images color size weight sku specifications'
+                }
+            });
             res.json(cart);
         } else {
             res.json({ items: [], totalItems: 0, totalPrice: 0 });
@@ -85,7 +99,7 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
     try {
         const { productId, quantity, variantId } = req.body;
-        
+
         // Kiểm tra sản phẩm tồn tại
         const product = await Product.findById(productId);
         if (!product) {
@@ -102,10 +116,10 @@ export const addToCart = async (req, res) => {
             specifications = variant.specifications || {};
             price = (variant.salePrice && variant.salePrice < variant.price) ? variant.salePrice : variant.price;
         }
-        
-        // Lấy số lượng có sẵn thực tế
+
+                // Lấy số lượng có sẵn thực tế
         const availableStock = await getAvailableStock(productId);
-        
+
         // Tìm hoặc tạo giỏ hàng
         let cart = await Cart.findOne({ user: req.user._id });
         let totalQuantity = quantity;
@@ -119,7 +133,7 @@ export const addToCart = async (req, res) => {
         }
         // Kiểm tra số lượng có đủ không (tổng số lượng cũ + mới)
         if (availableStock < totalQuantity) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: `Chỉ còn ${availableStock} sản phẩm trong kho`,
                 availableStock: availableStock
             });
@@ -133,11 +147,11 @@ export const addToCart = async (req, res) => {
                 cart.items[itemIndex].price = price;
                 cart.items[itemIndex].specifications = specifications;
             } else {
-                cart.items.push({ 
-                    product: productId, 
+                cart.items.push({
+                    product: productId,
                     variantId: variantId || undefined,
                     specifications,
-                    quantity, 
+                    quantity,
                     price,
                     reservedAt: new Date()
                 });
@@ -145,22 +159,29 @@ export const addToCart = async (req, res) => {
         } else {
             cart = new Cart({
                 user: req.user._id,
-                items: [{ 
-                    product: productId, 
+                items: [{
+                    product: productId,
                     variantId: variantId || undefined,
                     specifications,
-                    quantity, 
+                    quantity,
                     price,
                     reservedAt: new Date()
                 }]
             });
         }
-        
+
         await cart.save();
-        
+
         // Populate thông tin sản phẩm để trả về
-        await cart.populate('items.product', 'name price salePrice images stock variants');
-        
+        await cart.populate({
+            path: 'items.product',
+            select: 'name price salePrice images stock variants',
+            populate: {
+                path: 'variants',
+                select: 'name price salePrice stock images color size weight sku specifications'
+            }
+        });
+
         // Sau khi populate product, bổ sung variantInfo cho từng item nếu có variantId
         for (let item of cart.items) {
             if (item.variantId && item.product.variants) {
@@ -197,7 +218,7 @@ export const addToCart = async (req, res) => {
                 }
             }
         }
-        
+
         res.status(201).json(cart);
     } catch (error) {
         console.error('❌ Cart API error:', error);
@@ -208,52 +229,98 @@ export const addToCart = async (req, res) => {
 // Cập nhật số lượng sản phẩm trong giỏ hàng
 export const updateCartItem = async (req, res) => {
     try {
-        const { quantity } = req.body;
+        const { quantity, variantId } = req.body;
         const { productId } = req.params;
-        
+
         // Kiểm tra sản phẩm tồn tại
         const product = await Product.findById(productId);
         if (!product) {
             return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
         }
-        
+
         // Lấy số lượng có sẵn thực tế (trừ đi số lượng hiện tại trong giỏ hàng của user này)
         const currentReservation = await ProductReservation.findOne({
             product: productId,
             user: req.user._id,
             isActive: true
         });
-        
+
         const currentQuantity = currentReservation ? currentReservation.quantity : 0;
         const otherReservedQuantity = await ProductReservation.getReservedQuantity(productId) - currentQuantity;
         const availableStock = Math.max(0, product.stock - otherReservedQuantity);
-        
+
         // Kiểm tra số lượng mới có hợp lệ không
         if (availableStock < quantity) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: `Chỉ có thể đặt tối đa ${availableStock} sản phẩm`,
                 availableStock: availableStock
             });
         }
-        
+
         // Cập nhật reservation
         await ProductReservation.createReservation(productId, req.user._id, quantity);
-        
+
         // Cập nhật giỏ hàng
         const cart = await Cart.findOne({ user: req.user._id });
         if (!cart) {
             return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
         }
-        
-        const itemIndex = cart.items.findIndex(item => item.product.toString() === productId);
+
+        // Tìm item theo productId và variantId (nếu có)
+        const itemIndex = cart.items.findIndex(item =>
+            item.product.toString() === productId &&
+            String(item.variantId || '') === String(variantId || '')
+        );
+
         if (itemIndex > -1) {
-            cart.items[itemIndex].quantity = quantity;
-            cart.items[itemIndex].reservedAt = new Date();
-            // Cập nhật lại giá nếu có sale mới
-            cart.items[itemIndex].price = (product.salePrice && product.salePrice < product.price) ? product.salePrice : product.price;
+            const item = cart.items[itemIndex];
+            item.quantity = quantity;
+            item.reservedAt = new Date();
+
+            // Nếu có variantId, giữ nguyên giá biến thể
+            if (item.variantId) {
+                const variant = product.variants.id(item.variantId);
+                if (variant) {
+                    // Giữ nguyên giá biến thể đã được tính toán trước đó
+                    // Không thay đổi item.price
+                }
+            } else {
+                // Nếu không có variantId, cập nhật giá sản phẩm
+                item.price = (product.salePrice && product.salePrice < product.price) ? product.salePrice : product.price;
+            }
+
             await cart.save();
-            
-            await cart.populate('items.product', 'name price salePrice images stock');
+
+            // Populate lại với variants để có thể tính toán variantInfo
+            await cart.populate({
+                path: 'items.product',
+                select: 'name price salePrice images stock variants',
+                populate: {
+                    path: 'variants',
+                    select: 'name price salePrice stock images color size weight sku specifications'
+                }
+            });
+
+            // Bổ sung variantInfo cho item nếu có variantId
+            if (item.variantId && item.product.variants) {
+                const variant = item.product.variants.id(item.variantId);
+                if (variant && typeof variant === 'object') {
+                    item.variantInfo = {
+                        _id: variant._id,
+                        name: variant.name || '',
+                        images: Array.isArray(variant.images) ? variant.images : [],
+                        price: typeof variant.price === 'number' ? variant.price : 0,
+                        salePrice: typeof variant.salePrice === 'number' ? variant.salePrice : 0,
+                        stock: typeof variant.stock === 'number' ? variant.stock : 0,
+                        color: (variant.color && typeof variant.color === 'object') ? variant.color : { code: '', name: '' },
+                        size: typeof variant.size === 'number' ? variant.size : 0,
+                        weight: typeof variant.weight === 'number' ? variant.weight : 0,
+                        sku: variant.sku || '',
+                        specifications: (variant.specifications && typeof variant.specifications === 'object') ? Object.fromEntries(Object.entries(variant.specifications)) : {},
+                    };
+                }
+            }
+
             res.json(cart);
         } else {
             res.status(404).json({ message: "Không tìm thấy sản phẩm trong giỏ hàng" });
@@ -267,7 +334,7 @@ export const updateCartItem = async (req, res) => {
 export const removeFromCart = async (req, res) => {
     try {
         const { productId } = req.params;
-        
+
         // Xóa reservation
         await ProductReservation.updateMany(
             {
@@ -279,16 +346,16 @@ export const removeFromCart = async (req, res) => {
                 isActive: false
             }
         );
-        
+
         // Cập nhật giỏ hàng
         const cart = await Cart.findOne({ user: req.user._id });
         if (!cart) {
             return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
         }
-        
+
         cart.items = cart.items.filter(item => item.product.toString() !== productId);
         await cart.save();
-        
+
         await cart.populate('items.product', 'name price salePrice images stock');
         res.json(cart);
     } catch (error) {
@@ -311,7 +378,7 @@ export const clearCart = async (req, res) => {
                     isActive: false
                 }
             );
-            
+
             // Xóa tất cả items trong giỏ hàng
             cart.items = [];
             await cart.save();
@@ -353,15 +420,15 @@ export const applyCoupon = async (req, res) => {
 export const getProductAvailability = async (req, res) => {
     try {
         const { productId } = req.params;
-        
+
         const product = await Product.findById(productId);
         if (!product) {
             return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
         }
-        
+
         const reservedQuantity = await ProductReservation.getReservedQuantity(productId);
         const availableStock = Math.max(0, product.stock - reservedQuantity);
-        
+
         res.json({
             productId,
             totalStock: product.stock,
@@ -372,3 +439,4 @@ export const getProductAvailability = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+

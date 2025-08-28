@@ -92,8 +92,8 @@ export const cartApi = {
   },
 
   // Cập nhật số lượng sản phẩm trong giỏ hàng
-  updateCartItem: async (productId: string, quantity: number): Promise<Cart> => {
-    const response = await api.put(`/cart/${productId}`, { quantity });
+  updateCartItem: async (productId: string, quantity: number, variantId?: string): Promise<Cart> => {
+    const response = await api.put(`/cart/${productId}`, { quantity, variantId });
     return response.data;
   },
 
@@ -123,9 +123,9 @@ export const cartApi = {
 };
 
 export const getTaxConfig = async (): Promise<{ rate: number, updatedAt: string }> => {
-    const res = await fetch('http://localhost:8000/api/tax');
-    if (!res.ok) throw new Error('Không lấy được cấu hình thuế');
-    return res.json();
+  const res = await fetch('http://localhost:8000/api/tax');
+  if (!res.ok) throw new Error('Không lấy được cấu hình thuế');
+  return res.json();
 };
 
 export default cartApi; 

@@ -22,7 +22,7 @@ const productReservationSchema = new mongoose.Schema({
     },
     expiresAt: {
         type: Date,
-        default: function() {
+        default: function () {
             // Hết hạn sau 3 ngày
             return new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
         },
@@ -42,7 +42,7 @@ productReservationSchema.index({ user: 1, isActive: 1 });
 productReservationSchema.index({ expiresAt: 1 });
 
 // Static method để lấy tổng số lượng đã được đặt trước của một sản phẩm
-productReservationSchema.statics.getReservedQuantity = async function(productId) {
+productReservationSchema.statics.getReservedQuantity = async function (productId) {
     const result = await this.aggregate([
         {
             $match: {
@@ -58,20 +58,20 @@ productReservationSchema.statics.getReservedQuantity = async function(productId)
             }
         }
     ]);
-    
+
     return result.length > 0 ? result[0].totalReserved : 0;
 };
 
 // Static method để cleanup reservations hết hạn
-productReservationSchema.statics.cleanupExpiredReservations = async function() {
+productReservationSchema.statics.cleanupExpiredReservations = async function () {
     const now = new Date();
-    
+
     // Tìm tất cả reservations hết hạn
     const expiredReservations = await this.find({
         expiresAt: { $lt: now },
         isActive: true
     });
-    
+
     // Cập nhật trạng thái thành không active
     await this.updateMany(
         {
@@ -82,21 +82,21 @@ productReservationSchema.statics.cleanupExpiredReservations = async function() {
             isActive: false
         }
     );
-    
+
     console.log(`Cleaned up ${expiredReservations.length} expired reservations`);
-    
+
     return expiredReservations;
 };
 
 // Static method để tạo reservation mới
-productReservationSchema.statics.createReservation = async function(productId, userId, quantity) {
+productReservationSchema.statics.createReservation = async function (productId, userId, quantity) {
     // Kiểm tra xem user đã có reservation cho sản phẩm này chưa
     const existingReservation = await this.findOne({
         product: productId,
         user: userId,
         isActive: true
     });
-    
+
     if (existingReservation) {
         // Cập nhật số lượng và thời gian hết hạn
         existingReservation.quantity = quantity;

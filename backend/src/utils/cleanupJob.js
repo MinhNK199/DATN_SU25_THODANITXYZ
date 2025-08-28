@@ -1,21 +1,20 @@
-import Cart from "../models/Cart.js";
 import ProductReservation from "../models/ProductReservation.js";
-import Order from "../models/Order.js";
+import Cart from "../models/Cart.js";
 
 // Cleanup job chạy mỗi giờ
 export const runCleanupJob = async () => {
     try {
         console.log('Starting cleanup job...');
-        
+
         // Cleanup expired reservations
         const expiredReservations = await ProductReservation.cleanupExpiredReservations();
-        
+
         // Cleanup old carts
         await Cart.cleanupOldCarts();
-        
+
         // Đã bỏ logic tự động chuyển trạng thái đơn hàng sang 'returned' sau 3 ngày giao hàng thành công mà chưa thanh toán.
         console.log('Cleanup job completed successfully');
-        
+
         return {
             expiredReservations: expiredReservations.length,
             success: true
@@ -35,9 +34,9 @@ export const runCleanupNow = async (req, res) => {
         const result = await runCleanupJob();
         res.json(result);
     } catch (error) {
-        res.status(500).json({ 
-            message: 'Cleanup job failed', 
-            error: error.message 
+        res.status(500).json({
+            message: 'Cleanup job failed',
+            error: error.message
         });
     }
 };
@@ -48,6 +47,6 @@ export const setupCleanupCron = () => {
     setInterval(async () => {
         await runCleanupJob();
     }, 60 * 60 * 1000); // 1 giờ
-    
+
     console.log('Cleanup cron job setup completed');
 }; 

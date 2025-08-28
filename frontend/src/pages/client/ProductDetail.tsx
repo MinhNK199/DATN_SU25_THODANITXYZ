@@ -14,6 +14,8 @@ const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  // State cho số lượng của từng biến thể
+  const [variantQuantities, setVariantQuantities] = useState<Record<string, number>>({});
   // Removed unused state variables
   const [activeTab, setActiveTab] = useState('description');
   const [loading, setLoading] = useState(true);
@@ -96,7 +98,9 @@ const ProductDetail: React.FC = () => {
       return;
     }
     try {
-      await addToCart(product._id, quantity);
+      // Nếu có biến thể, sử dụng số lượng của biến thể đó
+      const finalQuantity = selectedVariantId ? getVariantQuantity(selectedVariantId) : quantity;
+      await addToCart(product._id, finalQuantity, selectedVariantId);
       toast.success('Đã thêm sản phẩm vào giỏ hàng');
     } catch (error) {
       console.error('Error adding to cart:', error);
@@ -108,6 +112,28 @@ const ProductDetail: React.FC = () => {
     if (newQuantity >= 1 && newQuantity <= (product?.stock || 999)) {
       setQuantity(newQuantity);
     }
+  };
+
+  // Hàm xử lý số lượng cho biến thể
+  const handleVariantQuantityChange = (variantId: string, newQuantity: number) => {
+    const variant = product?.variants?.find((v: Variant) => v._id === variantId);
+    if (variant && newQuantity >= 1 && newQuantity <= variant.stock) {
+      setVariantQuantities(prev => ({
+        ...prev,
+        [variantId]: newQuantity
+      }));
+    }
+  };
+
+  // Hàm lấy số lượng của biến thể
+  const getVariantQuantity = (variantId: string) => {
+    return variantQuantities[variantId] || 1;
+  };
+
+  // Hàm tính tổng giá của biến thể theo số lượng
+  const getVariantTotalPrice = (variant: Variant, quantity: number) => {
+    const price = variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price;
+    return price * quantity;
   };
 
   const openVariantModal = () => {
@@ -304,8 +330,8 @@ const ProductDetail: React.FC = () => {
                       <FaStar
                         key={index}
                         className={`w-5 h-5 ${index < Math.floor(product.rating || 0)
-                            ? 'text-yellow-400'
-                            : 'text-gray-300'
+                          ? 'text-yellow-400'
+                          : 'text-gray-300'
                           }`}
                       />
                     ))}
@@ -359,14 +385,35 @@ const ProductDetail: React.FC = () => {
                   </span>
                 </div>
                 {product?.variants && product.variants.length > 0 && (
-                  <div className="mt-4 flex gap-3">
-                    <button
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold text-base shadow-lg"
-                      onClick={openVariantModal}
-                      type="button"
-                    >
-                      Chọn loại sản phẩm
-                    </button>
+                  <div className="mt-4 space-y-3">
+                    {selectedVariantId ? (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-600 text-sm font-medium">
+                              🎯 Đã chọn: {product.variants.find((v: Variant) => v._id === selectedVariantId)?.name || 'N/A'}
+                            </span>
+                            <span className="text-green-700 text-xs">
+                              Số lượng: {getVariantQuantity(selectedVariantId)}
+                            </span>
+                          </div>
+                          <button
+                            className="text-green-600 hover:text-green-800 text-sm underline"
+                            onClick={openVariantModal}
+                          >
+                            Thay đổi
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold text-base shadow-lg"
+                        onClick={openVariantModal}
+                        type="button"
+                      >
+                        Chọn loại sản phẩm
+                      </button>
+                    )}
                   </div>
                 )}
                 <div className="space-y-2">
@@ -388,6 +435,25 @@ const ProductDetail: React.FC = () => {
                       <FaPlus className="w-3 h-3" />
                     </button>
                   </div>
+
+                  {/* Hiển thị tổng giá theo số lượng */}
+                  {selectedVariantId && (
+                    <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-blue-800">
+                        <div className="font-medium mb-1">🎯 Tổng giá biến thể:</div>
+                        <div className="text-lg font-bold text-blue-900">
+                          {formatPrice(getVariantTotalPrice(
+                            product.variants.find((v: Variant) => v._id === selectedVariantId)!,
+                            quantity
+                          ))}
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          {formatPrice(product.variants.find((v: Variant) => v._id === selectedVariantId)?.salePrice ||
+                            product.variants.find((v: Variant) => v._id === selectedVariantId)?.price || 0)} × {quantity}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-3 mt-2">
                   <button
@@ -396,7 +462,15 @@ const ProductDetail: React.FC = () => {
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 shadow-lg"
                   >
                     <FaShoppingCart className="w-5 h-5" />
-                    <span>{product.stock > 0 ? 'Thêm vào giỏ hàng' : 'Hết hàng'}</span>
+                    <span>
+                      {product.stock > 0
+                        ? (selectedVariantId
+                          ? `Thêm vào giỏ hàng (${getVariantQuantity(selectedVariantId)})`
+                          : 'Thêm vào giỏ hàng'
+                        )
+                        : 'Hết hàng'
+                      }
+                    </span>
                   </button>
                   <div className="flex gap-2">
                     <button className="flex-1 p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
@@ -445,8 +519,8 @@ const ProductDetail: React.FC = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                 >
                   {tab.label}
@@ -643,6 +717,41 @@ const ProductDetail: React.FC = () => {
                     )}
                   </div>
                   <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
+
+                  {/* Hiển thị tổng giá theo số lượng */}
+                  <div className="text-sm text-gray-600 mb-2">
+                    Tổng: <span className="font-semibold text-green-600">
+                      {formatPrice(getVariantTotalPrice(variant, getVariantQuantity(variant._id)))}
+                    </span>
+                  </div>
+
+                  {/* Nút tăng giảm số lượng */}
+                  <div className="flex items-center space-x-2 mb-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVariantQuantityChange(variant._id, getVariantQuantity(variant._id) - 1);
+                      }}
+                      disabled={getVariantQuantity(variant._id) <= 1}
+                      className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <FaMinus className="w-3 h-3" />
+                    </button>
+                    <span className="text-sm font-semibold w-8 text-center">
+                      {getVariantQuantity(variant._id)}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVariantQuantityChange(variant._id, getVariantQuantity(variant._id) + 1);
+                      }}
+                      disabled={getVariantQuantity(variant._id) >= variant.stock}
+                      className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <FaPlus className="w-3 h-3" />
+                    </button>
+                  </div>
+
                   {variant.size && (
                     <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
                   )}
@@ -653,7 +762,7 @@ const ProductDetail: React.FC = () => {
                   onClick={() => variant.stock > 0 && setSelectedVariantId(variant._id)}
                   style={{ minWidth: 120, fontWeight: 600 }}
                 >
-                  Chọn
+                  Chọn ({getVariantQuantity(variant._id)})
                 </Button>
               </div>
             </Popover>

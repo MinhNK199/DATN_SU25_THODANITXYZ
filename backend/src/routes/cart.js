@@ -21,4 +21,5 @@ routerCart.delete("/", protect, clearCart);
 routerCart.post("/apply-coupon", protect, applyCoupon);
 routerCart.get("/product-availability/:productId", getProductAvailability);
 
+
 export default routerCart;
