@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import path from "path";
+import fs from "fs";
 import { logActivity } from "../utils/activityLog.js";
 import crypto from "crypto";
 import { sendMail } from "../utils/mailer.js";
@@ -524,3 +526,37 @@ export const changePassword = async (req, res) => {
     res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
   }
 };
+
+
+export const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Không có file nào được upload" });
+    }
+
+    const userId = req.user._id; // đã có từ middleware protect
+    const avatarPath = `uploads/images/${req.file.filename}`;
+
+    // Xóa ảnh cũ nếu có (tránh rác ổ cứng)
+    const user = await User.findById(userId);
+    if (user.avatar && user.avatar !== "uploads/images/default-avatar.png") {
+      const oldPath = path.join(process.cwd(), user.avatar);
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    // update avatar trong DB
+    user.avatar = avatarPath;
+    await user.save();
+
+    res.json({
+      message: "Cập nhật avatar thành công",
+      avatar: avatarPath, // FE sẽ nhận đường dẫn này
+    });
+  } catch (error) {
+    console.error("❌ Lỗi upload avatar:", error);
+    res.status(500).json({ message: "Lỗi server khi upload avatar" });
+  }
+};
+

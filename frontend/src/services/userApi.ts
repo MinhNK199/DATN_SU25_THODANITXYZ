@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000/api';
+const SERVER_URL = 'http://localhost:8000'; // Base để build avatar URL
 
 // Tạo instance axios với interceptor để tự động thêm token
 const api = axios.create({
@@ -93,6 +94,18 @@ export interface Order {
   updatedAt: string;
 }
 
+// Hàm xử lý avatar trả về luôn full URL
+const normalizeUser = (user: any): User => {
+  return {
+    ...user,
+    avatar: user?.avatar
+      ? user.avatar.startsWith('http')
+        ? user.avatar
+        : `${SERVER_URL}/${user.avatar.replace(/^\//, '')}`
+      : undefined,
+  };
+};
+
 export const getAddresses = async (): Promise<Address[]> => {
   const token = localStorage.getItem("token");
   const res = await fetch("/api/address", {
@@ -104,18 +117,19 @@ export const getAddresses = async (): Promise<Address[]> => {
   if (!res.ok) throw new Error("Không lấy được địa chỉ");
   return res.json();
 };
+
 // User API functions
 export const userApi = {
   // Lấy thông tin user hiện tại
   getCurrentUser: async (): Promise<User> => {
     const response = await api.get('/auth/me');
-    return response.data.user;
+    return normalizeUser(response.data.user);
   },
 
   // Cập nhật thông tin user
   updateProfile: async (userId: string, data: Partial<User>): Promise<User> => {
     const response = await api.put(`/auth/users/${userId}`, data);
-    return response.data.user;
+    return normalizeUser(response.data.user);
   },
 
   // Lấy địa chỉ của user
@@ -188,6 +202,7 @@ export const userApi = {
     const response = await api.put(`/payment-methods/${id}`, data);
     return response.data;
   },
+
   // Quản lý thông báo
   getNotifications: async (): Promise<any[]> => {
     const response = await api.get('/notification');
@@ -211,4 +226,4 @@ export const userApi = {
   },
 };
 
-export default api; 
+export default api;

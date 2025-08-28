@@ -19,11 +19,11 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-  minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
-  select: false,
-  required: function() {
-    return this.provider === "local";
-  }
+      minlength: [6, "Mật khẩu phải có ít nhất 6 ký tự"],
+      select: false,
+      required: function () {
+        return this.provider === "local";
+      },
     },
     passwordChangedAt: Date,
     role: {
@@ -54,7 +54,12 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    avatar: String,
+    avatar: {
+  type: String,
+  default: "uploads/images/default-avatar.png"
+},
+
+
     notificationSettings: {
       orderEmail: { type: Boolean, default: true },
       promotionEmail: { type: Boolean, default: true },
@@ -70,46 +75,50 @@ const userSchema = new mongoose.Schema(
     },
     emailVerificationToken: String,
     emailVerificationExpires: Date,
-    favorites: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product'
-    }],
+    favorites: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+    ],
     rewardPoints: {
       current: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
       total: {
         type: Number,
         default: 0,
-        min: 0
+        min: 0,
       },
-      history: [{
-        type: {
-          type: String,
-          enum: ['earned', 'spent', 'expired', 'bonus'],
-          required: true
+      history: [
+        {
+          type: {
+            type: String,
+            enum: ["earned", "spent", "expired", "bonus"],
+            required: true,
+          },
+          amount: {
+            type: Number,
+            required: true,
+          },
+          description: String,
+          orderId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Order",
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
         },
-        amount: {
-          type: Number,
-          required: true
-        },
-        description: String,
-        orderId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Order'
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now
-        }
-      }]
+      ],
     },
     provider: {
-  type: String,
-  default: "local"
-},
+      type: String,
+      default: "local",
+    },
     active: {
       type: Boolean,
       default: true,
@@ -121,8 +130,8 @@ const userSchema = new mongoose.Schema(
       status: {
         type: String,
         enum: ["pending", "approved", "rejected"],
-        default: "pending"
-      }
+        default: "pending",
+      },
     },
   },
   {

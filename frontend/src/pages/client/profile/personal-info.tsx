@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, Save, Eye, EyeOff, X } from 'lucide-react';
-import toast from 'react-hot-toast';
-import axiosInstance from '../../../api/axiosInstance';
+import React, { useState, useEffect } from "react";
+import { Camera, Save } from "lucide-react";
+import toast from "react-hot-toast";
+import axiosInstance from "../../../api/axiosInstance";
 
 interface User {
   _id: string;
@@ -18,121 +18,103 @@ const PersonalInfo = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [showSensitiveModal, setShowSensitiveModal] = useState(false);
-  const [sensitiveField, setSensitiveField] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  
+
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    gender: '',
-    dateOfBirth: '',
-    email: ''
+    name: "",
+    phone: "",
+    email: "",
   });
 
-  // Load user data from localStorage or API
+  // ✅ API URL cố định
+  const API_URL = "http://localhost:8000";
+
+  // Hàm chuẩn hóa avatar thành full URL
+  const formatAvatarUrl = (avatarPath?: string) => {
+    if (!avatarPath) return undefined;
+
+    // Fix trường hợp backend trả về "undefined/...."
+    avatarPath = avatarPath.replace(/^undefined\//, "");
+
+    if (avatarPath.startsWith("http")) return avatarPath;
+    return `${API_URL}/${avatarPath.replace(/^\//, "")}`;
+  };
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const savedUser = localStorage.getItem('user');
+        const savedUser = localStorage.getItem("user");
         if (savedUser) {
           const userData = JSON.parse(savedUser);
+
+          userData.avatar = formatAvatarUrl(userData.avatar);
+
           setUser(userData);
           setFormData({
-            name: userData.name || '',
-            phone: userData.phone || '',
-            gender: userData.gender || '',
-            dateOfBirth: userData.dateOfBirth || '',
-            email: userData.email || ''
+            name: userData.name || "",
+            phone: userData.phone || "",
+            email: userData.email || "",
           });
         } else {
-          // ✅ Fetch from API với endpoint đúng: /auth/me
-          const response = await axiosInstance.get('/auth/me');
+          const response = await axiosInstance.get("/auth/me");
           if (response.data) {
             const userData = response.data.user || response.data;
+
+            userData.avatar = formatAvatarUrl(userData.avatar);
+
             setUser(userData);
             setFormData({
-              name: userData.name || '',
-              phone: userData.phone || '',
-              gender: userData.gender || '',
-              dateOfBirth: userData.dateOfBirth || '',
-              email: userData.email || ''
+              name: userData.name || "",
+              phone: userData.phone || "",
+              email: userData.email || "",
             });
-            localStorage.setItem('user', JSON.stringify(userData));
+
+            localStorage.setItem("user", JSON.stringify(userData));
           }
         }
       } catch (error) {
-        console.error('Error loading user data:', error);
-        toast.error('Không thể tải thông tin người dùng');
+        console.error("Error loading user data:", error);
+        toast.error("Không thể tải thông tin người dùng");
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUserData();
-  }, []);
+  }, [API_URL]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      
-      // ✅ Update với endpoint đúng: /auth/users/:id
       const response = await axiosInstance.put(`/auth/users/${user?._id}`, {
         name: formData.name,
         phone: formData.phone,
-        gender: formData.gender,
-        dateOfBirth: formData.dateOfBirth
       });
 
       if (response.data) {
-        const updatedUser = { ...user, ...formData };
+        const updatedUser: User = {
+          ...user!,
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+        };
+
+        updatedUser.avatar = formatAvatarUrl(updatedUser.avatar);
+
         setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        localStorage.setItem("user", JSON.stringify(updatedUser));
         setIsEditing(false);
-        toast.success('Cập nhật thông tin thành công!');
+        toast.success("Cập nhật thông tin thành công!");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSensitiveUpdate = (field: string) => {
-    setSensitiveField(field);
-    setShowSensitiveModal(true);
-  };
-
-  const handleSensitiveSubmit = async () => {
-    try {
-      setIsLoading(true);
-      
-      // ✅ Endpoint để update email/phone với xác thực password
-      const response = await axiosInstance.put('/auth/update-sensitive', {
-        field: sensitiveField,
-        value: formData[sensitiveField as keyof typeof formData],
-        password: password
-      });
-
-      if (response.data) {
-        const updatedUser = { ...user, [sensitiveField]: formData[sensitiveField as keyof typeof formData] };
-        setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        setShowSensitiveModal(false);
-        setPassword('');
-        toast.success('Cập nhật thành công!');
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Mật khẩu không đúng');
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     } finally {
       setIsLoading(false);
     }
@@ -142,41 +124,27 @@ const PersonalInfo = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Vui lòng chọn file hình ảnh');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Kích thước file không được vượt quá 5MB');
-      return;
-    }
+    const formDataUpload = new FormData();
+    formDataUpload.append("avatar", file);
 
     try {
-      setIsLoading(true);
-      
-      const formData = new FormData();
-      formData.append('avatar', file);
+      const response = await axiosInstance.post(
+        "/auth/upload-avatar",
+        formDataUpload,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
 
-      // ✅ Upload avatar endpoint
-      const response = await axiosInstance.post('/auth/upload-avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data) {
-        const updatedUser = { ...user, avatar: response.data.avatar };
+      if (response.data?.avatar) {
+        const avatarUrl = formatAvatarUrl(response.data.avatar);
+        const updatedUser = { ...user!, avatar: avatarUrl };
         setUser(updatedUser);
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        toast.success('Cập nhật ảnh đại diện thành công!');
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        toast.success("Cập nhật ảnh đại diện thành công!");
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi upload ảnh');
-    } finally {
-      setIsLoading(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Lỗi upload ảnh");
     }
   };
 
@@ -193,59 +161,68 @@ const PersonalInfo = () => {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Thông tin cá nhân</h1>
-        <p className="text-gray-600 mt-1">Quản lý thông tin tài khoản của bạn</p>
+        <p className="text-gray-600 mt-1">
+          Quản lý thông tin tài khoản của bạn
+        </p>
       </div>
 
-      {/* Avatar Section */}
-      <div className="flex items-center space-x-6 mb-8 p-6 bg-gray-50 rounded-lg">
-        <div className="relative">
-          <img
-            src={user?.avatar || '/default-avatar.png'}
-            alt="Avatar"
-            className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.src = 'https://via.placeholder.com/80x80?text=Avatar';
-            }}
-          />
-          <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-lg cursor-pointer">
-            <Camera className="w-4 h-4" />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
-          </label>
+      {/* Banner + Avatar */}
+      <div className="flex flex-col items-center mb-16 rounded-lg">
+        <div className="w-full h-40 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 relative flex justify-center">
+          <div className="absolute -bottom-12">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt="Avatar"
+                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+              />
+            ) : (
+              <div className="w-24 h-24 flex items-center justify-center rounded-full bg-gray-300 text-gray-700 border-4 border-white shadow-lg text-sm font-semibold">
+                No Avatar
+              </div>
+            )}
+
+            {/* Nút upload ảnh */}
+            <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-lg cursor-pointer">
+              <Camera className="w-4 h-4" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">{user?.name || 'Chưa có tên'}</h3>
-          <p className="text-gray-600">{user?.email}</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Vai trò: {user?.role === 'admin' ? 'Quản trị viên' : 'Khách hàng'}
-          </p>
+
+        {/* Vai trò */}
+        <div className="mt-16">
+          <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+            {user?.role === "admin" ? "Quản trị viên" : "Khách hàng"}
+          </span>
         </div>
       </div>
 
-      {/* Form Section */}
+      {/* Thông tin chi tiết */}
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900">Thông tin chi tiết</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Thông tin chi tiết
+          </h2>
           <button
-            onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+            onClick={() => (isEditing ? handleSave() : setIsEditing(true))}
             disabled={isLoading}
             className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
-            <span>{isEditing ? 'Lưu thay đổi' : 'Chỉnh sửa'}</span>
+            <span>{isEditing ? "Lưu thay đổi" : "Chỉnh sửa"}</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Full Name */}
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Họ và tên <span className="text-red-500">*</span>
+            <label className="block text-base font-medium text-gray-700 mb-2">
+              Họ và tên
             </label>
             <input
               type="text"
@@ -253,93 +230,36 @@ const PersonalInfo = () => {
               value={formData.name}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 text-lg"
               placeholder="Nhập họ và tên"
             />
           </div>
 
-          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-base font-medium text-gray-700 mb-2">
               Email
             </label>
-            <div className="flex">
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                disabled={true}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-gray-500"
-              />
-              <button
-                onClick={() => handleSensitiveUpdate('email')}
-                className="px-3 py-2 bg-yellow-500 text-white rounded-r-md hover:bg-yellow-600 transition-colors text-sm"
-                title="Cần xác thực mật khẩu để thay đổi email"
-              >
-                Thay đổi
-              </button>
-            </div>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              disabled={true}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-lg"
+            />
           </div>
 
-          {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-base font-medium text-gray-700 mb-2">
               Số điện thoại
             </label>
-            <div className="flex">
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                disabled={!isEditing}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                placeholder="Nhập số điện thoại"
-              />
-              {!isEditing && (
-                <button
-                  onClick={() => handleSensitiveUpdate('phone')}
-                  className="px-3 py-2 bg-yellow-500 text-white rounded-r-md hover:bg-yellow-600 transition-colors text-sm"
-                  title="Cần xác thực mật khẩu để thay đổi số điện thoại"
-                >
-                  Thay đổi
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Gender */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Giới tính
-            </label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleInputChange}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-            >
-              <option value="">Chọn giới tính</option>
-              <option value="male">Nam</option>
-              <option value="female">Nữ</option>
-              <option value="other">Khác</option>
-            </select>
-          </div>
-
-          {/* Date of Birth */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ngày sinh
-            </label>
             <input
-              type="date"
-              name="dateOfBirth"
-              value={formData.dateOfBirth}
+              type="tel"
+              name="phone"
+              value={formData.phone}
               onChange={handleInputChange}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500 text-lg"
+              placeholder="Nhập số điện thoại"
             />
           </div>
         </div>
@@ -349,13 +269,10 @@ const PersonalInfo = () => {
             <button
               onClick={() => {
                 setIsEditing(false);
-                // Reset form data
                 setFormData({
-                  name: user?.name || '',
-                  phone: user?.phone || '',
-                  gender: user?.gender || '',
-                  dateOfBirth: user?.dateOfBirth || '',
-                  email: user?.email || ''
+                  name: user?.name || "",
+                  phone: user?.phone || "",
+                  email: user?.email || "",
                 });
               }}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
@@ -382,79 +299,6 @@ const PersonalInfo = () => {
           </div>
         )}
       </div>
-
-      {/* Sensitive Info Modal */}
-      {showSensitiveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Xác thực thay đổi</h3>
-              <button
-                onClick={() => {
-                  setShowSensitiveModal(false);
-                  setPassword('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <p className="text-gray-600 mb-4">
-              Để thay đổi {sensitiveField === 'email' ? 'email' : 'số điện thoại'}, vui lòng nhập mật khẩu của bạn.
-            </p>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mật khẩu hiện tại <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 pr-10"
-                  placeholder="Nhập mật khẩu của bạn"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowSensitiveModal(false);
-                  setPassword('');
-                }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSensitiveSubmit}
-                disabled={!password || isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Đang xác thực...</span>
-                  </>
-                ) : (
-                  <span>Xác nhận</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
