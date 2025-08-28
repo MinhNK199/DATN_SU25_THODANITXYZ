@@ -25,16 +25,12 @@ const PersonalInfo = () => {
     email: "",
   });
 
-  // ✅ API URL cố định
   const API_URL = "http://localhost:8000";
 
-  // Hàm chuẩn hóa avatar thành full URL
+  // Hàm chuẩn hóa avatar
   const formatAvatarUrl = (avatarPath?: string) => {
     if (!avatarPath) return undefined;
-
-    // Fix trường hợp backend trả về "undefined/...."
     avatarPath = avatarPath.replace(/^undefined\//, "");
-
     if (avatarPath.startsWith("http")) return avatarPath;
     return `${API_URL}/${avatarPath.replace(/^\//, "")}`;
   };
@@ -45,9 +41,7 @@ const PersonalInfo = () => {
         const savedUser = localStorage.getItem("user");
         if (savedUser) {
           const userData = JSON.parse(savedUser);
-
           userData.avatar = formatAvatarUrl(userData.avatar);
-
           setUser(userData);
           setFormData({
             name: userData.name || "",
@@ -58,16 +52,13 @@ const PersonalInfo = () => {
           const response = await axiosInstance.get("/auth/me");
           if (response.data) {
             const userData = response.data.user || response.data;
-
             userData.avatar = formatAvatarUrl(userData.avatar);
-
             setUser(userData);
             setFormData({
               name: userData.name || "",
               phone: userData.phone || "",
               email: userData.email || "",
             });
-
             localStorage.setItem("user", JSON.stringify(userData));
           }
         }
@@ -167,24 +158,26 @@ const PersonalInfo = () => {
       </div>
 
       {/* Banner + Avatar */}
-      <div className="flex flex-col items-center mb-16 rounded-lg">
-        <div className="w-full h-40 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 relative flex justify-center">
-          <div className="absolute -bottom-12">
+      <div className="flex flex-col items-center mb-8 rounded-lg">
+        {/* Banner */}
+        <div className="w-full h-40 rounded-lg bg-gradient-to-b from-purple-500 to-blue-500 relative flex justify-center">
+          {/* Avatar */}
+          <div className="absolute -bottom-16 flex flex-col items-center">
             {user?.avatar ? (
               <img
                 src={user.avatar}
                 alt="Avatar"
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
               />
             ) : (
-              <div className="w-24 h-24 flex items-center justify-center rounded-full bg-gray-300 text-gray-700 border-4 border-white shadow-lg text-sm font-semibold">
+              <div className="w-32 h-32 flex items-center justify-center rounded-full bg-gray-300 text-gray-700 border-4 border-white shadow-lg text-base font-semibold">
                 No Avatar
               </div>
             )}
 
             {/* Nút upload ảnh */}
-            <label className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-lg cursor-pointer">
-              <Camera className="w-4 h-4" />
+            <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-lg cursor-pointer">
+              <Camera className="w-5 h-5" />
               <input
                 type="file"
                 accept="image/*"
@@ -193,13 +186,6 @@ const PersonalInfo = () => {
               />
             </label>
           </div>
-        </div>
-
-        {/* Vai trò */}
-        <div className="mt-16">
-          <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
-            {user?.role === "admin" ? "Quản trị viên" : "Khách hàng"}
-          </span>
         </div>
       </div>
 
