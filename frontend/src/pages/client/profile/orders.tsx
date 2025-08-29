@@ -3,7 +3,7 @@ import {
   ShoppingBag, Search, Filter, Eye, Package, Truck,
   CheckCircle, XCircle, Clock, RotateCcw, Pause, DollarSign
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../../api/axiosInstance';
 
 interface OrderItem {
@@ -57,18 +57,14 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 5;
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrders();
-    
-    // ✅ Lắng nghe event khi có order mới được tạo
     const handleOrderUpdated = () => {
-      console.log("🔄 Orders component received orderUpdated event");
       fetchOrders();
     };
-    
     window.addEventListener('orderUpdated', handleOrderUpdated);
-    
     return () => {
       window.removeEventListener('orderUpdated', handleOrderUpdated);
     };
@@ -84,7 +80,6 @@ const Orders = () => {
         setOrders([]);
       }
     } catch (error) {
-      console.error("Error fetching orders:", error);
       setOrders([]);
     } finally {
       setIsLoading(false);
@@ -133,7 +128,6 @@ const Orders = () => {
     }
   };
 
-  // ✅ Hàm hiển thị trạng thái thanh toán
   const getPaymentStatusText = (order: Order) => {
     if (order.paymentMethod === "COD") {
       return order.paymentStatus === "paid" ? "Đã thanh toán COD" : "Chưa thanh toán COD";
@@ -173,7 +167,6 @@ const Orders = () => {
     }
   };
 
-  // ✅ THÊM: Hàm hiển thị thông tin giao hàng
   const getDeliveryInfo = (order: Order) => {
     if (order.status === 'shipped' && order.estimatedDeliveryDate) {
       return {
@@ -185,10 +178,8 @@ const Orders = () => {
     return null;
   };
 
-  // ✅ THÊM: Hàm hiển thị timeline đơn hàng
   const getOrderTimeline = (order: Order) => {
     if (!order.statusHistory || order.statusHistory.length === 0) return [];
-    
     return order.statusHistory.map((history, index) => ({
       id: index,
       status: history.status,
@@ -227,6 +218,21 @@ const Orders = () => {
       hour: '2-digit', minute: '2-digit'
     });
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) return;
+    try {
+      await axiosInstance.put(`/order/${orderId}/status`, {
+        status: "cancelled",
+        note: "Khách hàng hủy đơn hàng"
+      });
+      fetchOrders();
+    } catch (error: any) {}
+  };
+
+  const handleReviewOrder = (orderId: string) => {
+    navigate(`/profile/orders/${orderId}/review`);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -242,8 +248,6 @@ const Orders = () => {
         <h1 className="text-2xl font-bold text-gray-900">Đơn hàng của tôi</h1>
         <p className="text-gray-600 mt-1">Theo dõi và quản lý đơn hàng của bạn</p>
       </div>
-
-      {/* Search + Filter */}
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
@@ -274,8 +278,6 @@ const Orders = () => {
           </div>
         </div>
       </div>
-
-      {/* Orders */}
       {filteredOrders.length === 0 ? (
         <div className="text-center py-12">
           <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -305,7 +307,6 @@ const Orders = () => {
               key={order._id}
               className="bg-white border border-blue-200 rounded-lg shadow-sm hover:shadow-lg transition-all overflow-hidden"
             >
-              {/* Header */}
               <div className="bg-blue-50 px-6 py-4 border-b border-blue-200 flex justify-between items-center">
                 <div>
                   <h3 className="font-semibold text-gray-900">
@@ -330,8 +331,6 @@ const Orders = () => {
                   </Link>
                 </div>
               </div>
-
-              {/* Items */}
               <div className="px-6 py-4 space-y-4">
                 {order.orderItems?.slice(0, 2).map((item, index) => (
                   <div key={index} className="flex items-center space-x-4 border-b pb-3 last:border-0 last:pb-0">
@@ -357,8 +356,6 @@ const Orders = () => {
                   </p>
                 )}
               </div>
-
-              {/* Footer */}
               <div className="bg-blue-50 px-6 py-4 border-t border-blue-200 flex justify-between items-center">
                 <div className="text-sm text-gray-700">
                   <span>Giao đến: </span>
@@ -371,12 +368,26 @@ const Orders = () => {
                   <p className="text-lg font-bold text-blue-700">
                     {formatPrice(order.totalPrice)}
                   </p>
+                  {order.status === "pending" && (
+                    <button
+                      onClick={() => handleCancelOrder(order._id)}
+                      className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Hủy đơn hàng
+                    </button>
+                  )}
+                  {order.status === "delivered_success" && (
+                    <button
+                      onClick={() => handleReviewOrder(order._id)}
+                      className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                    >
+                      Đánh giá đơn hàng
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           ))}
-
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 mt-8">
               <button

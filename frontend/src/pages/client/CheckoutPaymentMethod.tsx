@@ -64,9 +64,9 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
           <input
             type="radio"
             name="paymentMethod"
-            value="cod"
-            checked={formData.paymentMethod === "cod"}
-            onChange={() => handlePaymentMethodChange("cod")}
+            value="COD"
+            checked={formData.paymentMethod === "COD"}
+            onChange={() => handlePaymentMethodChange("COD")}
             className="w-5 h-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500"
           />
           <div className="flex items-center space-x-4">

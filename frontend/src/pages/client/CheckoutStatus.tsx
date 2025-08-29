@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-
 import axios from "axios";
 
 const CheckoutStatus: React.FC = () => {
@@ -47,86 +46,157 @@ const CheckoutStatus: React.FC = () => {
       }
 
       // Kiểm tra trạng thái đơn hàng từ backend
-      const orderResponse = await axios.get(`http://localhost:8000/api/order/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const orderResponse = await axios.get(
+        `http://localhost:8000/api/order/${orderId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       console.log("📦 Order status from backend:", orderResponse.data);
 
       const order = orderResponse.data;
-      
+
       // Kiểm tra trạng thái thanh toán
       console.log("🔍 Checking order status:", {
         isPaid: order.isPaid,
         paymentStatus: order.paymentStatus,
         status: order.status,
+        paymentMethod: order.paymentMethod,
         resultCode,
         vnp_ResponseCode,
-        zp_ResponseCode
+        zp_ResponseCode,
       });
 
-             // ✅ ƯU TIÊN 1: URL Parameters (resultCode là trường QUAN TRỌNG NHẤT)
-       if (resultCode === "0" || vnp_ResponseCode === "00" || zp_ResponseCode === "1") {
-          console.log("✅ Payment successful based on URL params, redirecting to success page");
-          setStatus("success");
-          setTimeout(() => {
-            navigate(`/checkout/success?orderId=${orderId}&paymentMethod=${order.paymentMethod || paymentMethod}&resultCode=${resultCode}`);
-          }, 1000);
-        } 
-        // ❌ ƯU TIÊN 2: URL Parameters cho thất bại (resultCode là trường QUAN TRỌNG NHẤT)
-        else if ((resultCode && resultCode !== "0") || 
-                 (vnp_ResponseCode && vnp_ResponseCode !== "00") ||
-                 (zp_ResponseCode && zp_ResponseCode !== "1")) {
-          console.log("❌ Payment failed based on URL params, redirecting to failed page");
+      // ✅ ƯU TIÊN 1: URL Parameters (thành công)
+      if (
+        resultCode === "0" ||
+        vnp_ResponseCode === "00" ||
+        zp_ResponseCode === "1"
+      ) {
+        console.log(
+          "✅ Payment successful based on URL params, redirecting to success page"
+        );
+        setStatus("success");
+        setTimeout(() => {
+          navigate(
+            `/checkout/success?orderId=${orderId}&paymentMethod=${
+              order.paymentMethod || paymentMethod
+            }&resultCode=${resultCode}`
+          );
+        }, 1000);
+      }
+      // ❌ ƯU TIÊN 2: URL Parameters (thất bại)
+      else if (
+        (resultCode && resultCode !== "0") ||
+        (vnp_ResponseCode && vnp_ResponseCode !== "00") ||
+        (zp_ResponseCode && zp_ResponseCode !== "1")
+      ) {
+        console.log(
+          "❌ Payment failed based on URL params, redirecting to failed page"
+        );
+        setStatus("failed");
+        setTimeout(() => {
+          navigate(
+            `/checkout/failed?orderId=${orderId}&paymentMethod=${
+              order.paymentMethod || paymentMethod
+            }&error=payment_failed&resultCode=${resultCode}&amount=${
+              order.totalPrice || ""
+            }`
+          );
+        }, 1000);
+      }
+      // ✅ ƯU TIÊN 3: COD luôn thành công
+      else if (
+        order.paymentMethod?.toUpperCase() === "COD" ||
+        paymentMethod?.toUpperCase() === "COD"
+      ) {
+        console.log("✅ COD order created, treating as success");
+        setStatus("success");
+        setTimeout(() => {
+          navigate(
+            `/checkout/success?orderId=${orderId}&paymentMethod=COD`
+          );
+        }, 1000);
+      }
+      // ✅ Backend báo đã thanh toán
+      else if (order.isPaid && order.paymentStatus === "paid") {
+        console.log(
+          "✅ Payment successful from backend status, redirecting to success page"
+        );
+        setStatus("success");
+        setTimeout(() => {
+          navigate(
+            `/checkout/success?orderId=${orderId}&paymentMethod=${
+              order.paymentMethod || paymentMethod
+            }`
+          );
+        }, 1000);
+      }
+      // ❌ Backend báo thất bại
+      else if (
+        order.paymentStatus === "failed" ||
+        order.status === "cancelled"
+      ) {
+        console.log(
+          "❌ Payment failed from backend status, redirecting to failed page"
+        );
+        setStatus("failed");
+        setTimeout(() => {
+          navigate(
+            `/checkout/failed?orderId=${orderId}&paymentMethod=${
+              order.paymentMethod || paymentMethod
+            }&error=payment_failed&amount=${order.totalPrice || ""}`
+          );
+        }, 1000);
+      }
+      // ⏳ Chưa rõ trạng thái → retry
+      else {
+        if (retryCount >= MAX_RETRIES) {
+          console.log("❌ Max retries reached, redirecting to failed page");
           setStatus("failed");
           setTimeout(() => {
-            navigate(`/checkout/failed?orderId=${orderId}&paymentMethod=${order.paymentMethod || paymentMethod}&error=payment_failed&resultCode=${resultCode}&amount=${order.totalPrice || ''}`);
-          }, 1000);
-        } 
-        // ⏳ ƯU TIÊN 3: Backend Status (fallback khi không có URL params)
-        else if (order.isPaid && order.paymentStatus === 'paid') {
-          console.log("✅ Payment successful from backend status, redirecting to success page");
-          setStatus("success");
-          setTimeout(() => {
-            navigate(`/checkout/success?orderId=${orderId}&paymentMethod=${order.paymentMethod || paymentMethod}`);
-          }, 1000);
-        } else if (order.paymentStatus === 'failed' || order.status === 'cancelled') {
-          console.log("❌ Payment failed from backend status, redirecting to failed page");
-          setStatus("failed");
-          setTimeout(() => {
-            navigate(`/checkout/failed?orderId=${orderId}&paymentMethod=${order.paymentMethod || paymentMethod}&error=payment_failed&amount=${order.totalPrice || ''}`);
+            navigate(
+              `/checkout/failed?orderId=${orderId}&paymentMethod=${
+                order.paymentMethod || paymentMethod
+              }&error=timeout&amount=${order.totalPrice || ""}`
+            );
           }, 1000);
         } else {
-          // ⏳ Đang chờ xử lý - kiểm tra lại sau 3 giây
-          if (retryCount >= MAX_RETRIES) {
-            console.log("❌ Max retries reached, redirecting to failed page");
-            setStatus("failed");
-            setTimeout(() => {
-              navigate(`/checkout/failed?orderId=${orderId}&paymentMethod=${order.paymentMethod || paymentMethod}&error=timeout&amount=${order.totalPrice || ''}`);
-            }, 1000);
-          } else {
-            console.log(`⏳ Payment pending, retrying in 3 seconds... (${retryCount + 1}/${MAX_RETRIES})`);
-            setRetryCount(prev => prev + 1);
-            setTimeout(() => {
-              checkPaymentStatus();
-            }, 3000);
-          }
+          console.log(
+            `⏳ Payment pending, retrying in 3 seconds... (${
+              retryCount + 1
+            }/${MAX_RETRIES})`
+          );
+          setRetryCount((prev) => prev + 1);
+          setTimeout(() => {
+            checkPaymentStatus();
+          }, 3000);
         }
+      }
     } catch (error) {
       console.error("❌ Error checking payment status:", error);
-      
-             // Fallback: dựa vào URL parameters
-       if (resultCode === "0" || vnp_ResponseCode === "00" || zp_ResponseCode === "1") {
-         setStatus("success");
-         setTimeout(() => {
-           navigate(`/checkout/success?orderId=${orderId}&paymentMethod=${paymentMethod}`);
-         }, 1000);
-       } else {
-         setStatus("failed");
-         setTimeout(() => {
-           navigate(`/checkout/failed?orderId=${orderId}&paymentMethod=${paymentMethod}&error=payment_failed`);
-         }, 1000);
-       }
+
+      // Fallback: dựa vào URL parameters
+      if (
+        resultCode === "0" ||
+        vnp_ResponseCode === "00" ||
+        zp_ResponseCode === "1"
+      ) {
+        setStatus("success");
+        setTimeout(() => {
+          navigate(
+            `/checkout/success?orderId=${orderId}&paymentMethod=${paymentMethod}`
+          );
+        }, 1000);
+      } else {
+        setStatus("failed");
+        setTimeout(() => {
+          navigate(
+            `/checkout/failed?orderId=${orderId}&paymentMethod=${paymentMethod}&error=payment_failed`
+          );
+        }, 1000);
+      }
     } finally {
       setLoading(false);
     }
@@ -182,7 +252,9 @@ const CheckoutStatus: React.FC = () => {
         {orderId && (
           <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
             <p className="text-sm text-gray-600 mb-2">Mã đơn hàng:</p>
-            <p className="font-mono text-lg font-semibold text-gray-900">{orderId}</p>
+            <p className="font-mono text-lg font-semibold text-gray-900">
+              {orderId}
+            </p>
             {paymentMethod && (
               <p className="text-sm text-gray-500 mt-2">
                 Phương thức: {paymentMethod.toUpperCase()}
@@ -193,27 +265,24 @@ const CheckoutStatus: React.FC = () => {
 
         {/* Progress Bar */}
         <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-          <div 
+          <div
             className={`h-2 rounded-full transition-all duration-1000 ${
-              status === "checking" ? "bg-blue-600 w-1/3" :
-              status === "success" ? "bg-green-600 w-full" :
-              status === "failed" ? "bg-red-600 w-full" :
-              "bg-blue-600 w-1/2"
+              status === "checking"
+                ? "bg-blue-600 w-1/3"
+                : status === "success"
+                ? "bg-green-600 w-full"
+                : status === "failed"
+                ? "bg-red-600 w-full"
+                : "bg-blue-600 w-1/2"
             }`}
           ></div>
         </div>
 
         {/* Additional Info */}
         <div className="text-sm text-gray-500">
-          {status === "checking" && (
-            <p>Vui lòng đợi trong giây lát...</p>
-          )}
-          {status === "success" && (
-            <p>Chuyển hướng đến trang thành công</p>
-          )}
-          {status === "failed" && (
-            <p>Chuyển hướng đến trang thất bại</p>
-          )}
+          {status === "checking" && <p>Vui lòng đợi trong giây lát...</p>}
+          {status === "success" && <p>Chuyển hướng đến trang thành công</p>}
+          {status === "failed" && <p>Chuyển hướng đến trang thất bại</p>}
         </div>
       </div>
     </div>

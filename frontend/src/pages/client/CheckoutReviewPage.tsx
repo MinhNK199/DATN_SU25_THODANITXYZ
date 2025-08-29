@@ -123,7 +123,7 @@ const CheckoutReviewPage: React.FC = () => {
       console.log("Wallet info:", walletInfo);
 
       // ✅ CHỈ xóa giỏ hàng cho COD, online payment sẽ xóa sau khi thanh toán thành công
-      if (formData.paymentMethod === "cod") {
+      if (formData.paymentMethod === "COD") {
         await removeOrderedItemsFromCart(orderData.orderItems);
       }
       // ⚠️ Online payment: KHÔNG xóa giỏ hàng ngay, chỉ xóa khi thanh toán thành công
