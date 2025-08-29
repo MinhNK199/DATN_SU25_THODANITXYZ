@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, ShoppingCart, Trash2, Search, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
-import axiosInstance from '../../../api/axiosInstance';
+import React, { useState, useEffect } from "react";
+import { Heart, ShoppingCart, Trash2, Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import axiosInstance from "../../../api/axiosInstance";
 
 interface WishlistItem {
-  id: string;
+  _id: string;
   productId: string;
   productName: string;
   productImage: string;
@@ -23,9 +23,9 @@ const Wishlist = () => {
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
     fetchWishlist();
@@ -38,48 +38,66 @@ const Wishlist = () => {
   const fetchWishlist = async () => {
     try {
       setIsLoading(true);
-      const response = await axiosInstance.get('/wishlist');
-      
-      if (response.data.success) {
-        setWishlistItems(response.data.data);
-      }
+      const response = await axiosInstance.get("/product/favorites");
+
+      const favorites = response.data.favorites || [];
+
+      const mapped = favorites.map((item: any) => ({
+        _id: item._id,
+        productId: item._id,
+        productName: item.name,
+        productImage: item.images?.[0] || "",
+        price: item.price,
+        originalPrice: item.price,
+        discount: 0,
+        inStock: item.stock > 0,
+        category: item.category?.name || "Khác",
+        rating: item.averageRating || 0,
+        reviewCount: item.numReviews || 0,
+        addedAt: item.createdAt || new Date().toISOString(),
+      }));
+
+      setWishlistItems(mapped);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     } finally {
       setIsLoading(false);
     }
   };
 
   const filterAndSortItems = () => {
-    let filtered = wishlistItems;
+    let filtered = [...wishlistItems];
 
-    // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(item =>
+      filtered = filtered.filter((item) =>
         item.productName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Filter by category
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(item => item.category === categoryFilter);
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter((item) => item.category === categoryFilter);
     }
 
-    // Sort items
     switch (sortBy) {
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+      case "newest":
+        filtered.sort(
+          (a, b) =>
+            new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()
+        );
         break;
-      case 'oldest':
-        filtered.sort((a, b) => new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime());
+      case "oldest":
+        filtered.sort(
+          (a, b) =>
+            new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime()
+        );
         break;
-      case 'price-low':
+      case "price-low":
         filtered.sort((a, b) => a.price - b.price);
         break;
-      case 'price-high':
+      case "price-high":
         filtered.sort((a, b) => b.price - a.price);
         break;
-      case 'name':
+      case "name":
         filtered.sort((a, b) => a.productName.localeCompare(b.productName));
         break;
       default:
@@ -89,53 +107,56 @@ const Wishlist = () => {
     setFilteredItems(filtered);
   };
 
-  const handleRemoveFromWishlist = async (itemId: string) => {
+  const handleRemoveFromWishlist = async (productId: string) => {
     try {
-      const response = await axiosInstance.delete(`/wishlist/${itemId}`);
-      
-      if (response.data.success) {
-        setWishlistItems(prev => prev.filter(item => item.id !== itemId));
-        toast.success('Đã xóa khỏi danh sách yêu thích');
+      const response = await axiosInstance.delete(
+        `/product/${productId}/favorite`
+      );
+      if (response.data) {
+        setWishlistItems((prev) =>
+          prev.filter((item) => item.productId !== productId)
+        );
+        toast.success("Đã xóa khỏi danh sách yêu thích");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     }
   };
 
   const handleAddToCart = async (productId: string) => {
     try {
-      const response = await axiosInstance.post('/cart/add', {
+      const response = await axiosInstance.post("/cart/add", {
         productId,
-        quantity: 1
+        quantity: 1,
       });
-
       if (response.data.success) {
-        toast.success('Đã thêm vào giỏ hàng');
+        toast.success("Đã thêm vào giỏ hàng");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     }
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
     }).format(price);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
+    return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
-  // Get unique categories
-  const categories = [...new Set(wishlistItems.map(item => item.category))];
+  const categories = [...new Set(wishlistItems.map((item) => item.category))];
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Đang tải danh sách yêu thích...</span>
+        <span className="ml-2 text-gray-600">
+          Đang tải danh sách yêu thích...
+        </span>
       </div>
     );
   }
@@ -172,8 +193,10 @@ const Wishlist = () => {
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Tất cả danh mục</option>
-              {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
               ))}
             </select>
 
@@ -198,15 +221,16 @@ const Wishlist = () => {
         <div className="text-center py-12">
           <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {searchTerm || categoryFilter !== 'all' ? 'Không tìm thấy sản phẩm' : 'Danh sách yêu thích trống'}
+            {searchTerm || categoryFilter !== "all"
+              ? "Không tìm thấy sản phẩm"
+              : "Danh sách yêu thích trống"}
           </h3>
           <p className="text-gray-500 mb-6">
-            {searchTerm || categoryFilter !== 'all' 
-              ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
-              : 'Thêm sản phẩm vào danh sách yêu thích để theo dõi'
-            }
+            {searchTerm || categoryFilter !== "all"
+              ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm"
+              : "Thêm sản phẩm vào danh sách yêu thích để theo dõi"}
           </p>
-          {!searchTerm && categoryFilter === 'all' && (
+          {!searchTerm && categoryFilter === "all" && (
             <Link
               to="/products"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
@@ -216,29 +240,25 @@ const Wishlist = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+            <div
+              key={item._id}
+              className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+            >
               {/* Product Image */}
               <div className="relative">
-                <Link to={`/products/${item.productId}`}>
+                <Link to={`/product/${item.productId}`}>
                   <img
                     src={item.productImage}
                     alt={item.productName}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-64 object-contain bg-white"
                   />
                 </Link>
-                
-                {/* Discount Badge */}
-                {item.discount && (
-                  <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">
-                    -{item.discount}%
-                  </div>
-                )}
 
                 {/* Remove from Wishlist */}
                 <button
-                  onClick={() => handleRemoveFromWishlist(item.id)}
+                  onClick={() => handleRemoveFromWishlist(item.productId)}
                   className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
                 >
                   <Heart className="w-4 h-4 text-red-500 fill-current" />
@@ -247,10 +267,7 @@ const Wishlist = () => {
 
               {/* Product Info */}
               <div className="p-4">
-                <Link 
-                  to={`/products/${item.productId}`}
-                  className="block mb-2"
-                >
+                <Link to={`/product/${item.productId}`} className="block mb-2">
                   <h3 className="font-medium text-gray-900 line-clamp-2 hover:text-blue-600 transition-colors">
                     {item.productName}
                   </h3>
@@ -261,7 +278,11 @@ const Wishlist = () => {
                     {[...Array(5)].map((_, i) => (
                       <svg
                         key={i}
-                        className={`w-4 h-4 ${i < Math.floor(item.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                        className={`w-4 h-4 ${
+                          i < Math.floor(item.rating)
+                            ? "text-yellow-400"
+                            : "text-gray-300"
+                        }`}
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -269,7 +290,9 @@ const Wishlist = () => {
                       </svg>
                     ))}
                   </div>
-                  <span className="text-sm text-gray-500">({item.reviewCount})</span>
+                  <span className="text-sm text-gray-500">
+                    ({item.reviewCount})
+                  </span>
                 </div>
 
                 <div className="mb-3">
@@ -286,12 +309,14 @@ const Wishlist = () => {
                 </div>
 
                 <div className="flex items-center justify-between mb-3">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    item.inStock 
-                      ? 'bg-green-100 text-green-600' 
-                      : 'bg-red-100 text-red-600'
-                  }`}>
-                    {item.inStock ? 'Còn hàng' : 'Hết hàng'}
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      item.inStock
+                        ? "bg-green-100 text-green-600"
+                        : "bg-red-100 text-red-600"
+                    }`}
+                  >
+                    {item.inStock ? "Còn hàng" : "Hết hàng"}
                   </span>
                   <span className="text-xs text-gray-500">
                     Thêm ngày {formatDate(item.addedAt)}
@@ -306,11 +331,11 @@ const Wishlist = () => {
                     className="flex-1 flex items-center justify-center space-x-2 bg-blue-600 text-white py-2 px-3 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
                   >
                     <ShoppingCart className="w-4 h-4" />
-                    <span>{item.inStock ? 'Thêm giỏ hàng' : 'Hết hàng'}</span>
+                    <span>{item.inStock ? "Thêm giỏ hàng" : "Hết hàng"}</span>
                   </button>
-                  
+
                   <button
-                    onClick={() => handleRemoveFromWishlist(item.id)}
+                    onClick={() => handleRemoveFromWishlist(item.productId)}
                     className="p-2 border border-gray-300 rounded-md hover:bg-red-50 hover:border-red-300 transition-colors"
                   >
                     <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
