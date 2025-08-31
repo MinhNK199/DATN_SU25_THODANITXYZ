@@ -19,7 +19,9 @@ import {
   verifyEmail, 
   googleLogin, 
   changePassword,
-  uploadAvatar
+  uploadAvatar,
+  duyetAdminRequest,
+  getAdminRequests,
 } from "../controllers/auth.js";
 import { checkAdmin, protect } from "../middlewares/authMiddleware.js";
 import { getActivityLogs, getMyActivityLogs } from "../utils/activityLog.js";
@@ -44,11 +46,26 @@ const upload = multer({ storage });
  * 📌 Routes auth
  */
 routerAuth.post("/register", validateRequestJoi(registerSchema), dangKy);
-routerAuth.post("/register-admin", dangKyAdmin);
 routerAuth.post("/login", validateRequestJoi(loginSchema), dangNhap);
 routerAuth.post("/verify-email", verifyEmail);
 routerAuth.post("/google", googleLogin);
 routerAuth.get("/facebook", passport.authenticate("facebook", { scope: ["email"] }));
+routerAuth.post("/register-admin", dangKyAdmin);
+
+routerAuth.patch(
+  "/admin-request/:id/approve",
+  protect,
+  (req, res, next) => {
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Bạn không có quyền duyệt yêu cầu admin." });
+    }
+    next();
+  },
+  duyetAdminRequest
+);
+
+routerAuth.get("/admin-requests", protect, getAdminRequests);
+
 
 routerAuth.get(
   "/facebook/callback",

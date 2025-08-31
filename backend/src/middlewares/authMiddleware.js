@@ -58,6 +58,7 @@ export const protect = async (req, res, next) => {
             });
         }
     }
+    
 };
 
 export const checkAdmin = (requiredCheck = []) => {
@@ -73,7 +74,6 @@ export const checkAdmin = (requiredCheck = []) => {
         const roleCheck = {
             superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
             admin: ["view_user", "CheckTaiKhoan"], 
-            staff: ["view_user"],
             customer: [],
         };
 

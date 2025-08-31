@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
     passwordChangedAt: Date,
     role: {
       type: String,
-      enum: ["customer", "staff", "admin", "superadmin"],
+      enum: ["customer", "staff", "admin", "superadmin","pendingAdmin"],
       default: "customer",
     },
     phone: {
@@ -129,7 +129,7 @@ const userSchema = new mongoose.Schema(
       content: String,
       status: {
         type: String,
-        enum: ["pending", "approved", "rejected"],
+        enum: ["pending", "approved", "rejected",],
         default: "pending",
       },
     },

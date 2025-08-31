@@ -11,7 +11,8 @@ import { OAuth2Client } from "google-auth-library";
 
 export const dangKy = async (req, res) => {
   try {
-    const { name, email, password, phone, addresses, avatar, recaptchaToken } = req.body;
+    const { name, email, password, phone, addresses, avatar, recaptchaToken } =
+      req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -88,10 +89,10 @@ export const dangNhap = async (req, res) => {
     });
     await logActivity({
       content: `Đăng nhập hệ thống`,
-  userName: user.name,
-  userId: user._id,
-  actorName: user.name, // chính user vừa đăng nhập
-  actorId: user._id,
+      userName: user.name,
+      userId: user._id,
+      actorName: user.name, // chính user vừa đăng nhập
+      actorId: user._id,
     });
     return res.status(200).json({
       message: "Đăng nhập thành công",
@@ -125,20 +126,16 @@ export const updateUserRole = async (req, res) => {
       return res.status(404).json({ message: "Người dùng không tồn tại" });
     }
     if (user.active === false) {
-      return res
-        .status(400)
-        .json({
-          message: "Không thể đổi quyền cho tài khoản đang bị vô hiệu hóa",
-        });
+      return res.status(400).json({
+        message: "Không thể đổi quyền cho tài khoản đang bị vô hiệu hóa",
+      });
     }
     if (role === "superadmin") {
       const existingSuperadmin = await User.findOne({ role: "superadmin" });
       if (existingSuperadmin && existingSuperadmin._id.toString() !== id) {
-        return res
-          .status(400)
-          .json({
-            message: "Chỉ có duy nhất một superadmin được phép tồn tại",
-          });
+        return res.status(400).json({
+          message: "Chỉ có duy nhất một superadmin được phép tồn tại",
+        });
       }
     }
     user.role = role;
@@ -166,16 +163,20 @@ export const getAllUsers = async (req, res) => {
 
     const query = {
       name: { $regex: keyword, $options: "i" },
+      role: { $ne: "pendingAdmin" }, // 🚫 loại bỏ pendingAdmin
     };
 
     if (role) query.role = role;
     if (active !== undefined) query.active = active === "true";
+
     const users = await User.find(query)
       .select("-password")
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .sort({ createdAt: -1 });
+
     const total = await User.countDocuments(query);
+
     let result = users;
     if (req.user.role === "admin") {
       result = users.map((u) => {
@@ -191,6 +192,7 @@ export const getAllUsers = async (req, res) => {
         return u;
       });
     }
+
     res.status(200).json({
       total,
       page: Number(page),
@@ -201,6 +203,7 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
   }
 };
+
 
 export const getUserById = async (req, res) => {
   try {
@@ -227,12 +230,10 @@ export const toggleUserStatus = async (req, res) => {
     const currentUser = req.user;
 
     if (currentUser._id.toString() === targetUser._id.toString()) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Không thể vô hiệu hóa hoặc kích hoạt tài khoản của chính mình",
-        });
+      return res.status(400).json({
+        message:
+          "Không thể vô hiệu hóa hoặc kích hoạt tài khoản của chính mình",
+      });
     }
 
     // superadmin có thể thao tác với tất cả
@@ -242,12 +243,10 @@ export const toggleUserStatus = async (req, res) => {
     // admin chỉ được thao tác với user không phải admin hoặc superadmin
     else if (currentUser.role === "admin") {
       if (["admin", "superadmin"].includes(targetUser.role)) {
-        return res
-          .status(403)
-          .json({
-            message:
-              "Admin không thể vô hiệu hóa hoặc kích hoạt tài khoản admin hoặc superadmin",
-          });
+        return res.status(403).json({
+          message:
+            "Admin không thể vô hiệu hóa hoặc kích hoạt tài khoản admin hoặc superadmin",
+        });
       }
       targetUser.active = !targetUser.active;
     }
@@ -264,9 +263,9 @@ export const toggleUserStatus = async (req, res) => {
         targetUser.active ? "được kích hoạt" : "bị vô hiệu hóa"
       }`,
       userName: targetUser.name,
-  userId: targetUser._id,
-  actorName: req.user.name,
-  actorId: req.user._id,
+      userId: targetUser._id,
+      actorName: req.user.name,
+      actorId: req.user._id,
     });
     res.status(200).json({
       message: `Tài khoản đã ${
@@ -286,11 +285,9 @@ export const updateUser = async (req, res) => {
 
     // Kiểm tra quyền: chỉ cho phép người dùng cập nhật chính họ
     if (req.user._id.toString() !== id) {
-      return res
-        .status(403)
-        .json({
-          message: "Bạn không có quyền cập nhật thông tin người dùng này",
-        });
+      return res.status(403).json({
+        message: "Bạn không có quyền cập nhật thông tin người dùng này",
+      });
     }
 
     const {
@@ -318,8 +315,13 @@ export const updateUser = async (req, res) => {
     user.name = name || user.name;
     user.phone = phone || user.phone;
     user.avatar = avatar || user.avatar;
-    if (notificationSettings) user.notificationSettings = { ...user.notificationSettings, ...notificationSettings };
-    if (privacySettings) user.privacySettings = { ...user.privacySettings, ...privacySettings };
+    if (notificationSettings)
+      user.notificationSettings = {
+        ...user.notificationSettings,
+        ...notificationSettings,
+      };
+    if (privacySettings)
+      user.privacySettings = { ...user.privacySettings, ...privacySettings };
 
     // ✅ Cập nhật địa chỉ mặc định
     const newAddress = {
@@ -361,16 +363,25 @@ export const verifyEmail = async (req, res) => {
   try {
     const { email, token } = req.body;
     if (!email || !token) {
-      return res.status(400).json({ message: "Thiếu email hoặc token xác thực." });
+      return res
+        .status(400)
+        .json({ message: "Thiếu email hoặc token xác thực." });
     }
     const user = await User.findOne({ email, emailVerificationToken: token });
     if (!user) {
-      return res.status(400).json({ message: "Token hoặc email không hợp lệ." });
+      return res
+        .status(400)
+        .json({ message: "Token hoặc email không hợp lệ." });
     }
     if (user.emailVerified) {
-      return res.status(400).json({ message: "Email đã được xác thực trước đó." });
+      return res
+        .status(400)
+        .json({ message: "Email đã được xác thực trước đó." });
     }
-    if (!user.emailVerificationExpires || user.emailVerificationExpires < Date.now()) {
+    if (
+      !user.emailVerificationExpires ||
+      user.emailVerificationExpires < Date.now()
+    ) {
       return res.status(400).json({ message: "Token xác thực đã hết hạn." });
     }
     user.emailVerified = true;
@@ -379,7 +390,9 @@ export const verifyEmail = async (req, res) => {
     await user.save();
     return res.status(200).json({ message: "Xác thực email thành công!" });
   } catch (error) {
-    return res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Lỗi máy chủ", error: error.message });
   }
 };
 
@@ -408,7 +421,9 @@ export const googleLogin = async (req, res) => {
     const { email, name, picture } = payload;
 
     if (!email) {
-      return res.status(400).json({ message: "Không lấy được email từ Google." });
+      return res
+        .status(400)
+        .json({ message: "Không lấy được email từ Google." });
     }
 
     let user = await User.findOne({ email });
@@ -451,9 +466,17 @@ export const googleLogin = async (req, res) => {
   }
 };
 
+// Đăng ký xin làm admin
 export const dangKyAdmin = async (req, res) => {
   try {
-    const { name, email, password, avatar, adminRequestImage, adminRequestContent } = req.body;
+    const {
+      name,
+      email,
+      password,
+      avatar,
+      adminRequestImage,
+      adminRequestContent,
+    } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -466,13 +489,13 @@ export const dangKyAdmin = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: "customer", // Mặc định là customer, admin sẽ phê duyệt sau
+      role: "pendingAdmin", // user mới đăng ký xin admin
       avatar,
       adminRequest: {
         image: adminRequestImage,
         content: adminRequestContent,
-        status: "pending"
-      }
+        status: "pending",
+      },
     });
 
     user.password = undefined;
@@ -496,20 +519,94 @@ export const dangKyAdmin = async (req, res) => {
   }
 };
 
+// Duyệt hoặc từ chối yêu cầu admin
+export const duyetAdminRequest = async (req, res) => {
+  try {
+    // chỉ superadmin mới được duyệt
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Bạn không có quyền duyệt yêu cầu admin." });
+    }
+
+    const { id } = req.params;
+    const { action, note } = req.body; // "approve" | "reject"
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Không tìm thấy user." });
+    }
+
+    if (!user.adminRequest || user.adminRequest.status !== "pending") {
+      return res.status(400).json({ message: "Yêu cầu này không còn ở trạng thái chờ." });
+    }
+
+    if (action === "approve") {
+      user.role = "admin";
+      user.adminRequest.status = "approved";
+      user.adminRequest.note = note || "Đã duyệt yêu cầu admin";
+    } else if (action === "reject") {
+      user.role = "customer";
+      user.adminRequest.status = "rejected";
+      user.adminRequest.note = note || "Từ chối yêu cầu admin";
+    } else {
+      return res.status(400).json({ message: "Hành động không hợp lệ." });
+    }
+
+    await user.save();
+
+    await logActivity({
+      content: `${action === "approve" ? "Phê duyệt" : "Từ chối"} yêu cầu admin cho ${user.name}`,
+      userName: user.name,
+      userId: user._id,
+      actorName: req.user.name,
+      actorId: req.user._id,
+    });
+
+    res.json({
+      message: action === "approve"
+        ? "Đã duyệt quyền admin thành công!"
+        : "Đã từ chối yêu cầu admin.",
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  }
+};
+
+// Lấy danh sách yêu cầu admin
+export const getAdminRequests = async (req, res) => {
+  try {
+    // chỉ superadmin mới được xem
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Bạn không có quyền xem danh sách này." });
+    }
+
+    const requests = await User.find({
+      role: "pendingAdmin",                // user đang xin làm admin
+      "adminRequest.status": "pending",    // trạng thái chờ
+    }).select("-password");
+
+    res.json({ requests });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
+  }
+};
+
 export const changePassword = async (req, res) => {
   try {
     const userId = req.user._id;
     const { oldPassword, newPassword } = req.body;
-    const user = await User.findById(userId).select('+password');
+    const user = await User.findById(userId).select("+password");
     if (!user) {
-      return res.status(404).json({ message: 'Người dùng không tồn tại' });
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
     }
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Mật khẩu cũ không đúng' });
+      return res.status(400).json({ message: "Mật khẩu cũ không đúng" });
     }
     if (oldPassword === newPassword) {
-      return res.status(400).json({ message: 'Mật khẩu mới phải khác mật khẩu cũ' });
+      return res
+        .status(400)
+        .json({ message: "Mật khẩu mới phải khác mật khẩu cũ" });
     }
     user.password = await bcrypt.hash(newPassword, 10);
     user.passwordChangedAt = new Date();
@@ -521,12 +618,11 @@ export const changePassword = async (req, res) => {
       actorName: user.name,
       actorId: user._id,
     });
-    res.status(200).json({ message: 'Đổi mật khẩu thành công' });
+    res.status(200).json({ message: "Đổi mật khẩu thành công" });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi máy chủ', error: error.message });
+    res.status(500).json({ message: "Lỗi máy chủ", error: error.message });
   }
 };
-
 
 export const uploadAvatar = async (req, res) => {
   try {
@@ -559,4 +655,3 @@ export const uploadAvatar = async (req, res) => {
     res.status(500).json({ message: "Lỗi server khi upload avatar" });
   }
 };
-

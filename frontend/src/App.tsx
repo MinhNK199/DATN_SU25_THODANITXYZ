@@ -91,6 +91,7 @@ function App() {
             <Route path="/login-success" element={<LoginSuccess />} />
             <Route path="/register" element={<Register />} />
             <Route path="/admin-dky" element={<RegisterAdmin />} />
+            <Route path="/admin-list" element={<Listadmin />} />
 
             {/* Client Routes */}
             <Route path="/" element={<ClientLayout />}>
