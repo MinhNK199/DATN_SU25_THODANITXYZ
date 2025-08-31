@@ -31,7 +31,8 @@ const BlogList: React.FC = () => {
     const fetchBlogs = async () => {
       try {
         setLoading(true);
-        let url = `/api/blog/public/published?page=${currentPage}&limit=12`;
+        // Sửa URL: backend mount tại /api/blogs/public/published
+        let url = `/api/blogs/public/published?page=${currentPage}&limit=12`;
         
         if (searchTerm) {
           url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -69,6 +70,15 @@ const BlogList: React.FC = () => {
       month: 'numeric',
       year: 'numeric'
     });
+  };
+
+  // Chuẩn hóa URL ảnh (thêm host nếu là đường dẫn tương đối)
+  const getImageUrl = (url?: string) => {
+    if (!url || url.trim() === '') return '/placeholder.png';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Mặc định backend chạy ở cổng 8000
+    const normalized = url.replace(/^\/+/, '');
+    return `http://localhost:8000/${normalized}`;
   };
 
   const getBrandFromTags = (tags: string[]) => {
@@ -185,7 +195,7 @@ const BlogList: React.FC = () => {
                   <div className="relative h-64 overflow-hidden bg-gray-100 flex items-center justify-center">
                     {blog.coverImage ? (
                       <img
-                        src={blog.coverImage}
+                        src={getImageUrl(blog.coverImage)}
                         alt={blog.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {

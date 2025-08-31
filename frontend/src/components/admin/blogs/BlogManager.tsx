@@ -35,14 +35,16 @@ const BlogManager: React.FC = () => {
   const fetchBlogs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/blog');
+      // Sửa URL: backend mount tại /api/blogs
+      const response = await fetch('/api/blogs');
       if (!response.ok) {
         throw new Error('Lỗi khi tải dữ liệu blog');
       }
       const data = await response.json();
       setBlogs(data);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      console.error('Lỗi khi tải blog:', error);
+      setBlogs([]);
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,8 @@ const BlogManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
       try {
-        const response = await fetch(`/api/blog/${id}`, {
+        // Sửa URL: backend mount tại /api/blogs
+        const response = await fetch(`/api/blogs/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -72,7 +75,8 @@ const BlogManager: React.FC = () => {
 
   const handlePublish = async (id: string) => {
     try {
-      const response = await fetch(`/api/blog/${id}/publish`, {
+              // Sửa URL: backend mount tại /api/blogs
+        const response = await fetch(`/api/blogs/${id}/publish`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -113,6 +117,15 @@ const BlogManager: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('vi-VN');
+  };
+
+  // Chuẩn hóa URL ảnh (thêm host nếu là đường dẫn tương đối)
+  const getImageUrl = (url?: string) => {
+    if (!url || url.trim() === '') return '/placeholder.png';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Mặc định backend chạy ở cổng 8000
+    const normalized = url.replace(/^\/+/, '');
+    return `http://localhost:8000/${normalized}`;
   };
 
   const getStatusBadge = (isPublished: boolean) => {
@@ -203,7 +216,7 @@ const BlogManager: React.FC = () => {
                       <div className="w-10 h-10 rounded mr-3 flex items-center justify-center bg-gray-100">
                         {blog.coverImage ? (
                           <img
-                            src={blog.coverImage}
+                            src={getImageUrl(blog.coverImage)}
                             alt={blog.title}
                             className="w-10 h-10 rounded object-cover"
                             onError={(e) => {
