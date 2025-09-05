@@ -605,6 +605,149 @@ export const getValidOrderStatusOptions = async (req, res) => {
   }
 };
 
+// ========== USER THÊM ĐÁNH GIÁ ==========
+export const addReview = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { note, rating } = req.body;
+
+    // tìm đơn hàng
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    // chỉ user sở hữu đơn mới được đánh giá
+    if (order.user.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền đánh giá đơn hàng này" });
+    }
+
+    // chỉ cho phép khi đã giao thành công
+    if (!["delivered_success", "completed"].includes(order.status)) {
+      return res
+        .status(400)
+        .json({ message: "Bạn chỉ có thể đánh giá sau khi đã nhận hàng" });
+    }
+
+    // tránh review trùng
+    const existingReview = order.reviews.find(
+      (r) => r.user.toString() === req.user._id.toString()
+    );
+    if (existingReview) {
+      return res
+        .status(400)
+        .json({ message: "Bạn đã đánh giá đơn hàng này rồi" });
+    }
+
+    // xử lý upload ảnh
+    const imagePaths = req.files
+      ? req.files.map((file) => `/uploads/reviews/${file.filename}`)
+      : [];
+
+    // thêm review mới
+    order.reviews.push({
+      user: req.user._id,
+      note,
+      rating,
+      images: imagePaths,
+      createdAt: new Date(),
+    });
+
+    await order.save();
+
+    res.json({
+      message: "Đánh giá thành công",
+      reviews: order.reviews,
+    });
+  } catch (error) {
+    console.error("Lỗi khi thêm đánh giá:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+
+// Lấy danh sách review của một đơn hàng, trả về review của user hiện tại
+export const getReviews = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.query.userId; // frontend truyền userId hiện tại
+
+    const order = await Order.findById(orderId).populate(
+      "reviews.user",
+      "_id name avatar"
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    let reviews = order.reviews || [];
+
+    // Nếu có userId, lọc chỉ review của user đó
+    if (userId) {
+  reviews = reviews.filter((r) => {
+    const uid = r.user?._id?.toString?.() || r.user?.toString?.(); // 🔑 support cả ObjectId & populated object
+    return uid === userId;
+  });
+}
+
+
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
+
+
+// ========== ADMIN / SUPERADMIN TRẢ LỜI REVIEW ==========
+export const replyReview = async (req, res) => {
+  try {
+    const { id, reviewId } = req.params;
+    const { note } = req.body;
+
+    if (!note || note.length === 0) {
+      return res.status(400).json({ message: "Vui lòng nhập nội dung phản hồi" });
+    }
+
+    // chỉ cho admin/superadmin (middleware role check đã xử lý)
+    if (!["admin", "superadmin"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Bạn không có quyền trả lời đánh giá" });
+    }
+
+    const order = await Order.findById(id).populate("reviews.user", "name email");
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const review = order.reviews.id(reviewId);
+    if (!review) {
+      return res.status(404).json({ message: "Không tìm thấy đánh giá" });
+    }
+
+    if (review.adminReply && review.adminReply.note) {
+      return res.status(400).json({ message: "Đánh giá này đã được phản hồi" });
+    }
+
+    review.adminReply = {
+      note,
+      repliedBy: req.user._id,
+      repliedAt: new Date(),
+    };
+
+    await order.save();
+
+    res.json({
+      message: "Đã trả lời đánh giá thành công",
+      review,
+    });
+  } catch (error) {
+    console.error("Lỗi trả lời đánh giá:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
 // Cập nhật trạng thái đơn hàng
 export const updateOrderStatus = async (req, res) => {
   try {

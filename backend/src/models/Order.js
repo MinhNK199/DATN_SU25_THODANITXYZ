@@ -46,8 +46,8 @@ const orderSchema = new mongoose.Schema(
         "COD",
         "credit-card",
         "momo",
-        "zalopay", 
-        "vnpay", 
+        "zalopay",
+        "vnpay",
         "BANKING",
         "paid_online",
       ],
@@ -60,21 +60,20 @@ const orderSchema = new mongoose.Schema(
       email_address: String,
       method: String,
       amount: Number,
-      // Thông tin đặc biệt cho từng phương thức thanh toán
-      cardLast4: String, // Credit card
-      cardType: String, // VISA, MASTERCARD, etc.
-      bankCode: String, // VNPay, MoMo
-      payType: String, // MoMo
-      orderType: String, // MoMo
-      transType: String, // MoMo
-      extraData: String, // MoMo, ZaloPay
-      app_trans_id: String, // ZaloPay
-      zp_trans_id: String, // ZaloPay
-      vnp_TransactionNo: String, // VNPay
-      vnp_BankCode: String, // VNPay
-      vnp_PayDate: String, // VNPay
-      failure_reason: String, // Khi thanh toán thất bại
-      failure_time: String, // Thời gian thất bại
+      cardLast4: String,
+      cardType: String,
+      bankCode: String,
+      payType: String,
+      orderType: String,
+      transType: String,
+      extraData: String,
+      app_trans_id: String,
+      zp_trans_id: String,
+      vnp_TransactionNo: String,
+      vnp_BankCode: String,
+      vnp_PayDate: String,
+      failure_reason: String,
+      failure_time: String,
     },
     itemsPrice: {
       type: Number,
@@ -123,21 +122,21 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        "draft", // Đơn hàng tạm (chưa thanh toán online)
-        "pending", // Chờ xác nhận từ admin
-        "confirmed", // Đã xác nhận từ admin
-        "processing", // Đang xử lý và đóng gói
-        "shipped", // Đang giao hàng
-        "delivered_success", // Giao hàng thành công
-        "delivered_failed", // Giao hàng thất bại
-        "partially_delivered", // Giao hàng một phần
-        "returned", // Hoàn hàng
-        "on_hold", // Tạm dừng xử lý
-        "completed", // Hoàn thành
-        "cancelled", // Đã hủy
-        "refund_requested", // Yêu cầu hoàn tiền
-        "refunded", // Đã hoàn tiền
-        "payment_failed", // Thanh toán thất bại
+        "draft",
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered_success",
+        "delivered_failed",
+        "partially_delivered",
+        "returned",
+        "on_hold",
+        "completed",
+        "cancelled",
+        "refund_requested",
+        "refunded",
+        "payment_failed",
       ],
       default: "draft",
     },
@@ -146,7 +145,6 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "awaiting_payment", "paid", "failed", "cancelled"],
       default: "pending",
     },
-    // Thêm fields mới cho delivery tracking
     estimatedDeliveryDate: {
       type: Date,
     },
@@ -171,7 +169,28 @@ const orderSchema = new mongoose.Schema(
         default: Date.now,
       },
     },
-    // Số lần giao lại khi giao hàng thất bại
+    reviews: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    rating: { type: Number, min: 1, max: 5, required: true },
+    note: { type: String, maxlength: 200 },
+    images: [String],
+    createdAt: { type: Date, default: Date.now },
+    adminReply: {
+      note: { type: String, maxlength: 500 },
+      repliedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+      repliedAt: { type: Date },
+    },
+  },
+],
+
     retryDeliveryCount: {
       type: Number,
       default: 0,
