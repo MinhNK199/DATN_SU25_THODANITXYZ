@@ -44,9 +44,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     if (!variant.height || variant.height <= 0) {
       errors.push("Chiều cao phải lớn hơn 0")
     }
-    if (!variant.imageFile) {
-   errors.push("Phải upload ít nhất 1 ảnh biến thể")
- }
+
     // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
     //if ((!variant.images || variant.images.length === 0) && !variant.imageFile) {
      // errors.push("Phải upload ít nhất 1 ảnh biến thể")
