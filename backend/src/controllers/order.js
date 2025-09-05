@@ -2,6 +2,9 @@ import Order from "../models/Order.js";
 import Notification from "../models/Notification.js";
 import { sendMail } from "../utils/mailer.js";
 import User from "../models/User.js";
+import mongoose from "mongoose";
+import { getOrderStatusMessage } from "../utils/orderStatusHelper.js";  
+
 
 const paidMethods = [
   "credit-card",
@@ -276,27 +279,39 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
 // Lấy đơn hàng theo id
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate(
-      "user",
-      "name email"
-    );
-    if (!order)
+    const orderId = req.params.id;
+
+    // Kiểm tra ID có hợp lệ không
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
+
+    const order = await Order.findById(orderId).populate("user", "name email");
+
+    if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    
-    // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
-    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
-    const statusInfo = getOrderStatusMessage(order);
-    
-    const orderWithStatus = {
+    }
+
+    let statusInfo = null;
+    try {
+      const { getOrderStatusMessage } = await import("../utils/orderStatusHelper.js");
+      if (typeof getOrderStatusMessage === "function") {
+        statusInfo = getOrderStatusMessage(order);
+      }
+    } catch (err) {
+      console.warn("⚠️ orderStatusHelper lỗi hoặc không tồn tại:", err.message);
+    }
+
+    res.json({
       ...order.toObject(),
-      statusInfo
-    };
-    
-    res.json(orderWithStatus);
+      statusInfo,
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("❌ getOrderById error:", error);
+    res.status(500).json({ message: "Lỗi server khi lấy chi tiết đơn hàng" });
   }
 };
+
 
 // Cập nhật trạng thái đã thanh toán
 export const updateOrderToPaid = async (req, res) => {
@@ -378,38 +393,39 @@ export const updateOrderToDelivered = async (req, res) => {
 export const getMyOrders = async (req, res) => {
   try {
     console.log(`🔍 getMyOrders called for user: ${req.user._id}`);
-    
-    // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng TRỪ payment_failed (bao gồm cả draft đã thanh toán)
+
+    // Lấy tất cả đơn hàng của user, loại trừ payment_failed
     const orders = await Order.find({
       user: req.user._id,
-      status: { $ne: 'payment_failed' } // Chỉ loại trừ payment_failed
+      status: { $ne: "payment_failed" }
     }).sort({ createdAt: -1 });
 
     console.log(`📋 Found ${orders.length} orders for user ${req.user._id}`);
-    
-    // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
-    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
-    
-    const ordersWithStatus = orders.map(order => {
+
+    // Gắn thêm statusInfo vào từng đơn
+    const ordersWithStatus = orders.map((order) => {
       const orderObj = order.toObject();
       const statusInfo = getOrderStatusMessage(order);
-      
+
       return {
         ...orderObj,
-        statusInfo
+        statusInfo,
       };
     });
-    
-    console.log(`📊 Order details:`, ordersWithStatus.map(o => ({
-      id: o._id.toString().slice(-6),
-      method: o.paymentMethod,
-      status: o.status,
-      isPaid: o.isPaid,
-      paymentStatus: o.paymentStatus,
-      statusInfo: o.statusInfo,
-      createdAt: o.createdAt
-    })));
-    
+
+    console.log(
+      `📊 Order details:`,
+      ordersWithStatus.map((o) => ({
+        id: o._id.toString().slice(-6),
+        method: o.paymentMethod,
+        status: o.status,
+        isPaid: o.isPaid,
+        paymentStatus: o.paymentStatus,
+        statusInfo: o.statusInfo,
+        createdAt: o.createdAt,
+      }))
+    );
+
     res.json(ordersWithStatus);
   } catch (error) {
     console.error("❌ Lỗi getMyOrders:", error);

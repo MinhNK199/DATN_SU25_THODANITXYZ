@@ -121,6 +121,7 @@ const CheckoutReviewPage: React.FC = () => {
       setOrderNumber(res._id || "");
       console.log("PaymentMethod before submit:", formData.paymentMethod);
       console.log("Wallet info:", walletInfo);
+      console.log("👉 Order API response:", res);
 
       // ✅ CHỈ xóa giỏ hàng cho COD, online payment sẽ xóa sau khi thanh toán thành công
       if (formData.paymentMethod === "COD") {
