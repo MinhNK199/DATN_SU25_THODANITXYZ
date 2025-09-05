@@ -44,12 +44,11 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     if (!variant.height || variant.height <= 0) {
       errors.push("Chiều cao phải lớn hơn 0")
     }
-    
+
     // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
-    if (!variant.imageFile) {
-      errors.push("Phải upload ít nhất 1 ảnh biến thể")
-    }
-    
+    //if ((!variant.images || variant.images.length === 0) && !variant.imageFile) {
+     // errors.push("Phải upload ít nhất 1 ảnh biến thể")
+    //}
     return {
       isValid: errors.length === 0,
       errors
@@ -160,43 +159,15 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   }
 
   // CRITICAL FIX: Xử lý ColorPicker change event đúng cách
-  const handleColorChange = (variantId: string, colorValue: unknown, hex?: string) => {
-    console.log(`🎨 Handling color change for variant ${variantId}:`, { colorValue, hex })
-
+  const handleColorChange = (variantId: string, _: any, hex?: string) => {
     const currentVariant = variants.find((v) => v.id === variantId)
     const currentColor = currentVariant?.color || { code: "#000000", name: "" }
 
-    let newColor: { code: string; name: string }
-
-    if (hex) {
-      // Từ ColorPicker - chỉ cập nhật code
-      newColor = {
-        code: hex,
-        name: currentColor.name,
-      }
-      console.log("🎨 Color from ColorPicker:", newColor)
-    } else if (typeof colorValue === "object" && colorValue !== null) {
-      // Từ object - đảm bảo có đầy đủ code và name
-      newColor = {
-        code: typeof colorValue.code === "string" ? colorValue.code : currentColor.code,
-        name: typeof colorValue.name === "string" ? colorValue.name : currentColor.name,
-      }
-      console.log("🎨 Color from object:", newColor)
-    } else {
-      // Fallback
-      console.log("⚠️ Invalid color input, using current color")
-      newColor = currentColor
+    const newColor = {
+      code: hex || currentColor.code,
+      name: currentColor.name || "Custom", // luôn có name
     }
 
-    // Validate final color object
-    if (!newColor.code || typeof newColor.code !== "string") {
-      newColor.code = "#000000"
-    }
-    if (typeof newColor.name !== "string") {
-      newColor.name = ""
-    }
-
-    console.log("✅ Final color to set:", newColor)
     updateVariant(variantId, "color", newColor)
   }
 
@@ -232,6 +203,60 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     return allErrors
   }
 
+  const handleImageChange = async (variantId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await fetch("http://localhost:8000/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+
+    if (data?.url) {
+      const updatedVariants = variants.map((v) =>
+        v.id === variantId
+          ? { ...v, images: [data.url] }
+          : v
+      );
+      onVariantsChange(updatedVariants);
+    }
+  };
+
+  const handleImagesUpload = async (variantId: string, files: FileList) => {
+    const token = localStorage.getItem("token");
+    const uploadedUrls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const formData = new FormData();
+      formData.append("image", files[i]);
+      const response = await fetch("http://localhost:8000/api/upload/image", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json();
+      if (data?.url) {
+        uploadedUrls.push(data.url);
+      }
+    }
+    // Cập nhật mảng images cho biến thể
+    const updatedVariants = variants.map((v) =>
+      v.id === variantId
+        ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
+        : v
+    );
+    onVariantsChange(updatedVariants);
+  };
+
+  const handleRemoveImage = (variantId: string, imgUrl: string) => {
+    const updatedVariants = variants.map((v) =>
+      v.id === variantId
+        ? { ...v, images: v.images.filter((url: string) => url !== imgUrl) }
+        : v
+    );
+    onVariantsChange(updatedVariants);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -250,13 +275,16 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">
                   Biến thể {index + 1}
-                  {variant.color?.code && variant.color.code !== "#000000" && (
-                    <span
-                      className="ml-2 inline-block w-4 h-4 rounded border"
-                      style={{ backgroundColor: variant.color.code }}
-                      title={`${variant.color.name || "Unnamed"} (${variant.color.code})`}
-                    />
-                  )}
+                  {variant.color &&
+                    typeof variant.color === "object" &&
+                    "code" in variant.color &&
+                    (variant.color as any).code !== "#000000" && (
+                      <span
+                        className="ml-2 inline-block w-4 h-4 rounded border"
+                        style={{ backgroundColor: (variant.color as any).code }}
+                        title={`${(variant.color as any).name || "Unnamed"} (${(variant.color as any).code})`}
+                      />
+                    )}
                 </h4>
                 <Space>
                   <Tooltip title="Kích hoạt biến thể">
@@ -279,7 +307,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               {/* Validation errors */}
               {!validation.isValid && (
                 <div className="bg-red-100 border border-red-300 rounded p-2">
-                  <div className="text-red-700 text-sm font-medium mb-1">Lỗi validation:</div>
+                  <div className="text-red-700 text-sm font-medium mb-1">Lỗi:</div>
                   <ul className="text-red-600 text-xs list-disc list-inside">
                     {validation.errors.map((error, idx) => (
                       <li key={idx}>{error}</li>
@@ -456,39 +484,44 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0] || null;
-                        updateVariant(variant.id, "imageFile", file);
-                        if (file) {
-                          const formData = new FormData();
-                          formData.append('image', file);
-                          const token = localStorage.getItem('token');
-                          try {
-                            const res = await fetch('http://localhost:8000/api/upload/image', {
-                              method: 'POST',
-                              headers: { Authorization: `Bearer ${token}` },
-                              body: formData,
-                            });
-                            const data = await res.json();
-                            if (data.url) {
-                              updateVariant(variant.id, "images", [data.url]);
-                            } else {
-                              message.error('Upload ảnh thất bại!');
-                            }
-                          } catch (err) {
-                            message.error('Upload ảnh thất bại!');
-                          }
-                        } else {
-                          updateVariant(variant.id, "images", []);
-                        }
+                      multiple
+                      onChange={e => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) handleImagesUpload(variant.id, files);
                       }}
                     />
-                    {variant.imageFile && (
-                      <img
-                        src={URL.createObjectURL(variant.imageFile)}
-                        alt="Preview"
-                        style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8, border: "1px solid #eee", marginTop: 8 }}
-                      />
+                    {/* Hiển thị preview ảnh đã upload */}
+                    {variant.images && variant.images.length > 0 && (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                        {variant.images.map((imgUrl: string, idx: number) => (
+                          <div key={idx} style={{ position: "relative", display: "inline-block" }}>
+                            <img
+                              src={imgUrl}
+                              alt={`Ảnh biến thể ${idx + 1}`}
+                              style={{ width: 80, height: 80, borderRadius: 8, border: "1px solid #eee" }}
+                            />
+                            <Button
+                              size="small"
+                              danger
+                              style={{
+                                position: "absolute",
+                                top: 2,
+                                right: 2,
+                                padding: 0,
+                                borderRadius: "50%",
+                                width: 22,
+                                height: 22,
+                                minWidth: 0,
+                                lineHeight: "22px",
+                                fontSize: 14,
+                              }}
+                              onClick={() => handleRemoveImage(variant.id, imgUrl)}
+                            >
+                              <FaTrash />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </Col>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import cartApi, { Cart, CartItem } from '../services/cartApi';
+import { calculateSubtotal } from '../utils/priceUtils';
 
 interface CartState {
   items: CartItem[];
@@ -21,7 +22,7 @@ type CartAction =
 
 const CartContext = createContext<{
   state: CartState;
-  addToCart: (productId: string, quantity?: number) => Promise<void>;
+  addToCart: (productId: string, quantity?: number, variantId?: string) => Promise<void>;
   removeFromCart: (productId: string) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -48,7 +49,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     case 'ADD_ITEM': {
       const existingItemIndex = state.items.findIndex(item => item.product._id === action.payload.product._id);
       let updatedItems;
-      
+
       if (existingItemIndex > -1) {
         updatedItems = state.items.map((item, index) =>
           index === existingItemIndex
@@ -58,11 +59,11 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       } else {
         updatedItems = [...state.items, action.payload];
       }
-      
+
       return {
         ...state,
         items: updatedItems,
-        total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        total: calculateSubtotal(updatedItems),
         itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
       };
     }
@@ -71,7 +72,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: updatedItems,
-        total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        total: calculateSubtotal(updatedItems),
         itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
       };
     }
@@ -84,7 +85,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       return {
         ...state,
         items: updatedItems,
-        total: updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        total: calculateSubtotal(updatedItems),
         itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
       };
     }
@@ -118,7 +119,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (savedCart) {
         try {
           const cartItems = JSON.parse(savedCart);
-          dispatch({ type: 'LOAD_CART', payload: { items: cartItems, totalPrice: 0, totalItems: 0 } });
+          const mockCart: Cart = {
+            _id: 'local',
+            user: 'local',
+            items: cartItems,
+            totalItems: cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0),
+            totalPrice: 0,
+            discountAmount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          dispatch({ type: 'LOAD_CART', payload: mockCart });
         } catch (error) {
           console.error('Error loading cart from localStorage:', error);
         }
@@ -133,13 +144,23 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error('Error loading cart:', error);
       dispatch({ type: 'SET_ERROR', payload: error.message });
-      
+
       // Fallback to localStorage if API fails
       const savedCart = localStorage.getItem('cart');
       if (savedCart) {
         try {
           const cartItems = JSON.parse(savedCart);
-          dispatch({ type: 'LOAD_CART', payload: { items: cartItems, totalPrice: 0, totalItems: 0 } });
+          const mockCart: Cart = {
+            _id: 'local-fallback',
+            user: 'local',
+            items: cartItems,
+            totalItems: cartItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0),
+            totalPrice: 0,
+            discountAmount: 0,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          dispatch({ type: 'LOAD_CART', payload: mockCart });
         } catch (localError) {
           console.error('Error loading cart from localStorage:', localError);
         }
@@ -155,7 +176,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = useCallback(async (productId: string, quantity: number = 1, variantId?: string) => {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       // Nếu chưa đăng nhập, lưu vào localStorage
       toast.error('Vui lòng đăng nhập để thêm vào giỏ hàng');
@@ -181,7 +202,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cart = await cartApi.addToCart({ productId, quantity, variantId });
       dispatch({ type: 'LOAD_CART', payload: cart });
-      
+
       const product = cart.items.find(item => item.product._id === productId && String(item.variantId || '') === String(variantId || ''));
       if (product) {
         toast.success(`Đã thêm "${product.product.name}" vào giỏ hàng`);
@@ -194,7 +215,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeFromCart = useCallback(async (itemId: string) => {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
       return;
@@ -219,13 +240,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
       return;
     }
 
-    // Tìm item trong cart để lấy productId
+    // Tìm item trong cart để lấy productId và variantId
     const item = state.items.find(item => item._id === itemId);
     if (!item) {
       toast.error('Không tìm thấy sản phẩm trong giỏ hàng');
@@ -233,7 +254,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const cart = await cartApi.updateCartItem(item.product._id, quantity);
+      // Truyền variantId nếu có để backend có thể xử lý đúng
+      const cart = await cartApi.updateCartItem(item.product._id, quantity, item.variantId);
       dispatch({ type: 'LOAD_CART', payload: cart });
     } catch (error: any) {
       console.error('Error updating cart:', error);
@@ -243,7 +265,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = useCallback(async () => {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
       return;
@@ -266,7 +288,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ✅ DI CHUYỂN FUNCTION VÀO TRONG COMPONENT
   const removeOrderedItemsFromCart = useCallback(async (orderItems: any[]) => {
     const token = localStorage.getItem('token');
-    
+
     if (!token) {
       return;
     }
@@ -275,7 +297,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Gọi API để lấy lại giỏ hàng mới sau khi đã xóa ở backend
       const updatedCart = await cartApi.getCart();
       dispatch({ type: 'LOAD_CART', payload: updatedCart });
-      
+
       console.log(`✅ Đã cập nhật giỏ hàng sau khi đặt hàng`);
     } catch (error: any) {
       console.error('Error updating cart after order:', error);

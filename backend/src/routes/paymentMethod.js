@@ -9,4 +9,4 @@ router.post("/", protect, addPaymentMethod);
 router.delete("/:id", protect, deletePaymentMethod);
 router.put("/:id", protect, updatePaymentMethod);
 
-export default router; 
+export default router;

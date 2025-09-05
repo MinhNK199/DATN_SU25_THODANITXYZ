@@ -195,7 +195,8 @@ const BlogEdit: React.FC<BlogEditProps> = ({ blog, onClose, onSuccess }) => {
       console.log('Gửi dữ liệu blog để update:', blogData);
 
       // Update blog sử dụng proxy
-      const response = await fetch(`/api/blog/${blog._id}`, {
+      // Sửa URL: backend mount tại /api/blogs
+      const response = await fetch(`/api/blogs/${blog._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -19,7 +19,7 @@ interface Variant {
   price: number;
   salePrice?: number;
   stock: number;
-  color?: string;
+  color?: { code: string; name: string } | string; // <-- Sửa dòng này
   size?: string;
   weight?: number;
   images: string[];
@@ -60,7 +60,12 @@ const VariantList: React.FC = () => {
         limit: 20,
         search: searchTerm,
         product: selectedProduct,
-        isActive: selectedStatus !== 'all' ? selectedStatus : undefined
+        isActive:
+          selectedStatus === "active"
+            ? true
+            : selectedStatus === "inactive"
+            ? false
+            : undefined,
       };
       
       const response = await variantApi.getVariants(params);
@@ -177,7 +182,7 @@ const VariantList: React.FC = () => {
             shape="square" 
             size={48} 
             src={record.images && record.images.length > 0 ? record.images[0] : undefined}
-            style={{ backgroundColor: record.color || '#f0f0f0' }}
+            style={{ backgroundColor: typeof record.color === 'object' && record.color !== null ? record.color.code : (record.color || '#f0f0f0') }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
             <Text strong style={{ fontSize: 14 }}>{record.name}</Text>
@@ -190,13 +195,13 @@ const VariantList: React.FC = () => {
                       width: 14, 
                       height: 14, 
                       borderRadius: '50%', 
-                      backgroundColor: typeof record.color === 'object' ? record.color.code : record.color,
+                      backgroundColor: typeof record.color === 'object' && record.color !== null ? record.color.code : (record.color || '#000000'),
                       border: '1px solid #d9d9d9'
                     }} 
                   />
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {typeof record.color === 'object' && record.color !== null && 'name' in record.color && 'code' in record.color
-                      ? ((record.color as any).name || (record.color as any).code)
+                    {typeof record.color === 'object' && record.color !== null && 'name' in record.color
+                      ? record.color.name || record.color.code
                       : record.color}
                   </Text>
                 </div>
@@ -427,4 +432,4 @@ const VariantList: React.FC = () => {
   );
 };
 
-export default VariantList; 
+export default VariantList;

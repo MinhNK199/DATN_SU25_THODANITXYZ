@@ -1,13 +1,9 @@
 import React, { useState } from "react";
-import { useGoogleLogin } from "@react-oauth/google";
 import { GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import {
   FaEye,
   FaEyeSlash,
-  FaGoogle,
-  FaFacebook,
-  FaApple,
   FaEnvelope,
   FaLock,
   FaUser,
@@ -39,37 +35,6 @@ export default function Login() {
       [e.target.name]: e.target.value,
     });
   };
-const login = useGoogleLogin({
-  onSuccess: async (tokenResponse) => {
-    try {
-     const id_token = tokenResponse.access_token;
-
-      const res = await axios.post("http://localhost:8000/api/auth/google", {
-        id_token,
-      });
-
-      const { token, user } = res.data;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      setCurrentUser(user);
-      setSuccess("Đăng nhập Google thành công!");
-
-      const role = user?.role;
-      if (role === "admin" || role === "superadmin") {
-        setShowRoleChoice(true);
-      } else {
-        navigate("/");
-      }
-    } catch (err) {
-      console.error("Lỗi đăng nhập Google:", err);
-      setError("Đăng nhập Google thất bại");
-    }
-  },
-  onError: () => {
-    setError("Đăng nhập Google thất bại");
-  },
-  flow: "implicit", // hoặc "auth-code" tùy backend
-});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,17 +45,10 @@ const login = useGoogleLogin({
     if (isLogin) {
       // Logic đăng nhập
       try {
-        console.log("Đang gửi request đăng nhập:", {
-          email: formData.email,
-          password: formData.password,
-        });
-
         const res = await axios.post("/api/auth/login", {
           email: formData.email,
           password: formData.password,
         });
-
-        console.log("Response từ server:", res.data);
 
         setSuccess(res.data.message || "Đăng nhập thành công!");
         localStorage.setItem("token", res.data.token);
@@ -99,30 +57,19 @@ const login = useGoogleLogin({
         localStorage.setItem("user", JSON.stringify(res.data.user));
         setCurrentUser(user);
 
-        console.log("User data:", user);
-        console.log("User role:", user?.role);
-
         const role = user?.role;
-
-        // Kiểm tra role để quyết định chuyển hướng
         if (role === "admin" || role === "superadmin") {
           setShowRoleChoice(true);
         } else {
-          // User thường - chuyển về trang chủ
           setTimeout(() => {
-            console.log("Chuyển hướng đến trang chủ");
             navigate("/");
           }, 1500);
         }
       } catch (err: any) {
-        console.error("Lỗi đăng nhập:", err);
-        console.error("Error response:", err.response?.data);
-
         const errorMessage =
           err.response?.data?.details?.join(", ") ||
           err.response?.data?.message ||
           "Đăng nhập thất bại!";
-
         setError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -136,22 +83,11 @@ const login = useGoogleLogin({
       }
 
       try {
-        console.log("Đang gửi request đăng ký:", {
+        const res = await axios.post("/api/auth/register", {
           name: formData.name,
           email: formData.email,
           password: formData.password,
         });
-
-        const res = await axios.post(
-          "/api/auth/register",
-          {
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-          }
-        );
-
-        console.log("Response từ server:", res.data);
 
         setSuccess(res.data.message || "Đăng ký thành công!");
         setTimeout(() => {
@@ -164,22 +100,15 @@ const login = useGoogleLogin({
           });
         }, 2000);
       } catch (err: any) {
-        console.error("Lỗi đăng ký:", err);
-        console.error("Error response:", err.response?.data);
-
         const errorMessage =
           err.response?.data?.details?.join(", ") ||
           err.response?.data?.message ||
           "Đăng ký thất bại!";
-
         setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
     }
-  };
-  const handleFacebookLogin = () => {
-    window.location.href = "http://localhost:8000/api/auth/facebook";
   };
 
   const handleRoleChoice = (choice: "admin" | "client") => {
@@ -446,32 +375,40 @@ const login = useGoogleLogin({
           </div>
 
           {/* Social Login */}
-         <div className="mt-6 grid grid-cols-2 gap-4">
-    {/* Custom Google Login Button */}
-    <button
-      type="button"
-      onClick={() => login()}
-      disabled={isLoading}
-      className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <FaGoogle className="text-red-500 h-5 w-5" />
-      <span>Đăng nhập với Google</span>
-    </button>
+          <div className="mt-6">
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                try {
+                  const id_token = credentialResponse.credential;
+                  const res = await axios.post(
+                    "http://localhost:8000/api/auth/google",
+                    { id_token }
+                  );
 
-    {/* Facebook Login */}
-    <button
-      type="button"
-      onClick={handleFacebookLogin}
-      disabled={isLoading}
-      className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      <FaFacebook className="text-blue-600 h-5 w-5" />
-      <span>Đăng nhập với Facebook</span>
-    </button>
-  </div>
+                  const { token, user } = res.data;
+                  localStorage.setItem("token", token);
+                  localStorage.setItem("user", JSON.stringify(user));
+                  setCurrentUser(user);
+                  setSuccess("Đăng nhập Google thành công!");
 
-          {/* Toggle Login/Register */}
-          <div className="mt-6 text-center">
+                  const role = user?.role;
+                  if (role === "admin" || role === "superadmin") {
+                    setShowRoleChoice(true);
+                  } else {
+                    navigate("/");
+                  }
+                } catch (err) {
+                  setError("Đăng nhập Google thất bại");
+                }
+              }}
+              onError={() => {
+                setError("Đăng nhập Google thất bại");
+              }}
+            />
+          </div>
+
+          {/* Toggle Login/Register + Admin Register Link */}
+          <div className="mt-6 text-center space-y-2">
             <button
               type="button"
               onClick={() => {
@@ -485,13 +422,20 @@ const login = useGoogleLogin({
                   confirmPassword: "",
                 });
               }}
-              className="text-blue-600 hover:text-blue-500 transition-colors font-medium"
+              className="text-blue-600 hover:text-blue-500 transition-colors font-medium block w-full"
               disabled={isLoading}
             >
               {isLogin
                 ? "Chưa có tài khoản? Đăng ký ngay"
                 : "Đã có tài khoản? Đăng nhập"}
             </button>
+
+            <a
+              href="/admin-dky"
+              className="text-purple-600 hover:text-purple-500 transition-colors font-medium block w-full"
+            >
+              Đăng ký tài khoản Admin
+            </a>
           </div>
         </div>
       </div>

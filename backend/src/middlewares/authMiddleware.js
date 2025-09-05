@@ -10,6 +10,10 @@ export const protect = async (req, res, next) => {
         req.headers.authorization.startsWith("Bearer")
     ) {
         token = req.headers.authorization.split(" ")[1];
+        // Bỏ qua các giá trị token không hợp lệ dạng string
+        if (token === "null" || token === "undefined" || token.trim() === "") {
+            token = undefined;
+        }
     }
 
     if (!token) {
@@ -54,6 +58,7 @@ export const protect = async (req, res, next) => {
             });
         }
     }
+    
 };
 
 export const checkAdmin = (requiredCheck = []) => {
@@ -69,7 +74,6 @@ export const checkAdmin = (requiredCheck = []) => {
         const roleCheck = {
             superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
             admin: ["view_user", "CheckTaiKhoan"], 
-            staff: ["view_user"],
             customer: [],
         };
 

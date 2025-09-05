@@ -28,7 +28,9 @@ const Listadmin: React.FC = () => {
   const [messageType, setMessageType] = useState<"success" | "error" | "">("");
   const [message, setMessage] = useState("");
   const [searchEmail, setSearchEmail] = useState("");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "pending" | "approved" | "rejected"
+  >("all");
   const [filteredRequests, setFilteredRequests] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -42,7 +44,16 @@ const Listadmin: React.FC = () => {
       const res = await axios.get(API_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setRequests(res.data.requests || []);
+
+      // Map lại dữ liệu từ API sang field FE đang dùng
+      const mapped = (res.data.requests || []).map((u: any) => ({
+        ...u,
+        adminRequestStatus: u.adminRequest?.status || "pending",
+        adminRequestImage: u.adminRequest?.image || "",
+        adminRequestContent: u.adminRequest?.content || "",
+      }));
+
+      setRequests(mapped);
     } catch {
       setMessage("Lỗi khi tải danh sách yêu cầu admin!");
       setMessageType("error");
@@ -62,7 +73,9 @@ const Listadmin: React.FC = () => {
       );
     }
     if (filterStatus !== "all") {
-      filtered = filtered.filter((user) => user.adminRequestStatus === filterStatus);
+      filtered = filtered.filter(
+        (user) => user.adminRequestStatus === filterStatus
+      );
     }
     setFilteredRequests(filtered);
   }, [searchEmail, filterStatus, requests]);
@@ -81,8 +94,8 @@ const Listadmin: React.FC = () => {
         try {
           const token = localStorage.getItem("token");
           await axios.patch(
-            `http://localhost:8000/api/auth/admin-requests/${id}/approve`,
-            { approve },
+            `http://localhost:8000/api/auth/admin-request/${id}/approve`,
+            { action: approve ? "approve" : "reject" }, // Gửi action thay vì approve
             { headers: { Authorization: `Bearer ${token}` } }
           );
           setMessageType("success");

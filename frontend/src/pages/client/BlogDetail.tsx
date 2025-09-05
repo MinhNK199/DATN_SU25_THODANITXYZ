@@ -30,7 +30,8 @@ const BlogDetail: React.FC = () => {
       
       try {
         setLoading(true);
-        const response = await fetch(`/api/blog/public/slug/${slug}`);
+        // Sửa URL: backend mount tại /api/blogs/public/slug/${slug}
+        const response = await fetch(`/api/blogs/public/slug/${slug}`);
         if (!response.ok) {
           throw new Error('Không tìm thấy bài viết');
         }
@@ -39,7 +40,8 @@ const BlogDetail: React.FC = () => {
         
         // Fetch related blogs
         if (data.tags && data.tags.length > 0) {
-          const relatedResponse = await fetch(`/api/blog/public/published?tag=${encodeURIComponent(data.tags[0])}&limit=3`);
+          // Sửa URL: backend mount tại /api/blogs/public/published
+          const relatedResponse = await fetch(`/api/blogs/public/published?tag=${encodeURIComponent(data.tags[0])}&limit=3`);
           if (relatedResponse.ok) {
             const relatedData = await relatedResponse.json();
             setRelatedBlogs(relatedData.blogs?.filter((b: Blog) => b._id !== data._id) || []);
@@ -63,6 +65,15 @@ const BlogDetail: React.FC = () => {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  // Chuẩn hóa URL ảnh (thêm host nếu là đường dẫn tương đối)
+  const getImageUrl = (url?: string) => {
+    if (!url || url.trim() === '') return '/placeholder.png';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    // Mặc định backend chạy ở cổng 8000
+    const normalized = url.replace(/^\/+/, '');
+    return `http://localhost:8000/${normalized}`;
   };
 
   const getBrandFromTags = (tags: string[]) => {
@@ -205,7 +216,7 @@ const BlogDetail: React.FC = () => {
             <div className="w-full h-96 bg-gray-100 rounded-lg shadow-lg flex items-center justify-center">
               {blog.coverImage ? (
                 <img
-                  src={blog.coverImage}
+                  src={getImageUrl(blog.coverImage)}
                   alt={blog.title}
                   className="w-full h-96 object-cover rounded-lg shadow-lg"
                   onError={(e) => {
@@ -265,7 +276,7 @@ const BlogDetail: React.FC = () => {
                     <div className="h-48 overflow-hidden bg-gray-100 flex items-center justify-center">
                       {relatedBlog.coverImage ? (
                         <img
-                          src={relatedBlog.coverImage}
+                          src={getImageUrl(relatedBlog.coverImage)}
                           alt={relatedBlog.title}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
