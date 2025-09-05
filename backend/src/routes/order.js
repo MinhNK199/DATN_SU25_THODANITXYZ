@@ -10,6 +10,10 @@ import {
   getRevenueStats,
   updateOrderToPaidCOD,
   requestRefund,
+  requestReturn,
+  confirmSatisfaction,
+  confirmDelivery,
+  cancelOrder,
   getValidOrderStatusOptions,
   handlePaymentFailed,
   confirmOrderAfterPayment
@@ -45,8 +49,12 @@ routerOrder.put("/:id/deliver", protect, updateOrderToDelivered);
 routerOrder.put("/:id/status", protect, updateOrderStatus);
 routerOrder.put("/:id/paid-cod", protect, updateOrderToPaidCOD);
 routerOrder.put("/:id/refund-request", protect, requestRefund);
+routerOrder.put("/:id/return-request", protect, requestReturn);
+routerOrder.put("/:id/confirm-satisfaction", protect, confirmSatisfaction);
+routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
+routerOrder.put("/:id/cancel", protect, cancelOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
-routerOrder.put("/:id/cancel", protect, handlePaymentFailed);
+routerOrder.put("/:id/payment-failed", protect, handlePaymentFailed);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
 // Route để cập nhật thanh toán thất bại

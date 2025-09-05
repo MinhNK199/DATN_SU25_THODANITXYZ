@@ -522,60 +522,67 @@ export const getValidOrderStatusOptions = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     
     // ✅ CẬP NHẬT: Logic transitions nhất quán và hoàn thiện
+    // 📋 QUY TẮC: Admin chỉ có thể chuyển trạng thái theo luồng chính
+    // ❌ KHÔNG CHO PHÉP: Admin thay đổi trạng thái từ shipped trở đi (phụ thuộc vào user)
+    // ✅ CHO PHÉP: Client yêu cầu hoàn tiền thông qua API requestRefund
     const validTransitions = {
       draft: ["pending", "cancelled"],
       pending: ["confirmed", "cancelled", "on_hold"],
       confirmed: ["processing", "cancelled", "on_hold"],
       processing: ["shipped", "cancelled", "on_hold"],
-      shipped: ["delivered_success", "delivered_failed", "partially_delivered"],
-      delivered_success: ["completed", "returned"],
-      delivered_failed: ["shipped", "cancelled"], // Cho phép giao lại
-      partially_delivered: ["shipped", "delivered_success"],
-      returned: ["refund_requested", "refunded"],
+      // ❌ TỪ SHIPPED TRỞ ĐI: Admin KHÔNG THỂ thay đổi trạng thái thủ công
+      // Các trạng thái này phụ thuộc vào hành động của người dùng
+      shipped: [], // Admin không thể thay đổi - user phải xác nhận nhận hàng
+      delivered_success: [], // Admin không thể thay đổi - user phải xác nhận hài lòng
+      delivered_failed: ["shipped", "cancelled"], // Chỉ cho phép giao lại hoặc hủy
+      partially_delivered: ["shipped", "delivered_success"], // Chỉ cho phép giao lại hoặc hoàn thành
+      returned: ["refund_requested", "refunded"], // Admin có thể xử lý hoàn tiền
+      return_requested: ["returned", "delivered_success"], // Admin có thể từ chối hoàn hàng
       on_hold: ["processing", "cancelled"],
-      refund_requested: ["refunded", "delivered_success"], // Có thể từ chối hoàn tiền
-      completed: [], // Trạng thái cuối
-      cancelled: [], // Trạng thái cuối
-      refunded: [], // Trạng thái cuối
+      refund_requested: ["refunded", "delivered_success"], // Admin có thể từ chối hoàn tiền
+      completed: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
+      cancelled: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
+      refunded: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
       payment_failed: ["cancelled"], // Chỉ có thể hủy
     };
     
     let options = validTransitions[order.status] || [];
+    console.log(`Đơn hàng ${order._id} có trạng thái ${order.status}, options ban đầu:`, options);
     
-    // ✅ THÊM: Business rules validation
-    // Chỉ cho phép hoàn hàng nếu giao hàng thành công và chưa thanh toán
-    if (order.status === "delivered_success" && !order.isPaid) {
-      options = options.filter(
-        (opt) => opt === "returned" || opt === "completed"
-      );
+    // ✅ THÊM: Business rules validation đơn giản hóa
+    // ❌ TỪ SHIPPED TRỞ ĐI: Admin KHÔNG THỂ thay đổi trạng thái thủ công
+    if (["shipped", "delivered_success"].includes(order.status)) {
+      options = []; // Không có options nào cho admin
+      console.log(`Đơn hàng ${order._id} có trạng thái ${order.status} - Admin không thể thay đổi (phụ thuộc vào user)`);
     }
     
-    // Chỉ cho phép yêu cầu hoàn tiền nếu trạng thái là completed và trong 3 ngày
-    if (order.status === "completed") {
-      const completedHistory = order.statusHistory.find(
-        (s) => s.status === "completed"
-      );
-      if (completedHistory) {
-        const now = new Date();
-        const completedAt = new Date(completedHistory.date);
-        const diffDays = (now - completedAt) / (1000 * 60 * 60 * 24);
-        if (diffDays <= 3) {
-          options.push("refund_requested");
-        }
+    // ❌ CHẶN: Admin không thể thay đổi trạng thái từ shipped trở đi
+    // Các trạng thái này phụ thuộc vào hành động của người dùng
+    if (["completed", "cancelled", "refunded"].includes(order.status)) {
+      console.log(`Đơn hàng ${order._id} có trạng thái ${order.status} - Admin không thể thay đổi trạng thái cuối`);
+      options = []; // Không có options nào cho admin
+    }
+    
+    // Kiểm tra điều kiện giao lại (chỉ khi cần thiết)
+    if (order.status === "delivered_failed") {
+      const retryCount = order.retryDeliveryCount || 0;
+      if (retryCount >= 3) {
+        options = options.filter(opt => opt !== "shipped");
+        console.log(`Đơn hàng ${order._id} đã vượt quá số lần giao lại (${retryCount}/3)`);
       }
     }
     
-    // ✅ THÊM: Kiểm tra điều kiện đặc biệt
-    // Chỉ cho phép giao lại tối đa 3 lần
-    if (order.status === "delivered_failed" && order.retryDeliveryCount >= 3) {
-      options = options.filter(opt => opt !== "shipped");
+    // Kiểm tra thông tin delivery person (chỉ khi cần thiết)
+    if (order.status === "processing") {
+      const hasDeliveryPerson = order.deliveryPerson && order.deliveryPerson.name && order.deliveryPerson.name.trim() !== "";
+      if (!hasDeliveryPerson) {
+        // Không ẩn shipped, chỉ ghi log để admin biết cần cập nhật thông tin
+        console.log(`Đơn hàng ${order._id} chưa có thông tin người giao hàng, nhưng vẫn cho phép chuyển sang shipped`);
+        // options = options.filter(opt => opt !== "shipped"); // Bỏ dòng này
+      }
     }
     
-    // Chỉ cho phép chuyển sang shipped nếu có thông tin delivery person
-    if (order.status === "processing" && !order.deliveryPerson?.name) {
-      options = options.filter(opt => opt !== "shipped");
-    }
-    
+    console.log(`Đơn hàng ${order._id} - options cuối cùng:`, options);
     res.json({ validStatus: options });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -591,21 +598,27 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     
     // ✅ CẬP NHẬT: Sử dụng logic transitions nhất quán
+    // 📋 QUY TẮC: Admin chỉ có thể chuyển trạng thái theo luồng chính
+    // ❌ KHÔNG CHO PHÉP: Admin thay đổi trạng thái từ shipped trở đi (phụ thuộc vào user)
+    // ✅ CHO PHÉP: Client yêu cầu hoàn tiền thông qua API requestRefund
     const validTransitions = {
       draft: ["pending", "cancelled"],
       pending: ["confirmed", "cancelled", "on_hold"],
       confirmed: ["processing", "cancelled", "on_hold"],
       processing: ["shipped", "cancelled", "on_hold"],
-      shipped: ["delivered_success", "delivered_failed", "partially_delivered"],
-      delivered_success: ["completed", "returned"],
-      delivered_failed: ["shipped", "cancelled"], // Cho phép giao lại
-      partially_delivered: ["shipped", "delivered_success"],
-      returned: ["refund_requested", "refunded"],
+      // ❌ TỪ SHIPPED TRỞ ĐI: Admin KHÔNG THỂ thay đổi trạng thái thủ công
+      // Các trạng thái này phụ thuộc vào hành động của người dùng
+      shipped: [], // Admin không thể thay đổi - user phải xác nhận nhận hàng
+      delivered_success: [], // Admin không thể thay đổi - user phải xác nhận hài lòng
+      delivered_failed: ["shipped", "cancelled"], // Chỉ cho phép giao lại hoặc hủy
+      partially_delivered: ["shipped", "delivered_success"], // Chỉ cho phép giao lại hoặc hoàn thành
+      returned: ["refund_requested", "refunded"], // Admin có thể xử lý hoàn tiền
+      return_requested: ["returned", "delivered_success"], // Admin có thể từ chối hoàn hàng
       on_hold: ["processing", "cancelled"],
-      refund_requested: ["refunded", "delivered_success"], // Có thể từ chối hoàn tiền
-      completed: [], // Trạng thái cuối
-      cancelled: [], // Trạng thái cuối
-      refunded: [], // Trạng thái cuối
+      refund_requested: ["refunded", "delivered_success"], // Admin có thể từ chối hoàn tiền
+      completed: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
+      cancelled: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
+      refunded: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
       payment_failed: ["cancelled"], // Chỉ có thể hủy
     };
     
@@ -618,45 +631,36 @@ export const updateOrderStatus = async (req, res) => {
     
     if (!validTransitions[currentStatus].includes(status)) {
       // ✅ CẬP NHẬT: Xử lý các trường hợp đặc biệt
-      if (status === "refund_requested") {
-        if (order.status !== "completed") {
+      if (status === "return_requested") {
+        // Chỉ cho phép yêu cầu hoàn hàng khi đang giao hàng
+        if (currentStatus !== 'shipped') {
           return res.status(400).json({
-            message: "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã hoàn thành.",
+            message: 'Chỉ có thể yêu cầu hoàn hàng khi đơn hàng đang giao'
           });
         }
-        // Kiểm tra thời gian completed
-        const completedHistory = order.statusHistory.find(
-          (s) => s.status === "completed"
-        );
-        if (!completedHistory) {
-          return res
-            .status(400)
-            .json({ message: "Không tìm thấy thời điểm hoàn thành đơn hàng." });
-        }
-        const now = new Date();
-        const completedAt = new Date(completedHistory.date);
-        const diffDays = (now - completedAt) / (1000 * 60 * 60 * 24);
-        if (diffDays > 3) {
-          return res.status(400).json({
-            message:
-              "Chỉ có thể yêu cầu hoàn tiền trong vòng 3 ngày kể từ khi đơn hàng hoàn thành.",
-          });
-        }
+      } else if (status === "refund_requested") {
+        // ❌ BỎ: Admin không thể yêu cầu hoàn tiền
+        // Yêu cầu hoàn tiền chỉ có thể đến từ client thông qua API requestRefund
+        // Admin chỉ có thể xử lý yêu cầu hoàn tiền khi client đã gửi
+        return res.status(400).json({
+          message: "Admin không thể yêu cầu hoàn tiền. Yêu cầu hoàn tiền chỉ có thể đến từ khách hàng.",
+        });
       } else if (status === "shipped" && currentStatus === "delivered_failed") {
         // ✅ THÊM: Kiểm tra số lần giao lại
-        if (order.retryDeliveryCount >= 3) {
+        const retryCount = order.retryDeliveryCount || 0;
+        if (retryCount >= 3) {
           return res.status(400).json({
             message: "Đã vượt quá số lần giao lại tối đa (3 lần).",
           });
         }
         // Tăng số lần giao lại
-        order.retryDeliveryCount += 1;
+        order.retryDeliveryCount = retryCount + 1;
       } else if (status === "shipped" && currentStatus === "processing") {
-        // ✅ THÊM: Kiểm tra thông tin delivery person
-        if (!order.deliveryPerson?.name) {
-          return res.status(400).json({
-            message: "Cần cập nhật thông tin người giao hàng trước khi chuyển sang trạng thái giao hàng.",
-          });
+        // ✅ THÊM: Kiểm tra thông tin delivery person (không bắt buộc)
+        const hasDeliveryPerson = order.deliveryPerson && order.deliveryPerson.name && order.deliveryPerson.name.trim() !== "";
+        if (!hasDeliveryPerson) {
+          console.log(`⚠️ Đơn hàng ${order._id} chuyển sang shipped mà chưa có thông tin người giao hàng`);
+          // Không return error, chỉ ghi log để admin biết
         }
       } else {
         return res.status(400).json({
@@ -673,36 +677,55 @@ export const updateOrderStatus = async (req, res) => {
             "Chỉ có thể chuyển sang trạng thái Thành công khi đơn hàng đã giao thành công.",
         });
       }
-      if (!order.isPaid) {
-        return res.status(400).json({
-          message:
-            "Chỉ có thể chuyển sang trạng thái Thành công khi đơn hàng đã được thanh toán.",
-        });
-      }
+      // Bỏ kiểm tra thanh toán - cho phép chuyển sang completed từ delivered_success
+      // Đơn hàng có thể hoàn thành ngay cả khi chưa thanh toán (ví dụ: COD)
+      // 📋 LƯU Ý: Trạng thái completed là trạng thái cuối, admin không thể thay đổi nữa
     }
 
     // ✅ CẬP NHẬT: Xử lý các trường hợp đặc biệt
-    if (status === "delivered_success") {
+    if (status === "return_requested") {
+      // Lưu thông tin yêu cầu hoàn hàng
+      order.returnRequest = {
+        requestedAt: Date.now(),
+        reason: note || 'Khách hàng yêu cầu hoàn hàng',
+        status: 'pending'
+      };
+    } else if (status === "delivered_success") {
       order.actualDeliveryDate = Date.now();
       order.isDelivered = true;
       order.deliveredAt = Date.now();
     }
-
+    
     if (status === "shipped") {
       // Tự động ước tính thời gian giao hàng (3-5 ngày)
       const estimatedDate = new Date();
       estimatedDate.setDate(estimatedDate.getDate() + 3 + Math.floor(Math.random() * 3));
       order.estimatedDeliveryDate = estimatedDate;
+      
+      // Nếu chưa có thông tin delivery person, tạo thông tin mặc định
+      if (!order.deliveryPerson || !order.deliveryPerson.name) {
+        order.deliveryPerson = {
+          name: "Nhân viên giao hàng",
+          phone: "N/A",
+          id: "N/A"
+        };
+        console.log(`✅ Đã tạo thông tin delivery person mặc định cho đơn hàng ${order._id}`);
+      }
     }
 
     // Đếm số lượt yêu cầu hoàn tiền
-    const refundCount = order.statusHistory.filter(
-      (s) => s.status === "refund_requested"
-    ).length;
+    const refundCount = order.statusHistory && order.statusHistory.length > 0 
+      ? order.statusHistory.filter((s) => s.status === "refund_requested").length 
+      : 0;
     const maxRefund = 3;
     const remain = Math.max(0, maxRefund - refundCount);
 
     order.status = status;
+    // Đảm bảo statusHistory là array
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    
     order.statusHistory.push({
       status,
       note,
@@ -712,7 +735,16 @@ export const updateOrderStatus = async (req, res) => {
     const updatedOrder = await order.save();
     
     // ✅ CẬP NHẬT: Gửi thông báo chi tiết hơn
-    if (order.status === "refunded") {
+    if (status === "returned") {
+      await createNotificationForUser(
+        order.user,
+        "Yêu cầu hoàn hàng được chấp nhận",
+        `Yêu cầu hoàn hàng cho đơn hàng #${order._id} đã được chấp nhận. Vui lòng chuẩn bị hàng để hoàn trả.`,
+        "order",
+        `/profile?tab=orders`,
+        { orderId: order._id }
+      );
+    } else if (status === "refunded") {
       await createNotificationForUser(
         order.user,
         "Hoàn tiền thành công",
@@ -721,7 +753,7 @@ export const updateOrderStatus = async (req, res) => {
         `/profile?tab=orders`,
         { orderId: order._id }
       );
-    } else if (order.status === "delivered_success" && refundCount > 0) {
+    } else if (status === "delivered_success" && refundCount > 0) {
       await createNotificationForUser(
         order.user,
         "Từ chối hoàn tiền",
@@ -730,7 +762,7 @@ export const updateOrderStatus = async (req, res) => {
         `/profile?tab=orders`,
         { orderId: order._id, remain }
       );
-    } else if (order.status === "shipped") {
+    } else if (status === "shipped") {
       await createNotificationForUser(
         order.user,
         "Đơn hàng đang giao",
@@ -776,19 +808,26 @@ export const requestRefund = async (req, res) => {
           "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã được thanh toán.",
       });
     }
-    const refundCount = order.statusHistory.filter(
-      (s) => s.status === "refund_requested"
-    ).length;
+    const refundCount = order.statusHistory && order.statusHistory.length > 0 
+      ? order.statusHistory.filter((s) => s.status === "refund_requested").length 
+      : 0;
     const maxRefund = 3;
     const remain = Math.max(0, maxRefund - refundCount);
     if (refundCount > maxRefund) {
       // Tự động từ chối hoàn tiền
       order.status = "delivered_success";
+      
+      // Đảm bảo statusHistory là array
+      if (!order.statusHistory) {
+        order.statusHistory = [];
+      }
+      
       order.statusHistory.push({
         status: "delivered_success",
         note: "Tự động từ chối hoàn tiền do vượt quá số lần cho phép",
         date: Date.now(),
       });
+      
       await order.save();
       await createNotificationForUser(
         order.user,
@@ -803,12 +842,19 @@ export const requestRefund = async (req, res) => {
           "Bạn đã vượt quá số lần yêu cầu hoàn tiền. Mọi yêu cầu tiếp theo sẽ bị từ chối.",
       });
     }
+    // Kiểm tra xem đơn hàng đã có yêu cầu hoàn tiền chưa
     if (order.status === "refund_requested") {
       return res
         .status(400)
         .json({ message: "Đơn hàng đã có yêu cầu hoàn tiền." });
     }
     order.status = "refund_requested";
+    
+    // Đảm bảo statusHistory là array
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    
     order.statusHistory.push({
       status: "refund_requested",
       note: req.body.reason || "",
@@ -826,5 +872,211 @@ export const requestRefund = async (req, res) => {
     res.json(order);
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+// API yêu cầu hoàn hàng
+export const requestReturn = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
+    // Kiểm tra điều kiện yêu cầu hoàn hàng
+    if (order.status !== "shipped") {
+      return res.status(400).json({ 
+        message: "Chỉ có thể yêu cầu hoàn hàng khi đơn hàng đang giao" 
+      });
+    }
+    
+    // Cập nhật trạng thái
+    order.status = "return_requested";
+    order.statusHistory.push({
+      status: "return_requested",
+      note: reason || "Khách hàng yêu cầu hoàn hàng",
+      date: Date.now(),
+    });
+    
+    await order.save();
+    
+    // Gửi thông báo
+    await createNotificationForUser(
+      order.user,
+      "Yêu cầu hoàn hàng đã được gửi",
+      `Yêu cầu hoàn hàng cho đơn hàng #${order._id} đã được gửi thành công. Chúng tôi sẽ xem xét và phản hồi trong thời gian sớm nhất.`,
+      "order",
+      `/profile?tab=orders`,
+      { orderId: order._id, reason }
+    );
+    
+    res.json({
+      success: true,
+      message: "Yêu cầu hoàn hàng đã được gửi thành công",
+      order: order
+    });
+    
+  } catch (error) {
+    console.error("Lỗi khi yêu cầu hoàn hàng:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Có lỗi xảy ra khi yêu cầu hoàn hàng" 
+    });
+  }
+};
+
+// API xác nhận hài lòng với đơn hàng
+export const confirmSatisfaction = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
+    // Kiểm tra điều kiện
+    if (order.status !== "delivered_success") {
+      return res.status(400).json({ 
+        message: "Chỉ có thể xác nhận hài lòng khi đơn hàng đã giao thành công" 
+      });
+    }
+    
+    // Cập nhật trạng thái
+    order.status = "completed";
+    order.statusHistory.push({
+      status: "completed",
+      note: "Khách hàng xác nhận hài lòng với đơn hàng",
+      date: Date.now(),
+    });
+    
+    await order.save();
+    
+    // Gửi thông báo
+    await createNotificationForUser(
+      order.user,
+      "Đơn hàng hoàn thành",
+      `Đơn hàng #${order._id} đã được hoàn thành. Cảm ơn bạn đã mua sắm tại cửa hàng chúng tôi!`,
+      "order",
+      `/profile?tab=orders`,
+      { orderId: order._id }
+    );
+    
+    res.json({
+      success: true,
+      message: "Xác nhận hài lòng thành công",
+      order: order
+    });
+    
+  } catch (error) {
+    console.error("Lỗi khi xác nhận hài lòng:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Có lỗi xảy ra khi xác nhận hài lòng" 
+    });
+  }
+};
+
+// API xác nhận đã nhận hàng (cho khách hàng)
+export const confirmDelivery = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
+    // Kiểm tra điều kiện
+    if (order.status !== "shipped") {
+      return res.status(400).json({ 
+        message: "Chỉ có thể xác nhận đã nhận hàng khi đơn hàng đang giao" 
+      });
+    }
+    
+    // Cập nhật trạng thái
+    order.status = "delivered_success";
+    order.deliveredAt = new Date();
+    order.statusHistory.push({
+      status: "delivered_success",
+      note: "Khách hàng xác nhận đã nhận được hàng",
+      date: Date.now(),
+    });
+    
+    await order.save();
+    
+    // Gửi thông báo
+    await createNotificationForUser(
+      order.user,
+      "Đã nhận hàng thành công",
+      `Bạn đã xác nhận nhận được hàng cho đơn hàng #${order._id}. Đơn hàng đã hoàn thành giao hàng.`,
+      "order",
+      `/profile?tab=orders`,
+      { orderId: order._id }
+    );
+    
+    res.json({
+      success: true,
+      message: "Xác nhận đã nhận hàng thành công",
+      order: order
+    });
+    
+  } catch (error) {
+    console.error("Lỗi khi xác nhận đã nhận hàng:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Có lỗi xảy ra khi xác nhận đã nhận hàng" 
+    });
+  }
+};
+
+// API hủy đơn hàng (cho khách hàng)
+export const cancelOrder = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    
+    // Kiểm tra điều kiện - chỉ cho phép hủy khi đơn hàng còn ở trạng thái có thể hủy
+    if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
+      return res.status(400).json({ 
+        message: "Chỉ có thể hủy đơn hàng khi đơn hàng chưa được giao" 
+      });
+    }
+    
+    // Cập nhật trạng thái
+    order.status = "cancelled";
+    order.statusHistory.push({
+      status: "cancelled",
+      note: "Khách hàng hủy đơn hàng",
+      date: Date.now(),
+    });
+    
+    await order.save();
+    
+    // Gửi thông báo
+    await createNotificationForUser(
+      order.user,
+      "Đơn hàng đã được hủy",
+      `Đơn hàng #${order._id} đã được hủy thành công.`,
+      "order",
+      `/profile?tab=orders`,
+      { orderId: order._id }
+    );
+    
+    res.json({
+      success: true,
+      message: "Hủy đơn hàng thành công",
+      order: order
+    });
+    
+  } catch (error) {
+    console.error("Lỗi khi hủy đơn hàng:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Có lỗi xảy ra khi hủy đơn hàng" 
+    });
   }
 };

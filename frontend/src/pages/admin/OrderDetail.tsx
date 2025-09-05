@@ -207,6 +207,17 @@ const OrderDetail: React.FC = () => {
         setOrder(updatedOrder);
         form.resetFields();
         message.success("Cập nhật trạng thái đơn hàng thành công!");
+        
+        // ✅ CẬP NHẬT: Reload lại danh sách trạng thái có thể chuyển đổi
+        try {
+          const newValidOptions = await getValidOrderStatusOptions(id);
+          setValidStatusOptions(newValidOptions);
+          console.log("Đã cập nhật danh sách trạng thái mới:", newValidOptions);
+        } catch (error) {
+          console.error("Lỗi khi reload trạng thái:", error);
+          setValidStatusOptions([]);
+        }
+        
         // If the final status is 'delivered', we can trigger something for statistics here if needed.
         // For now, the backend handles stats aggregation.
         if (values.status === "delivered" && !order?.isPaid) {
