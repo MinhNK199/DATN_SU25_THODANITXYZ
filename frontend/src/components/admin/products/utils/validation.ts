@@ -16,6 +16,7 @@ export interface ProductVariant {
   width?: number
   height?: number
   specifications?: { [key: string]: string }
+  imageFile?: File | null // <-- Thêm dòng này
 }
 
 export interface ValidationResult {
@@ -57,9 +58,15 @@ export const validateVariant = (variant: ProductVariant, index: number): Validat
     errors.push(`Biến thể ${index + 1}: Chiều cao phải lớn hơn 0`)
   }
   
-  if (!variant.images?.length || variant.images.every(img => !img.trim())) {
-    errors.push(`Biến thể ${index + 1}: Phải có ít nhất 1 hình ảnh`)
-  }
+  // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
+  if (!variant.imageFile) {
+   errors.push("Phải upload ít nhất 1 ảnh biến thể")
+ }
+  
+  // Kiểm tra trường images (link ảnh đã upload)
+//  if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
+//   errors.push("Phải upload ít nhất 1 ảnh biến thể")
+//  }
   
   return {
     isValid: errors.length === 0,
@@ -70,25 +77,21 @@ export const validateVariant = (variant: ProductVariant, index: number): Validat
 /**
  * Validate all variants
  */
-export const validateAllVariants = (variants: ProductVariant[]): ValidationResult => {
-  if (variants.length < 1) {
-    return {
-      isValid: false,
-      errors: ["Chưa có biến thể sản phẩm, vui lòng kiểm tra lại"]
+export function validateAllVariants(variants: any[]) {
+  const errors: string[] = [];
+  variants.forEach((variant, idx) => {
+    if (!variant.name?.trim()) errors.push(`Biến thể ${idx + 1}: Tên không được để trống`);
+    if (!variant.sku?.trim()) errors.push(`Biến thể ${idx + 1}: SKU không được để trống`);
+    if (!variant.price || variant.price <= 0) errors.push(`Biến thể ${idx + 1}: Giá phải lớn hơn 0`);
+    if (variant.stock < 0) errors.push(`Biến thể ${idx + 1}: Tồn kho không được âm`);
+    if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
+      errors.push(`Biến thể ${idx + 1}: Phải upload ít nhất 1 ảnh biến thể`);
     }
-  }
-
-  const allErrors: string[] = []
-  
-  variants.forEach((variant, index) => {
-    const validation = validateVariant(variant, index)
-    allErrors.push(...validation.errors)
-  })
-  
+  });
   return {
-    isValid: allErrors.length === 0,
-    errors: allErrors
-  }
+    isValid: errors.length === 0,
+    errors,
+  };
 }
 
 /**

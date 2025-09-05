@@ -11,6 +11,7 @@ import { setupCleanupCron } from "./utils/cleanupJob.js";
 import { checkAndRefreshToken } from "./utils/tokenRefresh.js";
 import fs from 'fs';
 import path from 'path';
+import uploadRoutes from "./routes/upload.js";
 
 const app = express();
 
@@ -18,14 +19,14 @@ const app = express();
 const uploadsDir = path.join(process.cwd(), 'uploads', 'images');
 
 try {
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-    console.log('✅ Đã tạo thư mục uploads/images:', uploadsDir);
-  } else {
-    console.log('✅ Thư mục uploads/images đã tồn tại:', uploadsDir);
-  }
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('✅ Đã tạo thư mục uploads/images:', uploadsDir);
+    } else {
+        console.log('✅ Thư mục uploads/images đã tồn tại:', uploadsDir);
+    }
 } catch (error) {
-  console.error('❌ Lỗi tạo thư mục uploads:', error);
+    console.error('❌ Lỗi tạo thư mục uploads:', error);
 }
 
 // Middleware
@@ -54,25 +55,26 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Test route
 app.get('/', (req, res) => {
-    res.json({ 
-        message: 'Backend server đang chạy!', 
+    res.json({
+        message: 'Backend server đang chạy!',
         timestamp: new Date().toISOString(),
         uploadsDir: uploadsDir
     });
 });
 
 // Routes
+app.use("/api/upload", uploadRoutes); // Đặt lên trên
 app.use("/api", router);
 
 // Khởi động server
 const PORT = 8000; // Cố định port 8000
-app.listen(PORT, async () => {
+app.listen(PORT, async() => {
     console.log(`🚀 Server đã được khởi động thành công!`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`🌐 URL: http://localhost:${PORT}`);
     console.log(`📁 Thư mục uploads: ${uploadsDir}`);
     console.log(`⏰ Thời gian: ${new Date().toLocaleString('vi-VN')}`);
-    
+
     // Kết nối database sau khi server khởi động
     try {
         await connectDB();
@@ -80,7 +82,7 @@ app.listen(PORT, async () => {
     } catch (error) {
         console.error('❌ Lỗi kết nối database:', error);
     }
-    
+
     // Setup cleanup cron job
     try {
         setupCleanupCron();

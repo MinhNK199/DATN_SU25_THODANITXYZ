@@ -28,4 +28,4 @@ routerBlog.patch("/:id/publish", protect, publishBlog);
 routerBlog.get("/public/published", getPublishedBlogs);
 routerBlog.get("/public/slug/:slug", getBlogBySlug);
 
-export default routerBlog; 
+export default routerBlog;
