@@ -9,6 +9,7 @@ import router from "./routes/index.js";
 import connectDB from "./config/database.js";
 import { setupCleanupCron } from "./utils/cleanupJob.js";
 import { checkAndRefreshToken } from "./utils/tokenRefresh.js";
+import { initAutoCompleteCron } from "./utils/autoCompleteOrders.js";
 import fs from 'fs';
 import path from 'path';
 import uploadRoutes from "./routes/upload.js";
@@ -89,5 +90,13 @@ app.listen(PORT, async() => {
         console.log('✅ Setup cleanup cron job thành công');
     } catch (error) {
         console.error('❌ Lỗi setup cleanup cron job:', error);
+    }
+
+    // Setup auto-complete orders cron job
+    try {
+        initAutoCompleteCron();
+        console.log('✅ Setup auto-complete orders cron job thành công');
+    } catch (error) {
+        console.error('❌ Lỗi setup auto-complete orders cron job:', error);
     }
 });

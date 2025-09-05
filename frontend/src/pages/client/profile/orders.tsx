@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axiosInstance from '../../../api/axiosInstance';
+import toast from 'react-hot-toast';
 
 interface OrderItem {
   _id: string;
@@ -221,12 +222,51 @@ const Orders = () => {
   const handleCancelOrder = async (orderId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này?")) return;
     try {
-      await axiosInstance.put(`/order/${orderId}/status`, {
-        status: "cancelled",
-        note: "Khách hàng hủy đơn hàng"
-      });
+      await axiosInstance.put(`/order/${orderId}/cancel`);
+      toast.success("Hủy đơn hàng thành công!");
       fetchOrders();
-    } catch (error: any) {}
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi hủy đơn hàng');
+    }
+  };
+
+  const handleConfirmDelivery = async (orderId: string) => {
+    if (!window.confirm("Bạn có chắc chắn đã nhận được hàng?")) return;
+    
+    try {
+      await axiosInstance.put(`/order/${orderId}/confirm-delivery`);
+      toast.success("Xác nhận đã nhận hàng thành công!");
+      fetchOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  };
+
+  const handleReturnRequest = async (orderId: string) => {
+    const reason = window.prompt("Vui lòng nhập lý do yêu cầu hoàn hàng/hoàn tiền:");
+    if (!reason || reason.trim() === "") return;
+    
+    try {
+      await axiosInstance.put(`/order/${orderId}/return-request`, {
+        reason: reason.trim()
+      });
+      toast.success("Yêu cầu hoàn hàng/hoàn tiền đã được gửi thành công!");
+      fetchOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
+  };
+
+  const handleConfirmSatisfaction = async (orderId: string) => {
+    if (!window.confirm("Bạn có chắc chắn hài lòng với đơn hàng này?")) return;
+    
+    try {
+      await axiosInstance.put(`/order/${orderId}/confirm-satisfaction`);
+      toast.success("Xác nhận hài lòng thành công! Đơn hàng đã hoàn thành.");
+      fetchOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra');
+    }
   };
 
   const handleReviewOrder = (orderId: string) => {
@@ -376,14 +416,55 @@ const Orders = () => {
                       Hủy đơn hàng
                     </button>
                   )}
-                  {order.status === "delivered_success" && (
-                    <button
-                      onClick={() => handleReviewOrder(order._id)}
-                      className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
-                    >
-                      Đánh giá đơn hàng
-                    </button>
-                  )}
+                                     {/* Nút xác nhận đã nhận hàng */}
+                   {order.status === "shipped" && (
+                     <button
+                       onClick={() => handleConfirmDelivery(order._id)}
+                       className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm mr-2"
+                     >
+                       Đã nhận được hàng
+                     </button>
+                   )}
+
+                   {/* Nút yêu cầu hoàn hàng/hoàn tiền khi đang giao */}
+                   {order.status === "shipped" && (
+                     <button
+                       onClick={() => handleReturnRequest(order._id)}
+                       className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm mr-2"
+                     >
+                       {order.paymentMethod === "COD" ? "Yêu cầu hoàn hàng" : "Yêu cầu hoàn tiền"}
+                     </button>
+                   )}
+                   
+                   {/* Nút hoàn tiền */}
+                   {order.status === "delivered_success" && order.isPaid && (
+                     <button
+                       onClick={() => navigate(`/profile/orders/${order._id}`)}
+                       className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm mr-2"
+                     >
+                       Yêu cầu hoàn tiền
+                     </button>
+                   )}
+
+                   {/* Nút xác nhận hài lòng */}
+                   {order.status === "delivered_success" && (
+                     <button
+                       onClick={() => handleConfirmSatisfaction(order._id)}
+                       className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm mr-2"
+                     >
+                       Hài lòng với đơn hàng
+                     </button>
+                   )}
+                   
+                   {/* Nút đánh giá */}
+                   {["delivered_success", "completed"].includes(order.status) && (
+                     <button
+                       onClick={() => handleReviewOrder(order._id)}
+                       className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                     >
+                       Đánh giá đơn hàng
+                     </button>
+                   )}
                 </div>
               </div>
             </div>
