@@ -15,6 +15,12 @@ import { useCart } from "../../contexts/CartContext";
 import cartApi, { getTaxConfig } from "../../services/cartApi";
 import { Product } from "../../interfaces/Product";
 import { Modal, Button, Image, message } from "antd";
+import {
+  calculateDisplayPrice,
+  calculateOriginalPrice,
+  calculateSubtotal,
+  calculateTotalSavings
+} from "../../utils/priceUtils";
 
 const Cart: React.FC = () => {
   const { state, updateQuantity, removeFromCart, clearCart, loadCart } =
@@ -23,6 +29,33 @@ const Cart: React.FC = () => {
   useEffect(() => {
     loadCart();
   }, []);
+
+  // Debug: Log mỗi khi cartItems thay đổi
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Cart Items changed:', cartItems);
+      console.log('📊 Current subtotal calculation:');
+      cartItems.forEach((item, index) => {
+        const price = calculateDisplayPrice(item);
+        const total = price * item.quantity;
+        console.log(`  Item ${index + 1}: ${item.product.name}`);
+        console.log(`    Price: ${price} (${formatPrice(price)})`);
+        console.log(`    Quantity: ${item.quantity}`);
+        console.log(`    Total: ${total} (${formatPrice(total)})`);
+      });
+    }
+  }, [cartItems]);
+
+  // Debug: Log subtotal mỗi khi nó thay đổi
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && cartItems.length > 0) {
+      const currentSubtotal = cartItems.reduce((sum, item) => {
+        const price = calculateDisplayPrice(item);
+        return sum + (price * item.quantity);
+      }, 0);
+      console.log(`💰 Subtotal updated: ${currentSubtotal} (${formatPrice(currentSubtotal)})`);
+    }
+  }, [cartItems]);
 
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
   useEffect(() => {
@@ -64,18 +97,11 @@ const Cart: React.FC = () => {
     }).format(price);
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const savings = cartItems.reduce((sum, item) => {
-    if (item.product.salePrice && item.product.salePrice < item.product.price) {
-      return (
-        sum + (item.product.price - item.product.salePrice) * item.quantity
-      );
-    }
-    return sum;
-  }, 0);
+
+
+  // Tính toán subtotal và savings sử dụng utility functions
+  const subtotal = calculateSubtotal(cartItems);
+  const savings = calculateTotalSavings(cartItems);
   const shipping = subtotal > 500000 ? 0 : 30000;
   const [taxRate, setTaxRate] = useState(0.08);
   useEffect(() => {
@@ -98,6 +124,8 @@ const Cart: React.FC = () => {
     setDetailModalOpen(false);
     setDetailItem(null);
   };
+
+
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -138,6 +166,7 @@ const Cart: React.FC = () => {
             ) : (
               <div className="space-y-4">
                 {cartItems.map((item) => {
+
                   // Ưu tiên lấy thông tin từ variantInfo nếu có
                   const variant = item.variantInfo;
                   const displayName = variant?.name || item.product.name;
@@ -145,30 +174,42 @@ const Cart: React.FC = () => {
                     variant?.images?.[0] ||
                     item.product.images?.[0] ||
                     "/placeholder.svg";
-                  const displayPrice =
-                    variant?.salePrice && variant?.salePrice < variant?.price
-                      ? variant.salePrice
-                      : variant?.price ??
-                        (item.product.salePrice &&
-                        item.product.salePrice < item.product.price
-                          ? item.product.salePrice
-                          : item.product.price);
-                  const displayOldPrice =
-                    variant?.salePrice && variant?.salePrice < variant?.price
-                      ? variant.price
-                      : item.product.salePrice &&
-                        item.product.salePrice < item.product.price
-                      ? item.product.price
-                      : undefined;
+                  // Logic hiển thị giá: ưu tiên giá từ biến thể, đảm bảo nhất quán
+                  const displayPrice = calculateDisplayPrice(item);
+
+                  // Logic hiển thị giá gốc để so sánh, đảm bảo nhất quán
+                  const displayOldPrice = calculateOriginalPrice(item);
                   const displayStock = variant?.stock ?? item.product.stock;
-                  const displayColor = variant?.color ?? item.product.color ?? null;
-                  const displaySize = variant?.size ?? item.product.size ?? null;
-                  const displaySKU = variant?.sku ?? item.product.sku ?? null;
+
+                  // Cải thiện logic hiển thị màu sắc và kích thước
+                  const displayColor = variant?.color?.code || variant?.color?.name || item.product.color?.code || item.product.color?.name || null;
+                  const displaySize = variant?.size || item.product.size || null;
+                  const displaySKU = variant?.sku || item.product.sku || null;
                   return (
                     <div
                       key={item._id}
                       className="bg-white rounded-2xl shadow-lg p-6"
                     >
+                      {/* Thông báo biến thể nếu có */}
+                      {item.variantId && (
+                        <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-blue-600 text-sm font-medium">
+                                🎯 Sản phẩm với biến thể đã chọn
+                              </span>
+                              {variant?.name && (
+                                <span className="text-blue-700 text-sm">
+                                  ({variant.name})
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                              ID: {item.variantId}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <div className="flex flex-col md:flex-row gap-6">
                         {/* Product Image */}
                         <div className="flex-shrink-0">
@@ -184,8 +225,50 @@ const Cart: React.FC = () => {
                           <div className="flex flex-col md:flex-row md:items-start md:justify-between">
                             <div className="flex-1">
                               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                                {displayName}
+                                {item.product.name}
                               </h3>
+
+                              {/* Hiển thị tên biến thể ngay dưới tên sản phẩm */}
+                              {variant?.name && (
+                                <div className="mb-3">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-lg font-semibold text-blue-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 shadow-sm">
+                                      🎯 {variant.name}
+                                    </span>
+                                    {item.variantId && (
+                                      <span className="text-xs text-blue-500 bg-blue-100 px-2 py-1 rounded-full">
+                                        ID: {item.variantId}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Debug info tạm thời để kiểm tra giá biến thể */}
+                                  <div className="mt-2 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                    <div>Variant Price: {variant.price || 'Không có'}</div>
+                                    <div>Variant Sale Price: {variant.salePrice || 'Không có'}</div>
+                                    <div>Product Price: {item.product.price}</div>
+                                    <div>Item Price (from backend): {item.price}</div>
+                                    <div>Final Price (calculated): {displayPrice}</div>
+                                    <div>Price Source: {variant.price ? 'Variant' : 'Product'}</div>
+                                    <div>Quantity: {item.quantity}</div>
+                                    <div>Total: {displayPrice * item.quantity}</div>
+                                  </div>
+
+                                  {/* Hiển thị thông tin bổ sung của biến thể */}
+                                  <div className="flex items-center space-x-4 text-xs text-gray-600 mt-2">
+                                    {variant?.sku && (
+                                      <span className="bg-gray-100 px-2 py-1 rounded">
+                                        SKU: {variant.sku}
+                                      </span>
+                                    )}
+                                    {variant?.stock !== undefined && (
+                                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
+                                        Tồn kho: {variant.stock}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                               {/* Nút xem chi tiết */}
                               <Button
                                 type="link"
@@ -196,6 +279,7 @@ const Cart: React.FC = () => {
                               </Button>
                               {/* Product Options */}
                               <div className="flex items-center space-x-4 mb-4">
+                                {/* Hiển thị màu sắc */}
                                 {displayColor && (
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-600">
@@ -204,9 +288,12 @@ const Cart: React.FC = () => {
                                     <div
                                       className="w-6 h-6 rounded-full border-2 border-gray-300"
                                       style={{ backgroundColor: displayColor }}
+                                      title={displayColor}
                                     />
                                   </div>
                                 )}
+
+                                {/* Hiển thị kích thước */}
                                 {displaySize && (
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-600">
@@ -217,6 +304,8 @@ const Cart: React.FC = () => {
                                     </span>
                                   </div>
                                 )}
+
+                                {/* Hiển thị SKU */}
                                 {displaySKU && (
                                   <div className="flex items-center space-x-2">
                                     <span className="text-sm text-gray-600">
@@ -231,23 +320,62 @@ const Cart: React.FC = () => {
 
                               {/* Price */}
                               <div className="flex items-center space-x-3 mb-4">
-                                <span className="text-2xl font-bold text-gray-900">
-                                  {formatPrice(displayPrice)}
-                                </span>
-                                {displayOldPrice && (
-                                  <span className="text-lg text-gray-500 line-through">
-                                    {formatPrice(displayOldPrice)}
-                                  </span>
-                                )}
-                                {displayOldPrice && (
+                                <div className="flex flex-col">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-2xl font-bold text-gray-900">
+                                      {formatPrice(displayPrice)}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      / sản phẩm
+                                    </span>
+                                  </div>
+
+                                  {/* Hiển thị tổng giá theo số lượng */}
+                                  <div className="text-lg font-semibold text-green-600">
+                                    Tổng: {formatPrice(displayPrice * item.quantity)}
+                                  </div>
+
+
+
+
+
+                                  {/* Hiển thị giá gốc nếu có giảm giá */}
+                                  {displayOldPrice && displayOldPrice !== displayPrice && (
+                                    <span className="text-lg text-gray-500 line-through">
+                                      {formatPrice(displayOldPrice)}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Hiển thị thông tin tiết kiệm */}
+                                {displayOldPrice && displayOldPrice !== displayPrice && (
                                   <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-semibold">
                                     Tiết kiệm{" "}
-                                    {formatPrice(displayOldPrice - displayPrice)}
+                                    {formatPrice((displayOldPrice - displayPrice) * item.quantity)}
                                   </span>
                                 )}
+
+                                {/* Hiển thị thông báo rõ ràng về nguồn giá */}
+                                {variant && variant.price ? (
+                                  <span className="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm font-semibold">
+                                    🎯 Giá biến thể: {formatPrice(calculateDisplayPrice(item))}
+                                  </span>
+                                ) : (
+                                  <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-sm">
+                                    Giá sản phẩm gốc
+                                  </span>
+                                )}
+
+
                               </div>
                               <div className="text-sm text-gray-600 mb-2">
-                                Tồn kho: {displayStock}
+                                {variant?.stock !== undefined ? (
+                                  <span className="text-blue-600 font-medium">
+                                    🎯 Tồn kho biến thể: {variant.stock}
+                                  </span>
+                                ) : (
+                                  <span>Tồn kho: {displayStock}</span>
+                                )}
                               </div>
                             </div>
 
@@ -276,7 +404,9 @@ const Cart: React.FC = () => {
                                       );
                                       return;
                                     }
-                                    updateQuantity(item._id, item.quantity + 1);
+
+                                    const newQuantity = item.quantity + 1;
+                                    updateQuantity(item._id, newQuantity);
                                   }}
                                   disabled={
                                     item.quantity >=
@@ -291,9 +421,9 @@ const Cart: React.FC = () => {
                               {/* Remove Button */}
                               <button
                                 onClick={() => removeFromCart(item._id)}
-                                className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors"
+                                className="flex items-center space-x-2 text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg border border-red-200 hover:border-red-300 transition-all duration-200 font-medium"
                               >
-                                <FaTrash className="w-4 h-4" />
+                                <FaTrash className="w-5 h-5" />
                                 <span>Xóa</span>
                               </button>
                             </div>
@@ -304,46 +434,46 @@ const Cart: React.FC = () => {
                             <span className="text-sm text-gray-600">
                               {typeof displayStock === "number"
                                 ? (() => {
-                                    const remain = displayStock - item.quantity;
-                                    if (remain <= 0)
-                                      return (
-                                        <span className="text-red-600">
-                                          Hết hàng
-                                        </span>
-                                      );
-                                    if (remain <= 5)
-                                      return (
-                                        <span className="text-orange-500">
-                                          Chỉ còn {remain}
-                                        </span>
-                                      );
+                                  const remain = displayStock - item.quantity;
+                                  if (remain <= 0)
                                     return (
-                                      <span className="text-green-600">
-                                        Còn {remain} sản phẩm
+                                      <span className="text-red-600">
+                                        Hết hàng
                                       </span>
                                     );
-                                  })()
+                                  if (remain <= 5)
+                                    return (
+                                      <span className="text-orange-500">
+                                        Chỉ còn {remain}
+                                      </span>
+                                    );
+                                  return (
+                                    <span className="text-green-600">
+                                      Còn {remain} sản phẩm
+                                    </span>
+                                  );
+                                })()
                                 : (() => {
-                                    const remain =
-                                      item.product.stock - item.quantity;
-                                    if (remain <= 0)
-                                      return (
-                                        <span className="text-red-600">
-                                          Hết hàng
-                                        </span>
-                                      );
-                                    if (remain <= 5)
-                                      return (
-                                        <span className="text-orange-500">
-                                          Chỉ còn {remain}
-                                        </span>
-                                      );
+                                  const remain =
+                                    item.product.stock - item.quantity;
+                                  if (remain <= 0)
                                     return (
-                                      <span className="text-green-600">
-                                        Còn {remain} sản phẩm
+                                      <span className="text-red-600">
+                                        Hết hàng
                                       </span>
                                     );
-                                  })()}
+                                  if (remain <= 5)
+                                    return (
+                                      <span className="text-orange-500">
+                                        Chỉ còn {remain}
+                                      </span>
+                                    );
+                                  return (
+                                    <span className="text-green-600">
+                                      Còn {remain} sản phẩm
+                                    </span>
+                                  );
+                                })()}
                             </span>
                           </div>
                         </div>
@@ -364,12 +494,40 @@ const Cart: React.FC = () => {
 
               {/* Summary Items */}
               <div className="space-y-4 mb-6">
+
+
                 <div className="flex justify-between">
                   <span className="text-gray-600">
-                    Tạm tính ({cartItems.length} sản phẩm)
+                    Tạm tính ({state.itemCount} sản phẩm)
                   </span>
                   <span className="font-semibold">{formatPrice(subtotal)}</span>
                 </div>
+
+                {/* Debug: Hiển thị chi tiết tính toán tạm tính */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                    <div className="font-medium mb-1">🔍 Chi tiết tạm tính:</div>
+                    {cartItems.map((item, index) => {
+                      const price = calculateDisplayPrice(item);
+                      const total = price * item.quantity;
+                      return (
+                        <div key={index} className="ml-2 mb-1">
+                          • {item.product.name}: {formatPrice(price)} × {item.quantity} = {formatPrice(total)}
+                          <div className="ml-4 text-xs text-gray-400">
+                            Price Source: {item.variantInfo?.price ? 'Variant' : 'Product'} |
+                            Variant Price: {item.variantInfo?.price || 'N/A'} |
+                            Product Price: {item.product.price}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="border-t border-gray-300 pt-1 mt-1 font-medium">
+                      Tổng: {formatPrice(subtotal)}
+                    </div>
+                  </div>
+                )}
+
+
 
                 {savings > 0 && (
                   <div className="flex justify-between text-green-600">
@@ -482,28 +640,33 @@ const Cart: React.FC = () => {
                 Tên sản phẩm: {detailItem.product.name}
               </div>
               {detailItem.variantInfo && (
-                <div className="mb-2">
-                  Loại sản phẩm:{" "}
-                  {detailItem.variantInfo.name ||
-                    detailItem.variantInfo.size ||
-                    "N/A"}
+                <div className="mb-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="font-medium text-blue-800 mb-2">🎯 Thông tin biến thể:</div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="font-medium">Tên biến thể:</span> {detailItem.variantInfo.name || "N/A"}</div>
+                    <div><span className="font-medium">Variant ID:</span> {detailItem.variantId || "N/A"}</div>
+                    <div><span className="font-medium">Giá gốc:</span> {formatPrice(detailItem.variantInfo.price || 0)}</div>
+                    <div><span className="font-medium">Giá sale:</span> {detailItem.variantInfo.salePrice ? formatPrice(detailItem.variantInfo.salePrice) : "Không có"}</div>
+                    <div><span className="font-medium">Tồn kho:</span> {detailItem.variantInfo.stock || 0}</div>
+                    <div><span className="font-medium">SKU:</span> {detailItem.variantInfo.sku || "N/A"}</div>
+                  </div>
+
+
                 </div>
               )}
               <div className="mb-2">
-                Giá:{" "}
-                <span className="text-red-600 font-semibold">
-                  {formatPrice(
-                    detailItem.variantInfo?.salePrice &&
-                      detailItem.variantInfo?.salePrice <
-                        detailItem.variantInfo?.price
-                      ? detailItem.variantInfo.salePrice
-                      : detailItem.variantInfo?.price ??
-                        (detailItem.product.salePrice &&
-                        detailItem.product.salePrice < detailItem.product.price
-                          ? detailItem.product.salePrice
-                          : detailItem.product.price)
-                  )}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span>Giá:</span>
+                  <span className="text-red-600 font-semibold">
+                    {formatPrice(calculateDisplayPrice(detailItem))}
+                  </span>
+                  <span className="text-sm text-gray-500">/ sản phẩm</span>
+                </div>
+
+                {/* Hiển thị tổng giá theo số lượng */}
+                <div className="mt-1 text-lg font-bold text-green-600">
+                  Tổng: {formatPrice(calculateDisplayPrice(detailItem) * detailItem.quantity)}
+                </div>
               </div>
               <div className="mb-2">
                 Số lượng: <span className="font-semibold">{detailItem.quantity}</span>
@@ -538,21 +701,21 @@ const Cart: React.FC = () => {
                   {typeof detailItem.variantInfo?.weight === "number"
                     ? `${detailItem.variantInfo.weight}g`
                     : typeof detailItem.product.weight === "number"
-                    ? `${detailItem.product.weight}g`
-                    : "N/A"}
+                      ? `${detailItem.product.weight}g`
+                      : "N/A"}
                 </span>
               </div>
               {(detailItem.variantInfo?.specifications &&
                 Object.keys(detailItem.variantInfo.specifications).length > 0) ||
-              (detailItem.specifications &&
-                Object.keys(detailItem.specifications).length > 0) ? (
+                (detailItem.specifications &&
+                  Object.keys(detailItem.specifications).length > 0) ? (
                 <div className="mt-2">
                   <div className="font-medium mb-1">Thông số kỹ thuật:</div>
                   <table className="w-full text-sm border rounded-lg">
                     <tbody>
                       {Object.entries(
                         detailItem.variantInfo?.specifications ||
-                          detailItem.specifications || {}
+                        detailItem.specifications || {}
                       ).map(([key, value]) => (
                         <tr key={key}>
                           <td className="py-2 px-2 bg-gray-50 font-medium text-gray-700">
