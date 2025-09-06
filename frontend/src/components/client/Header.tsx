@@ -53,7 +53,7 @@ const Header: React.FC = () => {
         const user = JSON.parse(userStr);
         setUserRole(user.role);
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        // Silently handle user data parsing error
         setUserRole(null);
       }
     } else {
@@ -78,7 +78,7 @@ const Header: React.FC = () => {
           const user = JSON.parse(userStr);
           setUserRole(user.role);
         } catch (error) {
-          console.error('Error parsing user data:', error);
+          // Silently handle user data parsing error
           setUserRole(null);
         }
       } else {
@@ -98,15 +98,11 @@ const Header: React.FC = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        console.log('Fetching categories...');
         const response = await axios.get('/api/category');
-        console.log('Categories response:', response.data);
         const activeCategories = response.data.filter((cat: Category) => cat.isActive);
-        console.log('Active categories:', activeCategories);
         setCategories(activeCategories);
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        // Fallback to default categories if API fails
+        // Silently handle error - fallback to default categories
         setCategories([
           { _id: '1', name: 'Điện thoại', slug: 'mobile', isActive: true },
           { _id: '2', name: 'Laptop', slug: 'laptop', isActive: true },
@@ -126,15 +122,11 @@ const Header: React.FC = () => {
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        console.log('Fetching brands...');
         const response = await axios.get('http://localhost:8000/api/brand');
-        console.log('Brands response:', response.data);
         const activeBrands = response.data.filter((brand: Brand) => brand.isActive);
-        console.log('Active brands:', activeBrands);
         setBrands(activeBrands);
       } catch (error) {
-        console.error('Error fetching brands:', error);
-        // Fallback to default brands if API fails
+        // Silently handle error - fallback to default brands
         setBrands([
           { _id: '1', name: 'Apple', isActive: true },
           { _id: '2', name: 'Samsung', isActive: true },

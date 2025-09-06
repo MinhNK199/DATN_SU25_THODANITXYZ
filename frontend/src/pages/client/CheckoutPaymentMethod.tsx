@@ -90,7 +90,7 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
                 type="radio"
                 name="paymentMethod"
                 value="online"
-                checked={formData.paymentMethod === "online" || formData.paymentMethod === "momo" || formData.paymentMethod === "zalopay" || formData.paymentMethod === "vnpay"}
+                checked={formData.paymentMethod === "online" || formData.paymentMethod === "momo" || formData.paymentMethod === "vnpay"}
                 onChange={() => handlePaymentMethodChange("online")}
                 className="w-5 h-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500"
               />
@@ -106,7 +106,7 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
-                    if (formData.paymentMethod === "online" || formData.paymentMethod === "momo" || formData.paymentMethod === "zalopay" || formData.paymentMethod === "vnpay") {
+                    if (formData.paymentMethod === "online" || formData.paymentMethod === "momo" || formData.paymentMethod === "vnpay") {
                       setIsOnlinePaymentOpen(!isOnlinePaymentOpen);
                     }
                   }}
@@ -156,32 +156,6 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
                 </label>
               </div>
 
-              {/* ZaloPay */}
-              <div className="bg-white rounded-xl p-4 hover:bg-blue-50 transition-colors cursor-pointer border-2 border-transparent hover:border-blue-200">
-                <label className="flex items-center space-x-4 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="onlinePaymentMethod"
-                    value="zalopay"
-                    checked={formData.paymentMethod === "zalopay"}
-                    onChange={() => handleOnlinePaymentSelect("zalopay")}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                                     <div className="flex items-center space-x-3">
-                     <div className="w-20 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                       <img
-                         src="/images/wallets/zalopay.png"
-                         alt="ZaloPay"
-                         className="w-16 h-8"
-                       />
-                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">ZaloPay</h4>
-                      <p className="text-sm text-gray-600">Thanh toán qua ZaloPay</p>
-                    </div>
-                  </div>
-                </label>
-              </div>
 
               {/* VNPAY */}
               <div className="bg-white rounded-xl p-4 hover:bg-blue-50 transition-colors cursor-pointer border-2 border-transparent hover:border-blue-200">

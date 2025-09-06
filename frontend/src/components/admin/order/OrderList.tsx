@@ -5,12 +5,7 @@ import { FaEye } from "react-icons/fa";
 import { Button, Card, Tag, Tooltip, Table, Input, Select, Row, Col, Modal, message as antdMessage } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
-
-const API_URL = "http://localhost:8000/api/order";
-
-const getToken = () => {
-    return localStorage.getItem('token') || '';
-}
+import axiosInstance from "../../../api/axiosInstance";
 
 const { Option } = Select;
 
@@ -33,24 +28,21 @@ const OrderList: React.FC = () => {
   const fetchOrders = async (pageNumber = 1) => {
     setLoading(true);
     try {
-      const token = getToken();
       const params = new URLSearchParams();
-      if (customerName) params.append("customerName", customerName);
-      if (orderId) params.append("orderId", orderId);
+      if (customerName) params.append("search", customerName);
+      if (orderId) params.append("search", orderId);
       if (status) params.append("status", status);
       params.append("page", pageNumber.toString());
-      const res = await fetch(`${API_URL}?${params.toString()}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
+      
+      const response = await axiosInstance.get(`/order?${params.toString()}`);
+      const data = response.data;
       
       const ordersData = Array.isArray(data.orders) ? data.orders : [];
       setOrders(ordersData);
       setTotal(data.total || 0);
 
     } catch (error) {
+      console.error("Error fetching orders:", error);
       setMessage("Lỗi khi tải danh sách đơn hàng!");
       setMessageType("error");
     }

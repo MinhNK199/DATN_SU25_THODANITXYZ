@@ -156,30 +156,6 @@ const CheckoutReviewPage: React.FC = () => {
           navigate(`/checkout/failed?orderId=${res._id}&paymentMethod=momo&error=payment_error&amount=${orderData.totalPrice}`);
           return;
         }
-      } else if (formData.paymentMethod === "zalopay") {
-        const yourToken = localStorage.getItem("token");
-        const zaloRes = await axios.post(
-          "http://localhost:8000/api/order/zalo-pay",
-          { orderId: res._id },
-          { headers: { Authorization: `Bearer ${yourToken}` } }
-        );
-
-        if (zaloRes.data && zaloRes.data.data && zaloRes.data.data.order_url) {
-          localStorage.setItem(
-            "pendingOrder",
-            JSON.stringify({
-              orderId: res._id,
-              paymentMethod: "zalopay",
-              orderItems: orderData.orderItems,
-            })
-          );
-          window.location.href = zaloRes.data.data.order_url;
-          return;
-        } else {
-          await handlePaymentFailure(res._id);
-          navigate(`/checkout/failed?orderId=${res._id}&paymentMethod=zalopay&error=payment_error&amount=${orderData.totalPrice}`);
-          return;
-        }
       } else if (formData.paymentMethod === "vnpay") {
         try {
           console.log("🚀 VNPAY Payment Started");

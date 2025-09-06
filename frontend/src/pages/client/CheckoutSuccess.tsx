@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, Package, Truck, Clock, AlertCircle } from 'lucide-react';
 import { useToast } from '../../components/client/ToastContainer';
 import { useCart } from '../../contexts/CartContext';
-import axios from 'axios';
+import axiosInstance from '../../api/axiosInstance';
 
 interface OrderDetails {
   _id: string;
@@ -62,40 +62,7 @@ const CheckoutSuccess: React.FC = () => {
       }
 
       // Xử lý theo phương thức thanh toán
-      if (paymentMethod === "zalopay") {
-        if (status === "1") {
-          // ✅ Thanh toán ZaloPay thành công từ URL
-          console.log("🔔 ZaloPay payment success from URL");
-          showSuccess(
-            "Thanh toán ZaloPay thành công!",
-            `Đơn hàng ${orderId} đã được thanh toán và sẽ được giao trong 2-3 ngày.`
-          );
-
-          // Xóa sản phẩm đã đặt khỏi giỏ hàng
-          const pendingOrder = localStorage.getItem("pendingOrder");
-          if (pendingOrder) {
-            const orderData = JSON.parse(pendingOrder);
-            if (orderData.orderItems) {
-              await removeOrderedItemsFromCart(orderData.orderItems);
-            }
-            localStorage.removeItem("pendingOrder");
-          }
-
-          // ✅ Đợi callback rồi fetch data một lần
-          setTimeout(async () => {
-            await fetchOrderDetails();
-          }, 3000); // Đợi 3 giây cho callback xử lý
-          
-        } else {
-          // ❌ Thanh toán ZaloPay thất bại
-          await axios.delete(`/api/order/${orderId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          showError("Thanh toán ZaloPay thất bại", "Đơn hàng đã bị hủy");
-          navigate("/checkout?error=payment_cancelled");
-          return;
-        }
-      } else if (paymentMethod === "momo") {
+      if (paymentMethod === "momo") {
         // Kiểm tra từ URL parameters
         if (resultCode === "0") {
           // ✅ Thanh toán Momo thành công
@@ -202,9 +169,7 @@ const CheckoutSuccess: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token || !orderId) return;
 
-      const response = await axios.get(`/api/order/${orderId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axiosInstance.get(`/order/${orderId}`);
 
       setOrderDetails(response.data);
       setLoading(false);
@@ -219,8 +184,6 @@ const CheckoutSuccess: React.FC = () => {
     switch (method?.toLowerCase()) {
       case 'momo':
         return '💜';
-      case 'zalopay':
-        return '💙';
       case 'vnpay':
         return '🟢';
       case 'credit-card':
@@ -236,8 +199,6 @@ const CheckoutSuccess: React.FC = () => {
     switch (method?.toLowerCase()) {
       case 'momo':
         return 'MoMo';
-      case 'zalopay':
-        return 'ZaloPay';
       case 'vnpay':
         return 'VNPay';
       case 'credit-card':

@@ -46,7 +46,6 @@ const orderSchema = new mongoose.Schema(
         "COD",
         "credit-card",
         "momo",
-        "zalopay", 
         "vnpay", 
         "BANKING",
         "paid_online",
@@ -67,9 +66,7 @@ const orderSchema = new mongoose.Schema(
       payType: String, // MoMo
       orderType: String, // MoMo
       transType: String, // MoMo
-      extraData: String, // MoMo, ZaloPay
-      app_trans_id: String, // ZaloPay
-      zp_trans_id: String, // ZaloPay
+      extraData: String, // MoMo
       vnp_TransactionNo: String, // VNPay
       vnp_BankCode: String, // VNPay
       vnp_PayDate: String, // VNPay
@@ -176,7 +173,6 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    zalopayTransId: { type: String },
     vnpayTransId: { type: String },
     statusHistory: [
       {

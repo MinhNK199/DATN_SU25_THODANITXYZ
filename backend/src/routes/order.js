@@ -18,14 +18,8 @@ import {
   handlePaymentFailed,
   confirmOrderAfterPayment
 } from "../controllers/order.js";
-import { 
-  createZaloPayOrder, 
-  checkZaloPayStatus, 
-  checkZaloPayStatusByOrderId,
-  cancelZaloPayPayment, 
-  zalopayCallback
-} from "../controllers/paymentZalopay.js";
 import { protect } from "../middlewares/authMiddleware.js";
+import Order from "../models/Order.js";
 
 const routerOrder = express.Router();
 
@@ -35,12 +29,6 @@ routerOrder.get("/myorders", protect, getMyOrders);
 routerOrder.get("/admin/revenue-stats", protect, getRevenueStats);
 routerOrder.get("/", protect, getOrders);
 
-// ========== ZALOPAY PAYMENT ROUTES ==========
-routerOrder.post("/zalo-pay", protect, createZaloPayOrder);
-routerOrder.post("/zalo-pay/callback", zalopayCallback);
-routerOrder.get("/zalo-pay/status/:app_trans_id", checkZaloPayStatus);
-routerOrder.get("/zalo-pay/status-by-order/:orderId", protect, checkZaloPayStatusByOrderId);
-routerOrder.post("/zalo-pay/cancel", protect, cancelZaloPayPayment);
 
 // ========== ORDER DETAIL & ACTIONS ==========
 routerOrder.get("/:id", protect, getOrderById);
@@ -54,7 +42,6 @@ routerOrder.put("/:id/confirm-satisfaction", protect, confirmSatisfaction);
 routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
 routerOrder.put("/:id/cancel", protect, cancelOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
-routerOrder.put("/:id/payment-failed", protect, handlePaymentFailed);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
 // Route để cập nhật thanh toán thất bại

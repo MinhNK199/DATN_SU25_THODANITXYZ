@@ -182,7 +182,7 @@ export const canTransitionTo = (currentStatus, targetStatus) => {
         payment_failed: ["cancelled"],
     };
 
-    return validTransitions[currentStatus] ? .includes(targetStatus) || false;
+    return validTransitions[currentStatus]?.includes(targetStatus) || false;
 };
 
 // ✅ THÊM: Hàm lấy danh sách trạng thái có thể chuyển đổi

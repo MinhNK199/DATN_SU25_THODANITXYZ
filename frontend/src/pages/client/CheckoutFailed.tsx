@@ -133,8 +133,6 @@ const CheckoutFailed: React.FC = () => {
     switch (method) {
       case "momo":
         return "MoMo";
-      case "zalopay":
-        return "ZaloPay";
       case "vnpay":
         return "VNPAY";
       case "credit-card":

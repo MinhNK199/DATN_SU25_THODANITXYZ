@@ -6,7 +6,6 @@ import User from "../models/User.js";
 const paidMethods = [
   "credit-card",
   "momo",
-  "zalopay",
   "vnpay",
   "BANKING",
   "paid_online",
@@ -33,7 +32,6 @@ export const createOrder = async (req, res) => {
 
     // ✅ SỬA LOGIC: Luôn tạo đơn hàng draft cho tất cả các phương thức thanh toán online
     const isOnlinePayment = [
-      "zalopay",
       "momo",
       "vnpay",
       "credit-card",
@@ -136,8 +134,6 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
       ...(paymentInfo.orderType && { orderType: paymentInfo.orderType }),
       ...(paymentInfo.transType && { transType: paymentInfo.transType }),
       ...(paymentInfo.extraData && { extraData: paymentInfo.extraData }),
-      ...(paymentInfo.app_trans_id && { app_trans_id: paymentInfo.app_trans_id }),
-      ...(paymentInfo.zp_trans_id && { zp_trans_id: paymentInfo.zp_trans_id }),
       ...(paymentInfo.vnp_TransactionNo && { vnp_TransactionNo: paymentInfo.vnp_TransactionNo }),
       ...(paymentInfo.vnp_BankCode && { vnp_BankCode: paymentInfo.vnp_BankCode }),
       ...(paymentInfo.vnp_PayDate && { vnp_PayDate: paymentInfo.vnp_PayDate })
@@ -284,15 +280,21 @@ export const getOrderById = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     
     // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
-    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
-    const statusInfo = getOrderStatusMessage(order);
-    
-    const orderWithStatus = {
-      ...order.toObject(),
-      statusInfo
-    };
-    
-    res.json(orderWithStatus);
+    try {
+      const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+      const statusInfo = getOrderStatusMessage(order);
+      
+      const orderWithStatus = {
+        ...order.toObject(),
+        statusInfo
+      };
+      
+      res.json(orderWithStatus);
+    } catch (helperError) {
+      console.error('Error loading orderStatusHelper:', helperError);
+      // Fallback nếu helper không load được
+      res.json(order.toObject());
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -388,17 +390,24 @@ export const getMyOrders = async (req, res) => {
     console.log(`📋 Found ${orders.length} orders for user ${req.user._id}`);
     
     // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
-    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
-    
-    const ordersWithStatus = orders.map(order => {
-      const orderObj = order.toObject();
-      const statusInfo = getOrderStatusMessage(order);
+    let ordersWithStatus = orders;
+    try {
+      const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
       
-      return {
-        ...orderObj,
-        statusInfo
-      };
-    });
+      ordersWithStatus = orders.map(order => {
+        const orderObj = order.toObject();
+        const statusInfo = getOrderStatusMessage(order);
+        
+        return {
+          ...orderObj,
+          statusInfo
+        };
+      });
+    } catch (helperError) {
+      console.error('Error loading orderStatusHelper:', helperError);
+      // Fallback nếu helper không load được
+      ordersWithStatus = orders.map(order => order.toObject());
+    }
     
     console.log(`📊 Order details:`, ordersWithStatus.map(o => ({
       id: o._id.toString().slice(-6),
@@ -456,7 +465,7 @@ export const getOrders = async (req, res) => {
       const orderObj = order.toObject();
 
              // Xử lý hiển thị payment status
-       if (["zalopay", "momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
+       if (["momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
          if (order.isPaid && order.paymentStatus === "paid") {
            orderObj.displayPaymentStatus = `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
          } else if (order.paymentStatus === "failed") {

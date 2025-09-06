@@ -6,23 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + React + TS</title>
     
-    <!-- 🎯 SCRIPT TỰ ĐỘNG CHUYỂN HƯỚNG ZALOPAY
-    <script>
-  (function() {
-    const zalopayOrder = localStorage.getItem('zalopayOrder');
-    
-    if (zalopayOrder) {
-      const orderData = JSON.parse(zalopayOrder);
-      
-      // Chờ 3 giây rồi chuyển hướng (không cần kiểm tra hostname)
-      setTimeout(() => {
-        console.log('Auto redirecting after 3 seconds...');
-        localStorage.removeItem('zalopayOrder');
-        window.location.href = orderData.returnUrl;
-      }, 3000);
-    }
-  })();
-</script> -->
   </head>
   <body>
     <div id="root"></div>

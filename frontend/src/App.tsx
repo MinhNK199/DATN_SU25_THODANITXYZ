@@ -56,6 +56,9 @@ import TestProductAPI from './components/client/TestProductAPI';
 import LoginSuccess from './components/LoginSuccess';
 import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
+import CouponList from './components/admin/coupons/CouponList';
+import CouponAdd from './components/admin/coupons/CouponAdd';
+import CouponEdit from './components/admin/coupons/CouponEdit';
 import BlogPage from './pages/admin/BlogPage';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
 import BlogList from './pages/client/BlogList';
@@ -159,6 +162,9 @@ function App() {
               <Route path="ratings" element={<RatingList />} />
               <Route path="vouchers" element={<VoucherList />} />
               <Route path="vouchers/add" element={<VoucherAdd />} />
+              <Route path="coupons" element={<CouponList />} />
+              <Route path="coupons/add" element={<CouponAdd />} />
+              <Route path="coupons/edit/:id" element={<CouponEdit />} />
               <Route path="blogs" element={<BlogPage />} />
             </Route>
           </Routes>
