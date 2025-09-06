@@ -11,7 +11,7 @@ export const protect = async (req, res, next) => {
     ) {
         token = req.headers.authorization.split(" ")[1];
         // Bỏ qua các giá trị token không hợp lệ dạng string
-        if (token === "null" || token === "undefined" || token.trim() === "") {
+        if (token === "null" || token === "undefined" || !token || token.trim() === "") {
             token = undefined;
         }
     }
@@ -33,32 +33,32 @@ export const protect = async (req, res, next) => {
             return res.status(401).json({ message: "Người dùng không tồn tại hoặc đã bị khóa" });
         }
 
-        req.user = user; 
+        req.user = user;
         console.log('Xác thực thành công:', user.email, user.role);
         next();
     } catch (error) {
         console.error('Token không hợp lệ:', error);
-        
+
         // Xử lý riêng cho từng loại lỗi
         if (error.name === 'TokenExpiredError') {
-            return res.status(401).json({ 
+            return res.status(401).json({
                 message: "Token đã hết hạn, vui lòng đăng nhập lại",
                 error: "TOKEN_EXPIRED",
                 expiredAt: error.expiredAt
             });
         } else if (error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ 
+            return res.status(401).json({
                 message: "Token không hợp lệ",
                 error: "INVALID_TOKEN"
             });
         } else {
-            return res.status(401).json({ 
+            return res.status(401).json({
                 message: "Token không hợp lệ",
                 error: "TOKEN_ERROR"
             });
         }
     }
-    
+
 };
 
 export const checkAdmin = (requiredCheck = []) => {
@@ -73,7 +73,7 @@ export const checkAdmin = (requiredCheck = []) => {
         // Phân quyền theo vai trò
         const roleCheck = {
             superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
-            admin: ["view_user", "CheckTaiKhoan"], 
+            admin: ["view_user", "CheckTaiKhoan"],
             customer: [],
         };
 

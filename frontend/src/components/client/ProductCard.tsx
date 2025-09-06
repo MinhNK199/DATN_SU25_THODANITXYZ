@@ -23,12 +23,12 @@ interface ProductCardProps {
     image?: string;
     images?: string[];
     brand:
-      | {
-          _id?: string;
-          name: string;
-        }
-      | string
-      | null;
+    | {
+      _id?: string;
+      name: string;
+    }
+    | string
+    | null;
     rating?: number;
     reviewCount?: number;
     averageRating?: number;
@@ -111,6 +111,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       toast.error("Loại sản phẩm đã hết hàng!");
       return;
     }
+
+
     setIsLoading(true);
     try {
       await addToCart(product._id, 1, selectedVariantId); // Gửi productId và variantId riêng biệt
@@ -186,7 +188,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleCompare = () => {
-    console.log("Add to compare:", product.name);
     toast.success("Tính năng so sánh sẽ được phát triển sau");
   };
 
@@ -258,30 +259,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <button
               onClick={handleAddToCart}
               disabled={isLoading || isOutOfStock}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1 ${
-                isOutOfStock
-                  ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                  : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1 ${isOutOfStock
+                ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700 text-white"
+                }`}
             >
               <FaShoppingCart className="w-3 h-3" />
               <span>
                 {isLoading
                   ? "Đang thêm..."
                   : isOutOfStock
-                  ? "Hết hàng"
-                  : product.variants && product.variants.length > 0
-                  ? "Chọn loại"
-                  : "Thêm vào giỏ"}
+                    ? "Hết hàng"
+                    : product.variants && product.variants.length > 0
+                      ? "Chọn loại"
+                      : "Thêm vào giỏ"}
               </span>
             </button>
             <button
               onClick={handleAddFavorite}
-              className={`p-2 rounded-lg transition-colors ${
-                isFavorite
-                  ? "text-red-500 bg-red-100 hover:bg-red-200"
-                  : "text-gray-600 bg-white hover:bg-red-500 hover:text-white"
-              }`}
+              className={`p-2 rounded-lg transition-colors ${isFavorite
+                ? "text-red-500 bg-red-100 hover:bg-red-200"
+                : "text-gray-600 bg-white hover:bg-red-500 hover:text-white"
+                }`}
             >
               <FaHeart className="w-4 h-4" />
             </button>
@@ -303,10 +302,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       <div className="p-4">
         <div className="text-sm text-blue-600 font-medium mb-1">
-  {product.brand && typeof product.brand === "object"
-    ? product.brand.name
-    : product.brand || "Không rõ thương hiệu"}
-</div>
+          {product.brand && typeof product.brand === "object"
+            ? product.brand.name
+            : product.brand || "Không rõ thương hiệu"}
+        </div>
 
         <Link to={`/product/${product._id}`}>
           <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
@@ -319,11 +318,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {[...Array(5)].map((_, i) => (
               <FaStar
                 key={i}
-                className={`w-4 h-4 ${
-                  i < Math.floor(product.rating || product.averageRating || 0)
-                    ? "text-yellow-400 fill-current"
-                    : "text-gray-300"
-                }`}
+                className={`w-4 h-4 ${i < Math.floor(product.rating || product.averageRating || 0)
+                  ? "text-yellow-400 fill-current"
+                  : "text-gray-300"
+                  }`}
               />
             ))}
           </div>
@@ -361,21 +359,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <button
           onClick={handleAddToCart}
           disabled={isLoading || isOutOfStock}
-          className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
-            isOutOfStock
-              ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-              : "bg-blue-600 hover:bg-blue-700 text-white"
-          }`}
+          className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${isOutOfStock
+            ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+            : "bg-blue-600 hover:bg-blue-700 text-white"
+            }`}
         >
           <FaShoppingCart className="w-4 h-4" />
           <span>
             {isLoading
               ? "Đang thêm..."
               : isOutOfStock
-              ? "Hết hàng"
-              : product.variants && product.variants.length > 0
-              ? "Chọn loại sản phẩm"
-              : "Thêm vào giỏ hàng"}
+                ? "Hết hàng"
+                : product.variants && product.variants.length > 0
+                  ? "Chọn loại sản phẩm"
+                  : "Thêm vào giỏ hàng"}
           </span>
         </button>
       </div>
@@ -406,108 +403,114 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, paddingTop: 8 }}>
           {filteredVariants.length === 0 && <div style={{ color: '#888', textAlign: 'center', padding: 32 }}>Không có loại sản phẩm phù hợp.</div>}
-          {filteredVariants.map((variant: any) => (
-            <Popover
-              key={variant._id}
-              content={(
-                <div style={{ minWidth: 300 }}>
-                  <div className="font-semibold mb-1 text-base">{variant.name || `${variant.size || ''}`}</div>
-                  <div className="mb-2">
-                    <img
-                      src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder.svg'}
-                      alt="variant-large"
-                      style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee', marginBottom: 8 }}
-                    />
-                  </div>
-                  <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
-                  <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
-                  <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
-                  <div className="mb-1">Kích thước: <span>{variant.size || 'N/A'}</span></div>
-                  <div className="mb-1">Cân nặng: <span>{variant.weight ? `${variant.weight}g` : 'N/A'}</span></div>
-                  <div className="mb-1">Trạng thái: <span className={variant.isActive ? 'text-green-600' : 'text-red-600'}>{variant.isActive ? 'Hoạt động' : 'Ẩn'}</span></div>
-                  {variant.images && variant.images.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-2">
-                      {variant.images.map((img: string, idx: number) => (
-                        <img key={idx} src={img} alt="variant-img" style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover', border: '1px solid #eee' }} />
-                      ))}
+          {filteredVariants.map((variant: any, index: number) => {
+            return (
+              <Popover
+                key={variant._id}
+                content={(
+                  <div style={{ minWidth: 300 }}>
+                    <div className="font-semibold mb-1 text-base">{variant.name || `${variant.size || ''}`}</div>
+                    <div className="mb-2">
+                      <img
+                        src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder.svg'}
+                        alt="variant-large"
+                        style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee', marginBottom: 8 }}
+                      />
                     </div>
-                  )}
-                  {variant.specifications && Object.keys(variant.specifications).length > 0 && (
-                    <div className="mt-2">
-                      <div className="font-medium mb-1">Thông số loại sản phẩm:</div>
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {Object.entries(variant.specifications).map(([key, value]) => (
-                            <tr key={key}>
-                              <td className="pr-2 text-gray-600">{key}</td>
-                              <td className="text-gray-800">{String(value)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              ) as React.ReactNode}
-              placement="right"
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  border: '1px solid #e5e7eb',
-                  borderRadius: 12,
-                  padding: 14,
-                  background: variant.stock === 0 ? '#f8d7da' : variant.stock <= 5 ? '#fffbe6' : '#fff',
-                  boxShadow: '0 2px 8px #f0f1f2',
-                  marginBottom: 4,
-                  position: 'relative',
-                  transition: 'box-shadow 0.2s',
-                  cursor: variant.stock > 0 ? 'pointer' : 'not-allowed',
-                }}
-                className={variant.stock > 0 ? 'hover:shadow-lg transition-shadow' : ''}
-                onClick={() => variant.stock > 0 && setSelectedVariantId(variant._id)}
-              >
-                <Badge.Ribbon
-                  text={variant.stock === 0 ? 'Hết hàng' : variant.stock <= 5 ? 'Sắp hết hàng' : ''}
-                  color={variant.stock === 0 ? 'red' : 'orange'}
-                  style={{ display: variant.stock > 5 ? 'none' : undefined }}
-                >
-                  <img
-                    src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder.svg'}
-                    alt="variant"
-                    style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee' }}
-                  />
-                </Badge.Ribbon>
-                <div style={{ flex: 1 }}>
-                  <div className="font-semibold text-base mb-1">{variant.name || `${variant.size || ''}`}</div>
-                  <div className="mb-1">
-                    {variant.salePrice && variant.salePrice < variant.price ? (
-                      <>
-                        <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice)}</span>
-                        <span className="text-gray-400 line-through ml-2">{formatPrice(variant.price)}</span>
-                      </>
-                    ) : (
-                      <span>{formatPrice(variant.price)}</span>
+                    <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
+                    <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
+                    <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
+                    <div className="mb-1">Kích thước: <span>{variant.size || 'N/A'}</span></div>
+                    <div className="mb-1">Cân nặng: <span>{variant.weight ? `${variant.weight}g` : 'N/A'}</span></div>
+                    <div className="mb-1">Trạng thái: <span className={variant.isActive ? 'text-green-600' : 'text-red-600'}>{variant.isActive ? 'Hoạt động' : 'Ẩn'}</span></div>
+                    {variant.images && variant.images.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        {variant.images.map((img: string, idx: number) => (
+                          <img key={idx} src={img} alt="variant-img" style={{ width: 36, height: 36, borderRadius: 4, objectFit: 'cover', border: '1px solid #eee' }} />
+                        ))}
+                      </div>
+                    )}
+                    {variant.specifications && Object.keys(variant.specifications).length > 0 && (
+                      <div className="mt-2">
+                        <div className="font-medium mb-1">Thông số loại sản phẩm:</div>
+                        <table className="w-full text-xs">
+                          <tbody>
+                            {Object.entries(variant.specifications).map(([key, value]) => (
+                              <tr key={key}>
+                                <td className="pr-2 text-gray-600">{key}</td>
+                                <td className="text-gray-800">{String(value)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
-                  <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
-                  {variant.size && (
-                    <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
-                  )}
-                </div>
-                <Button
-                  type="primary"
-                  disabled={variant.stock <= 0}
+                ) as React.ReactNode}
+                placement="right"
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 12,
+                    padding: 14,
+                    background: variant.stock === 0 ? '#f8d7da' : variant.stock <= 5 ? '#fffbe6' : '#fff',
+                    boxShadow: '0 2px 8px #f0f1f2',
+                    marginBottom: 4,
+                    position: 'relative',
+                    transition: 'box-shadow 0.2s',
+                    cursor: variant.stock > 0 ? 'pointer' : 'not-allowed',
+                  }}
+                  className={variant.stock > 0 ? 'hover:shadow-lg transition-shadow' : ''}
                   onClick={() => variant.stock > 0 && setSelectedVariantId(variant._id)}
-                  style={{ minWidth: 120, fontWeight: 600 }}
                 >
-                  Chọn
-                </Button>
-              </div>
-            </Popover>
-          ))}
+                  <Badge.Ribbon
+                    text={variant.stock === 0 ? 'Hết hàng' : variant.stock <= 5 ? 'Sắp hết hàng' : ''}
+                    color={variant.stock === 0 ? 'red' : 'orange'}
+                    style={{ display: variant.stock > 5 ? 'none' : undefined }}
+                  >
+                    <img
+                      src={variant.images && variant.images[0] ? variant.images[0] : '/placeholder.svg'}
+                      alt="variant"
+                      style={{ width: 64, height: 64, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee' }}
+                    />
+                  </Badge.Ribbon>
+                  <div style={{ flex: 1 }}>
+                    <div className="font-semibold text-base mb-1">{variant.name || `${variant.size || ''}`}</div>
+                    <div className="mb-1">
+                      {variant.salePrice && variant.salePrice < variant.price ? (
+                        <>
+                          <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice)}</span>
+                          <span className="text-gray-400 line-through ml-2">{formatPrice(variant.price)}</span>
+                        </>
+                      ) : (
+                        <span>{formatPrice(variant.price)}</span>
+                      )}
+                    </div>
+                    <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
+                    {variant.size && (
+                      <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
+                    )}
+                  </div>
+                  <Button
+                    type="primary"
+                    disabled={variant.stock <= 0}
+                    onClick={() => {
+                      if (variant.stock > 0 && variant._id) {
+                        setSelectedVariantId(variant._id);
+                      }
+                    }}
+                    style={{ minWidth: 120, fontWeight: 600 }}
+                  >
+                    Chọn
+                  </Button>
+                </div>
+              </Popover>
+            );
+          })}
         </div>
         <div className="flex justify-center mt-6">
           <Button

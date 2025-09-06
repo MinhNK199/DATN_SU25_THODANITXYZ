@@ -6,6 +6,7 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import SearchBar from './SearchBar';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { calculateDisplayPrice } from '../../utils/priceUtils';
 
 interface Category {
   _id: string;
@@ -37,7 +38,7 @@ const Header: React.FC = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const miniCartRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  
+
   const { state: cartState, loadCart } = useCart();
   const { state: wishlistState } = useWishlist();
 
@@ -45,9 +46,9 @@ const Header: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userStr = localStorage.getItem('user');
-    
+
     setIsLoggedIn(!!token);
-    
+
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
@@ -59,7 +60,7 @@ const Header: React.FC = () => {
     } else {
       setUserRole(null);
     }
-    
+
     if (token) {
       loadCart();
     }
@@ -70,9 +71,9 @@ const Header: React.FC = () => {
     const handleStorageChange = () => {
       const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
-      
+
       setIsLoggedIn(!!token);
-      
+
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
@@ -84,7 +85,7 @@ const Header: React.FC = () => {
       } else {
         setUserRole(null);
       }
-      
+
       if (token) {
         loadCart();
       }
@@ -206,9 +207,7 @@ const Header: React.FC = () => {
       </div>
 
       {/* Main Header */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-white shadow-lg' : 'bg-white'
-      }`}>
+      <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white'}`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             {/* Logo */}
@@ -229,7 +228,7 @@ const Header: React.FC = () => {
               <Link to="/" className="text-gray-700 hover:text-blue-600 font-medium transition-colors">
                 Trang chủ
               </Link>
-              
+
               {/* Categories Dropdown */}
               <div className="relative group">
                 <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 font-medium transition-colors">
@@ -242,17 +241,17 @@ const Header: React.FC = () => {
                     {isLoadingCategories ? (
                       <div className="text-gray-500 text-sm">Đang tải...</div>
                     ) : (
-                    <div className="space-y-2">
-                      {categories.map((category) => (
-                        <Link
+                      <div className="space-y-2">
+                        {categories.map((category) => (
+                          <Link
                             key={category._id}
                             to={`/products?category=${category.slug}`}
-                          className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
-                        >
-                          {category.name}
-                        </Link>
-                      ))}
-                    </div>
+                            className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -270,17 +269,17 @@ const Header: React.FC = () => {
                     {isLoadingBrands ? (
                       <div className="text-gray-500 text-sm">Đang tải...</div>
                     ) : (
-                    <div className="space-y-2">
-                      {brands.map((brand) => (
-                        <Link
+                      <div className="space-y-2">
+                        {brands.map((brand) => (
+                          <Link
                             key={brand._id}
                             to={`/products?brand=${brand.name.toLowerCase()}`}
-                          className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
-                        >
-                          {brand.name}
-                        </Link>
-                      ))}
-                    </div>
+                            className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
+                          >
+                            {brand.name}
+                          </Link>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -363,32 +362,32 @@ const Header: React.FC = () => {
 
               {/* Cart with mini cart */}
               {userRole === 'customer' && (
-              <div
-                className="relative group"
-                onMouseEnter={() => setShowMiniCart(true)}
-                onMouseLeave={() => setShowMiniCart(false)}
-              >
-                <Link to="/cart" className="relative text-gray-700 hover:text-blue-600 transition-colors">
-                  <FaShoppingCart className="w-5 h-5" />
-                  {cartState.itemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {cartState.itemCount}
-                    </span>
-                  )}
-                </Link>
-                {/* Mini Cart Popup */}
                 <div
-                  ref={miniCartRef}
-                  className={`absolute right-0 mt-3 w-96 max-w-[95vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-300 ${showMiniCart ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'} p-4`}
-                  style={{ minWidth: 320 }}
+                  className="relative group"
+                  onMouseEnter={() => setShowMiniCart(true)}
+                  onMouseLeave={() => setShowMiniCart(false)}
                 >
-                  <h3 className="font-bold text-lg mb-3 text-gray-900">Giỏ hàng</h3>
-                    
+                  <Link to="/cart" className="relative text-gray-700 hover:text-blue-600 transition-colors">
+                    <FaShoppingCart className="w-5 h-5" />
+                    {cartState.itemCount > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {cartState.itemCount}
+                      </span>
+                    )}
+                  </Link>
+                  {/* Mini Cart Popup */}
+                  <div
+                    ref={miniCartRef}
+                    className={`absolute right-0 mt-3 w-96 max-w-[95vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 transition-all duration-300 ${showMiniCart ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'} p-4`}
+                    style={{ minWidth: 320 }}
+                  >
+                    <h3 className="font-bold text-lg mb-3 text-gray-900">Giỏ hàng</h3>
+
                     {!isLoggedIn ? (
                       <div className="text-center text-gray-500 py-8">
                         <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
                         <p className="mb-4">Vui lòng đăng nhập để xem giỏ hàng</p>
-                        <Link 
+                        <Link
                           to="/login"
                           className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                         >
@@ -401,41 +400,49 @@ const Header: React.FC = () => {
                         <p>Đang tải giỏ hàng...</p>
                       </div>
                     ) : cartState.items.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
-                      <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
-                      Giỏ hàng của bạn trống
-                    </div>
-                  ) : (
-                    <>
-                      <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 mb-3">
-                        {cartState.items.slice(0, 2).map(item => (
-                            <div key={item._id} className="flex items-center py-2 gap-3">
-                              <img src={item.product.images && item.product.images[0] ? item.product.images[0] : '/placeholder.svg'} alt={item.product.name} className="w-14 h-14 object-contain rounded-lg border" />
-                            <div className="flex-1">
-                                <div className="font-medium text-gray-900 line-clamp-1">{item.product.name}</div>
-                              <div className="text-sm text-gray-500">Số lượng: {item.quantity}</div>
-                            </div>
-                              <div className="font-semibold text-blue-600 whitespace-nowrap">{formatPrice(item.product.salePrice || item.product.price)}</div>
-                          </div>
-                        ))}
-                        {cartState.items.length > 2 && (
-                          <div className="text-center text-gray-500 py-2 text-sm">... và {cartState.items.length - 2} sản phẩm khác</div>
-                        )}
+                      <div className="text-center text-gray-500 py-8">
+                        <FaShoppingCart className="mx-auto w-10 h-10 mb-2 text-gray-300" />
+                        Giỏ hàng của bạn trống
                       </div>
-                      <div className="flex justify-between items-center font-semibold text-gray-900 mb-3">
-                        <span>Tổng cộng:</span>
-                        <span className="text-blue-600 text-lg">
+                    ) : (
+                      <>
+                        <div className="max-h-64 overflow-y-auto divide-y divide-gray-100 mb-3">
+                          {cartState.items.slice(0, 2).map(item => {
+                            const variant = item.variantInfo;
+                            const variantName = variant?.name || '';
+                            const displayPrice = calculateDisplayPrice(item);
+                            return (
+                              <div key={item._id} className="flex items-center py-2 gap-3">
+                                <img src={item.product.images && item.product.images[0] ? item.product.images[0] : '/placeholder.svg'} alt={item.product.name} className="w-14 h-14 object-contain rounded-lg border" />
+                                <div className="flex-1">
+                                  <div className="font-medium text-gray-900 line-clamp-1">{item.product.name}</div>
+                                  {variantName && (
+                                    <div className="text-xs text-gray-500 line-clamp-1">{variantName}</div>
+                                  )}
+                                  <div className="text-sm text-gray-500">Số lượng: {item.quantity}</div>
+                                </div>
+                                <div className="font-semibold text-blue-600 whitespace-nowrap">{formatPrice(displayPrice)}</div>
+                              </div>
+                            );
+                          })}
+                          {cartState.items.length > 2 && (
+                            <div className="text-center text-gray-500 py-2 text-sm">... và {cartState.items.length - 2} sản phẩm khác</div>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center font-semibold text-gray-900 mb-3">
+                          <span>Tổng cộng:</span>
+                          <span className="text-blue-600 text-lg">
                             {formatPrice(cartState.total)}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Link to="/cart" className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-center font-medium text-gray-700 transition">Xem giỏ hàng</Link>
-                        <Link to="/checkout" className="flex-1 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center font-medium transition">Thanh toán</Link>
-                      </div>
-                    </>
-                  )}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link to="/cart" className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-center font-medium text-gray-700 transition">Xem giỏ hàng</Link>
+                          <Link to="/checkout" className="flex-1 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center font-medium transition">Thanh toán</Link>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* Admin/Superadmin notice */}
@@ -465,25 +472,25 @@ const Header: React.FC = () => {
                   <div className="p-2">
                     {isLoggedIn ? (
                       <>
-                    <Link
-                      to="/profile"
-                      className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
-                    >
-                      Tài khoản của tôi
-                    </Link>
-                    <Link
-                      to="/profile?tab=orders"
-                      className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
-                    >
-                      Đơn hàng của tôi
-                    </Link>
-                    <Link
-                      to="/profile?tab=wishlist"
-                      className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
-                    >
-                      Danh sách yêu thích
-                    </Link>
-                    <hr className="my-2" />
+                        <Link
+                          to="/profile"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
+                        >
+                          Tài khoản của tôi
+                        </Link>
+                        <Link
+                          to="/profile?tab=orders"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
+                        >
+                          Đơn hàng của tôi
+                        </Link>
+                        <Link
+                          to="/profile?tab=wishlist"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
+                        >
+                          Danh sách yêu thích
+                        </Link>
+                        <hr className="my-2" />
                         <button
                           onClick={handleLogout}
                           className="w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
@@ -493,12 +500,12 @@ const Header: React.FC = () => {
                       </>
                     ) : (
                       <>
-                    <Link
-                      to="/login"
-                      className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
-                    >
-                      Đăng nhập
-                    </Link>
+                        <Link
+                          to="/login"
+                          className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
+                        >
+                          Đăng nhập
+                        </Link>
                         <Link
                           to="/register"
                           className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
@@ -540,24 +547,24 @@ const Header: React.FC = () => {
               >
                 Trang chủ
               </Link>
-              
+
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Danh mục</h3>
                 {isLoadingCategories ? (
                   <div className="text-gray-500 text-sm ml-4">Đang tải...</div>
                 ) : (
-                <div className="space-y-2 ml-4">
-                  {categories.map((category) => (
-                    <Link
+                  <div className="space-y-2 ml-4">
+                    {categories.map((category) => (
+                      <Link
                         key={category._id}
                         to={`/products?category=${category.slug}`}
-                      className="block text-gray-600 hover:text-blue-600"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {category.name}
-                    </Link>
-                  ))}
-                </div>
+                        className="block text-gray-600 hover:text-blue-600"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -566,18 +573,18 @@ const Header: React.FC = () => {
                 {isLoadingBrands ? (
                   <div className="text-gray-500 text-sm ml-4">Đang tải...</div>
                 ) : (
-                <div className="space-y-2 ml-4">
-                  {brands.map((brand) => (
-                    <Link
+                  <div className="space-y-2 ml-4">
+                    {brands.map((brand) => (
+                      <Link
                         key={brand._id}
                         to={`/products?brand=${brand.name.toLowerCase()}`}
-                      className="block text-gray-600 hover:text-blue-600"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      {brand.name}
-                    </Link>
-                  ))}
-                </div>
+                        className="block text-gray-600 hover:text-blue-600"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {brand.name}
+                      </Link>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -635,13 +642,13 @@ const Header: React.FC = () => {
 
               {isLoggedIn ? (
                 <>
-              <Link
-                to="/profile"
-                className="block text-gray-700 hover:text-blue-600 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Tài khoản của tôi
-              </Link>
+                  <Link
+                    to="/profile"
+                    className="block text-gray-700 hover:text-blue-600 font-medium"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Tài khoản của tôi
+                  </Link>
                   <button
                     onClick={() => {
                       handleLogout();
@@ -653,13 +660,13 @@ const Header: React.FC = () => {
                   </button>
                 </>
               ) : (
-              <Link
-                to="/login"
-                className="block text-gray-700 hover:text-blue-600 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Đăng nhập
-              </Link>
+                <Link
+                  to="/login"
+                  className="block text-gray-700 hover:text-blue-600 font-medium"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Đăng nhập
+                </Link>
               )}
             </div>
           </div>
