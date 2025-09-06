@@ -16,20 +16,10 @@ import {
   cancelOrder,
   getValidOrderStatusOptions,
   handlePaymentFailed,
-  confirmOrderAfterPayment,
-  replyReview,
-  addReview,
-  getReviews
+  confirmOrderAfterPayment
 } from "../controllers/order.js";
-import { 
-  createZaloPayOrder, 
-  checkZaloPayStatus, 
-  checkZaloPayStatusByOrderId,
-  cancelZaloPayPayment, 
-  zalopayCallback
-} from "../controllers/paymentZalopay.js";
-import { uploadBanner as upload } from "../middlewares/updateMiddleware.js";
-import { checkAdmin, protect } from "../middlewares/authMiddleware.js";
+import { protect } from "../middlewares/authMiddleware.js";
+import Order from "../models/Order.js";
 
 const routerOrder = express.Router();
 
@@ -39,12 +29,6 @@ routerOrder.get("/myorders", protect, getMyOrders);
 routerOrder.get("/admin/revenue-stats", protect, getRevenueStats);
 routerOrder.get("/", protect, getOrders);
 
-// ========== ZALOPAY PAYMENT ROUTES ==========
-routerOrder.post("/zalo-pay", protect, createZaloPayOrder);
-routerOrder.post("/zalo-pay/callback", zalopayCallback);
-routerOrder.get("/zalo-pay/status/:app_trans_id", checkZaloPayStatus);
-routerOrder.get("/zalo-pay/status-by-order/:orderId", protect, checkZaloPayStatusByOrderId);
-routerOrder.post("/zalo-pay/cancel", protect, cancelZaloPayPayment);
 
 // ========== ORDER DETAIL & ACTIONS ==========
 routerOrder.get("/:id", protect, getOrderById);
@@ -58,14 +42,9 @@ routerOrder.put("/:id/confirm-satisfaction", protect, confirmSatisfaction);
 routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
 routerOrder.put("/:id/cancel", protect, cancelOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
-routerOrder.put("/:id/payment-failed", protect, handlePaymentFailed);
-
-// ========== REVIEW ROUTE ==========
-routerOrder.post("/:orderId/review", protect, upload.array("images", 5), addReview);
-routerOrder.put("/:id/review/:reviewId/reply", protect, checkAdmin(["view_user"]), replyReview);
-routerOrder.get("/:orderId/reviews", protect, getReviews);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
+// Route để cập nhật thanh toán thất bại
 routerOrder.put("/:id/payment-failed", protect, async (req, res) => {
   try {
     const order = await handlePaymentFailed(req.params.id, req.body.reason);
@@ -79,6 +58,7 @@ routerOrder.put("/:id/payment-failed", protect, async (req, res) => {
   }
 });
 
+// Route để xác nhận đơn hàng sau thanh toán thành công (dành cho manual confirmation nếu cần)
 routerOrder.put("/:id/confirm-payment", protect, async (req, res) => {
   try {
     const { paymentInfo } = req.body;
@@ -94,11 +74,12 @@ routerOrder.put("/:id/confirm-payment", protect, async (req, res) => {
 });
 
 // ========== ADMIN UTILITIES ==========
+// Route để admin force update trạng thái đơn hàng (emergency cases)
 routerOrder.put("/:id/admin/force-status", protect, async (req, res) => {
   try {
+    // Kiểm tra quyền admin (thêm middleware admin nếu cần)
     const { status, reason } = req.body;
-    const Order = (await import("../models/Order.js")).default;
-
+    
     const order = await Order.findById(req.params.id);
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -122,6 +103,7 @@ routerOrder.put("/:id/admin/force-status", protect, async (req, res) => {
   }
 });
 
+// Route để lấy thống kê đơn hàng theo trạng thái
 routerOrder.get("/admin/stats/status", protect, async (req, res) => {
   try {
     const Order = (await import("../models/Order.js")).default;

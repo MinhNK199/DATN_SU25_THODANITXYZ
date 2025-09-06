@@ -2,14 +2,10 @@ import Order from "../models/Order.js";
 import Notification from "../models/Notification.js";
 import { sendMail } from "../utils/mailer.js";
 import User from "../models/User.js";
-import mongoose from "mongoose";
-import { getOrderStatusMessage } from "../utils/orderStatusHelper.js";  
-
 
 const paidMethods = [
   "credit-card",
   "momo",
-  "zalopay",
   "vnpay",
   "BANKING",
   "paid_online",
@@ -36,7 +32,6 @@ export const createOrder = async (req, res) => {
 
     // ✅ SỬA LOGIC: Luôn tạo đơn hàng draft cho tất cả các phương thức thanh toán online
     const isOnlinePayment = [
-      "zalopay",
       "momo",
       "vnpay",
       "credit-card",
@@ -139,8 +134,6 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
       ...(paymentInfo.orderType && { orderType: paymentInfo.orderType }),
       ...(paymentInfo.transType && { transType: paymentInfo.transType }),
       ...(paymentInfo.extraData && { extraData: paymentInfo.extraData }),
-      ...(paymentInfo.app_trans_id && { app_trans_id: paymentInfo.app_trans_id }),
-      ...(paymentInfo.zp_trans_id && { zp_trans_id: paymentInfo.zp_trans_id }),
       ...(paymentInfo.vnp_TransactionNo && { vnp_TransactionNo: paymentInfo.vnp_TransactionNo }),
       ...(paymentInfo.vnp_BankCode && { vnp_BankCode: paymentInfo.vnp_BankCode }),
       ...(paymentInfo.vnp_PayDate && { vnp_PayDate: paymentInfo.vnp_PayDate })
@@ -279,39 +272,33 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
 // Lấy đơn hàng theo id
 export const getOrderById = async (req, res) => {
   try {
-    const orderId = req.params.id;
-
-    // Kiểm tra ID có hợp lệ không
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ message: "ID không hợp lệ" });
-    }
-
-    const order = await Order.findById(orderId).populate("user", "name email");
-
-    if (!order) {
+    const order = await Order.findById(req.params.id).populate(
+      "user",
+      "name email"
+    );
+    if (!order)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    let statusInfo = null;
+    
+    // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
     try {
-      const { getOrderStatusMessage } = await import("../utils/orderStatusHelper.js");
-      if (typeof getOrderStatusMessage === "function") {
-        statusInfo = getOrderStatusMessage(order);
-      }
-    } catch (err) {
-      console.warn("⚠️ orderStatusHelper lỗi hoặc không tồn tại:", err.message);
+      const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+      const statusInfo = getOrderStatusMessage(order);
+      
+      const orderWithStatus = {
+        ...order.toObject(),
+        statusInfo
+      };
+      
+      res.json(orderWithStatus);
+    } catch (helperError) {
+      console.error('Error loading orderStatusHelper:', helperError);
+      // Fallback nếu helper không load được
+      res.json(order.toObject());
     }
-
-    res.json({
-      ...order.toObject(),
-      statusInfo,
-    });
   } catch (error) {
-    console.error("❌ getOrderById error:", error);
-    res.status(500).json({ message: "Lỗi server khi lấy chi tiết đơn hàng" });
+    res.status(500).json({ message: error.message });
   }
 };
-
 
 // Cập nhật trạng thái đã thanh toán
 export const updateOrderToPaid = async (req, res) => {
@@ -393,39 +380,45 @@ export const updateOrderToDelivered = async (req, res) => {
 export const getMyOrders = async (req, res) => {
   try {
     console.log(`🔍 getMyOrders called for user: ${req.user._id}`);
-
-    // Lấy tất cả đơn hàng của user, loại trừ payment_failed
+    
+    // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng TRỪ payment_failed (bao gồm cả draft đã thanh toán)
     const orders = await Order.find({
       user: req.user._id,
-      status: { $ne: "payment_failed" }
+      status: { $ne: 'payment_failed' } // Chỉ loại trừ payment_failed
     }).sort({ createdAt: -1 });
 
     console.log(`📋 Found ${orders.length} orders for user ${req.user._id}`);
-
-    // Gắn thêm statusInfo vào từng đơn
-    const ordersWithStatus = orders.map((order) => {
-      const orderObj = order.toObject();
-      const statusInfo = getOrderStatusMessage(order);
-
-      return {
-        ...orderObj,
-        statusInfo,
-      };
-    });
-
-    console.log(
-      `📊 Order details:`,
-      ordersWithStatus.map((o) => ({
-        id: o._id.toString().slice(-6),
-        method: o.paymentMethod,
-        status: o.status,
-        isPaid: o.isPaid,
-        paymentStatus: o.paymentStatus,
-        statusInfo: o.statusInfo,
-        createdAt: o.createdAt,
-      }))
-    );
-
+    
+    // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
+    let ordersWithStatus = orders;
+    try {
+      const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+      
+      ordersWithStatus = orders.map(order => {
+        const orderObj = order.toObject();
+        const statusInfo = getOrderStatusMessage(order);
+        
+        return {
+          ...orderObj,
+          statusInfo
+        };
+      });
+    } catch (helperError) {
+      console.error('Error loading orderStatusHelper:', helperError);
+      // Fallback nếu helper không load được
+      ordersWithStatus = orders.map(order => order.toObject());
+    }
+    
+    console.log(`📊 Order details:`, ordersWithStatus.map(o => ({
+      id: o._id.toString().slice(-6),
+      method: o.paymentMethod,
+      status: o.status,
+      isPaid: o.isPaid,
+      paymentStatus: o.paymentStatus,
+      statusInfo: o.statusInfo,
+      createdAt: o.createdAt
+    })));
+    
     res.json(ordersWithStatus);
   } catch (error) {
     console.error("❌ Lỗi getMyOrders:", error);
@@ -472,7 +465,7 @@ export const getOrders = async (req, res) => {
       const orderObj = order.toObject();
 
              // Xử lý hiển thị payment status
-       if (["zalopay", "momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
+       if (["momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
          if (order.isPaid && order.paymentStatus === "paid") {
            orderObj.displayPaymentStatus = `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
          } else if (order.paymentStatus === "failed") {
@@ -604,149 +597,6 @@ export const getValidOrderStatusOptions = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// ========== USER THÊM ĐÁNH GIÁ ==========
-export const addReview = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const { note, rating } = req.body;
-
-    // tìm đơn hàng
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    // chỉ user sở hữu đơn mới được đánh giá
-    if (order.user.toString() !== req.user._id.toString()) {
-      return res
-        .status(403)
-        .json({ message: "Bạn không có quyền đánh giá đơn hàng này" });
-    }
-
-    // chỉ cho phép khi đã giao thành công
-    if (!["delivered_success", "completed"].includes(order.status)) {
-      return res
-        .status(400)
-        .json({ message: "Bạn chỉ có thể đánh giá sau khi đã nhận hàng" });
-    }
-
-    // tránh review trùng
-    const existingReview = order.reviews.find(
-      (r) => r.user.toString() === req.user._id.toString()
-    );
-    if (existingReview) {
-      return res
-        .status(400)
-        .json({ message: "Bạn đã đánh giá đơn hàng này rồi" });
-    }
-
-    // xử lý upload ảnh
-    const imagePaths = req.files
-      ? req.files.map((file) => `/uploads/reviews/${file.filename}`)
-      : [];
-
-    // thêm review mới
-    order.reviews.push({
-      user: req.user._id,
-      note,
-      rating,
-      images: imagePaths,
-      createdAt: new Date(),
-    });
-
-    await order.save();
-
-    res.json({
-      message: "Đánh giá thành công",
-      reviews: order.reviews,
-    });
-  } catch (error) {
-    console.error("Lỗi khi thêm đánh giá:", error);
-    res.status(500).json({ message: "Lỗi server" });
-  }
-};
-
-// Lấy danh sách review của một đơn hàng, trả về review của user hiện tại
-export const getReviews = async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const userId = req.query.userId; // frontend truyền userId hiện tại
-
-    const order = await Order.findById(orderId).populate(
-      "reviews.user",
-      "_id name avatar"
-    );
-
-    if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    let reviews = order.reviews || [];
-
-    // Nếu có userId, lọc chỉ review của user đó
-    if (userId) {
-  reviews = reviews.filter((r) => {
-    const uid = r.user?._id?.toString?.() || r.user?.toString?.(); // 🔑 support cả ObjectId & populated object
-    return uid === userId;
-  });
-}
-
-
-    res.json({ reviews });
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server" });
-  }
-};
-
-
-// ========== ADMIN / SUPERADMIN TRẢ LỜI REVIEW ==========
-export const replyReview = async (req, res) => {
-  try {
-    const { id, reviewId } = req.params;
-    const { note } = req.body;
-
-    if (!note || note.length === 0) {
-      return res.status(400).json({ message: "Vui lòng nhập nội dung phản hồi" });
-    }
-
-    // chỉ cho admin/superadmin (middleware role check đã xử lý)
-    if (!["admin", "superadmin"].includes(req.user.role)) {
-      return res.status(403).json({ message: "Bạn không có quyền trả lời đánh giá" });
-    }
-
-    const order = await Order.findById(id).populate("reviews.user", "name email");
-    if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    const review = order.reviews.id(reviewId);
-    if (!review) {
-      return res.status(404).json({ message: "Không tìm thấy đánh giá" });
-    }
-
-    if (review.adminReply && review.adminReply.note) {
-      return res.status(400).json({ message: "Đánh giá này đã được phản hồi" });
-    }
-
-    review.adminReply = {
-      note,
-      repliedBy: req.user._id,
-      repliedAt: new Date(),
-    };
-
-    await order.save();
-
-    res.json({
-      message: "Đã trả lời đánh giá thành công",
-      review,
-    });
-  } catch (error) {
-    console.error("Lỗi trả lời đánh giá:", error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
 
 // Cập nhật trạng thái đơn hàng
 export const updateOrderStatus = async (req, res) => {

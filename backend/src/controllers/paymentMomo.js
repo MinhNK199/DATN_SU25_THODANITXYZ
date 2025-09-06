@@ -150,7 +150,8 @@ export const createMomoPayment = async (req, res) => {
 
 export const momoWebhook = async (req, res) => {
   try {
-    console.log('🔔 MoMo Webhook Received:', {
+    console.log('🔔 ========== MOMO WEBHOOK START ==========');
+    console.log('📥 MoMo Webhook Received:', {
       body: req.body,
       headers: req.headers,
       method: req.method,
@@ -209,19 +210,53 @@ export const momoWebhook = async (req, res) => {
         if (existingOrder && existingOrder.isPaid && existingOrder.paymentStatus === 'paid') {
           console.log('✅ Order already confirmed, skipping duplicate processing');
         } else {
-          await confirmOrderAfterPayment(orderId, {
+          // ✅ Cập nhật trạng thái thanh toán trực tiếp
+          const order = await Order.findById(orderId);
+          if (!order) {
+            console.error('❌ Order not found:', orderId);
+            return res.status(404).json({ 
+              message: 'Order not found',
+              returnCode: -1
+            });
+          }
+
+          // ✅ CẬP NHẬT TRẠNG THÁI THANH TOÁN THÀNH CÔNG
+          order.status = 'pending'; // Chờ xác nhận từ admin
+          order.isPaid = true;
+          order.paidAt = Date.now();
+          order.paymentStatus = 'paid'; // Đã thanh toán thành công
+          
+          // ✅ CẬP NHẬT THÔNG TIN THANH TOÁN CHI TIẾT
+          order.paymentResult = {
             id: transId,
             status: 'success',
-            method: 'momo',
             update_time: new Date().toISOString(),
+            email_address: '',
+            method: 'momo',
             amount: amount,
             extraData: extraData,
             payType: payType,
             orderType: orderType,
             transType: transType
+          };
+          
+          // ✅ Thêm vào lịch sử trạng thái
+          if (!order.statusHistory) order.statusHistory = [];
+          order.statusHistory.push({
+            status: 'pending',
+            note: 'Thanh toán MOMO thành công - Đơn hàng chờ xác nhận từ admin',
+            date: Date.now()
           });
           
+          order.statusHistory.push({
+            status: 'payment_success',
+            note: `Thanh toán MOMO thành công - Số tiền: ${amount}đ - Transaction ID: ${transId}`,
+            date: Date.now()
+          });
+
+          await order.save();
           console.log('✅ Order status updated successfully for MoMo payment:', orderId);
+          console.log(`✅ Order after update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
         }
       } catch (confirmError) {
         console.error('❌ Error confirming MoMo payment:', confirmError);
@@ -235,20 +270,36 @@ export const momoWebhook = async (req, res) => {
         // Cập nhật trạng thái đơn hàng thành failed
         const order = await Order.findById(orderId);
         if (order) {
-          order.status = 'cancelled';
+          order.status = 'payment_failed';
           order.paymentStatus = 'failed';
           order.isPaid = false;
+          order.paidAt = undefined;
+          
+          // Cập nhật thông tin thanh toán thất bại
+          order.paymentResult = {
+            id: transId || 'N/A',
+            status: 'failed',
+            update_time: new Date().toISOString(),
+            email_address: '',
+            method: 'momo',
+            amount: amount || order.totalPrice,
+            failure_reason: message || 'Thanh toán thất bại',
+            failure_time: new Date().toISOString()
+          };
           
           // Thêm vào lịch sử trạng thái
           if (!order.statusHistory) order.statusHistory = [];
           order.statusHistory.push({
-            status: 'cancelled',
+            status: 'payment_failed',
             note: `Thanh toán MoMo thất bại: ${message} (Code: ${resultCode})`,
             date: Date.now()
           });
           
           await order.save();
           console.log('✅ Order status updated for failed/cancelled MoMo payment:', orderId);
+          console.log(`✅ Order after failure update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
+        } else {
+          console.error('❌ Order not found for failed payment:', orderId);
         }
       } catch (failedError) {
         console.error('❌ Error handling failed MoMo payment:', failedError);
@@ -256,12 +307,14 @@ export const momoWebhook = async (req, res) => {
     }
     
     // ✅ Trả về response cho MoMo
+    console.log('🔔 ========== MOMO WEBHOOK END ==========');
     res.status(200).json({ 
       message: 'Webhook processed successfully',
       returnCode: 1
     });
     
   } catch (error) {
+    console.error('❌ ========== MOMO WEBHOOK ERROR ==========');
     console.error('❌ MoMo webhook processing error:', error);
     res.status(500).json({ 
       message: 'Webhook processing error', 
@@ -280,7 +333,22 @@ export const testMomoWebhook = async (req, res) => {
       return res.status(400).json({ message: 'OrderId is required' });
     }
     
+    console.log('🧪 ========== TEST MOMO WEBHOOK ==========');
     console.log('🧪 Test MoMo webhook for order:', orderId, 'resultCode:', resultCode);
+    
+    // Kiểm tra xem đơn hàng có tồn tại không
+    const existingOrder = await Order.findById(orderId);
+    if (!existingOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    console.log('🧪 Order before test:', {
+      id: existingOrder._id,
+      status: existingOrder.status,
+      isPaid: existingOrder.isPaid,
+      paymentStatus: existingOrder.paymentStatus,
+      paymentMethod: existingOrder.paymentMethod
+    });
     
     // Giả lập webhook data
     const webhookData = {
@@ -288,7 +356,7 @@ export const testMomoWebhook = async (req, res) => {
       resultCode,
       message,
       transId: 'test_trans_' + Date.now(),
-      amount: 21600000,
+      amount: existingOrder.totalPrice,
       extraData: '',
       payType: 'qr',
       orderType: 'momo_wallet',
@@ -299,6 +367,16 @@ export const testMomoWebhook = async (req, res) => {
     // Gọi webhook handler
     req.body = webhookData;
     await momoWebhook(req, res);
+    
+    // Kiểm tra kết quả sau khi xử lý
+    const updatedOrder = await Order.findById(orderId);
+    console.log('🧪 Order after test:', {
+      id: updatedOrder._id,
+      status: updatedOrder.status,
+      isPaid: updatedOrder.isPaid,
+      paymentStatus: updatedOrder.paymentStatus,
+      paymentMethod: updatedOrder.paymentMethod
+    });
     
   } catch (error) {
     console.error('❌ Error in test webhook:', error);

@@ -131,7 +131,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           dispatch({ type: 'LOAD_CART', payload: mockCart });
         } catch (error) {
-          console.error('Error loading cart from localStorage:', error);
+          // Silently handle localStorage error
         }
       }
       return;
@@ -142,8 +142,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cart = await cartApi.getCart();
       dispatch({ type: 'LOAD_CART', payload: cart });
     } catch (error: any) {
-      console.error('Error loading cart:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message });
+      // Silently handle error - don't show error message if server is offline
+      if (error.message !== 'Network Error') {
+        dispatch({ type: 'SET_ERROR', payload: error.message });
+      }
 
       // Fallback to localStorage if API fails
       const savedCart = localStorage.getItem('cart');
@@ -162,7 +164,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           dispatch({ type: 'LOAD_CART', payload: mockCart });
         } catch (localError) {
-          console.error('Error loading cart from localStorage:', localError);
+          // Silently handle localStorage error
         }
       }
     } finally {
@@ -193,7 +195,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        // Silently handle user data parsing error
         toast.error('Lỗi xác thực người dùng');
         return;
       }
@@ -208,7 +210,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success(`Đã thêm "${product.product.name}" vào giỏ hàng`);
       }
     } catch (error: any) {
-      console.error('Error adding to cart:', error);
+      // Silently handle error - show user-friendly message
       toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
     }
   }, []);
@@ -233,7 +235,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'LOAD_CART', payload: cart });
       toast.success('Đã xóa sản phẩm khỏi giỏ hàng');
     } catch (error: any) {
-      console.error('Error removing from cart:', error);
+      // Silently handle error - show user-friendly message
       toast.error(error.response?.data?.message || 'Không thể xóa sản phẩm');
     }
   }, [state.items]);
@@ -258,7 +260,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const cart = await cartApi.updateCartItem(item.product._id, quantity, item.variantId);
       dispatch({ type: 'LOAD_CART', payload: cart });
     } catch (error: any) {
-      console.error('Error updating cart:', error);
+      // Silently handle error - show user-friendly message
       toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng');
     }
   }, [state.items]);
@@ -276,7 +278,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       dispatch({ type: 'CLEAR_CART' });
       toast.success('Đã xóa toàn bộ giỏ hàng');
     } catch (error: any) {
-      console.error('Error clearing cart:', error);
+      // Silently handle error - show user-friendly message
       toast.error(error.response?.data?.message || 'Không thể xóa giỏ hàng');
     }
   }, []);
@@ -298,9 +300,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedCart = await cartApi.getCart();
       dispatch({ type: 'LOAD_CART', payload: updatedCart });
 
-      console.log(`✅ Đã cập nhật giỏ hàng sau khi đặt hàng`);
+      // Cart updated after order
     } catch (error: any) {
-      console.error('Error updating cart after order:', error);
+      // Silently handle error - cart will be updated on next page load
     }
   }, []);
 
