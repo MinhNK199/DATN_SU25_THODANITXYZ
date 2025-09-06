@@ -46,8 +46,8 @@ router.use('/payment/vnpay', paymentVnpayRouter);
 router.use('/payment/credit-card', paymentCreditCardRouter);
 router.use("/blogs", routerBlog);
 router.get('/provinces', getProvinces);
-router.get('/wards', getWards);
-router.get('/districts', getDistricts);
+router.get('/provinces/:provinceCode/districts', getDistricts);
+router.get('/districts/:districtCode/wards', getWards);
 router.get('/tax', getTaxConfig);
 router.put('/tax', protect, checkAdmin(['Superadmin']), updateTaxConfig);
 

@@ -1,0 +1,13 @@
+{
+  "name": "address-update-scripts",
+  "version": "1.0.0",
+  "description": "Scripts để cập nhật dữ liệu địa chỉ Việt Nam",
+  "type": "module",
+  "scripts": {
+    "update-address": "node updateAddressData.js",
+    "test-api": "node testAddressAPI.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
