@@ -36,7 +36,13 @@ const ProductList: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const search = params.get('search') || '';
+    const category = params.get('category') || '';
     setSearchTerm(search);
+
+    // Nếu có category từ URL, sử dụng trực tiếp (backend đã hỗ trợ slug)
+    if (category) {
+      setFilterCategory(category);
+    }
   }, [location.search]);
 
   const fetchProducts = async (pageNum = 1) => {
@@ -234,8 +240,8 @@ const ProductList: React.FC = () => {
               <div className="text-center py-12 text-red-500">{error}</div>
             ) : (
               <div className={`grid gap-6 ${viewMode === 'grid'
-                  ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                  : 'grid-cols-1'
+                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                : 'grid-cols-1'
                 }`}>
                 {products.map((product) => {
                   const mappedProduct = {

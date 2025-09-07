@@ -64,10 +64,10 @@ const VariantEdit: React.FC = () => {
         // Set color values
         const colorCode = typeof variant.color === 'object' ? variant.color.code : variant.color || '#000000';
         const colorNameValue = typeof variant.color === 'object' ? variant.color.name : '';
-        
+
         setColorValue(colorCode);
         setColorName(colorNameValue);
-        
+
         form.setFieldsValue({
           name: variant.name || '',
           sku: variant.sku || '',
@@ -317,11 +317,11 @@ const VariantEdit: React.FC = () => {
               <Col span={12}>
                 <Form.Item label="Màu sắc">
                   <div className="space-y-2">
-                    <ColorPicker 
+                    <ColorPicker
                       value={colorValue}
                       onChange={(color, hex) => {
                         setColorValue(hex || '#000000');
-                        form.setFieldsValue({ 
+                        form.setFieldsValue({
                           color: { code: hex || '#000000', name: colorName || '' },
                           colorName: colorName || ''
                         });
@@ -330,11 +330,11 @@ const VariantEdit: React.FC = () => {
                       size="middle"
                     />
                     <Form.Item name="colorName" noStyle>
-                      <Input 
-                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)" 
+                      <Input
+                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
                         onChange={(e) => {
                           setColorName(e.target.value);
-                          form.setFieldsValue({ 
+                          form.setFieldsValue({
                             color: { code: colorValue || '#000000', name: e.target.value }
                           });
                         }}
@@ -344,8 +344,13 @@ const VariantEdit: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label="Kích thước" name="size">
-                  <Input placeholder="VD: M" />
+                <Form.Item label="Kích thước (cm)" name="size">
+                  <InputNumber
+                    placeholder="Kích thước (cm)"
+                    min={1}
+                    addonAfter="cm"
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>

@@ -217,9 +217,9 @@ const ProductEdit: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!id) return
-    
-    // Validate variants using utility function
-    const validation = validateAllVariants(variants)
+
+    // Validate variants using utility function (isEdit = true để không yêu cầu ảnh)
+    const validation = validateAllVariants(variants, true)
     if (!validation.isValid) {
       message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
       return
@@ -285,7 +285,7 @@ const ProductEdit: React.FC = () => {
         name: values.name,
         slug: slugify(values.name, { lower: true, strict: true }),
         description: values.description,
-        images: images.filter((img) => img.trim() !== ""),
+        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : images.filter((img) => img.trim() !== ""),
         tags: values.tags || [],
         warranty: values.warranty,
         brand: getId(values.brand),

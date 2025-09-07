@@ -6,42 +6,44 @@ import {
   FaPlus,
   FaArrowLeft,
   FaLock,
-  FaTruck,
   FaShieldAlt,
-  FaCreditCard,
 } from "react-icons/fa";
 import ProductCard from "../../components/client/ProductCard";
 import { useCart } from "../../contexts/CartContext";
-import cartApi, { getTaxConfig } from "../../services/cartApi";
+import { getTaxConfig } from "../../services/cartApi";
 import { getAvailableCoupons, getUsedCoupons, applyCoupon, removeCoupon, Coupon } from "../../services/couponApi";
 import { Product } from "../../interfaces/Product";
-import { Modal, Button, Image, message, Input, Select, Divider, Radio } from "antd";
+import { Modal, Button, Image, message, Input, Radio } from "antd";
 import {
   calculateDisplayPrice,
-  calculateOriginalPrice,
   calculateSubtotal,
   calculateTotalSavings
 } from "../../utils/priceUtils";
 
 const Cart: React.FC = () => {
-  const { state, updateQuantity, removeFromCart, clearCart, loadCart } =
+  const { state, updateQuantity, removeFromCart, loadCart } =
     useCart();
   const cartItems = state.items;
+
+  // Debug log để kiểm tra component mount
+  console.log('🛒 Cart component mounted');
+
   useEffect(() => {
     loadCart();
   }, []);
 
   // Debug: Log mỗi khi cartItems thay đổi (only in development)
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       // Removed console.log to reduce noise
     }
   }, [cartItems]);
 
   // Debug: Log subtotal mỗi khi nó thay đổi (only in development)
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development' && cartItems.length > 0) {
-      const currentSubtotal = cartItems.reduce((sum, item) => {
+    if (import.meta.env.DEV && cartItems.length > 0) {
+      // Debug: Calculate current subtotal
+      cartItems.reduce((sum, item) => {
         const price = calculateDisplayPrice(item);
         return sum + (price * item.quantity);
       }, 0);
@@ -86,7 +88,7 @@ const Cart: React.FC = () => {
     };
     fetchRecommended();
   }, []);
-  
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
@@ -100,10 +102,10 @@ const Cart: React.FC = () => {
   const [promoCode, setPromoCode] = useState("");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
-  const [usedCoupons, setUsedCoupons] = useState<Coupon[]>([]);
+  const [, setUsedCoupons] = useState<Coupon[]>([]);
   const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<Coupon | null>(null);
   const [appliedShippingCoupon, setAppliedShippingCoupon] = useState<Coupon | null>(null);
-  const [loadingCoupons, setLoadingCoupons] = useState(false);
+  const [, setLoadingCoupons] = useState(false);
   const [isCouponModalVisible, setIsCouponModalVisible] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState(0.08);
@@ -112,7 +114,7 @@ const Cart: React.FC = () => {
   useEffect(() => {
     getTaxConfig()
       .then((cfg) => setTaxRate(cfg.rate))
-      .catch((error) => {
+      .catch(() => {
         // Silently handle error - use default tax rate
         setTaxRate(0.08); // Default tax rate
       });
@@ -121,8 +123,9 @@ const Cart: React.FC = () => {
   // Tính toán subtotal và savings chỉ cho các sản phẩm được chọn
   const selectedCartItems = cartItems.filter(item => selectedItems.has(item._id));
   const subtotal = calculateSubtotal(selectedCartItems);
+
   const savings = calculateTotalSavings(selectedCartItems);
-  
+
   // Tính toán giảm giá từ coupon
   let couponDiscount = 0;
   if (appliedDiscountCoupon) {
@@ -138,7 +141,7 @@ const Cart: React.FC = () => {
       couponDiscount = Math.min(discountValue, subtotal);
     }
   }
-  
+
   const shipping = subtotal > 500000 || appliedShippingCoupon ? 0 : 30000;
   const tax = (subtotal - couponDiscount) * taxRate;
   const total = subtotal - couponDiscount + shipping + tax;
@@ -161,10 +164,10 @@ const Cart: React.FC = () => {
           getAvailableCoupons(),
           getUsedCoupons()
         ]);
-        
+
         setAvailableCoupons(availableResponse.coupons || []);
         setUsedCoupons(usedResponse.coupons || []);
-      } catch (error) {
+      } catch (error: any) {
         // Silently handle error - set server offline status
         if (error.message === 'Network Error') {
           setServerOnline(false);
@@ -176,7 +179,7 @@ const Cart: React.FC = () => {
         setLoadingCoupons(false);
       }
     };
-    
+
     loadCoupons();
   }, []);
 
@@ -228,7 +231,7 @@ const Cart: React.FC = () => {
       const selectedSubtotal = cartItems
         .filter(item => selectedItems.has(item._id))
         .reduce((sum, item) => sum + (calculateDisplayPrice(item) * item.quantity), 0);
-      
+
       const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
       if (selectedSubtotal < minAmount) {
         message.warning(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
@@ -242,7 +245,7 @@ const Cart: React.FC = () => {
       } else {
         message.error(result.message || "Không thể áp dụng mã giảm giá");
       }
-    } catch (error) {
+    } catch {
       message.error("Có lỗi xảy ra khi áp dụng mã giảm giá");
     }
   };
@@ -268,7 +271,7 @@ const Cart: React.FC = () => {
       const selectedSubtotal = cartItems
         .filter(item => selectedItems.has(item._id))
         .reduce((sum, item) => sum + (calculateDisplayPrice(item) * item.quantity), 0);
-      
+
       const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
       if (selectedSubtotal < minAmount) {
         message.warning(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
@@ -282,7 +285,7 @@ const Cart: React.FC = () => {
       } else {
         message.error(result.message || "Không thể áp dụng mã vận chuyển");
       }
-    } catch (error) {
+    } catch {
       message.error("Có lỗi xảy ra khi áp dụng mã vận chuyển");
     }
   };
@@ -293,7 +296,7 @@ const Cart: React.FC = () => {
         await removeCoupon(appliedDiscountCoupon._id);
         setAppliedDiscountCoupon(null);
         message.info("Đã hủy áp dụng mã giảm giá");
-      } catch (error) {
+      } catch {
         message.error("Có lỗi xảy ra khi hủy mã giảm giá");
       }
     }
@@ -305,7 +308,7 @@ const Cart: React.FC = () => {
         await removeCoupon(appliedShippingCoupon._id);
         setAppliedShippingCoupon(null);
         message.info("Đã hủy áp dụng mã vận chuyển");
-      } catch (error) {
+      } catch {
         message.error("Có lỗi xảy ra khi hủy mã vận chuyển");
       }
     }
@@ -393,14 +396,28 @@ const Cart: React.FC = () => {
                 <div className="divide-y divide-gray-200">
                   {cartItems.map((item) => {
                     const variant = item.variantInfo;
-                    const displayName = variant?.name || item.product.name;
+                    const displayName = item.product.name; // Luôn hiển thị tên sản phẩm cha
                     const displayImage = variant?.images?.[0] || item.product.images?.[0] || "/placeholder.svg";
+
+                    // Sử dụng calculateDisplayPrice để đảm bảo tính toán đúng
                     const displayPrice = calculateDisplayPrice(item);
-                    const displayOldPrice = calculateOriginalPrice(item);
+
+                    // Fallback: Nếu variantInfo rỗng, tính giá từ product.variants
+                    let actualDisplayPrice = displayPrice;
+                    if (!item.variantInfo && item.variantId && (item.product as any).variants) {
+                      const variant = (item.product as any).variants.find((v: any) => v._id.toString() === item.variantId?.toString());
+                      if (variant) {
+                        actualDisplayPrice = variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price;
+                      }
+                    }
+
+                    const displayOldPrice = variant?.price || item.product.price;
+
+
                     const displayStock = variant?.stock ?? item.product.stock;
-                    const displayColor = variant?.color?.code || variant?.color?.name || item.product.color?.code || item.product.color?.name || null;
-                    const displaySize = variant?.size || item.product.size || null;
-                    const displaySKU = variant?.sku || item.product.sku || null;
+                    const displayColor = variant?.color?.code || variant?.color?.name || null;
+                    const displaySize = variant?.size || null;
+                    const displaySKU = variant?.sku || null;
 
                     return (
                       <div key={item._id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
@@ -426,22 +443,35 @@ const Cart: React.FC = () => {
                                   className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg"
                                 />
                               </div>
-                              
+
                               {/* Product Info */}
                               <div className="flex-1 min-w-0">
                                 <h3 className="text-xs sm:text-sm font-semibold text-gray-900 truncate">
                                   {item.product.name}
                                 </h3>
-                                
+
                                 {/* Variant Info */}
-                                {variant?.name && (
+                                {item.variantInfo && item.variantInfo.name && item.variantInfo.name.trim() && (
                                   <div className="mt-1">
-                                    <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                      {variant.name}
+                                    <span className="text-xs text-gray-600 font-medium">
+                                      {item.variantInfo.name}
                                     </span>
                                   </div>
                                 )}
-                                
+
+                                {/* Fallback: Hiển thị variant info từ product.variants nếu variantInfo rỗng */}
+                                {(!item.variantInfo || !item.variantInfo.name) && item.variantId && (item.product as any).variants && (
+                                  <div className="mt-1">
+                                    <span className="text-xs text-gray-600 font-medium">
+                                      {(() => {
+                                        const variant = (item.product as any).variants.find((v: any) => v._id.toString() === item.variantId?.toString());
+                                        return variant ? variant.name : '';
+                                      })()}
+                                    </span>
+                                  </div>
+                                )}
+
+
                                 {/* View Details Button */}
                                 <div className="mt-2">
                                   <button
@@ -451,7 +481,7 @@ const Cart: React.FC = () => {
                                     Xem chi tiết
                                   </button>
                                 </div>
-                                
+
                                 {/* Product Options - Hidden on mobile */}
                                 <div className="mt-2 flex flex-wrap gap-2 hidden sm:flex">
                                   {displayColor && (
@@ -543,7 +573,7 @@ const Cart: React.FC = () => {
                           <div className="col-span-2 text-right hidden md:block">
                             <div className="space-y-1">
                               <div className="text-sm font-semibold text-gray-900">
-                                {formatPrice(displayPrice)}
+                                {formatPrice(actualDisplayPrice)}
                               </div>
                               {displayOldPrice && displayOldPrice !== displayPrice && (
                                 <div className="text-xs text-gray-500 line-through">
@@ -556,16 +586,16 @@ const Cart: React.FC = () => {
                           {/* Total */}
                           <div className="col-span-2 text-right">
                             <div className="text-xs sm:text-sm font-bold text-gray-900">
-                              {formatPrice(displayPrice * item.quantity)}
+                              {formatPrice(actualDisplayPrice * item.quantity)}
                             </div>
                             {displayOldPrice && displayOldPrice !== displayPrice && (
                               <div className="text-xs text-green-600">
-                                Tiết kiệm {formatPrice((displayOldPrice - displayPrice) * item.quantity)}
+                                Tiết kiệm {formatPrice((displayOldPrice - actualDisplayPrice) * item.quantity)}
                               </div>
                             )}
                             {/* Show price per item on mobile */}
                             <div className="text-xs text-gray-500 md:hidden">
-                              {formatPrice(displayPrice)}/cái
+                              {formatPrice(actualDisplayPrice)}/cái
                             </div>
                           </div>
 
@@ -605,20 +635,18 @@ const Cart: React.FC = () => {
                 </div>
 
                 {/* Debug: Hiển thị chi tiết tính toán tạm tính */}
-                {process.env.NODE_ENV === 'development' && (
+                {import.meta.env.DEV && (
                   <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
                     <div className="font-medium mb-1">🔍 Chi tiết tạm tính (chỉ sản phẩm được chọn):</div>
                     {selectedCartItems.map((item, index) => {
+                      const variant = item.variantInfo;
                       const price = calculateDisplayPrice(item);
                       const total = price * item.quantity;
+                      const variantName = variant?.name || '';
+
                       return (
                         <div key={index} className="ml-2 mb-1">
-                          • {item.product.name}: {formatPrice(price)} × {item.quantity} = {formatPrice(total)}
-                          <div className="ml-4 text-xs text-gray-400">
-                            Price Source: {item.variantInfo?.price ? 'Variant' : 'Product'} |
-                            Variant Price: {item.variantInfo?.price || 'N/A'} |
-                            Product Price: {item.product.price}
-                          </div>
+                          • {item.product.name}{variantName ? ` (${variantName})` : ''}: {formatPrice(price)} × {item.quantity} = {formatPrice(total)}
                         </div>
                       );
                     })}
@@ -730,7 +758,7 @@ const Cart: React.FC = () => {
               {/* Coupon Section */}
               <div className="mb-4 sm:mb-6">
                 <div className="text-gray-600 text-sm font-medium mb-3">MÃ GIẢM GIÁ</div>
-                
+
                 {/* Coupon Button */}
                 <button
                   onClick={() => setIsCouponModalVisible(true)}
@@ -764,16 +792,15 @@ const Cart: React.FC = () => {
                     },
                   });
                 }}
-                className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 mb-3 sm:mb-4 text-sm sm:text-base ${
-                  selectedItems.size === 0
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                }`}
+                className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 mb-3 sm:mb-4 text-sm sm:text-base ${selectedItems.size === 0
+                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  }`}
               >
                 <FaLock className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>
-                  {selectedItems.size === 0 
-                    ? "CHỌN SẢN PHẨM ĐỂ THANH TOÁN" 
+                  {selectedItems.size === 0
+                    ? "CHỌN SẢN PHẨM ĐỂ THANH TOÁN"
                     : `THANH TOÁN (${selectedItems.size} sản phẩm)`
                   }
                 </span>
@@ -898,7 +925,7 @@ const Cart: React.FC = () => {
                           <td className="py-2 px-2 bg-gray-50 font-medium text-gray-700">
                             {key}
                           </td>
-                          <td className="py-2 px-2 text-gray-600">{value}</td>
+                          <td className="py-2 px-2 text-gray-600">{String(value)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1032,11 +1059,10 @@ const Cart: React.FC = () => {
                 .map((coupon) => (
                   <div
                     key={coupon._id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedCouponId === coupon._id
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedCouponId === coupon._id
+                      ? "border-orange-500 bg-orange-50"
+                      : "border-gray-200 hover:border-gray-300"
+                      }`}
                     onClick={() => setSelectedCouponId(coupon._id)}
                   >
                     <div className="flex items-start justify-between">
@@ -1047,25 +1073,25 @@ const Cart: React.FC = () => {
                           </span>
                           <span className="text-xs text-gray-500">x10</span>
                         </div>
-                        
+
                         <div className="text-sm font-medium text-gray-900 mb-1">
                           {coupon.name}
                         </div>
-                        
+
                         <div className="text-xs text-gray-600 space-y-1">
                           <div>Giảm tối đa {formatPrice(coupon.maxDiscount || coupon.maxDiscountValue || coupon.discount || coupon.value || 0)}</div>
                           <div>Đơn tối thiểu {formatPrice(coupon.minAmount || coupon.minOrderValue || 0)}</div>
                           <div className="text-green-600 font-medium">TOÀN NGÀNH HÀNG</div>
                           <div>HSD: {new Date(coupon.endDate || coupon.expiryDate || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')}</div>
                         </div>
-                        
+
                         <div className="mt-2">
                           <a href="#" className="text-xs text-blue-500 hover:underline">
                             Điều kiện
                           </a>
                         </div>
                       </div>
-                      
+
                       <div className="ml-4">
                         <Radio
                           checked={selectedCouponId === coupon._id}
@@ -1073,7 +1099,7 @@ const Cart: React.FC = () => {
                         />
                       </div>
                     </div>
-                    
+
                     {selectedItems.size === 0 && (
                       <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded p-2">
                         <div className="text-xs text-yellow-800">
@@ -1095,11 +1121,10 @@ const Cart: React.FC = () => {
                 .map((coupon) => (
                   <div
                     key={coupon._id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedCouponId === coupon._id
-                        ? "border-orange-500 bg-orange-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedCouponId === coupon._id
+                      ? "border-orange-500 bg-orange-50"
+                      : "border-gray-200 hover:border-gray-300"
+                      }`}
                     onClick={() => setSelectedCouponId(coupon._id)}
                   >
                     <div className="flex items-start justify-between">
@@ -1110,15 +1135,15 @@ const Cart: React.FC = () => {
                           </span>
                           <span className="text-xs text-gray-500">x10</span>
                         </div>
-                        
+
                         <div className="text-sm font-medium text-gray-900 mb-1">
                           {coupon.name}
                         </div>
-                        
+
                         <div className="text-xs text-gray-600 space-y-1">
                           <div>
-                            {coupon.type === "percentage" 
-                              ? `Giảm ${coupon.discount || coupon.value || 0}%` 
+                            {coupon.type === "percentage"
+                              ? `Giảm ${coupon.discount || coupon.value || 0}%`
                               : `Giảm ${formatPrice(coupon.discount || coupon.value || 0)}`
                             }
                           </div>
@@ -1126,14 +1151,14 @@ const Cart: React.FC = () => {
                           <div className="text-blue-600 font-medium">TOÀN NGÀNH HÀNG</div>
                           <div>HSD: {new Date(coupon.endDate || coupon.expiryDate || Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')}</div>
                         </div>
-                        
+
                         <div className="mt-2">
                           <a href="#" className="text-xs text-blue-500 hover:underline">
                             Điều kiện
                           </a>
                         </div>
                       </div>
-                      
+
                       <div className="ml-4">
                         <Radio
                           checked={selectedCouponId === coupon._id}
@@ -1141,7 +1166,7 @@ const Cart: React.FC = () => {
                         />
                       </div>
                     </div>
-                    
+
                     {selectedItems.size === 0 && (
                       <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded p-2">
                         <div className="text-xs text-yellow-800">

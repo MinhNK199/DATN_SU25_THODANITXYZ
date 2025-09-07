@@ -8,6 +8,18 @@ export interface CartItem {
     salePrice?: number;
     images?: string[];
     stock: number;
+    variants?: Array<{
+      _id: string;
+      name: string;
+      price: number;
+      salePrice?: number;
+      stock: number;
+      images?: string[];
+      sku?: string;
+      color?: { name?: string; code?: string };
+      size?: number;
+      specifications?: Record<string, string>;
+    }>;
   };
   variantId?: string;
   variantInfo?: {
@@ -33,38 +45,32 @@ export interface CartItem {
 export const calculateDisplayPrice = (item: CartItem): number => {
   const variant = item.variantInfo;
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 calculateDisplayPrice debug:', {
-      productName: item.product.name,
-      variantId: item.variantId,
-      hasVariantInfo: !!variant,
-      variantPrice: variant?.price,
-      variantSalePrice: variant?.salePrice,
-      productPrice: item.product.price,
-      productSalePrice: item.product.salePrice
-    });
-  }
-
   // Nếu có biến thể, LUÔN ưu tiên giá của biến thể
   if (variant && variant.price && variant.price > 0) {
     // Nếu biến thể có giá sale và giá sale thấp hơn giá gốc, dùng giá sale
     if (variant.salePrice && variant.salePrice > 0 && variant.salePrice < variant.price) {
-      console.log('✅ Using variant sale price:', variant.salePrice);
       return variant.salePrice;
     }
     // Nếu không có giá sale hoặc giá sale không hợp lệ, dùng giá gốc của biến thể
-    console.log('✅ Using variant price:', variant.price);
     return variant.price;
+  }
+
+  // Fallback: Nếu variantInfo rỗng nhưng có variantId, tìm trong product.variants
+  if (!variant && item.variantId && item.product.variants) {
+    const foundVariant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
+    if (foundVariant && foundVariant.price && foundVariant.price > 0) {
+      if (foundVariant.salePrice && foundVariant.salePrice > 0 && foundVariant.salePrice < foundVariant.price) {
+        return foundVariant.salePrice;
+      }
+      return foundVariant.price;
+    }
   }
 
   // Nếu không có biến thể hoặc biến thể không có giá, dùng giá sản phẩm
   if (item.product.salePrice && item.product.salePrice > 0 && item.product.salePrice < item.product.price) {
-    console.log('⚠️ Using product sale price:', item.product.salePrice);
     return item.product.salePrice;
   }
 
-  console.log('⚠️ Using product price:', item.product.price);
   return item.product.price;
 };
 
@@ -73,8 +79,14 @@ export const calculateDisplayPrice = (item: CartItem): number => {
  */
 export const calculateOriginalPrice = (item: CartItem): number => {
   const variant = item.variantInfo;
-  // Ưu tiên giá gốc của biến thể, nếu không có thì dùng giá gốc của sản phẩm
-  return variant?.price || item.product.price;
+
+  // Nếu có biến thể, dùng giá gốc của biến thể
+  if (variant && variant.price && variant.price > 0) {
+    return variant.price;
+  }
+
+  // Nếu không có biến thể, dùng giá gốc của sản phẩm
+  return item.product.price;
 };
 
 /**
@@ -110,4 +122,35 @@ export const calculateSubtotal = (items: CartItem[]): number => {
  */
 export const calculateTotalSavings = (items: CartItem[]): number => {
   return items.reduce((sum, item) => sum + calculateSavings(item), 0);
+};
+
+/**
+ * Format thông tin biến thể để hiển thị (chỉ khi không có variantInfo.name)
+ */
+export const formatVariantInfo = (item: CartItem): string => {
+  if (!item.variantInfo || item.variantInfo.name) return '';
+
+  const variant = item.variantInfo;
+  const parts: string[] = [];
+
+  // Thêm thông tin màu sắc nếu có
+  if (variant.color?.name) {
+    parts.push(`Màu: ${variant.color.name}`);
+  }
+
+  // Thêm thông tin dung lượng/kích thước nếu có
+  if (variant.size && variant.size > 0) {
+    parts.push(`Dung lượng: ${variant.size}GB`);
+  }
+
+  // Thêm các thông số khác từ specifications
+  if (variant.specifications) {
+    Object.entries(variant.specifications).forEach(([key, value]) => {
+      if (value && value.trim()) {
+        parts.push(`${key}: ${value}`);
+      }
+    });
+  }
+
+  return parts.join(', ');
 };

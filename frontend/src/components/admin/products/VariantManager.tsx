@@ -16,38 +16,38 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   // Validation functions
   const validateVariant = (variant: ProductVariant): { isValid: boolean; errors: string[] } => {
     const errors: string[] = []
-    
+
     if (!variant.name?.trim()) {
       errors.push("Tên biến thể không được để trống")
     }
-    
+
     if (!variant.sku?.trim()) {
       errors.push("SKU không được để trống")
     }
-    
+
     if (!variant.price || variant.price <= 0) {
       errors.push("Giá phải lớn hơn 0")
     }
-    
+
     if (variant.stock < 0) {
       errors.push("Tồn kho không được âm")
     }
-    
+
     if (!variant.length || variant.length <= 0) {
       errors.push("Chiều dài phải lớn hơn 0")
     }
-    
+
     if (!variant.width || variant.width <= 0) {
       errors.push("Chiều rộng phải lớn hơn 0")
     }
-    
+
     if (!variant.height || variant.height <= 0) {
       errors.push("Chiều cao phải lớn hơn 0")
     }
 
     // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
     //if ((!variant.images || variant.images.length === 0) && !variant.imageFile) {
-     // errors.push("Phải upload ít nhất 1 ảnh biến thể")
+    // errors.push("Phải upload ít nhất 1 ảnh biến thể")
     //}
     return {
       isValid: errors.length === 0,
@@ -128,7 +128,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       })),
     )
 
-  onVariantsChange(updatedVariants)
+    onVariantsChange(updatedVariants)
   }
 
   const removeVariant = (id: string) => {
@@ -189,7 +189,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   // Validate all variants
   const validateAllVariants = () => {
     const allErrors: { variantId: string; errors: string[] }[] = []
-    
+
     variants.forEach((variant, index) => {
       const validation = validateVariant(variant)
       if (!validation.isValid) {
@@ -199,7 +199,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
         })
       }
     })
-    
+
     return allErrors
   }
 
@@ -268,7 +268,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
 
       {variants.map((variant, index) => {
         const validation = validateVariant(variant)
-        
+
         return (
           <Card key={variant.id} className={`mb-4 ${!validation.isValid ? 'border-red-300 bg-red-50' : ''}`}>
             <div className="space-y-4">
@@ -401,7 +401,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                         options={COLOR_OPTIONS.map(color => ({
                           label: (
                             <div className="flex items-center gap-2">
-                              <div 
+                              <div
                                 className="w-4 h-4 rounded border"
                                 style={{ backgroundColor: color.code }}
                               />
@@ -421,13 +421,14 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 </Col>
                 <Col span={12}>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Size:</label>
+                    <label className="text-sm font-medium">Kích thước (cm):</label>
                     <InputNumber
-                      placeholder="Size (mm, cm, ...)"
+                      placeholder="Kích thước (cm)"
                       value={variant.size || undefined}
                       onChange={(value) => updateVariant(variant.id, "size", value || 0)}
                       min={1}
                       className="w-full"
+                      addonAfter="cm"
                       {...validatePositiveNumber(variant.size)}
                     />
                   </div>

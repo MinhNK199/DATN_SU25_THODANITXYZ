@@ -124,7 +124,7 @@ const Home: React.FC = () => {
                   key={category._id || index}
                   className="group cursor-pointer p-0 bg-transparent border-none text-left"
                   style={{ all: 'unset', cursor: 'pointer' }}
-                  onClick={() => navigate(`/products?category=${category._id || category.slug || category.name}`)}
+                  onClick={() => navigate(`/products?category=${category.slug || category._id}`)}
                 >
                   <div className="relative overflow-hidden rounded-2xl shadow-lg group-hover:shadow-2xl transition-all duration-300">
                     <img
