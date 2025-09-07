@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Table, Typography, Button, Space, Input, Select, Avatar, Tag, Modal, Tooltip, message, Row, Col, Badge, Switch } from 'antd';
+import { Card, Table, Typography, Button, Space, Input, Select, Avatar, Tag, Modal, Tooltip, message, Row, Col, Switch } from 'antd';
 import { PlusOutlined, DeleteOutlined, EyeOutlined, EditOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import { ColumnsType } from 'antd/es/table';
 import { debounce } from 'lodash';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
 import { variantApi } from './api';
 
 const { Title, Text } = Typography;
@@ -49,7 +48,6 @@ const VariantList: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [total, setTotal] = useState(0);
 
   // Fetch variants
   const fetchVariants = async () => {
@@ -71,7 +69,6 @@ const VariantList: React.FC = () => {
       const response = await variantApi.getVariants(params);
       setVariants(response.variants || []);
       setTotalPages(response.pages || 1);
-      setTotal(response.total || 0);
     } catch (error) {
       console.error('Error fetching variants:', error);
       message.error('Không thể tải danh sách biến thể');
@@ -92,7 +89,7 @@ const VariantList: React.FC = () => {
 
   useEffect(() => {
     fetchVariants();
-  }, [currentPage, searchTerm, selectedProduct, selectedStatus]);
+  }, [currentPage, searchTerm, selectedProduct, selectedStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchProducts();
@@ -162,9 +159,6 @@ const VariantList: React.FC = () => {
     }).format(price);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
-  };
 
   const debouncedSearch = debounce((value: string) => {
     setSearchTerm(value);
@@ -182,7 +176,15 @@ const VariantList: React.FC = () => {
             shape="square" 
             size={48} 
             src={record.images && record.images.length > 0 ? record.images[0] : undefined}
-            style={{ backgroundColor: typeof record.color === 'object' && record.color !== null ? record.color.code : (record.color || '#f0f0f0') }}
+            style={{ 
+              backgroundColor: typeof record.color === 'object' && record.color !== null 
+                ? record.color.code 
+                : (typeof record.color === 'string' ? record.color : '#f0f0f0')
+            }}
+            onError={() => {
+              console.error("Avatar image load error:", record.images?.[0]);
+              return false;
+            }}
           />
           <div style={{ display: 'flex', flexDirection: 'column', fontSize: 13 }}>
             <Text strong style={{ fontSize: 14 }}>{record.name}</Text>
@@ -195,14 +197,16 @@ const VariantList: React.FC = () => {
                       width: 14, 
                       height: 14, 
                       borderRadius: '50%', 
-                      backgroundColor: typeof record.color === 'object' && record.color !== null ? record.color.code : (record.color || '#000000'),
+                      backgroundColor: typeof record.color === 'object' && record.color !== null 
+                        ? record.color.code 
+                        : (typeof record.color === 'string' ? record.color : '#000000'),
                       border: '1px solid #d9d9d9'
                     }} 
                   />
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {typeof record.color === 'object' && record.color !== null && 'name' in record.color
                       ? record.color.name || record.color.code
-                      : record.color}
+                      : (typeof record.color === 'string' ? record.color : 'N/A')}
                   </Text>
                 </div>
               )}

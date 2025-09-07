@@ -154,7 +154,7 @@ const ProductAddPage: React.FC = () => {
 
       // Biến thể
       formData.append("variants", JSON.stringify(variants.map((v) => {
-        const { images, imageFile, ...rest } = v;
+        const { imageFile, ...rest } = v;
         return rest;
       })))
 
