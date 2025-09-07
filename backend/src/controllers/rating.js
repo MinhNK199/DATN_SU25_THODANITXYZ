@@ -42,109 +42,74 @@ export const getRatings = async(req, res) => {
     }
 };
 
-export const createRating = async(req, res) => {
-    try {
-        const { productId, rating, comment, images } = req.body;
-        const userId = req.user._id;
+// Tạo đánh giá
+export const createRating = async (req, res) => {
+  try {
+    const { productId, orderId, rating, comment, images } = req.body;
+    const userId = req.user._id;
 
-        // Kiểm tra ObjectId hợp lệ
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return res.status(400).json({
-                error: {
-                    code: 'INVALID_PRODUCT_ID',
-                    message: 'ID sản phẩm không hợp lệ'
-                }
-            });
-        }
-
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({
-                error: {
-                    code: 'PRODUCT_NOT_FOUND',
-                    message: 'Sản phẩm không tồn tại'
-                }
-            });
-        }
-
-        // Kiểm tra user đã mua sản phẩm chưa
-        const hasPurchased = await Order.exists({
-            user: userId,
-            'orderItems.product': productId,
-
-            status: { $in: ['completed', 'delivered'] } // chỉ tính đơn đã hoàn thành/giao hàng
-        });
-        if (!hasPurchased) {
-            return res.status(403).json({
-                error: {
-                    code: 'NOT_PURCHASED',
-                    message: 'Bạn chỉ có thể đánh giá sản phẩm đã mua'
-                }
-            });
-        }
-
-        const existed = await Rating.findOne({ userId, productId });
-        if (existed) {
-            return res.status(400).json({
-                error: {
-                    code: 'ALREADY_RATED',
-                    message: 'Bạn đã đánh giá sản phẩm này rồi'
-                }
-            });
-        }
-
-        if (comment && containsBadWords(comment)) {
-            return res.status(400).json({
-                error: {
-                    code: 'BAD_WORDS_DETECTED',
-                    message: 'Comment chứa từ ngữ không phù hợp'
-                }
-            });
-        }
-
-        const filteredComment = comment ? filterBadWords(comment) : comment;
-
-        if (rating < 1 || rating > 5) {
-            return res.status(400).json({
-                error: {
-                    code: 'INVALID_RATING',
-                    message: 'Rating phải từ 1 đến 5'
-                }
-            });
-        }
-
-        const newRating = new Rating({
-            userId,
-            productId,
-            rating,
-            comment: filteredComment,
-            images
-        });
-
-        await newRating.save();
-
-        const productRatings = await Rating.find({ productId });
-        const avgRating = productRatings.reduce((acc, curr) => acc + curr.rating, 0) / productRatings.length;
-
-        await Product.findByIdAndUpdate(productId, {
-            averageRating: avgRating,
-            numReviews: productRatings.length
-        });
-
-        res.status(201).json({
-            data: newRating,
-            message: 'Tạo đánh giá thành công'
-        });
-    } catch (error) {
-        res.status(500).json({
-            error: {
-                code: 'INTERNAL_SERVER_ERROR',
-                message: error.message
-            }
-        });
+    if (!mongoose.Types.ObjectId.isValid(productId) || !mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
     }
+
+    // kiểm tra user có mua trong order này chưa
+    const order = await Order.findOne({
+      _id: orderId,
+      user: userId,
+      'orderItems.product': productId,
+      status: { $in: ['completed', 'delivered'] }
+    });
+    if (!order) {
+      return res.status(403).json({ message: "Bạn chỉ có thể đánh giá sản phẩm trong đơn đã mua" });
+    }
+
+    // kiểm tra đã đánh giá trong order này chưa
+    const existed = await Rating.findOne({ userId, productId, orderId });
+    if (existed) {
+      return res.status(400).json({ message: "Bạn đã đánh giá sản phẩm này trong đơn hàng này rồi" });
+    }
+
+    const newRating = new Rating({
+      userId,
+      productId,
+      orderId,
+      rating,
+      comment,
+      images
+    });
+
+    await newRating.save();
+
+    res.status(201).json({
+      data: newRating,
+      message: 'Tạo đánh giá thành công'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-// ...existing code...
+
+
+// Check user đã rating chưa
+export const checkUserRating = async (req, res) => {
+  try {
+    const { productId, orderId } = req.query;
+    const userId = req.user._id;
+
+    if (!mongoose.Types.ObjectId.isValid(productId) || !mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ message: "ID không hợp lệ" });
+    }
+
+    const rating = await Rating.findOne({ userId, productId, orderId });
+
+    res.json({
+      hasRated: !!rating,
+      rating,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // Cập nhật đánh giá
 export const updateRating = async(req, res) => {
@@ -227,6 +192,7 @@ export const updateRating = async(req, res) => {
         });
     }
 };
+
 
 // Xóa đánh giá
 export const deleteRating = async(req, res) => {

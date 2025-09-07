@@ -1,24 +1,26 @@
 import { Router } from "express";
 import { protect } from "../middlewares/authMiddleware.js";
-import { analyzeSentiment, createRating, deleteRating, getRatings, replyRating, updateRating } from "../controllers/rating.js";
+import { analyzeSentiment, createRating, deleteRating, getRatings, replyRating, checkUserRating, updateRating } from "../controllers/rating.js";
 
-const router = Router();
+const routerRating = Router();
 
 // Lấy danh sách đánh giá
-router.get("/", getRatings);
+routerRating.get("/", getRatings);
 
 // Tạo đánh giá mới (yêu cầu đăng nhập)
-router.post("/", protect, createRating);
+routerRating.post("/", protect, createRating);
 
 // Cập nhật đánh giá (yêu cầu đăng nhập)
-router.put("/:id", protect, updateRating);
+routerRating.put("/:id", protect, updateRating);
+
+routerRating.get('/check', protect, checkUserRating);
 
 // Xóa đánh giá (yêu cầu đăng nhập)
-router.delete("/:id", protect, deleteRating);
+routerRating.delete("/:id", protect, deleteRating);
 
 // Phân tích cảm xúc đánh giá
-router.post("/analyze-sentiment", analyzeSentiment);
+routerRating.post("/analyze-sentiment", analyzeSentiment);
 
-router.post("/:id/reply", protect, replyRating);
+routerRating.post("/:id/reply", protect, replyRating);
 
-export default router;
+export default routerRating;

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
+import RatingForm from "./components/RatingForm";
 import toast from "react-hot-toast";
 
 interface OrderItem {
@@ -80,22 +81,9 @@ const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [reviews, setReviews] = useState<Record<string, any[]>>({});
-  const [activeReviewOrderId, setActiveReviewOrderId] = useState<string | null>(
-    null
-  );
-  const [reviewData, setReviewData] = useState<{
-    rating: number;
-    comment: string;
-    images: File[];
-  }>({
-    rating: 0,
-    comment: "",
-    images: [],
-  });
-
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const ordersPerPage = 5;
   const navigate = useNavigate();
 
@@ -116,32 +104,11 @@ const Orders = () => {
       const response = await axiosInstance.get("/order/myorders");
       if (Array.isArray(response.data)) {
         setOrders(response.data);
-
-        const reviewData: Record<string, any[]> = {};
-
-        await Promise.all(
-          response.data.map(async (order: Order) => {
-            const oid = order._id.toString(); // 🔑 convert luôn thành string
-            try {
-              const res = await axiosInstance.get(`/order/${oid}/reviews`);
-              reviewData[oid] =
-                res.data.reviews?.filter(
-                  (r: any) => r.user?._id === localStorage.getItem("userId")
-                ) || [];
-            } catch {
-              reviewData[oid] = [];
-            }
-          })
-        );
-
-        setReviews(reviewData); // luôn là mảng
       } else {
         setOrders([]);
-        setReviews({});
       }
     } catch (error) {
       setOrders([]);
-      setReviews({});
     } finally {
       setIsLoading(false);
     }
@@ -398,110 +365,6 @@ const Orders = () => {
     }
   };
 
-  const handleReviewOrder = (orderId: string) => {
-    if (activeReviewOrderId === orderId) {
-      setActiveReviewOrderId(null);
-    } else {
-      setActiveReviewOrderId(orderId);
-      fetchReviews(orderId); // <-- thêm dòng này
-      if (!reviews[orderId] || reviews[orderId].length === 0) {
-        setReviewData({ rating: 0, comment: "", images: [] });
-      }
-    }
-  };
-
-  const submitReview = async (orderId: string) => {
-    try {
-      const formData = new FormData();
-      formData.append("note", reviewData.comment); // sửa note
-      formData.append("rating", reviewData.rating.toString());
-      reviewData.images.forEach((img) => formData.append("images", img));
-
-      const res = await axiosInstance.post(
-        `/order/${orderId}/review`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      toast.success("Đánh giá thành công");
-
-      setReviews((prev) => ({
-        ...prev,
-        [orderId]: res.data.reviews,
-      }));
-    } catch (err: any) {
-      console.error("Lỗi gửi đánh giá:", err); // log rõ ràng
-      toast.error(err.response?.data?.message || "Gửi đánh giá thất bại");
-    }
-  };
-
-  const fetchReviews = async (orderId: string) => {
-    try {
-      const userId = localStorage.getItem("userId");
-      const res = await axiosInstance.get(
-        `/order/${orderId}/reviews?userId=${userId}`
-      );
-      setReviews((prev) => ({
-        ...prev,
-        [orderId]: res.data.reviews, // mảng review của user hiện tại
-      }));
-    } catch (err) {
-      console.error("Lỗi khi lấy review:", err);
-    }
-  };
-
-  const StarRating = ({
-    rating,
-    onChange,
-  }: {
-    rating: number;
-    onChange: (val: number) => void;
-  }) => {
-    return (
-      <div className="flex space-x-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <svg
-            key={star}
-            onClick={() => onChange(star)}
-            xmlns="http://www.w3.org/2000/svg"
-            className={`w-6 h-6 cursor-pointer ${
-              star <= rating ? "text-yellow-400" : "text-gray-300"
-            }`}
-            fill={star <= rating ? "currentColor" : "none"}
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.518 4.674a1 1 0 00.95.69h4.908c.969 0 1.371 1.24.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.921-.755 1.688-1.54 1.118l-3.97-2.883a1 1 0 00-1.176 0l-3.97 2.883c-.784.57-1.838-.197-1.539-1.118l1.518-4.674a1 1 0 00-.364-1.118L2.083 10.1c-.783-.57-.38-1.81.588-1.81h4.908a1 1 0 00.95-.69l1.52-4.673z"
-            />
-          </svg>
-        ))}
-      </div>
-    );
-  };
-
-  const handleReviewImagesChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    orderId: string
-  ) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    setReviewData((prev) => ({
-      ...prev,
-      images: [...(prev.images || []), ...files],
-    }));
-  };
-
-  // khi xóa ảnh preview
-  const removeReviewImage = (index: number, orderId: string) => {
-    setReviewData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -621,35 +484,39 @@ const Orders = () => {
                 </div>
               </div>
 
-              {/* Items */}
+              {/* Items (chỉ preview) */}
               <div className="px-6 py-4 space-y-4">
                 {order.orderItems?.slice(0, 2).map((item, index) => (
                   <div
                     key={index}
-                    className="flex items-center space-x-4 border-b pb-3 last:border-0 last:pb-0"
+                    className="flex flex-col border-b pb-3 last:border-0 last:pb-0"
                   >
-                    <img
-                      src={item.image || "/placeholder-product.png"}
-                      alt={item.name || "Sản phẩm"}
-                      className="w-16 h-16 object-cover rounded-md border"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src =
-                          "https://via.placeholder.com/64x64?text=IMG";
-                      }}
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{item.name}</h4>
-                      {item.variant && (
+                    <div className="flex items-center space-x-4">
+                      <img
+                        src={item.image || "/placeholder-product.png"}
+                        alt={item.name || "Sản phẩm"}
+                        className="w-16 h-16 object-cover rounded-md border"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "https://via.placeholder.com/64x64?text=IMG";
+                        }}
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900">
+                          {item.name}
+                        </h4>
+                        {item.variant && (
+                          <p className="text-sm text-gray-600">
+                            Phân loại: {item.variant.name}
+                          </p>
+                        )}
                         <p className="text-sm text-gray-600">
-                          Phân loại: {item.variant.name}
+                          Số lượng: {item.quantity} × {formatPrice(item.price)}
                         </p>
-                      )}
-                      <p className="text-sm text-gray-600">
-                        Số lượng: {item.quantity} × {formatPrice(item.price)}
-                      </p>
-                    </div>
-                    <div className="text-right font-medium text-gray-900">
-                      {formatPrice(item.price * item.quantity)}
+                      </div>
+                      <div className="text-right font-medium text-gray-900">
+                        {formatPrice(item.price * item.quantity)}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -661,7 +528,7 @@ const Orders = () => {
               </div>
 
               {/* Footer */}
-              <div className="bg-blue-50 px-6 py-4 border-t border-blue-200 flex justify-between items-center">
+              <div className="bg-blue-50 px-6 py-4 border-t border-blue-200 flex justify-between items-start sm:items-center">
                 <div className="text-sm text-gray-700">
                   <span>Giao đến: </span>
                   <span className="font-medium">
@@ -722,149 +589,36 @@ const Orders = () => {
                     </button>
                   )}
 
-                  {/* Nút đánh giá */}
-                  {["delivered_success", "completed"].includes(
-                    order.status
-                  ) && (
+                  {(order.status === "completed" ||
+                    order.status === "delivered_success") && (
                     <button
-                      onClick={() => handleReviewOrder(order._id)}
-                      className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm"
+                      onClick={() =>
+                        setExpandedOrderId(
+                          expandedOrderId === order._id ? null : order._id
+                        )
+                      }
+                      className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
                     >
-                      {reviews[order._id.toString()]?.length > 0
-                        ? "Xem đánh giá"
-                        : "Đánh giá đơn hàng"}
+                      {expandedOrderId === order._id
+                        ? "Ẩn đánh giá"
+                        : "Xem / Đánh giá sản phẩm"}
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Form hoặc hiển thị đánh giá */}
-              {activeReviewOrderId === order._id && (
-                <div className="mt-4 px-6 py-4 bg-gray-50 border-t border-gray-200 space-y-4">
-                  {reviews[order._id] && reviews[order._id].length > 0 ? (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Đánh giá của bạn
-                      </h3>
-                      {reviews[order._id].map((rev, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 border rounded mb-2 bg-white"
-                        >
-                          <div className="flex space-x-1 mb-2">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <svg
-                                key={star}
-                                xmlns="http://www.w3.org/2000/svg"
-                                className={`w-5 h-5 ${
-                                  star <= rev.rating
-                                    ? "text-yellow-400"
-                                    : "text-gray-300"
-                                }`}
-                                fill={
-                                  star <= rev.rating ? "currentColor" : "none"
-                                }
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.518 4.674a1 1 0 00.95.69h4.908c.969 0 1.371 1.24.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.921-.755 1.688-1.54 1.118l-3.97-2.883a1 1 0 00-1.176 0l-3.97 2.883c-.784.57-1.838-.197-1.539-1.118l1.518-4.674a1 1 0 00-.364-1.118L2.083 10.1c-.783-.57-.38-1.81.588-1.81h4.908a1 1 0 00.95-.69l1.52-4.673z"
-                                />
-                              </svg>
-                            ))}
-                          </div>
-                          <p className="text-gray-800 mb-2">{rev.note}</p>
-                          {rev.images?.length > 0 && (
-                            <div className="flex space-x-2">
-                              {rev.images.map((img: string, i: number) => (
-                                <img
-                                  key={i}
-                                  src={img}
-                                  alt="review-img"
-                                  className="w-20 h-20 object-cover rounded border"
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Đánh giá đơn hàng #{order.orderNumber}
-                      </h3>
-                      <StarRating
-                        rating={reviewData.rating}
-                        onChange={(val) =>
-                          setReviewData({ ...reviewData, rating: val })
-                        }
+              {/* RatingForm hiển thị khi mở */}
+              {expandedOrderId === order._id && (
+                <div className="px-6 py-4 bg-gray-200 border-t">
+                  {order.orderItems.map((item) => (
+                    <div key={item._id} className="mb-4">
+                      <p className="font-medium">{item.name}</p>
+                      <RatingForm
+                        productId={item.product!}
+                        orderId={order._id}
                       />
-                      <textarea
-                        placeholder="Viết cảm nhận của bạn..."
-                        value={reviewData.comment}
-                        onChange={(e) =>
-                          setReviewData({
-                            ...reviewData,
-                            comment: e.target.value,
-                          })
-                        }
-                        className="w-full border rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                        rows={3}
-                      />
-                      <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Thêm hình ảnh (tùy chọn)
-                        </label>
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          onChange={(e) =>
-                            handleReviewImagesChange(e, order._id)
-                          }
-                          className="mb-2"
-                        />
-                        <div className="flex space-x-2 mt-2">
-                          {reviewData.images.map((file, index) => (
-                            <div key={index} className="relative">
-                              <img
-                                src={URL.createObjectURL(file)}
-                                alt="preview"
-                                className="w-16 h-16 object-cover rounded border"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeReviewImage(index, order._id)
-                                }
-                                className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex space-x-3">
-                        <button
-                          onClick={() => submitReview(order._id)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                          Gửi đánh giá
-                        </button>
-                        <button
-                          onClick={() => setActiveReviewOrderId(null)}
-                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                        >
-                          Hủy
-                        </button>
-                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
