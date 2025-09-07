@@ -130,7 +130,7 @@ const VariantAdd: React.FC = () => {
       console.error('Error creating variant:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error details:', error.response?.data?.details);
-      
+
       if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
         message.error(`Lỗi validation:\n${error.response.data.details.join('\n')}`);
       } else {
@@ -209,9 +209,9 @@ const VariantAdd: React.FC = () => {
                     { required: true, message: 'Vui lòng nhập SKU' },
                     { min: 2, message: 'SKU phải từ 2 ký tự trở lên' },
                     { max: 50, message: 'SKU không được quá 50 ký tự' },
-                    { 
-                      pattern: /^[A-Za-z0-9\-_!@#$%^&*()]+$/, 
-                      message: 'SKU chỉ được chứa chữ cái, số và các ký tự: -_!@#$%^&*()' 
+                    {
+                      pattern: /^[A-Za-z0-9\-_!@#$%^&*()]+$/,
+                      message: 'SKU chỉ được chứa chữ cái, số và các ký tự: -_!@#$%^&*()'
                     }
                   ]}
                 >
@@ -284,11 +284,11 @@ const VariantAdd: React.FC = () => {
               <Col span={12}>
                 <Form.Item label="Màu sắc">
                   <div className="space-y-2">
-                    <ColorPicker 
+                    <ColorPicker
                       value={colorValue}
                       onChange={(color, hex) => {
                         setColorValue(hex || '#000000');
-                        form.setFieldsValue({ 
+                        form.setFieldsValue({
                           color: { code: hex || '#000000', name: colorName || '' },
                           colorName: colorName || ''
                         });
@@ -297,11 +297,11 @@ const VariantAdd: React.FC = () => {
                       size="middle"
                     />
                     <Form.Item name="colorName" noStyle>
-                      <Input 
-                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)" 
+                      <Input
+                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
                         onChange={(e) => {
                           setColorName(e.target.value);
-                          form.setFieldsValue({ 
+                          form.setFieldsValue({
                             color: { code: colorValue || '#000000', name: e.target.value }
                           });
                         }}
@@ -311,8 +311,13 @@ const VariantAdd: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label="Kích thước" name="size">
-                  <Input placeholder="VD: M" />
+                <Form.Item label="Kích thước (cm)" name="size">
+                  <InputNumber
+                    placeholder="Kích thước (cm)"
+                    min={1}
+                    addonAfter="cm"
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>

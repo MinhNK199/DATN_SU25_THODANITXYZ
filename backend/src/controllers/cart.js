@@ -18,11 +18,7 @@ export const getCart = async (req, res) => {
         const cart = await Cart.findOne({ user: req.user._id })
             .populate({
                 path: 'items.product',
-                select: 'name price salePrice images stock variants',
-                populate: {
-                    path: 'variants',
-                    select: 'name price salePrice stock images color size weight sku specifications'
-                }
+                select: 'name price salePrice images stock variants'
             })
             .populate('coupon', 'code value type');
 
@@ -41,7 +37,7 @@ export const getCart = async (req, res) => {
                 }
                 // Bổ sung variantInfo nếu có variantId
                 if (item.variantId && item.product.variants) {
-                    const variant = item.product.variants.id(item.variantId);
+                    const variant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
                     if (variant && typeof variant === 'object') {
                         item.variantInfo = {
                             _id: variant._id,
@@ -56,21 +52,6 @@ export const getCart = async (req, res) => {
                             sku: variant.sku || '',
                             specifications: (variant.specifications && typeof variant.specifications === 'object') ? Object.fromEntries(Object.entries(variant.specifications)) : {},
                         };
-                    } else {
-                        // Nếu không tìm thấy variant, trả về object rỗng để tránh lỗi frontend
-                        item.variantInfo = {
-                            _id: '',
-                            name: '',
-                            images: [],
-                            price: 0,
-                            salePrice: 0,
-                            stock: 0,
-                            color: { code: '', name: '' },
-                            size: 0,
-                            weight: 0,
-                            sku: '',
-                            specifications: {},
-                        };
                     }
                 }
             }
@@ -79,11 +60,7 @@ export const getCart = async (req, res) => {
             // Populate lại để đảm bảo có variants với đầy đủ thông tin
             await cart.populate({
                 path: 'items.product',
-                select: 'name price salePrice images stock variants',
-                populate: {
-                    path: 'variants',
-                    select: 'name price salePrice stock images color size weight sku specifications'
-                }
+                select: 'name price salePrice images stock variants'
             });
             res.json(cart);
         } else {
@@ -109,7 +86,9 @@ export const addToCart = async (req, res) => {
         let specifications = {};
         let price = (product.salePrice && product.salePrice < product.price) ? product.salePrice : product.price;
         if (variantId) {
-            variant = product.variants.id(variantId);
+            // Tìm variant bằng cách so sánh _id
+            variant = product.variants.find(v => v._id.toString() === variantId.toString());
+
             if (!variant) {
                 return res.status(404).json({ message: "Không tìm thấy biến thể" });
             }
@@ -117,7 +96,7 @@ export const addToCart = async (req, res) => {
             price = (variant.salePrice && variant.salePrice < variant.price) ? variant.salePrice : variant.price;
         }
 
-                // Lấy số lượng có sẵn thực tế
+        // Lấy số lượng có sẵn thực tế
         const availableStock = await getAvailableStock(productId);
 
         // Tìm hoặc tạo giỏ hàng
@@ -146,6 +125,9 @@ export const addToCart = async (req, res) => {
                 cart.items[itemIndex].reservedAt = new Date();
                 cart.items[itemIndex].price = price;
                 cart.items[itemIndex].specifications = specifications;
+                if (variantId) {
+                    cart.items[itemIndex].variantId = variantId;
+                }
             } else {
                 cart.items.push({
                     product: productId,
@@ -175,17 +157,13 @@ export const addToCart = async (req, res) => {
         // Populate thông tin sản phẩm để trả về
         await cart.populate({
             path: 'items.product',
-            select: 'name price salePrice images stock variants',
-            populate: {
-                path: 'variants',
-                select: 'name price salePrice stock images color size weight sku specifications'
-            }
+            select: 'name price salePrice images stock variants'
         });
 
         // Sau khi populate product, bổ sung variantInfo cho từng item nếu có variantId
         for (let item of cart.items) {
             if (item.variantId && item.product.variants) {
-                const variant = item.product.variants.id(item.variantId);
+                const variant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
                 if (variant && typeof variant === 'object') {
                     item.variantInfo = {
                         _id: variant._id,
@@ -218,6 +196,35 @@ export const addToCart = async (req, res) => {
                 }
             }
         }
+
+        // Populate product data
+        await cart.populate({
+            path: 'items.product',
+            select: 'name price salePrice images stock variants'
+        });
+
+        // Tạo variantInfo cho tất cả items
+        for (let item of cart.items) {
+            if (item.variantId && item.product.variants) {
+                const variant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
+                if (variant && typeof variant === 'object') {
+                    item.variantInfo = {
+                        _id: variant._id,
+                        name: variant.name || '',
+                        images: Array.isArray(variant.images) ? variant.images : [],
+                        price: typeof variant.price === 'number' ? variant.price : 0,
+                        salePrice: typeof variant.salePrice === 'number' ? variant.salePrice : 0,
+                        stock: typeof variant.stock === 'number' ? variant.stock : 0,
+                        color: (variant.color && typeof variant.color === 'object') ? variant.color : { code: '', name: '' },
+                        size: typeof variant.size === 'number' ? variant.size : 0,
+                        weight: typeof variant.weight === 'number' ? variant.weight : 0,
+                        sku: variant.sku || '',
+                        specifications: (variant.specifications && typeof variant.specifications === 'object') ? Object.fromEntries(Object.entries(variant.specifications)) : {},
+                    };
+                }
+            }
+        }
+
 
         res.status(201).json(cart);
     } catch (error) {
@@ -279,7 +286,7 @@ export const updateCartItem = async (req, res) => {
 
             // Nếu có variantId, giữ nguyên giá biến thể
             if (item.variantId) {
-                const variant = product.variants.id(item.variantId);
+                const variant = product.variants.find(v => v._id.toString() === item.variantId.toString());
                 if (variant) {
                     // Giữ nguyên giá biến thể đã được tính toán trước đó
                     // Không thay đổi item.price
@@ -294,16 +301,12 @@ export const updateCartItem = async (req, res) => {
             // Populate lại với variants để có thể tính toán variantInfo
             await cart.populate({
                 path: 'items.product',
-                select: 'name price salePrice images stock variants',
-                populate: {
-                    path: 'variants',
-                    select: 'name price salePrice stock images color size weight sku specifications'
-                }
+                select: 'name price salePrice images stock variants'
             });
 
             // Bổ sung variantInfo cho item nếu có variantId
             if (item.variantId && item.product.variants) {
-                const variant = item.product.variants.id(item.variantId);
+                const variant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
                 if (variant && typeof variant === 'object') {
                     item.variantInfo = {
                         _id: variant._id,

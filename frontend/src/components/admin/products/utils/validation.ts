@@ -29,45 +29,45 @@ export interface ValidationResult {
  */
 export const validateVariant = (variant: ProductVariant, index: number): ValidationResult => {
   const errors: string[] = []
-  
+
   if (!variant.name?.trim()) {
     errors.push(`Biến thể ${index + 1}: Tên không được để trống`)
   }
-  
+
   if (!variant.sku?.trim()) {
     errors.push(`Biến thể ${index + 1}: SKU không được để trống`)
   }
-  
+
   if (!variant.price || variant.price <= 0) {
     errors.push(`Biến thể ${index + 1}: Giá phải lớn hơn 0`)
   }
-  
+
   if (variant.stock < 0) {
     errors.push(`Biến thể ${index + 1}: Tồn kho không được âm`)
   }
-  
+
   if (!variant.length || variant.length <= 0) {
     errors.push(`Biến thể ${index + 1}: Chiều dài phải lớn hơn 0`)
   }
-  
+
   if (!variant.width || variant.width <= 0) {
     errors.push(`Biến thể ${index + 1}: Chiều rộng phải lớn hơn 0`)
   }
-  
+
   if (!variant.height || variant.height <= 0) {
     errors.push(`Biến thể ${index + 1}: Chiều cao phải lớn hơn 0`)
   }
-  
+
   // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
   if (!variant.imageFile) {
-   errors.push("Phải upload ít nhất 1 ảnh biến thể")
- }
-  
+    errors.push("Phải upload ít nhất 1 ảnh biến thể")
+  }
+
   // Kiểm tra trường images (link ảnh đã upload)
-//  if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
-//   errors.push("Phải upload ít nhất 1 ảnh biến thể")
-//  }
-  
+  //  if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
+  //   errors.push("Phải upload ít nhất 1 ảnh biến thể")
+  //  }
+
   return {
     isValid: errors.length === 0,
     errors
@@ -77,14 +77,15 @@ export const validateVariant = (variant: ProductVariant, index: number): Validat
 /**
  * Validate all variants
  */
-export function validateAllVariants(variants: any[]) {
+export function validateAllVariants(variants: any[], isEdit: boolean = false) {
   const errors: string[] = [];
   variants.forEach((variant, idx) => {
     if (!variant.name?.trim()) errors.push(`Biến thể ${idx + 1}: Tên không được để trống`);
     if (!variant.sku?.trim()) errors.push(`Biến thể ${idx + 1}: SKU không được để trống`);
     if (!variant.price || variant.price <= 0) errors.push(`Biến thể ${idx + 1}: Giá phải lớn hơn 0`);
     if (variant.stock < 0) errors.push(`Biến thể ${idx + 1}: Tồn kho không được âm`);
-    if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
+    // Chỉ yêu cầu ảnh khi tạo mới, không yêu cầu khi sửa
+    if (!isEdit && (!variant.images || variant.images.length === 0 || !variant.images[0])) {
       errors.push(`Biến thể ${idx + 1}: Phải upload ít nhất 1 ảnh biến thể`);
     }
   });
