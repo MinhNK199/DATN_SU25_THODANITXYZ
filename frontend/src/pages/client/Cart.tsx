@@ -343,9 +343,9 @@ const Cart: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Giỏ hàng</h1>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Cart Items - Table Format */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2 lg:order-1">
             {cartItems.length === 0 ? (
               <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
                 <div className="text-6xl mb-4">🛒</div>
@@ -373,14 +373,14 @@ const Cart: React.FC = () => {
                 </div>
 
                 {/* Table Headers */}
-                <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
-                  <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-700">
+                <div className="px-4 sm:px-6 py-3 bg-gray-50 border-b border-gray-200">
+                  <div className="grid grid-cols-12 gap-2 sm:gap-4 text-xs sm:text-sm font-semibold text-gray-700">
                     <div className="col-span-1">
                       <input
                         type="checkbox"
                         checked={selectedItems.size === cartItems.length && cartItems.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 rounded focus:ring-blue-500"
                       />
                     </div>
                     <div className="col-span-4 hidden sm:block">CHI TIẾT SẢN PHẨM</div>
@@ -392,8 +392,8 @@ const Cart: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Table Body */}
-                <div className="divide-y divide-gray-200">
+                {/* Table Body - Scrollable */}
+                <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
                   {cartItems.map((item) => {
                     const variant = item.variantInfo;
                     const displayName = item.product.name; // Luôn hiển thị tên sản phẩm cha
@@ -420,27 +420,27 @@ const Cart: React.FC = () => {
                     const displaySKU = variant?.sku || null;
 
                     return (
-                      <div key={item._id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                        <div className="grid grid-cols-12 gap-4 items-center">
+                      <div key={item._id} className="px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50 transition-colors">
+                        <div className="grid grid-cols-12 gap-2 sm:gap-4 items-center">
                           {/* Checkbox */}
                           <div className="col-span-1">
                             <input
                               type="checkbox"
                               checked={selectedItems.has(item._id)}
                               onChange={(e) => handleItemSelect(item._id, e.target.checked)}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                              className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 rounded focus:ring-blue-500"
                             />
                           </div>
 
                           {/* Product Details */}
                           <div className="col-span-4">
-                            <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2 sm:space-x-4">
                               {/* Product Image */}
                               <div className="flex-shrink-0">
                                 <img
                                   src={displayImage}
                                   alt={displayName}
-                                  className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg"
+                                  className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-cover rounded-lg"
                                 />
                               </div>
 
@@ -619,20 +619,76 @@ const Cart: React.FC = () => {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 sticky top-8">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
-                Tóm tắt đơn hàng
-              </h2>
+          <div className="lg:col-span-1 order-1 lg:order-2">
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 sticky top-4 lg:top-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                  Tóm tắt đơn hàng
+                </h2>
+                <div className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+                  {selectedItems.size} sản phẩm
+                </div>
+              </div>
 
               {/* Summary Items */}
-              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-                <div className="flex justify-between">
-                  <span className="text-sm sm:text-base text-gray-600">
-                    SẢN PHẨM ({selectedItems.size})
-                  </span>
-                  <span className="text-sm sm:text-base font-semibold">{formatPrice(subtotal)}</span>
+              <div className="space-y-4 mb-6">
+                {/* Products Section */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-sm font-semibold text-gray-700">
+                      SẢN PHẨM
+                    </span>
+                    <span className="text-sm font-bold text-gray-900">{formatPrice(subtotal)}</span>
+                  </div>
+
+                  {/* Product Details */}
+                  {selectedCartItems.length > 0 && (
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {selectedCartItems.map((item, index) => {
+                        const variant = item.variantInfo;
+                        const price = calculateDisplayPrice(item);
+                        const total = price * item.quantity;
+                        const variantName = variant?.name || '';
+
+                        return (
+                          <div key={index} className="flex justify-between items-center text-xs bg-white rounded p-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-800 truncate">
+                                {item.product.name}
+                              </div>
+                              {variantName && (
+                                <div className="text-gray-500 truncate">
+                                  {variantName}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right ml-2">
+                              <div className="font-semibold text-gray-900">
+                                {formatPrice(total)}
+                              </div>
+                              <div className="text-gray-500">
+                                {formatPrice(price)} × {item.quantity}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+
+                {/* Savings Section */}
+                {savings > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-semibold text-green-800">Tiết kiệm sản phẩm</span>
+                      </div>
+                      <span className="text-sm font-bold text-green-600">-{formatPrice(savings)}</span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Debug: Hiển thị chi tiết tính toán tạm tính */}
                 {import.meta.env.DEV && (
@@ -653,13 +709,6 @@ const Cart: React.FC = () => {
                     <div className="border-t border-gray-300 pt-1 mt-1 font-medium">
                       Tổng: {formatPrice(subtotal)}
                     </div>
-                  </div>
-                )}
-
-                {savings > 0 && (
-                  <div className="flex justify-between text-green-600 text-sm sm:text-base">
-                    <span>Tiết kiệm sản phẩm</span>
-                    <span>-{formatPrice(savings)}</span>
                   </div>
                 )}
 
@@ -717,102 +766,125 @@ const Cart: React.FC = () => {
                   </div>
                 )}
 
-                {/* Shipping */}
-                <div className="space-y-1 sm:space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm sm:text-base text-gray-600">VẬN CHUYỂN</span>
-                    <span className="text-sm sm:text-base font-semibold">
-                      {shipping === 0 ? (
-                        <span className="text-green-600">Miễn phí</span>
-                      ) : (
-                        formatPrice(shipping)
-                      )}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Giao hàng tiêu chuẩn - {shipping === 0 ? "Miễn phí" : formatPrice(shipping)}
-                  </div>
-                </div>
+                {/* Shipping & Tax Section */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="space-y-3">
+                    {/* Shipping */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-semibold text-blue-800">VẬN CHUYỂN</span>
+                      </div>
+                      <span className="text-sm font-bold">
+                        {shipping === 0 ? (
+                          <span className="text-green-600">Miễn phí</span>
+                        ) : (
+                          <span className="text-blue-800">{formatPrice(shipping)}</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="text-xs text-blue-600 ml-4">
+                      Giao hàng tiêu chuẩn - {shipping === 0 ? "Miễn phí" : formatPrice(shipping)}
+                    </div>
 
-                {/* Tax */}
-                <div className="flex justify-between">
-                  <span className="text-sm sm:text-base text-gray-600">THUẾ</span>
-                  <span className="text-sm sm:text-base font-semibold">{formatPrice(tax)}</span>
+                    {/* Tax */}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-semibold text-blue-800">THUẾ (8%)</span>
+                      </div>
+                      <span className="text-sm font-bold text-blue-800">{formatPrice(tax)}</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Total */}
-                <div className="border-t border-gray-200 pt-3 sm:pt-4">
-                  <div className="flex justify-between text-base sm:text-lg font-bold">
-                    <span>TỔNG CỘNG</span>
-                    <span>{formatPrice(total)}</span>
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-lg font-bold text-gray-900">TỔNG CỘNG</span>
+                    <span className="text-xl font-bold text-purple-600">{formatPrice(total)}</span>
                   </div>
                   {(savings > 0 || couponDiscount > 0) && (
-                    <div className="flex justify-between text-xs sm:text-sm text-gray-500 mt-1">
+                    <div className="flex justify-between items-center text-sm text-gray-600">
                       <span>Đã bao gồm giảm giá</span>
-                      <span>-{formatPrice(savings + couponDiscount)}</span>
+                      <span className="font-semibold text-green-600">-{formatPrice(savings + couponDiscount)}</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Coupon Section */}
-              <div className="mb-4 sm:mb-6">
-                <div className="text-gray-600 text-sm font-medium mb-3">MÃ GIẢM GIÁ</div>
+              <div className="mb-6">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm font-semibold text-orange-800">MÃ GIẢM GIÁ</span>
+                    </div>
+                    {availableCoupons.length > 0 && (
+                      <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                        {availableCoupons.length} mã có sẵn
+                      </span>
+                    )}
+                  </div>
 
-                {/* Coupon Button */}
-                <button
-                  onClick={() => setIsCouponModalVisible(true)}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                >
-                  <span>Chọn mã giảm giá</span>
-                  <span className="text-sm opacity-90">›</span>
-                </button>
+                  {/* Coupon Button */}
+                  <button
+                    onClick={() => setIsCouponModalVisible(true)}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
+                  >
+                    <span>Chọn mã giảm giá</span>
+                    <span className="text-sm opacity-90">›</span>
+                  </button>
+                </div>
               </div>
 
               {/* Checkout Button */}
-              <Link
-                to="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (selectedItems.size === 0) {
-                    message.warning("Vui lòng chọn ít nhất một sản phẩm để thanh toán");
-                    return;
-                  }
-                  navigate("/checkout/shipping", {
-                    state: {
-                      subtotal,
-                      savings,
-                      shipping,
-                      tax,
-                      total,
-                      selectedItems: Array.from(selectedItems),
-                      appliedDiscountCoupon,
-                      appliedShippingCoupon,
-                      couponDiscount,
-                    },
-                  });
-                }}
-                className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 mb-3 sm:mb-4 text-sm sm:text-base ${selectedItems.size === 0
-                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                  }`}
-              >
-                <FaLock className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span>
-                  {selectedItems.size === 0
-                    ? "CHỌN SẢN PHẨM ĐỂ THANH TOÁN"
-                    : `THANH TOÁN (${selectedItems.size} sản phẩm)`
-                  }
-                </span>
-              </Link>
+              <div className="mb-4">
+                <Link
+                  to="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (selectedItems.size === 0) {
+                      message.warning("Vui lòng chọn ít nhất một sản phẩm để thanh toán");
+                      return;
+                    }
+                    navigate("/checkout/shipping", {
+                      state: {
+                        subtotal,
+                        savings,
+                        shipping,
+                        tax,
+                        total,
+                        selectedItems: Array.from(selectedItems),
+                        appliedDiscountCoupon,
+                        appliedShippingCoupon,
+                        couponDiscount,
+                      },
+                    });
+                  }}
+                  className={`w-full py-4 px-6 rounded-xl font-bold transition-all duration-300 flex items-center justify-center space-x-3 text-base shadow-lg hover:shadow-xl ${selectedItems.size === 0
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white transform hover:scale-105"
+                    }`}
+                >
+                  <FaLock className="w-5 h-5" />
+                  <span>
+                    {selectedItems.size === 0
+                      ? "CHỌN SẢN PHẨM ĐỂ THANH TOÁN"
+                      : `THANH TOÁN (${selectedItems.size} sản phẩm)`
+                    }
+                  </span>
+                </Link>
+              </div>
 
               {/* Security Info */}
-              <div className="text-center text-xs sm:text-sm text-gray-500">
-                <div className="flex items-center justify-center space-x-2 mb-1 sm:mb-2">
-                  <FaShieldAlt className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>Thanh toán an toàn</span>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+                <div className="flex items-center justify-center space-x-2 mb-2">
+                  <FaShieldAlt className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-semibold text-gray-700">Thanh toán an toàn</span>
                 </div>
-                <p className="text-xs">Thông tin của bạn được bảo vệ bằng mã hóa SSL</p>
+                <p className="text-xs text-gray-500">Thông tin của bạn được bảo vệ bằng mã hóa SSL</p>
               </div>
             </div>
           </div>
