@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   Form,
@@ -18,14 +18,17 @@ import {
   TreeSelect,
   Switch,
   Divider,
+  Upload,
+  Image,
 } from "antd"
-import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons"
+import { PlusOutlined, ArrowLeftOutlined, UploadOutlined } from "@ant-design/icons"
 import { getCategories, getBrands } from "./api"
 import slugify from "slugify"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import VariantManager from "./VariantManager"
 import { validateAllVariants, cleanColorData } from "./utils/validation"
+import type { UploadFile } from "antd/es/upload/interface"
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -52,7 +55,7 @@ const ProductAddPage: React.FC = () => {
   const [variants, setVariants] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   // Thêm state cho file ảnh đại diện
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
-  const mainImageInputRef = useRef<HTMLInputElement>(null)
+  const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
 
   useEffect(() => {
     const currentSpecs = form.getFieldValue("specifications")
@@ -184,11 +187,18 @@ const ProductAddPage: React.FC = () => {
     form.setFieldsValue({ slug })
   }
 
-  // Xử lý chọn file ảnh đại diện
-  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setMainImageFile(file)
-  }
+
+  // Xử lý upload ảnh đại diện với Upload component
+  const handleMainImageUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setMainImageFileList(fileList);
+
+    // Lấy file mới nhất
+    const latestFile = fileList[fileList.length - 1];
+    if (latestFile && latestFile.originFileObj) {
+      setMainImageFile(latestFile.originFileObj);
+    }
+  };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -217,19 +227,61 @@ const ProductAddPage: React.FC = () => {
                 <Input placeholder="VD: ATN-001" />
               </Form.Item>
               <Form.Item label="Ảnh đại diện sản phẩm">
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={mainImageInputRef}
-                  onChange={handleMainImageChange}
-                />
-                {mainImageFile && (
-                  <img
-                    src={URL.createObjectURL(mainImageFile)}
-                    alt="Preview"
-                    style={{ width: "100%", maxHeight: 200, marginTop: 8, borderRadius: 8 }}
-                  />
-                )}
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={mainImageFileList}
+                    onChange={handleMainImageUpload}
+                    beforeUpload={() => false}
+                    maxCount={1}
+                    showUploadList={false}
+                    className="w-full"
+                  >
+                    {mainImageFileList.length < 1 && (
+                      <div className="flex flex-col items-center justify-center h-32 w-full">
+                        <UploadOutlined className="text-3xl text-gray-400 mb-2" />
+                        <div className="text-sm text-gray-500">Upload</div>
+                        
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  {/* Hiển thị preview ảnh đã chọn */}
+                  {mainImageFile && (
+                    <div className="relative group">
+                      <Image
+                        src={URL.createObjectURL(mainImageFile)}
+                        alt="Preview ảnh đại diện"
+                        className="w-full max-h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                        onError={(e) => {
+                          console.error("Image load error:", mainImageFile.name);
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                      <Button
+                        size="small"
+                        danger
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        style={{
+                          padding: 0,
+                          borderRadius: "50%",
+                          width: 28,
+                          height: 28,
+                          minWidth: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        onClick={() => {
+                          setMainImageFile(null);
+                          setMainImageFileList([]);
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
@@ -301,17 +353,37 @@ const ProductAddPage: React.FC = () => {
               </Row>
 
               {/* Xem trước ảnh đại diện */}
-              {mainImageFile ? (
-                <img
-                  src={URL.createObjectURL(mainImageFile)}
-                  alt="Preview"
-                  style={{ width: "100%", borderRadius: "8px", marginBottom: "1rem" }}
-                />
-              ) : (
-                <div className="h-48 flex items-center justify-center bg-gray-200 rounded-lg mb-4">
-                  <Text type="secondary">Chưa có ảnh</Text>
-                </div>
-              )}
+              <div className="mb-4">
+                <Text className="text-sm font-medium text-gray-700 mb-2 block">Xem trước ảnh đại diện</Text>
+                {mainImageFile ? (
+                  <div className="relative group">
+                    <Image
+                      src={URL.createObjectURL(mainImageFile)}
+                      alt="Preview ảnh đại diện"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                      onError={(e) => {
+                        console.error("Image load error:", mainImageFile.name);
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                      <Text className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm font-medium">
+                        Ảnh đại diện
+                      </Text>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-48 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-dashed border-gray-300">
+                    <UploadOutlined className="text-4xl text-gray-400 mb-2" />
+                    <Text type="secondary" className="text-center">
+                      Chưa có ảnh đại diện
+                    </Text>
+                    <Text type="secondary" className="text-xs text-center mt-1">
+                      Upload ảnh để xem trước
+                    </Text>
+                  </div>
+                )}
+              </div>
 
               <Divider />
 

@@ -1,8 +1,11 @@
 "use client"
 
 import type React from "react"
-import { Button, Input, InputNumber, Switch, Row, Col, Card, Space, Tooltip, ColorPicker, message, Select } from "antd"
+import { useState, useEffect } from "react"
+import { Button, Input, InputNumber, Switch, Row, Col, Card, Space, Tooltip, ColorPicker, message, Select, Upload, Image } from "antd"
+import type { UploadFile } from "antd/es/upload/interface"
 import { FaPlus, FaTrash } from "react-icons/fa"
+import { PlusOutlined } from "@ant-design/icons"
 import SpecificationEditor from "./SpecificationEditor"
 import { COLOR_OPTIONS, type ProductVariant } from "./utils/validation"
 
@@ -12,6 +15,27 @@ interface VariantManagerProps {
 }
 
 const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsChange }) => {
+  const [fileLists, setFileLists] = useState<Record<string, UploadFile[]>>({})
+
+  // Initialize file lists for existing variants
+  useEffect(() => {
+    const newFileLists: Record<string, UploadFile[]> = {};
+    variants.forEach(variant => {
+      if (variant.images && variant.images.length > 0 && !fileLists[variant.id]) {
+        newFileLists[variant.id] = variant.images.map((imgUrl, index) => ({
+          uid: `existing-${variant.id}-${index}`,
+          name: `image-${index}`,
+          status: 'done',
+          url: imgUrl,
+          thumbUrl: imgUrl
+        }));
+      }
+    });
+    if (Object.keys(newFileLists).length > 0) {
+      setFileLists(prev => ({ ...prev, ...newFileLists }));
+    }
+  }, [variants]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Validation functions
   const validateVariant = (variant: ProductVariant): { isValid: boolean; errors: string[] } => {
     const errors: string[] = []
@@ -187,46 +211,6 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
 
 
 
-  const handleImagesUpload = async (variantId: string, files: FileList) => {
-    const token = localStorage.getItem("token");
-    const uploadedUrls: string[] = [];
-    
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const formData = new FormData();
-        formData.append("image", files[i]);
-        const response = await fetch("http://localhost:8000/api/upload/", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Upload failed for file ${i + 1}`);
-        }
-        
-        const data = await response.json();
-        if (data?.url) {
-          uploadedUrls.push(data.url);
-        }
-      }
-      
-      // Cập nhật mảng images cho biến thể
-      const updatedVariants = variants.map((v) =>
-        v.id === variantId
-          ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
-          : v
-      );
-      onVariantsChange(updatedVariants);
-      
-      if (uploadedUrls.length > 0) {
-        message.success(`Đã upload ${uploadedUrls.length} ảnh thành công`);
-      }
-    } catch (error) {
-      console.error("Error uploading images:", error);
-      message.error("Lỗi khi upload ảnh");
-    }
-  };
 
   const handleRemoveImage = (variantId: string, imgUrl: string) => {
     const updatedVariants = variants.map((v) =>
@@ -235,6 +219,57 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
         : v
     );
     onVariantsChange(updatedVariants);
+  };
+
+  const handleImageUpload = async (variantId: string, info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setFileLists(prev => ({ ...prev, [variantId]: fileList }));
+
+    // Upload files that are new
+    const newFiles = fileList.filter((file: UploadFile) => file.originFileObj && file.status === 'uploading');
+    
+    if (newFiles.length > 0) {
+      const token = localStorage.getItem("token");
+      const uploadedUrls: string[] = [];
+      
+      try {
+        for (const file of newFiles) {
+          if (file.originFileObj) {
+            const formData = new FormData();
+            formData.append("image", file.originFileObj);
+            const response = await fetch("http://localhost:8000/api/upload/", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: formData,
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Upload failed for file ${file.name}`);
+            }
+            
+            const data = await response.json();
+            if (data?.url) {
+              uploadedUrls.push(data.url);
+            }
+          }
+        }
+        
+        // Update variant with new images
+        const updatedVariants = variants.map((v) =>
+          v.id === variantId
+            ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
+            : v
+        );
+        onVariantsChange(updatedVariants);
+        
+        if (uploadedUrls.length > 0) {
+          message.success(`Đã upload ${uploadedUrls.length} ảnh thành công`);
+        }
+      } catch (error) {
+        console.error("Error uploading images:", error);
+        message.error("Lỗi khi upload ảnh");
+      }
+    }
   };
 
   return (
@@ -468,58 +503,58 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 <Col span={24}>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Ảnh biến thể:</label>
-                    <input
-                      type="file"
-                      accept="image/*"
+                    <Upload
+                      listType="picture-card"
+                      fileList={fileLists[variant.id] || []}
+                      onChange={(info) => handleImageUpload(variant.id, info)}
+                      beforeUpload={() => false}
                       multiple
-                      onChange={e => {
-                        const files = e.target.files;
-                        if (files && files.length > 0) handleImagesUpload(variant.id, files);
-                      }}
-                    />
+                      showUploadList={false}
+                    >
+                      {(fileLists[variant.id] || []).length < 8 && (
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                          <div className="text-sm text-gray-500">Upload</div>
+                        </div>
+                      )}
+                    </Upload>
+                    
                     {/* Hiển thị preview ảnh đã upload */}
-                    {variant.images && variant.images.length > 0 && (
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                        {variant.images.map((imgUrl: string, idx: number) => (
-                          <div key={idx} style={{ position: "relative", display: "inline-block" }}>
-                            <img
-                              src={imgUrl}
-                              alt={`Ảnh biến thể ${idx + 1}`}
-                              style={{ 
-                                width: 80, 
-                                height: 80, 
-                                borderRadius: 8, 
-                                border: "1px solid #eee",
-                                objectFit: "cover"
-                              }}
-                              onError={(e) => {
-                                console.error("Image load error:", imgUrl);
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                            <Button
-                              size="small"
-                              danger
-                              style={{
-                                position: "absolute",
-                                top: 2,
-                                right: 2,
-                                padding: 0,
-                                borderRadius: "50%",
-                                width: 22,
-                                height: 22,
-                                minWidth: 0,
-                                lineHeight: "22px",
-                                fontSize: 14,
-                              }}
-                              onClick={() => handleRemoveImage(variant.id, imgUrl)}
-                            >
-                              <FaTrash />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex gap-3 flex-wrap mt-3">
+                      {variant.images && variant.images.length > 0 && variant.images.map((imgUrl: string, idx: number) => (
+                        <div key={idx} className="relative group">
+                          <Image
+                            src={imgUrl}
+                            alt={`Ảnh biến thể ${idx + 1}`}
+                            width={100}
+                            height={100}
+                            className="rounded-lg border border-gray-200 object-cover shadow-sm"
+                            onError={(e) => {
+                              console.error("Image load error:", imgUrl);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            style={{
+                              padding: 0,
+                              borderRadius: "50%",
+                              width: 24,
+                              height: 24,
+                              minWidth: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => handleRemoveImage(variant.id, imgUrl)}
+                          >
+                            <FaTrash className="text-xs" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </Col>
               </Row>
