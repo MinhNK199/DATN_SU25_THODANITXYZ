@@ -506,66 +506,69 @@ const Cart: React.FC = () => {
                                   )}
                                 </div>
 
-                                {/* Stock Info - Hidden on mobile */}
-                                <div className="mt-1 hidden sm:block">
-                                  <span className="text-xs text-gray-500">
-                                    {typeof displayStock === "number" ? (
-                                      displayStock - item.quantity <= 0 ? (
-                                        <span className="text-red-600">Hết hàng</span>
-                                      ) : displayStock - item.quantity <= 5 ? (
-                                        <span className="text-orange-500">Chỉ còn {displayStock - item.quantity}</span>
-                                      ) : (
-                                        <span className="text-green-600">Còn {displayStock - item.quantity} sản phẩm</span>
-                                      )
-                                    ) : (
-                                      <span>Tồn kho: {displayStock}</span>
-                                    )}
-                                  </span>
-                                </div>
                               </div>
                             </div>
                           </div>
 
                           {/* Quantity Controls */}
                           <div className="col-span-2">
-                            <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                              <button
-                                onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                                disabled={item.quantity <= 1}
-                                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <FaMinus className="w-2 h-2 sm:w-3 sm:h-3" />
-                              </button>
-                              <input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => {
-                                  const newQuantity = parseInt(e.target.value) || 1;
-                                  const maxStock = variant?.stock ?? item.product.stock;
-                                  if (newQuantity > maxStock) {
-                                    message.warning("Đã đạt số lượng tối đa tồn kho!");
-                                    return;
-                                  }
-                                  updateQuantity(item._id, Math.max(1, newQuantity));
-                                }}
-                                className="w-8 sm:w-12 h-6 sm:h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
-                                min="1"
-                                max={variant?.stock ?? item.product.stock}
-                              />
-                              <button
-                                onClick={() => {
-                                  const maxStock = variant?.stock ?? item.product.stock;
-                                  if (item.quantity >= maxStock) {
-                                    message.warning("Đã đạt số lượng tối đa tồn kho!");
-                                    return;
-                                  }
-                                  updateQuantity(item._id, item.quantity + 1);
-                                }}
-                                disabled={item.quantity >= (variant?.stock ?? item.product.stock)}
-                                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                              >
-                                <FaPlus className="w-2 h-2 sm:w-3 sm:h-3" />
-                              </button>
+                            <div className="flex flex-col items-center space-y-2">
+                              <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                                <button
+                                  onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                                  disabled={item.quantity <= 1}
+                                  className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <FaMinus className="w-2 h-2 sm:w-3 sm:h-3" />
+                                </button>
+                                <input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const newQuantity = parseInt(e.target.value) || 1;
+                                    const maxStock = variant?.stock ?? item.product.stock;
+                                    if (newQuantity > maxStock) {
+                                      message.warning("Đã đạt số lượng tối đa tồn kho!");
+                                      return;
+                                    }
+                                    updateQuantity(item._id, Math.max(1, newQuantity));
+                                  }}
+                                  className="w-8 sm:w-12 h-6 sm:h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
+                                  min="1"
+                                  max={variant?.stock ?? item.product.stock}
+                                />
+                                <button
+                                  onClick={() => {
+                                    const maxStock = variant?.stock ?? item.product.stock;
+                                    if (item.quantity >= maxStock) {
+                                      message.warning("Đã đạt số lượng tối đa tồn kho!");
+                                      return;
+                                    }
+                                    updateQuantity(item._id, item.quantity + 1);
+                                  }}
+                                  disabled={item.quantity >= (variant?.stock ?? item.product.stock)}
+                                  className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  <FaPlus className="w-2 h-2 sm:w-3 sm:h-3" />
+                                </button>
+                              </div>
+
+                              {/* Stock Info - Moved here */}
+                              <div className="text-center">
+                                <span className="text-xs text-gray-500">
+                                  {typeof displayStock === "number" ? (
+                                    displayStock - item.quantity <= 0 ? (
+                                      <span className="text-red-600 font-medium">Hết hàng</span>
+                                    ) : displayStock - item.quantity <= 5 ? (
+                                      <span className="text-orange-500 font-medium">Chỉ còn {displayStock - item.quantity}</span>
+                                    ) : (
+                                      <span className="text-green-600 font-medium">Còn {displayStock - item.quantity} sản phẩm</span>
+                                    )
+                                  ) : (
+                                    <span className="text-gray-500">Tồn kho: {displayStock}</span>
+                                  )}
+                                </span>
+                              </div>
                             </div>
                           </div>
 
@@ -690,27 +693,6 @@ const Cart: React.FC = () => {
                   </div>
                 )}
 
-                {/* Debug: Hiển thị chi tiết tính toán tạm tính */}
-                {import.meta.env.DEV && (
-                  <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                    <div className="font-medium mb-1">🔍 Chi tiết tạm tính (chỉ sản phẩm được chọn):</div>
-                    {selectedCartItems.map((item, index) => {
-                      const variant = item.variantInfo;
-                      const price = calculateDisplayPrice(item);
-                      const total = price * item.quantity;
-                      const variantName = variant?.name || '';
-
-                      return (
-                        <div key={index} className="ml-2 mb-1">
-                          • {item.product.name}{variantName ? ` (${variantName})` : ''}: {formatPrice(price)} × {item.quantity} = {formatPrice(total)}
-                        </div>
-                      );
-                    })}
-                    <div className="border-t border-gray-300 pt-1 mt-1 font-medium">
-                      Tổng: {formatPrice(subtotal)}
-                    </div>
-                  </div>
-                )}
 
                 {/* Applied Discount Coupon */}
                 {appliedDiscountCoupon && (
