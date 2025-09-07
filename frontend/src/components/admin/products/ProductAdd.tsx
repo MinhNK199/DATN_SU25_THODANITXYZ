@@ -25,7 +25,7 @@ import slugify from "slugify"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import VariantManager from "./VariantManager"
-import { validateAllVariants, cleanColorData, validateAndCleanProductData } from "./utils/validation"
+import { validateAllVariants, cleanColorData } from "./utils/validation"
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -33,7 +33,7 @@ const { Option } = Select
 const API_URL = "http://localhost:8000/api"
 
 // Hàm chuyển đổi cấu trúc cây cho TreeSelect
-const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {
+const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => { // eslint-disable-line @typescript-eslint/no-explicit-any
   return categories
     .filter((cat) => cat.parent === parentId || (parentId === null && !cat.parent))
     .map((cat) => ({
@@ -49,10 +49,7 @@ const ProductAddPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
-  const [images, setImages] = useState<string[]>([""])
-  const [previewImage, setPreviewImage] = useState<string>("")
-  const [variants, setVariants] = useState<any[]>([])
-  const [specs, setSpecs] = useState<Record<string, string>>({})
+  const [variants, setVariants] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
   // Thêm state cho file ảnh đại diện
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const mainImageInputRef = useRef<HTMLInputElement>(null)
@@ -86,7 +83,7 @@ const ProductAddPage: React.FC = () => {
   const categoryTree = buildCategoryTree(categories)
 
   // ENHANCED: handleVariantsChange với better validation cho ColorSelector
-  const handleVariantsChange = (newVariants: any[]) => {
+  const handleVariantsChange = (newVariants: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.log("🔄 Variants changed:", newVariants)
 
     // CRITICAL: Đảm bảo color luôn là object hợp lệ cho ColorSelector
@@ -113,7 +110,7 @@ const ProductAddPage: React.FC = () => {
     setVariants(cleanedVariants)
   }
 
-  const onFinish = async (values: any) => {
+  const onFinish = async (values: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const validation = validateAllVariants(variants)
     if (!validation.isValid) {
       message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
@@ -154,7 +151,7 @@ const ProductAddPage: React.FC = () => {
 
       // Biến thể
       formData.append("variants", JSON.stringify(variants.map((v) => {
-        const { imageFile, ...rest } = v;
+        const { imageFile, ...rest } = v; // eslint-disable-line @typescript-eslint/no-unused-vars
         return rest;
       })))
 

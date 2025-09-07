@@ -65,9 +65,15 @@ export const createProductValidation = [
 
     body('variants.*.color')
     .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('Màu sắc không được quá 50 ký tự'),
+    .custom((value) => {
+        if (typeof value === 'string') {
+            return value.length <= 50;
+        } else if (typeof value === 'object' && value !== null) {
+            return true; // Allow color objects
+        }
+        return false;
+    })
+    .withMessage('Màu sắc phải là chuỗi hoặc object hợp lệ'),
 
     body('variants.*.size')
     .optional()
@@ -87,8 +93,8 @@ export const createProductValidation = [
 
     body('variants.*.images.*')
     .optional()
-    .isURL()
-    .withMessage('URL hình ảnh biến thể không hợp lệ'),
+    .isString()
+    .withMessage('URL hình ảnh biến thể phải là chuỗi'),
 
     body('specifications')
     .optional()
@@ -189,9 +195,15 @@ export const updateProductValidation = [
 
     body('variants.*.color')
     .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('Màu sắc không được quá 50 ký tự'),
+    .custom((value) => {
+        if (typeof value === 'string') {
+            return value.length <= 50;
+        } else if (typeof value === 'object' && value !== null) {
+            return true; // Allow color objects
+        }
+        return false;
+    })
+    .withMessage('Màu sắc phải là chuỗi hoặc object hợp lệ'),
 
     body('variants.*.size')
     .optional()
@@ -211,8 +223,8 @@ export const updateProductValidation = [
 
     body('variants.*.images.*')
     .optional()
-    .isURL()
-    .withMessage('URL hình ảnh biến thể không hợp lệ'),
+    .isString()
+    .withMessage('URL hình ảnh biến thể phải là chuỗi'),
 
     body('specifications')
     .optional()
