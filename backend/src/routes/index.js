@@ -22,6 +22,7 @@ import { runCleanupNow } from "../utils/cleanupJob.js";
 import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig.js';
 import { protect, checkAdmin } from '../middlewares/authMiddleware.js';
 import routerBlog from "./blog.js";
+import routerChat from "./chat.js";
 import { getProvinces, getWards, getDistricts } from '../controllers/provinceController.js';
 
 const router = Router();
@@ -45,6 +46,7 @@ router.use('/payment/momo', paymentMomoRouter);
 router.use('/payment/vnpay', paymentVnpayRouter);
 router.use('/payment/credit-card', paymentCreditCardRouter);
 router.use("/blogs", routerBlog);
+router.use("/chat", routerChat);
 router.get('/provinces', getProvinces);
 router.get('/provinces/:provinceCode/districts', getDistricts);
 router.get('/districts/:districtCode/wards', getWards);

@@ -46,6 +46,8 @@ import CheckoutPaymentPage from './pages/client/CheckoutPaymentPage';
 import CheckoutReviewPage from './pages/client/CheckoutReviewPage';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { ChatProvider } from './contexts/ChatContext';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
@@ -60,6 +62,7 @@ import CouponList from './components/admin/coupons/CouponList';
 import CouponAdd from './components/admin/coupons/CouponAdd';
 import CouponEdit from './components/admin/coupons/CouponEdit';
 import BlogPage from './pages/admin/BlogPage';
+import ChatPage from './pages/admin/ChatPage';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
 import BlogList from './pages/client/BlogList';
 import BlogDetail from './pages/client/BlogDetail';
@@ -79,9 +82,11 @@ import Notifications from './pages/client/profile/notifications';
 function App() {
   return (
     <div className="App">
-      <NotificationProvider>
-        <CartProvider>
-          <WishlistProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <ChatProvider>
             <ScrollToTop />
             <Routes>
             {/* Test routes */}
@@ -154,6 +159,7 @@ function App() {
               <Route path="categories/:id" element={<CategoryDetail />} />
               <Route path="orders" element={<OrderList />} />
               <Route path="orders/:id" element={<OrderDetail />} />
+              <Route path="chat" element={<ChatPage />} />
               <Route path="brands" element={<BrandList />} />
               <Route path="banners" element={<BannerList />} />
               <Route path="banners/add" element={<BannerAdd />} />
@@ -166,15 +172,18 @@ function App() {
               <Route path="coupons/add" element={<CouponAdd />} />
               <Route path="coupons/edit/:id" element={<CouponEdit />} />
               <Route path="blogs" element={<BlogPage />} />
+              <Route path="chat" element={<ChatPage />} />
             </Route>
           </Routes>
           
           {/* Global Components */}
           <PromotionBanner />
           <Toaster />
-        </WishlistProvider>
-      </CartProvider>
-      </NotificationProvider>
+              </ChatProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </NotificationProvider>
+      </AuthProvider>
     </div>
   );
 }
