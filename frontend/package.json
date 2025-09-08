@@ -35,7 +35,9 @@
     "react-use": "^17.6.0",
     "recharts": "^3.0.2",
     "slugify": "^1.6.6",
-    "toastify": "^2.0.1"
+    "socket.io-client": "^4.7.5",
+    "toastify": "^2.0.1",
+    "date-fns": "^3.6.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.20",

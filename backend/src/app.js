@@ -4,12 +4,14 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import passport from "passport";
+import { createServer } from "http";
 import "./config/passport.js";
 import router from "./routes/index.js";
 import connectDB from "./config/database.js";
 import { setupCleanupCron } from "./utils/cleanupJob.js";
 import { checkAndRefreshToken } from "./utils/tokenRefresh.js";
 import { initAutoCompleteCron } from "./utils/autoCompleteOrders.js";
+import { initializeSocket } from "./config/socket.js";
 import fs from 'fs';
 import path from 'path';
 import uploadRoutes from "./routes/upload.js";
@@ -68,11 +70,25 @@ app.use("/api/upload", uploadRoutes); // Đặt lên trên
 app.use("/api", router);
 
 // Khởi động server
-const PORT = 8000; // Cố định port 8000
-app.listen(PORT, async() => {
+// PORT will be defined later
+const server = createServer(app);
+
+// Initialize Socket.io
+let io;
+try {
+  io = initializeSocket(server);
+  console.log('✅ Socket.io initialized successfully');
+} catch (error) {
+  console.error('❌ Error initializing Socket.io:', error);
+}
+
+// Start server
+const PORT = process.env.PORT || 8000;
+server.listen(PORT, async() => {
     console.log(`🚀 Server đã được khởi động thành công!`);
     console.log(`📍 Port: ${PORT}`);
     console.log(`🌐 URL: http://localhost:${PORT}`);
+    console.log(`🔌 Socket.io: Enabled`);
     console.log(`📁 Thư mục uploads: ${uploadsDir}`);
     console.log(`⏰ Thời gian: ${new Date().toLocaleString('vi-VN')}`);
 

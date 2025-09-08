@@ -5,6 +5,7 @@ import Footer from '../components/client/Footer';
 import NotificationBanner from '../components/client/NotificationBanner';
 import CookieConsent from '../components/client/CookieConsent';
 import BackToTop from '../components/client/BackToTop';
+import ChatWidget from '../components/client/ChatWidget';
 
 const ClientLayout: React.FC = () => {
   return (
@@ -17,6 +18,7 @@ const ClientLayout: React.FC = () => {
       <Footer />
       <CookieConsent />
       <BackToTop />
+      <ChatWidget />
     </div>
   );
 };
