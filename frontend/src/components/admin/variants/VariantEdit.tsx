@@ -367,19 +367,7 @@ const VariantEdit: React.FC = () => {
 
             <Divider orientation="left">Ảnh sản phẩm</Divider>
             <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item label="Link ảnh (mỗi dòng 1 link, ưu tiên dùng nếu có)">
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
-                    value={imageLinks}
-                    onChange={e => setImageLinks(e.target.value)}
-                  />
-                  <div style={{ color: '#888', fontSize: 12 }}>
-                    Nếu nhập link ảnh ở đây, hệ thống sẽ dùng các link này làm ảnh cho biến thể. Nếu để trống, sẽ dùng ảnh upload bên dưới.
-                  </div>
-                </Form.Item>
-              </Col>
+             
               <Col span={24}>
                 <Form.Item label="Upload ảnh (không bắt buộc, chỉ dùng nếu không nhập link ảnh)">
                   <Upload

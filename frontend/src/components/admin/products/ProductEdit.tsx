@@ -221,7 +221,7 @@ const ProductEdit: React.FC = () => {
     // Validate variants using utility function (isEdit = true để không yêu cầu ảnh)
     const validation = validateAllVariants(variants, true)
     if (!validation.isValid) {
-      message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
+      message.error(`Lỗi:\n${validation.errors.join('\n')}`)
       return
     }
     setSubmitting(true)
