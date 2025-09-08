@@ -1,34 +1,5 @@
 import axiosInstance from '../api/axiosInstance';
-
-export interface Coupon {
-  _id: string;
-  code: string;
-  name: string;
-  description?: string;
-  type: 'percentage' | 'fixed' | 'shipping';
-  discount: number;
-  minAmount: number;
-  maxDiscount?: number;
-  isActive: boolean;
-  startDate: string;
-  endDate: string;
-  expiryDate?: string;
-  usageLimit?: number;
-  usedCount: number;
-  isUsed?: boolean;
-  usedDate?: string;
-  // Backward compatibility fields
-  value?: number;
-  minOrderValue?: number;
-  maxDiscountValue?: number;
-  usageCount?: number;
-}
-
-export interface CouponResponse {
-  success: boolean;
-  coupons: Coupon[];
-  message?: string;
-}
+import { Coupon, CouponResponse } from '../interfaces/Coupon';
 
 // Lấy danh sách mã giảm giá có sẵn
 export const getAvailableCoupons = async (): Promise<CouponResponse> => {

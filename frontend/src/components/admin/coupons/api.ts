@@ -1,47 +1,5 @@
 import axiosInstance from '../../../api/axiosInstance';
-
-export interface Coupon {
-  _id: string;
-  code: string;
-  name: string;
-  description?: string;
-  type: 'percentage' | 'fixed' | 'shipping';
-  discount: number;
-  minAmount: number;
-  maxDiscount?: number;
-  isActive: boolean;
-  startDate: string;
-  endDate: string;
-  usageLimit: number;
-  usedCount: number;
-  // Backward compatibility fields
-  value?: number;
-  minOrderValue?: number;
-  maxDiscountValue?: number;
-  usageCount?: number;
-}
-
-export interface CouponResponse {
-  success: boolean;
-  coupons: Coupon[];
-  message?: string;
-}
-
-export interface CreateCouponData {
-  code: string;
-  name: string;
-  description?: string;
-  type: 'percentage' | 'fixed' | 'shipping';
-  discount: number;
-  minAmount: number;
-  maxDiscount?: number;
-  isActive: boolean;
-  startDate: string;
-  endDate: string;
-  usageLimit: number;
-}
-
-export interface UpdateCouponData extends Partial<CreateCouponData> {}
+import { Coupon, CouponResponse, CreateCouponData, UpdateCouponData } from '../../../interfaces/Coupon';
 
 // Lấy danh sách tất cả coupon (admin)
 export const getCoupons = async (page = 1, pageSize = 10): Promise<{ coupons: Coupon[]; total: number; page: number; pages: number }> => {
@@ -87,10 +45,15 @@ export const updateCoupon = async (id: string, data: UpdateCouponData): Promise<
   }
 };
 
-// Xóa coupon
-export const deleteCoupon = async (id: string): Promise<void> => {
+// Xóa coupon (soft delete hoặc hard delete)
+export const deleteCoupon = async (id: string, hardDelete: boolean = false): Promise<void> => {
   try {
-    await axiosInstance.delete(`/coupon/${id}`);
+    if (hardDelete) {
+      await axiosInstance.delete(`/coupon/${id}`);
+    } else {
+      // Soft delete - chỉ tắt isActive
+      await axiosInstance.put(`/coupon/${id}`, { isActive: false });
+    }
   } catch (error: any) {
     console.error('Error deleting coupon:', error);
     throw new Error(error.response?.data?.message || 'Lỗi khi xóa mã giảm giá');

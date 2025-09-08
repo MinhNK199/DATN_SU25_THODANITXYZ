@@ -20,8 +20,8 @@ const couponSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Vui lòng chọn loại giảm giá'],
         enum: {
-            values: ['percentage', 'fixed', 'shipping'],
-            message: 'Loại giảm giá không hợp lệ (percentage, fixed hoặc shipping)',
+            values: ['percentage', 'fixed'],
+            message: 'Loại giảm giá không hợp lệ (percentage hoặc fixed)',
         },
     },
     discount: {
@@ -97,6 +97,10 @@ const couponSchema = new mongoose.Schema({
             default: 0,
         },
     }],
+    applyToAllProducts: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true,
     versionKey: false,
@@ -105,7 +109,7 @@ const couponSchema = new mongoose.Schema({
 });
 
 // Kiểm tra coupon còn hiệu lực không
-couponSchema.methods.isValid = function() {
+couponSchema.methods.isValid = function () {
     const now = new Date();
     return (
         this.isActive &&
@@ -116,22 +120,22 @@ couponSchema.methods.isValid = function() {
 };
 
 // Virtual để lấy giá trị discount (ưu tiên field mới)
-couponSchema.virtual('discountValue').get(function() {
+couponSchema.virtual('discountValue').get(function () {
     return this.discount !== undefined ? this.discount : this.value;
 });
 
 // Virtual để lấy min amount (ưu tiên field mới)
-couponSchema.virtual('minAmountValue').get(function() {
+couponSchema.virtual('minAmountValue').get(function () {
     return this.minAmount !== undefined ? this.minAmount : this.minOrderValue;
 });
 
 // Virtual để lấy max discount (ưu tiên field mới)
-couponSchema.virtual('maxDiscountAmount').get(function() {
+couponSchema.virtual('maxDiscountAmount').get(function () {
     return this.maxDiscount !== undefined ? this.maxDiscount : this.maxDiscountValue;
 });
 
 // Virtual để lấy used count (ưu tiên field mới)
-couponSchema.virtual('usedCountValue').get(function() {
+couponSchema.virtual('usedCountValue').get(function () {
     return this.usedCount !== undefined ? this.usedCount : this.usageCount;
 });
 

@@ -94,9 +94,6 @@ export const validateCoupon = async (req, res) => {
             if (maxDiscount) {
                 discountAmount = Math.min(discountAmount, maxDiscount);
             }
-        } else if (coupon.type === 'shipping') {
-            // Mã vận chuyển - giảm phí ship
-            discountAmount = discountValue;
         } else {
             discountAmount = Math.min(discountValue, orderValue);
         }
@@ -117,22 +114,28 @@ export const getAvailableCoupons = async (req, res) => {
         const coupons = await Coupon.find({
             isActive: true,
             startDate: { $lte: now },
-            endDate: { $gte: now },
-            $or: [
-                { $expr: { $lt: ["$usedCount", "$usageLimit"] } },
-                { $expr: { $lt: ["$usageCount", "$usageLimit"] } }
-            ]
+            endDate: { $gte: now }
         }).sort({ createdAt: -1 });
+
+        // Filter coupons that haven't exceeded usage limit
+        const availableCoupons = coupons.filter(coupon => {
+            const usedCount = coupon.usedCount || coupon.usageCount || 0;
+            const usageLimit = coupon.usageLimit || 1;
+            return usedCount < usageLimit;
+        });
+
+        console.log(`Found ${coupons.length} total coupons, ${availableCoupons.length} available coupons`);
+        console.log('Available coupons:', availableCoupons.map(c => ({ code: c.code, name: c.name, usedCount: c.usedCount || c.usageCount, usageLimit: c.usageLimit })));
 
         res.json({
             success: true,
-            coupons
+            coupons: availableCoupons
         });
     } catch (error) {
         console.error('Error fetching available coupons:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: error.message 
+            message: error.message
         });
     }
 };
@@ -141,7 +144,7 @@ export const getAvailableCoupons = async (req, res) => {
 export const getUsedCoupons = async (req, res) => {
     try {
         const userId = req.user._id;
-        
+
         // Tìm các coupon đã được sử dụng bởi user này
         const coupons = await Coupon.find({
             'usedBy.user': userId,
@@ -154,9 +157,9 @@ export const getUsedCoupons = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching used coupons:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: error.message 
+            message: error.message
         });
     }
 };
@@ -166,41 +169,41 @@ export const applyCoupon = async (req, res) => {
     try {
         const { code, orderAmount } = req.body;
         const userId = req.user._id;
-        
+
         const coupon = await Coupon.findOne({ code });
         if (!coupon) {
-            return res.status(404).json({ 
+            return res.status(404).json({
                 success: false,
-                message: "Mã giảm giá không tồn tại" 
+                message: "Mã giảm giá không tồn tại"
             });
         }
 
         // Kiểm tra coupon còn hiệu lực không
         if (!coupon.isValid()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: "Mã giảm giá không còn hiệu lực" 
+                message: "Mã giảm giá không còn hiệu lực"
             });
         }
 
         // Kiểm tra giá trị đơn hàng tối thiểu
         const minAmount = coupon.minAmountValue || coupon.minOrderValue || 0;
         if (orderAmount < minAmount) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: `Giá trị đơn hàng tối thiểu là ${minAmount}đ` 
+                message: `Giá trị đơn hàng tối thiểu là ${minAmount}đ`
             });
         }
 
         // Kiểm tra user đã sử dụng coupon này chưa
-        const userUsage = coupon.usedBy.find(usage => 
+        const userUsage = coupon.usedBy.find(usage =>
             usage.user.toString() === userId.toString()
         );
-        
+
         if (userUsage && userUsage.count >= coupon.userUsageLimit) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 success: false,
-                message: "Bạn đã sử dụng hết số lần cho phép của mã giảm giá này" 
+                message: "Bạn đã sử dụng hết số lần cho phép của mã giảm giá này"
             });
         }
 
@@ -213,9 +216,6 @@ export const applyCoupon = async (req, res) => {
             if (maxDiscount) {
                 discountAmount = Math.min(discountAmount, maxDiscount);
             }
-        } else if (coupon.type === 'shipping') {
-            // Mã vận chuyển - giảm phí ship
-            discountAmount = discountValue;
         } else {
             discountAmount = Math.min(discountValue, orderAmount);
         }
@@ -230,9 +230,9 @@ export const applyCoupon = async (req, res) => {
         });
     } catch (error) {
         console.error('Error applying coupon:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: error.message 
+            message: error.message
         });
     }
 };
@@ -241,7 +241,7 @@ export const applyCoupon = async (req, res) => {
 export const removeCoupon = async (req, res) => {
     try {
         const { couponId } = req.body;
-        
+
         // Chỉ cần trả về success, logic xử lý sẽ được thực hiện ở frontend
         res.json({
             success: true,
@@ -249,9 +249,9 @@ export const removeCoupon = async (req, res) => {
         });
     } catch (error) {
         console.error('Error removing coupon:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: error.message 
+            message: error.message
         });
     }
 };

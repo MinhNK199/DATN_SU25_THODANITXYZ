@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, InputNumber, Select, DatePicker, Switch, Button, Card, message, Row, Col, Spin } from "antd";
+import { Form, Input, InputNumber, Select, DatePicker, Switch, Button, Card, message, Row, Col, Spin, Checkbox } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCouponById, updateCoupon } from "./api";
 import dayjs from "dayjs";
@@ -7,17 +7,23 @@ import dayjs from "dayjs";
 const { Option } = Select;
 const { TextArea } = Input;
 
+interface Product {
+  _id: string;
+  name: string;
+}
+
 const CouponEdit: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
 
   useEffect(() => {
     const fetchCoupon = async () => {
       if (!id) return;
-      
+
       setInitialLoading(true);
       try {
         const coupon = await getCouponById(id);
@@ -37,9 +43,15 @@ const CouponEdit: React.FC = () => {
     fetchCoupon();
   }, [id, form, navigate]);
 
+  useEffect(() => {
+    fetch("/api/product?pageSize=1000")
+      .then(res => res.json())
+      .then(data => setProducts(data.products || []));
+  }, []);
+
   const handleSubmit = async (values: any) => {
     if (!id) return;
-    
+
     setLoading(true);
     try {
       const couponData = {
@@ -59,10 +71,8 @@ const CouponEdit: React.FC = () => {
   };
 
   const handleTypeChange = (type: string) => {
-    // Reset maxDiscount when changing type
-    if (type === 'shipping') {
-      form.setFieldsValue({ maxDiscount: undefined });
-    }
+    // Reset maxDiscount when changing type if needed
+    // No special handling needed for current types
   };
 
   if (initialLoading) {
@@ -127,7 +137,6 @@ const CouponEdit: React.FC = () => {
                   <Select onChange={handleTypeChange} placeholder="Chọn loại giảm giá">
                     <Option value="percentage">Phần trăm (%)</Option>
                     <Option value="fixed">Số tiền cố định</Option>
-                    <Option value="shipping">Miễn phí vận chuyển</Option>
                   </Select>
                 </Form.Item>
               </Card>
@@ -146,15 +155,14 @@ const CouponEdit: React.FC = () => {
                   <InputNumber
                     min={0}
                     className="w-full"
-                    placeholder="Nhập giá trị giảm"
+                    placeholder="VD: 20 (cho %) hoặc 50.000 (cho VNĐ)"
                     formatter={(value) => {
                       const type = form.getFieldValue('type');
+                      const formattedValue = `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                       if (type === 'percentage') {
-                        return `${value}%`;
-                      } else if (type === 'shipping') {
-                        return 'Miễn phí';
+                        return `${formattedValue}%`;
                       } else {
-                        return `${value} VNĐ`;
+                        return `${formattedValue} VNĐ`;
                       }
                     }}
                     parser={(value) => value!.replace(/[^\d]/g, '')}
@@ -172,8 +180,8 @@ const CouponEdit: React.FC = () => {
                   <InputNumber
                     min={0}
                     className="w-full"
-                    placeholder="0"
-                    formatter={(value) => `${value} VNĐ`}
+                    placeholder="VD: 500.000"
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' VNĐ'}
                     parser={(value) => value!.replace(/[^\d]/g, '')}
                   />
                 </Form.Item>
@@ -186,10 +194,10 @@ const CouponEdit: React.FC = () => {
                   <InputNumber
                     min={0}
                     className="w-full"
-                    placeholder="Không giới hạn"
-                    formatter={(value) => value ? `${value} VNĐ` : ''}
+                    placeholder="VD: 100.000"
+                    formatter={(value) => value ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' VNĐ' : ''}
                     parser={(value) => value!.replace(/[^\d]/g, '')}
-                    disabled={form.getFieldValue('type') === 'shipping'}
+                    disabled={false}
                   />
                 </Form.Item>
 
@@ -204,7 +212,26 @@ const CouponEdit: React.FC = () => {
                   <InputNumber
                     min={1}
                     className="w-full"
-                    placeholder="1"
+                    placeholder="VD: 100"
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                    parser={(value) => value!.replace(/\./g, '')}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label="Số lượt sử dụng tối đa per user"
+                  name="userUsageLimit"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập số lượt sử dụng per user" },
+                    { type: "number", min: 1, message: "Số lượt sử dụng per user phải lớn hơn 0" },
+                  ]}
+                >
+                  <InputNumber
+                    min={1}
+                    className="w-full"
+                    placeholder="VD: 5"
+                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                    parser={(value) => value!.replace(/\./g, '')}
                   />
                 </Form.Item>
               </Card>
@@ -270,6 +297,108 @@ const CouponEdit: React.FC = () => {
                   <p>• Mã sẽ tự động vô hiệu hóa khi hết hạn</p>
                   <p>• Khách hàng chỉ có thể sử dụng 1 lần mỗi mã</p>
                 </div>
+              </Card>
+            </Col>
+          </Row>
+
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Card title="Áp dụng sản phẩm" className="mb-6">
+                <Form.Item
+                  name="applyToAllProducts"
+                  valuePropName="checked"
+                >
+                  <Checkbox>Áp dụng cho tất cả các loại sản phẩm</Checkbox>
+                </Form.Item>
+
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.applyToAllProducts !== currentValues.applyToAllProducts
+                  }
+                >
+                  {({ getFieldValue }) => {
+                    const applyToAll = getFieldValue('applyToAllProducts');
+                    return !applyToAll ? (
+                      <Form.Item
+                        label="Chọn sản phẩm áp dụng"
+                        name="applicableProducts"
+                        rules={[
+                          { required: true, message: "Vui lòng chọn ít nhất một sản phẩm" }
+                        ]}
+                      >
+                        <Select
+                          mode="multiple"
+                          placeholder="Chọn một hoặc nhiều sản phẩm áp dụng"
+                          showSearch
+                          filterOption={(input, option) =>
+                            (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                          }
+                          maxTagCount="responsive"
+                          tagRender={(props) => {
+                            const { label, closable, onClose } = props;
+                            return (
+                              <span style={{
+                                background: '#f0f0f0',
+                                padding: '2px 8px',
+                                margin: '2px',
+                                borderRadius: '4px',
+                                display: 'inline-block'
+                              }}>
+                                {label}
+                                {closable && (
+                                  <span
+                                    onClick={onClose}
+                                    style={{ marginLeft: '4px', cursor: 'pointer' }}
+                                  >
+                                    ×
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          }}
+                        >
+                          {products.map((p) => (
+                            <Option key={p._id} value={p._id}>{p.name}</Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                    ) : null;
+                  }}
+                </Form.Item>
+
+                <Form.Item
+                  noStyle
+                  shouldUpdate={(prevValues, currentValues) =>
+                    prevValues.applyToAllProducts !== currentValues.applyToAllProducts ||
+                    prevValues.applicableProducts !== currentValues.applicableProducts
+                  }
+                >
+                  {({ getFieldValue }) => {
+                    const applyToAll = getFieldValue('applyToAllProducts');
+                    const selectedProducts = getFieldValue('applicableProducts') || [];
+
+                    if (applyToAll) {
+                      return (
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                          <strong>Áp dụng cho:</strong> Tất cả sản phẩm
+                        </div>
+                      );
+                    }
+
+                    if (selectedProducts.length > 0) {
+                      return (
+                        <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                          <strong>Đã chọn:</strong> {selectedProducts.map((id: string) =>
+                            products.find(p => p._id === id)?.name
+                          ).join(', ')}
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  }}
+                </Form.Item>
               </Card>
             </Col>
           </Row>
