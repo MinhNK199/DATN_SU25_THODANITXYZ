@@ -394,52 +394,56 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               {/* Color Selection */}
               <Row gutter={16}>
                 <Col span={12}>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Màu sắc:</label>
-                    <div className="flex gap-2 items-center">
-                      <ColorPicker
-                        value={variant.color?.code || "#000000"}
-                        onChange={(color, hex) => handleColorChange(variant.id, color, hex)}
-                        showText
-                        size="middle"
-                      />
-                      <Select
-                        placeholder="Chọn màu có sẵn"
-                        style={{ width: 200 }}
-                        value={variant.color?.code}
-                        onChange={(value) => {
-                          const selectedColor = COLOR_OPTIONS.find(c => c.code === value)
-                          if (selectedColor) {
-                            handleColorSelect(variant.id, selectedColor)
-                          }
-                        }}
-                        options={COLOR_OPTIONS.map(color => ({
-                          label: (
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-4 h-4 rounded border"
-                                style={{ backgroundColor: color.code }}
-                              />
-                              <span>{color.name}</span>
-                            </div>
-                          ),
-                          value: color.code
-                        }))}
-                      />
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Màu sắc:</label>
+                      <div className="space-y-2">
+                        <div className="flex gap-2 items-center">
+                          <ColorPicker
+                            value={variant.color?.code || "#000000"}
+                            onChange={(color, hex) => handleColorChange(variant.id, color, hex)}
+                            showText
+                            size="large"
+                            style={{ height: 32 }}
+                          />
+                          <Select
+                            placeholder="Chọn màu có sẵn"
+                            style={{ width: 200, height: 40 }}
+                            value={variant.color?.code}
+                            onChange={(value) => {
+                              const selectedColor = COLOR_OPTIONS.find(c => c.code === value)
+                              if (selectedColor) {
+                                handleColorSelect(variant.id, selectedColor)
+                              }
+                            }}
+                            options={COLOR_OPTIONS.map(color => ({
+                              label: (
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-4 h-4 rounded border"
+                                    style={{ backgroundColor: color.code }}
+                                  />
+                                  <span>{color.name}</span>
+                                </div>
+                              ),
+                              value: color.code
+                            }))}
+                          />
+                        </div>
+                        <Input
+                          placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
+                          style={{ width: 325, height: 32 }}
+                          value={variant.color?.name || ""}
+                          onChange={(e) => {
+                            const newColor = {
+                              code: variant.color?.code || "#000000",
+                              name: e.target.value
+                            };
+                            updateVariant(variant.id, "color", newColor);
+                          }}
+                          
+                        />
+                      </div>
                     </div>
-                    <Input
-                      placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
-                      value={variant.color?.name || ""}
-                      onChange={(e) => {
-                        const newColor = {
-                          code: variant.color?.code || "#000000",
-                          name: e.target.value
-                        };
-                        updateVariant(variant.id, "color", newColor);
-                      }}
-                      style={{ marginTop: 8 }}
-                    />
-                  </div>
                 </Col>
                 <Col span={12}>
                   <div className="space-y-2">
