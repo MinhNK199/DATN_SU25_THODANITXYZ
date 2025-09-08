@@ -16,6 +16,7 @@ interface VariantManagerProps {
 
 const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsChange }) => {
   const [fileLists, setFileLists] = useState<Record<string, UploadFile[]>>({})
+  const [touchedVariants, setTouchedVariants] = useState<Set<string>>(new Set())
 
   // Initialize file lists for existing variants
   useEffect(() => {
@@ -79,8 +80,9 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   }
 
   const addVariant = () => {
+    const newVariantId = Date.now().toString();
     const newVariant: ProductVariant = {
-      id: Date.now().toString(),
+      id: newVariantId,
       name: "",
       sku: "",
       price: 0,
@@ -97,11 +99,18 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       isActive: true,
       specifications: {},
     }
+    
+    // Khởi tạo fileList trống cho variant mới
+    setFileLists(prev => ({ ...prev, [newVariantId]: [] }));
+    
     onVariantsChange([...variants, newVariant])
   }
 
   const updateVariant = (id: string, field: keyof ProductVariant, value: unknown) => {
     console.log(`🔄 Updating variant ${id}, field: ${field}, value:`, value)
+
+    // Đánh dấu variant đã được tương tác
+    setTouchedVariants(prev => new Set(prev).add(id))
 
     const updatedVariants = variants.map((v) => {
       if (v.id === id) {
@@ -223,10 +232,19 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
 
   const handleImageUpload = async (variantId: string, info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const { fileList } = info;
+    console.log("📸 Upload info:", info);
+    console.log("📸 File list:", fileList);
+    
     setFileLists(prev => ({ ...prev, [variantId]: fileList }));
 
-    // Upload files that are new
-    const newFiles = fileList.filter((file: UploadFile) => file.originFileObj && file.status === 'uploading');
+    // Upload files that are new (có originFileObj và chưa được upload)
+    const newFiles = fileList.filter((file: UploadFile) => 
+      file.originFileObj && 
+      file.status !== 'error' &&
+      !file.url // Chưa có URL nghĩa là chưa được upload
+    );
+    
+    console.log("📸 New files to upload:", newFiles);
     
     if (newFiles.length > 0) {
       const token = localStorage.getItem("token");
@@ -235,39 +253,90 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       try {
         for (const file of newFiles) {
           if (file.originFileObj) {
+            console.log("📸 Uploading file:", file.name);
+            console.log("📸 File size:", file.originFileObj.size);
+            console.log("📸 File type:", file.originFileObj.type);
+            
             const formData = new FormData();
             formData.append("image", file.originFileObj);
+            
+            console.log("📸 Sending request to: http://localhost:8000/api/upload/");
+            console.log("📸 Token exists:", !!token);
+            
             const response = await fetch("http://localhost:8000/api/upload/", {
               method: "POST",
               headers: { Authorization: `Bearer ${token}` },
               body: formData,
             });
             
+            console.log("📸 Upload response status:", response.status);
+            
             if (!response.ok) {
-              throw new Error(`Upload failed for file ${file.name}`);
+              const errorText = await response.text();
+              console.error("📸 Upload error response:", errorText);
+              throw new Error(`Upload failed for file ${file.name}: ${response.status}`);
             }
             
             const data = await response.json();
+            console.log("📸 Upload response data:", data);
+            
             if (data?.url) {
-              uploadedUrls.push(data.url);
+              // Đảm bảo URL đầy đủ
+              const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
+              uploadedUrls.push(fullUrl);
+              console.log("📸 Successfully uploaded:", fullUrl);
+            } else {
+              console.error("📸 No URL in response:", data);
             }
           }
         }
         
         // Update variant with new images
-        const updatedVariants = variants.map((v) =>
-          v.id === variantId
-            ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
-            : v
-        );
-        onVariantsChange(updatedVariants);
-        
         if (uploadedUrls.length > 0) {
+          const updatedVariants = variants.map((v) =>
+            v.id === variantId
+              ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
+              : v
+          );
+          onVariantsChange(updatedVariants);
+          
+          // Cập nhật fileList với URL đã upload
+          const updatedFileList = fileList.map((file: UploadFile, index: number) => {
+            if (index < uploadedUrls.length && file.originFileObj) {
+              return {
+                ...file,
+                status: 'done',
+                url: uploadedUrls[index],
+                thumbUrl: uploadedUrls[index]
+              };
+            }
+            return file;
+          });
+          
+          setFileLists(prev => ({ ...prev, [variantId]: updatedFileList }));
           message.success(`Đã upload ${uploadedUrls.length} ảnh thành công`);
         }
       } catch (error) {
-        console.error("Error uploading images:", error);
-        message.error("Lỗi khi upload ảnh");
+        console.error("📸 Error uploading images:", error);
+        message.error(`Lỗi khi upload ảnh: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    } else {
+      // Nếu không có file mới, kiểm tra xem có file nào đã được upload chưa
+      console.log("📸 No new files to upload, checking existing files...");
+      const existingFiles = fileList.filter((file: UploadFile) => file.url);
+      console.log("📸 Existing files with URLs:", existingFiles);
+      
+      if (existingFiles.length > 0) {
+        const existingUrls = existingFiles.map((file: UploadFile) => file.url).filter(Boolean);
+        console.log("📸 Existing URLs:", existingUrls);
+        
+        // Cập nhật variant với URLs hiện có
+        const updatedVariants = variants.map((v) =>
+          v.id === variantId
+            ? { ...v, images: existingUrls }
+            : v
+        );
+        onVariantsChange(updatedVariants);
       }
     }
   };
@@ -283,9 +352,11 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
 
       {variants.map((variant, index) => {
         const validation = validateVariant(variant)
+        const isTouched = touchedVariants.has(variant.id)
+        const shouldShowValidation = isTouched && !validation.isValid
         
         return (
-          <Card key={variant.id} className={`mb-4 ${!validation.isValid ? 'border-red-300 bg-red-50' : ''}`}>
+          <Card key={variant.id} className={`mb-4 ${shouldShowValidation ? 'border-red-300 bg-red-50' : ''}`}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">
@@ -320,7 +391,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               </div>
 
               {/* Validation errors */}
-              {!validation.isValid && (
+              {shouldShowValidation && (
                 <div className="bg-red-100 border border-red-300 rounded p-2">
                   <div className="text-red-700 text-sm font-medium mb-1">Lỗi:</div>
                   <ul className="text-red-600 text-xs list-disc list-inside">
@@ -337,7 +408,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     placeholder="Tên biến thể *"
                     value={variant.name}
                     onChange={(e) => updateVariant(variant.id, "name", e.target.value)}
-                    status={!variant.name?.trim() ? "error" : undefined}
+                    status={isTouched && !variant.name?.trim() ? "error" : undefined}
                   />
                 </Col>
                 <Col span={8}>
@@ -345,7 +416,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     placeholder="SKU *"
                     value={variant.sku}
                     onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
-                    status={!variant.sku?.trim() ? "error" : undefined}
+                    status={isTouched && !variant.sku?.trim() ? "error" : undefined}
                   />
                 </Col>
                 <Col span={8}>
@@ -366,7 +437,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     value={variant.price || undefined}
                     onChange={(value) => updateVariant(variant.id, "price", value || 0)}
                     className="w-full"
-                    status={!variant.price || variant.price <= 0 ? "error" : undefined}
+                    status={isTouched && (!variant.price || variant.price <= 0) ? "error" : undefined}
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   />
                 </Col>
@@ -386,7 +457,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     onChange={(value) => updateVariant(variant.id, "stock", value || 0)}
                     className="w-full"
                     min={0}
-                    status={variant.stock < 0 ? "error" : undefined}
+                    status={isTouched && variant.stock < 0 ? "error" : undefined}
                   />
                 </Col>
               </Row>
@@ -473,7 +544,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                           onChange={(value) => updateVariant(variant.id, "length", value || 0)}
                           min={1}
                           style={{ width: 80 }}
-                          status={!variant.length || variant.length <= 0 ? "error" : undefined}
+                          status={isTouched && (!variant.length || variant.length <= 0) ? "error" : undefined}
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -484,7 +555,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                           onChange={(value) => updateVariant(variant.id, "width", value || 0)}
                           min={1}
                           style={{ width: 80 }}
-                          status={!variant.width || variant.width <= 0 ? "error" : undefined}
+                          status={isTouched && (!variant.width || variant.width <= 0) ? "error" : undefined}
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -495,7 +566,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                           onChange={(value) => updateVariant(variant.id, "height", value || 0)}
                           min={1}
                           style={{ width: 80 }}
-                          status={!variant.height || variant.height <= 0 ? "error" : undefined}
+                          status={isTouched && (!variant.height || variant.height <= 0) ? "error" : undefined}
                         />
                       </div>
                     </div>
