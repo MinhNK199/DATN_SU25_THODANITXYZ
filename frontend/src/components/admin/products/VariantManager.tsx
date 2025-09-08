@@ -17,6 +17,9 @@ interface VariantManagerProps {
 const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsChange }) => {
   const [fileLists, setFileLists] = useState<Record<string, UploadFile[]>>({})
   const [touchedVariants, setTouchedVariants] = useState<Set<string>>(new Set())
+  // State để lưu trữ lỗi SKU từ database
+  const [skuErrors, setSkuErrors] = useState<Record<string, string>>({})
+  const [skuCheckTimeouts, setSkuCheckTimeouts] = useState<Record<string, number>>({})
 
   // Initialize file lists for existing variants
   useEffect(() => {
@@ -36,6 +39,101 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       setFileLists(prev => ({ ...prev, ...newFileLists }));
     }
   }, [variants]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(skuCheckTimeouts).forEach(timeout => {
+        if (timeout) clearTimeout(timeout);
+      });
+    };
+  }, [skuCheckTimeouts]);
+
+  // Hàm kiểm tra SKU với database
+  const checkSkuInDatabase = async (sku: string, variantId: string) => {
+    if (!sku?.trim()) {
+      // Xóa lỗi nếu SKU trống
+      setSkuErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[variantId];
+        return newErrors;
+      });
+      return;
+    }
+
+    try {
+      console.log(`🔍 Checking SKU "${sku}" for variant ${variantId}`);
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        console.error("❌ No token found");
+        setSkuErrors(prev => ({ ...prev, [variantId]: "Vui lòng đăng nhập để kiểm tra SKU" }));
+        return;
+      }
+
+      const url = `http://localhost:8000/api/product/check-sku?sku=${encodeURIComponent(sku)}`;
+      console.log(`📡 Making request to: ${url}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`📡 SKU check response status: ${response.status}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`📋 SKU check result:`, data);
+        
+        if (data.exists) {
+          setSkuErrors(prev => ({ ...prev, [variantId]: data.message }));
+          console.log(`❌ SKU "${sku}" exists: ${data.message}`);
+        } else {
+          setSkuErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[variantId];
+            return newErrors;
+          });
+          console.log(`✅ SKU "${sku}" is available`);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ SKU check failed: ${response.status} - ${errorText}`);
+        
+        // Nếu backend không hoạt động, không hiển thị lỗi để tránh làm phiền người dùng
+        // Chỉ log vào console để debug
+        if (response.status === 404) {
+          console.log("⚠️ Backend endpoint not found - skipping database validation");
+        } else if (response.status === 401) {
+          console.log("⚠️ Token invalid - skipping database validation");
+        } else if (response.status === 500) {
+          console.log("⚠️ Backend error - skipping database validation");
+        } else {
+          console.log(`⚠️ Unknown error ${response.status} - skipping database validation`);
+        }
+        
+        // Xóa lỗi cũ nếu có
+        setSkuErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[variantId];
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error checking SKU:", error);
+      console.log("⚠️ Network error - skipping database validation");
+      
+      // Xóa lỗi cũ nếu có
+      setSkuErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[variantId];
+        return newErrors;
+      });
+    }
+  };
 
   // Validation functions
   const validateVariant = (variant: ProductVariant): { isValid: boolean; errors: string[] } => {
@@ -67,6 +165,33 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     
     if (!variant.height || variant.height <= 0) {
       errors.push("Chiều cao phải lớn hơn 0")
+    }
+
+    // Kiểm tra trùng lặp SKU trong form hiện tại
+    if (variant.sku?.trim()) {
+      const duplicateSku = variants.filter(v => 
+        v.id !== variant.id && 
+        v.sku?.trim().toLowerCase() === variant.sku.trim().toLowerCase()
+      );
+      if (duplicateSku.length > 0) {
+        errors.push(`SKU "${variant.sku}" đã tồn tại trong biến thể khác`)
+      }
+    }
+
+    // Kiểm tra trùng lặp tên biến thể
+    if (variant.name?.trim()) {
+      const duplicateName = variants.filter(v => 
+        v.id !== variant.id && 
+        v.name?.trim().toLowerCase() === variant.name.trim().toLowerCase()
+      );
+      if (duplicateName.length > 0) {
+        errors.push(`Tên biến thể "${variant.name}" đã tồn tại`)
+      }
+    }
+
+    // Kiểm tra lỗi SKU từ database
+    if (skuErrors[variant.id]) {
+      errors.push(skuErrors[variant.id]);
     }
 
     // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
@@ -345,15 +470,64 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Sản phẩm biến thể</h3>
-        <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
-          Thêm biến thể
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            type="default" 
+            onClick={async () => {
+              console.log("🧪 Testing SKU check API...");
+              
+              // Test 1: Check if backend is running
+              try {
+                const response = await fetch('http://localhost:8000/api/product/check-sku?sku=test123', {
+                  method: 'GET',
+                  headers: { 
+                    'Authorization': `Bearer ${localStorage.getItem("token")}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                console.log("📡 Backend response status:", response.status);
+                
+                if (response.status === 404) {
+                  console.log("❌ Backend is running but endpoint not found");
+                  message.error("Backend đang chạy nhưng endpoint không tồn tại");
+                } else if (response.status === 401) {
+                  console.log("❌ Backend is running but token invalid");
+                  message.error("Backend đang chạy nhưng token không hợp lệ");
+                } else if (response.status === 500) {
+                  console.log("❌ Backend is running but has internal error");
+                  const errorData = await response.json();
+                  console.log("❌ Error details:", errorData);
+                  message.error(`Backend lỗi: ${errorData.message}`);
+                } else {
+                  console.log("✅ Backend is running and responding");
+                  message.success("Backend đang hoạt động bình thường");
+                }
+              } catch (error) {
+                console.log("❌ Backend is not running or network error:", error);
+                message.error("Backend không chạy hoặc lỗi mạng");
+              }
+              
+              // Test 2: Check actual SKU
+              checkSkuInDatabase("123A", "test");
+            }}
+          >
+            Test API
+          </Button>
+          <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
+            Thêm biến thể
+          </Button>
+        </div>
       </div>
 
       {variants.map((variant, index) => {
         const validation = validateVariant(variant)
         const isTouched = touchedVariants.has(variant.id)
-        const shouldShowValidation = isTouched && !validation.isValid
+        
+        // Hiển thị validation cho lỗi trùng lặp ngay lập tức, các lỗi khác chỉ khi đã tương tác
+        const hasDuplicateErrors = validation.errors.some(error => 
+          error.includes('đã tồn tại') || error.includes('đã tồn tại trong biến thể khác') || error.includes('đã tồn tại trong sản phẩm')
+        )
+        const shouldShowValidation = (isTouched && !validation.isValid) || hasDuplicateErrors
         
         return (
           <Card key={variant.id} className={`mb-4 ${shouldShowValidation ? 'border-red-300 bg-red-50' : ''}`}>
@@ -408,15 +582,38 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     placeholder="Tên biến thể *"
                     value={variant.name}
                     onChange={(e) => updateVariant(variant.id, "name", e.target.value)}
-                    status={isTouched && !variant.name?.trim() ? "error" : undefined}
+                    status={
+                      (isTouched && !variant.name?.trim()) || 
+                      validation.errors.some(error => error.includes('Tên biến thể') && error.includes('đã tồn tại'))
+                        ? "error" : undefined
+                    }
                   />
                 </Col>
                 <Col span={8}>
                   <Input
                     placeholder="SKU *"
                     value={variant.sku}
-                    onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
-                    status={isTouched && !variant.sku?.trim() ? "error" : undefined}
+                    onChange={(e) => {
+                      updateVariant(variant.id, "sku", e.target.value);
+                      
+                      // Clear existing timeout
+                      if (skuCheckTimeouts[variant.id]) {
+                        clearTimeout(skuCheckTimeouts[variant.id]);
+                      }
+                      
+                      // Set new timeout for SKU check
+                      const timeout = setTimeout(() => {
+                        checkSkuInDatabase(e.target.value, variant.id);
+                      }, 1000);
+                      
+                      setSkuCheckTimeouts(prev => ({ ...prev, [variant.id]: timeout }));
+                    }}
+                    status={
+                      (isTouched && !variant.sku?.trim()) || 
+                      validation.errors.some(error => error.includes('SKU') && error.includes('đã tồn tại')) ||
+                      skuErrors[variant.id]
+                        ? "error" : undefined
+                    }
                   />
                 </Col>
                 <Col span={8}>

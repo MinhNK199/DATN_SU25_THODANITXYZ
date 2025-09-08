@@ -116,7 +116,7 @@ const ProductAddPage: React.FC = () => {
   const onFinish = async (values: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const validation = validateAllVariants(variants)
     if (!validation.isValid) {
-      message.error(`Lỗi validation:\n${validation.errors.join('\n')}`)
+      message.error(`Lỗi:\n${validation.errors.join('\n')}`)
       return
     }
     setLoading(true)
@@ -134,6 +134,32 @@ const ProductAddPage: React.FC = () => {
   const productStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
   const productCategory = categoryId || (typeof values.category === "string" ? values.category : "");
   const productBrand = brandId || (typeof values.brand === "string" ? values.brand : "");
+
+  // Validation trước khi gửi
+  if (!productName || productName.length < 2) {
+    message.error("Tên sản phẩm phải có ít nhất 2 ký tự");
+    return;
+  }
+  if (!productDescription || productDescription.length < 10) {
+    message.error("Mô tả sản phẩm phải có ít nhất 10 ký tự");
+    return;
+  }
+  if (!productPrice || productPrice <= 0) {
+    message.error("Giá sản phẩm phải lớn hơn 0");
+    return;
+  }
+  if (!productCategory) {
+    message.error("Vui lòng chọn danh mục");
+    return;
+  }
+  if (!productBrand) {
+    message.error("Vui lòng chọn thương hiệu");
+    return;
+  }
+  if (variants.length === 0) {
+    message.error("Phải có ít nhất 1 biến thể");
+    return;
+  }
 
   formData.append("name", productName);
   formData.append("description", productDescription);
@@ -158,6 +184,18 @@ const ProductAddPage: React.FC = () => {
         return rest;
       })))
 
+      // Debug: Log form data
+      console.log("📤 Sending product data:");
+      console.log("Name:", productName);
+      console.log("Description:", productDescription);
+      console.log("Price:", productPrice);
+      console.log("Stock:", productStock);
+      console.log("Category:", productCategory);
+      console.log("Brand:", productBrand);
+      console.log("SKU:", values.sku);
+      console.log("Variants:", variants);
+      console.log("Main image file:", mainImageFile);
+
       // Gửi request
       const token = localStorage.getItem("token")
       const response = await fetch(`${API_URL}/product`, {
@@ -167,8 +205,12 @@ const ProductAddPage: React.FC = () => {
         },
         body: formData,
       })
+      
+      console.log("📡 Response status:", response.status);
+      
       if (!response.ok) {
         const errorData = await response.json()
+        console.error("❌ Error response:", errorData);
         message.error(errorData.message || "Thêm sản phẩm thất bại.")
         return
       }

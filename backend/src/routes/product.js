@@ -55,7 +55,8 @@ import {
     searchProducts,
     createVoucher,
     checkVoucher,
-    updateVoucherUsage
+    updateVoucherUsage,
+    checkSkuExists
 } from "../controllers/product.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
@@ -146,5 +147,8 @@ routerProduct.post('/voucher', createVoucher);
 routerProduct.post('/check-voucher', checkVoucher);
 // Cập nhật lượt dùng voucher
 routerProduct.post('/voucher/update-usage', updateVoucherUsage);
+
+// Kiểm tra SKU trùng lặp
+routerProduct.get('/check-sku', checkSkuExists);
 
 export default routerProduct;
