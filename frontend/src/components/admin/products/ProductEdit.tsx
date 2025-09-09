@@ -65,9 +65,7 @@ const ProductEdit: React.FC = () => {
   const [images, setImages] = useState<string[]>([""])
   const [variants, setVariants] = useState<ProductVariant[]>([])
   const [previewImage, setPreviewImage] = useState<string>("")
-  const [fileList] = useState<UploadFile[]>([])
   // Thêm state cho ảnh đại diện
-  const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
 
 
@@ -202,24 +200,22 @@ const ProductEdit: React.FC = () => {
       console.log("📝 Form values before processing:", values)
       console.log("📝 Current variants:", variants)
 
-      const uploadedImageUrls = fileList
-        .map((file) => {
-          if (file.response && file.response.url) return file.response.url
-          if (file.url) return file.url
-          return null
-        })
-        .filter((url): url is string => url !== null)
-
-      // Xử lý ảnh đại diện mới
+      // Lấy URL ảnh đại diện từ fileList đã upload
       let mainImageUrl = ""
-      if (mainImageFile) {
-        // Nếu có ảnh đại diện mới, sử dụng ảnh đó
-        // Trong thực tế, cần upload ảnh lên server và lấy URL
-        // Tạm thời sử dụng URL.createObjectURL cho demo
-        mainImageUrl = URL.createObjectURL(mainImageFile)
-      } else if (mainImageFileList.length > 0 && mainImageFileList[0].url) {
-        // Nếu không có ảnh mới nhưng có ảnh hiện tại, giữ nguyên
+      if (mainImageFileList.length > 0 && mainImageFileList[0].url) {
         mainImageUrl = mainImageFileList[0].url
+      } else if (images.length > 0) {
+        // Fallback về ảnh gốc nếu không có ảnh mới
+        mainImageUrl = images[0]
+      }
+      
+      // Nếu không có ảnh nào, sử dụng mảng rỗng
+      const finalImages = mainImageUrl ? [mainImageUrl] : []
+      
+      // Validation: Kiểm tra có ít nhất 1 ảnh
+      if (finalImages.length === 0) {
+        message.error("Vui lòng chọn ít nhất 1 ảnh đại diện cho sản phẩm!");
+        return;
       }
 
       // CRITICAL: Pre-process variants to ensure color is object before sending
@@ -270,7 +266,7 @@ const ProductEdit: React.FC = () => {
         name: values.name,
         slug: slugify(values.name, { lower: true, strict: true }),
         description: values.description,
-        images: mainImageUrl ? [mainImageUrl, ...uploadedImageUrls.filter(url => url !== mainImageUrl)] : (uploadedImageUrls.length > 0 ? uploadedImageUrls : images.filter((img) => img.trim() !== "")),
+        images: finalImages,
         tags: values.tags || [],
         warranty: values.warranty,
         brand: getId(values.brand),
@@ -332,16 +328,55 @@ const ProductEdit: React.FC = () => {
 
 
   // Xử lý upload ảnh đại diện
-  const handleMainImageUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const handleMainImageUpload = async (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const { fileList } = info;
     setMainImageFileList(fileList);
 
     // Lấy file mới nhất
     const latestFile = fileList[fileList.length - 1];
     if (latestFile && latestFile.originFileObj) {
-      setMainImageFile(latestFile.originFileObj);
       // Cập nhật preview image
       setPreviewImage(URL.createObjectURL(latestFile.originFileObj));
+      
+      // Upload ảnh lên server ngay lập tức
+      try {
+        const token = localStorage.getItem("token");
+        const formData = new FormData();
+        formData.append("image", latestFile.originFileObj);
+        
+        const response = await fetch("http://localhost:8000/api/upload/", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.url) {
+            const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
+            // Cập nhật fileList với URL từ server
+            const updatedFileList = fileList.map((file: any, index: number) => {
+              if (index === fileList.length - 1) {
+                return {
+                  ...file,
+                  url: fullUrl,
+                  thumbUrl: fullUrl,
+                  status: 'done'
+                };
+              }
+              return file;
+            });
+            setMainImageFileList(updatedFileList);
+            setPreviewImage(fullUrl);
+            message.success("Upload ảnh thành công!");
+          }
+        } else {
+          message.error("Upload ảnh thất bại!");
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        message.error("Lỗi khi upload ảnh!");
+      }
     } else if (latestFile && latestFile.url) {
       // Nếu là ảnh hiện tại (không phải file mới)
       setPreviewImage(latestFile.url);
@@ -422,14 +457,9 @@ const ProductEdit: React.FC = () => {
                             justifyContent: "center",
                           }}
                           onClick={() => {
-                            setMainImageFile(null);
+                            // Xóa ảnh hiện tại
                             setMainImageFileList([]);
-                            // Khôi phục ảnh gốc nếu có
-                            if (images.length > 0) {
-                              setPreviewImage(images[0]);
-                            } else {
-                              setPreviewImage("");
-                            }
+                            setPreviewImage("");
                           }}
                         >
                           <FaTrash className="text-xs" />
@@ -494,7 +524,7 @@ const ProductEdit: React.FC = () => {
               <Divider />
 
               <Title level={4}>Xem trước ảnh đại diện</Title>
-              {previewImage ? (
+              {previewImage && previewImage.trim() !== "" ? (
                 <div className="space-y-3">
                   <div className="relative group">
                     <Image
