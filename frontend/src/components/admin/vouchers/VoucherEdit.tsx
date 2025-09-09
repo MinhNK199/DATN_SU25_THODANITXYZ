@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Select, DatePicker, InputNumber, Switch, Button, message, Card, Row, Col } from "antd";
+import { Form, Input, Select, DatePicker, InputNumber, Switch, Button, message as antdMessage, Card, Row, Col } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { updateCoupon, getCouponById } from "../coupons/api";
 import { Coupon, UpdateCouponData } from "../../../interfaces/Coupon";
@@ -14,6 +15,7 @@ const VoucherEdit: React.FC = () => {
     const [coupon, setCoupon] = useState<Coupon | null>(null);
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const { success, error } = useNotification();
     const location = useLocation();
 
     useEffect(() => {
@@ -35,7 +37,7 @@ const VoucherEdit: React.FC = () => {
             setCoupon(couponData);
             populateForm(couponData);
         } catch (error) {
-            message.error("Không thể tải thông tin voucher");
+            error("Không thể tải thông tin voucher");
             navigate("/admin/vouchers");
         } finally {
             setLoading(false);
@@ -73,10 +75,10 @@ const VoucherEdit: React.FC = () => {
             };
 
             await updateCoupon(id, updateData);
-            message.success("Cập nhật voucher thành công");
+            success("Cập nhật voucher thành công");
             navigate("/admin/vouchers");
         } catch (error: any) {
-            message.error(error.message || "Có lỗi xảy ra khi cập nhật voucher");
+            error(error.message || "Có lỗi xảy ra khi cập nhật voucher");
         } finally {
             setLoading(false);
         }
@@ -282,7 +284,7 @@ const VoucherEdit: React.FC = () => {
                         <Button onClick={handleCancel}>
                             Hủy
                         </Button>
-                        <Button type="primary" htmlType="submit" loading={loading}>
+                        <Button type="primary" className="admin-primary-button" htmlType="submit" loading={loading}>
                             Cập nhật voucher
                         </Button>
                     </div>

@@ -35,16 +35,16 @@ export const createVariantValidation = [
     .custom((value) => {
         if (value === undefined || value === null) return true;
         if (typeof value === 'string') {
-            // Nếu là string, kiểm tra hex color
-            return /^#[0-9A-F]{6}$/i.test(value);
+            // Nếu là string, kiểm tra hex color hoặc rgba
+            return /^#[0-9A-F]{6}$/i.test(value) || /^rgba?\([^)]+\)$/i.test(value);
         } else if (typeof value === 'object' && value !== null) {
             // Nếu là object, kiểm tra có code và name
             return value.code && typeof value.code === 'string' &&
-                /^#[0-9A-F]{6}$/i.test(value.code);
+                (/^#[0-9A-F]{6}$/i.test(value.code) || /^rgba?\([^)]+\)$/i.test(value.code));
         }
         return false;
     })
-    .withMessage('Màu sắc phải là mã màu hex hợp lệ hoặc object có code và name'),
+    .withMessage('Màu sắc phải là mã màu hex hoặc rgba hợp lệ hoặc object có code và name'),
 
     body('size')
     .optional()
@@ -122,16 +122,16 @@ export const updateVariantValidation = [
     .custom((value) => {
         if (value === undefined || value === null) return true;
         if (typeof value === 'string') {
-            // Nếu là string, kiểm tra hex color
-            return /^#[0-9A-F]{6}$/i.test(value);
+            // Nếu là string, kiểm tra hex color hoặc rgba
+            return /^#[0-9A-F]{6}$/i.test(value) || /^rgba?\([^)]+\)$/i.test(value);
         } else if (typeof value === 'object' && value !== null) {
             // Nếu là object, kiểm tra có code và name
             return value.code && typeof value.code === 'string' &&
-                /^#[0-9A-F]{6}$/i.test(value.code);
+                (/^#[0-9A-F]{6}$/i.test(value.code) || /^rgba?\([^)]+\)$/i.test(value.code));
         }
         return false;
     })
-    .withMessage('Màu sắc phải là mã màu hex hợp lệ hoặc object có code và name'),
+    .withMessage('Màu sắc phải là mã màu hex hoặc rgba hợp lệ hoặc object có code và name'),
 
     body('size')
     .optional()

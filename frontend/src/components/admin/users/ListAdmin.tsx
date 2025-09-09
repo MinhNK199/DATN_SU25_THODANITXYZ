@@ -175,6 +175,7 @@ const Listadmin: React.FC = () => {
           <Tooltip title="Duyệt admin">
             <Button
               type="primary"
+              className="admin-primary-button"
               icon={<FaCheck />}
               onClick={() => handleApprove(record._id!, true)}
               disabled={record.adminRequestStatus !== "pending"}

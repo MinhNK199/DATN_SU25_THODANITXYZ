@@ -59,6 +59,16 @@ const upload = multer({
 // Middleware upload ảnh
 export const uploadImage = upload.single('image');
 
+// Middleware upload multiple ảnh cho thumbnails
+export const uploadMultipleImages = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'thumbnail_0', maxCount: 1 },
+  { name: 'thumbnail_1', maxCount: 1 },
+  { name: 'thumbnail_2', maxCount: 1 },
+  { name: 'thumbnail_3', maxCount: 1 },
+  { name: 'thumbnail_4', maxCount: 1 }
+]);
+
 // Middleware xử lý lỗi multer
 export const handleMulterError = (error, req, res, next) => {
   if (error instanceof multer.MulterError) {

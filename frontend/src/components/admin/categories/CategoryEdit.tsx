@@ -6,7 +6,7 @@ import {
     Input,
     Button,
     Switch,
-    message,
+    message as antdMessage,
     Typography,
     Spin,
     Alert,
@@ -19,6 +19,7 @@ import {
     TreeSelect,
     Upload
 } from 'antd';
+import { useNotification } from "../../../hooks/useNotification";
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
 import { FaTrash } from 'react-icons/fa';
 import { getCategoryById, updateCategory, fetchCategories } from './api';
@@ -47,6 +48,7 @@ const CategoryEdit: React.FC = () => {
     const [submitting, setSubmitting] = useState(false);
     const [pageLoading, setPageLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { success, error: showError } = useNotification();
     const [categories, setCategories] = useState<Category[]>([]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -135,10 +137,10 @@ const CategoryEdit: React.FC = () => {
             
             console.log("📤 Updating category data:", finalValues);
             await updateCategory(id, finalValues);
-            message.success('Cập nhật danh mục thành công!');
+            success('Cập nhật danh mục thành công!');
             navigate('/admin/categories');
         } catch (error: any) {
-            message.error(error.message || 'Cập nhật danh mục thất bại!');
+            showError(error.message || 'Cập nhật danh mục thất bại!');
         } finally {
             setSubmitting(false);
         }
@@ -218,7 +220,7 @@ const CategoryEdit: React.FC = () => {
                 form={form}
                 layout="vertical"
                 onFinish={onFinish}
-                onFinishFailed={() => message.error('Vui lòng kiểm tra lại các trường thông tin!')}
+                onFinishFailed={() => showError('Vui lòng kiểm tra lại các trường thông tin!')}
             >
                 <Row gutter={[24, 24]}>
                     {/* Main Content */}

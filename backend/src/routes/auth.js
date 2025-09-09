@@ -72,7 +72,7 @@ routerAuth.get(
     passport.authenticate("facebook", { session: false, failureRedirect: "/login" }),
     async(req, res) => {
         const user = req.user;
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
         res.redirect(`${process.env.CLIENT_URL}/login-success?token=${token}`);
     }
 );
@@ -89,7 +89,7 @@ routerAuth.post(
 );
 
 routerAuth.patch("/users/:id/role", protect, checkAdmin(["capQuyen"]), updateUserRole);
-routerAuth.get("/users", protect, checkAdmin(["view_user"]), getAllUsers);
+routerAuth.get("/users", protect, checkAdmin(["admin", "superadmin"]), getAllUsers);
 routerAuth.get("/me", protect, getCurrentUser);
 routerAuth.get("/users/:id", protect, getUserById);
 routerAuth.patch("/users/:id/status", protect, checkAdmin(["CheckTaiKhoan"]), toggleUserStatus);

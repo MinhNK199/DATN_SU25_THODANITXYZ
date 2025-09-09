@@ -51,12 +51,37 @@ export const normalizeProductBody = (req, res, next) => {
         req.body.images = [`/uploads/images/${req.file.filename}`];
     } else if (req.files && Array.isArray(req.files)) {
         req.body.images = req.files.map(f => `/uploads/images/${f.filename}`);
+    } else if (req.files && req.files.image) {
+        // Handle multiple files upload
+        req.body.images = [`/uploads/images/${req.files.image[0].filename}`];
     } else if (req.body.images && typeof req.body.images === "string") {
         try {
             req.body.images = JSON.parse(req.body.images);
         } catch {
             req.body.images = [req.body.images];
         }
+    }
+
+    // Parse thumbnails from uploaded files
+    const thumbnailFiles = [];
+    if (req.files) {
+        Object.keys(req.files).forEach(key => {
+            if (key.startsWith('thumbnail_')) {
+                thumbnailFiles.push(`/uploads/images/${req.files[key][0].filename}`);
+            }
+        });
+    }
+    
+    // Also parse thumbnails from form data (fallback)
+    Object.keys(req.body).forEach(key => {
+        if (key.startsWith('thumbnail_')) {
+            thumbnailFiles.push(req.body[key]);
+            delete req.body[key];
+        }
+    });
+    
+    if (thumbnailFiles.length > 0) {
+        req.body.thumbnails = thumbnailFiles;
     }
     next();
 };

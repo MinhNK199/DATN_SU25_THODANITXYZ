@@ -61,7 +61,7 @@ import {
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { createProductValidation, updateProductValidation } from "../validation/product.js";
-import { uploadImage } from "../controllers/upload.js";
+import { uploadImage, uploadMultipleImages } from "../controllers/upload.js";
 import { normalizeProductBody } from "../middlewares/normalizeProductBody.js";
 
 const routerProduct = express.Router();
@@ -80,12 +80,11 @@ routerProduct.get("/:id/favorite", protect, checkFavorite);
 routerProduct.post("/:id/favorite", protect, addToFavorites);
 routerProduct.delete("/:id/favorite", protect, removeFromFavorites);
 
-routerProduct.get("/:id", getProductById);
 routerProduct.get("/:id/variant-stats", protect, getVariantStats);
 
 routerProduct.get("/", getProducts);
-routerProduct.post("/", protect, uploadImage, normalizeProductBody, createProductValidation, validateRequest, createProduct);
-routerProduct.put("/:id", protect, updateProductValidation, validateRequest, updateProduct);
+routerProduct.post("/", protect, uploadMultipleImages, normalizeProductBody, createProductValidation, validateRequest, createProduct);
+routerProduct.put("/:id", protect, uploadMultipleImages, normalizeProductBody, updateProductValidation, validateRequest, updateProduct);
 routerProduct.delete("/:id", protect, deleteProduct);
 routerProduct.put("/:id/soft-delete", protect, softDeleteProduct);
 routerProduct.put("/:id/restore", protect, restoreProduct);
@@ -150,5 +149,8 @@ routerProduct.post('/voucher/update-usage', updateVoucherUsage);
 
 // Kiểm tra SKU trùng lặp
 routerProduct.get('/check-sku', checkSkuExists);
+
+// Route này phải đặt cuối cùng để tránh conflict với các route cụ thể
+routerProduct.get("/:id", getProductById);
 
 export default routerProduct;

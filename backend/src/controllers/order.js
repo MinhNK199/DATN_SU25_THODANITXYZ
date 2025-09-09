@@ -788,14 +788,105 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
-// Thống kê doanh thu theo ngày và tháng
+// Thống kê doanh thu theo ngày, tuần và tháng
 export const getRevenueStats = async (req, res) => {
   try {
-    // Tạm thời vô hiệu hóa logic thống kê
-    res.json({ daily: [], monthly: [] });
-    return;
+    // Kiểm tra quyền admin
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có quyền xem thống kê doanh thu'
+      });
+    }
+
+    // Thống kê doanh thu theo ngày (30 ngày gần nhất)
+    const dailyStats = await Order.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: {
+            $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30 ngày gần nhất
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            day: { $dayOfMonth: '$createdAt' },
+            month: { $month: '$createdAt' },
+            year: { $year: '$createdAt' }
+          },
+          totalRevenue: { $sum: '$totalPrice' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
+      }
+    ]);
+
+    // Thống kê doanh thu theo tuần (12 tuần gần nhất)
+    const weeklyStats = await Order.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: {
+            $gte: new Date(Date.now() - 12 * 7 * 24 * 60 * 60 * 1000) // 12 tuần gần nhất
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            week: { $week: '$createdAt' },
+            year: { $year: '$createdAt' }
+          },
+          totalRevenue: { $sum: '$totalPrice' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.week': 1 }
+      }
+    ]);
+
+    // Thống kê doanh thu theo tháng (12 tháng gần nhất)
+    const monthlyStats = await Order.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: {
+            $gte: new Date(Date.now() - 12 * 30 * 24 * 60 * 60 * 1000) // 12 tháng gần nhất
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            month: { $month: '$createdAt' },
+            year: { $year: '$createdAt' }
+          },
+          totalRevenue: { $sum: '$totalPrice' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      daily: dailyStats,
+      weekly: weeklyStats,
+      monthly: monthlyStats
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error getting revenue stats:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Lỗi khi lấy thống kê doanh thu' 
+    });
   }
 };
 

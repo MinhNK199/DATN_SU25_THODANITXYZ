@@ -67,6 +67,11 @@ export const chatApi = {
     return response.data;
   },
 
+  markConversationAsRead: async (conversationId: string) => {
+    const response = await axiosInstance.put(`/chat/conversations/${conversationId}/read`);
+    return response.data;
+  },
+
   // Utility APIs
   getUnreadCount: async () => {
     const response = await axiosInstance.get('/chat/unread-count');
@@ -91,7 +96,7 @@ export const chatApi = {
   },
 
   assignConversation: async (conversationId: string, adminId: string) => {
-    const response = await axiosInstance.put(`/chat/conversations/${conversationId}/assign`, {
+    const response = await axiosInstance.put(`/chat/conversations/${conversationId}/status`, {
       assignedTo: adminId
     });
     return response.data;

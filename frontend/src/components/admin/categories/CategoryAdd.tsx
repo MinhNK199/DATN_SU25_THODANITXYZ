@@ -6,7 +6,7 @@ import {
     Input,
     Button,
     Switch,
-    message,
+    message as antdMessage,
     Typography,
     Space,
     InputNumber,
@@ -17,6 +17,7 @@ import {
     TreeSelect,
     Upload
 } from 'antd';
+import { useNotification } from "../../../hooks/useNotification";
 import { ArrowLeftOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { FaTrash } from 'react-icons/fa';
 import type { UploadFile } from 'antd/es/upload/interface';
@@ -30,7 +31,6 @@ const { TextArea } = Input;
 type FieldType = Omit<Category, '_id' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'deletedBy' | 'parent'> & {
     parent?: string | null;
 };
-
 
 const buildCategoryTree = (categories: Category[], parentId: string | null = null): any[] => {
     return categories
@@ -47,6 +47,7 @@ const CategoryAdd: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     const navigate = useNavigate();
+    const { success, error } = useNotification();
     const [previewImage, setPreviewImage] = useState<string>('');
     // Thêm state cho file ảnh upload
     const [imageFileList, setImageFileList] = useState<UploadFile[]>([]);
@@ -90,11 +91,6 @@ const CategoryAdd: React.FC = () => {
                 imageUrl = "https://via.placeholder.com/300x200/cccccc/666666?text=No+Image";
             }
             
-            // Giữ nguyên localhost URL để test
-            // if (imageUrl.includes('localhost')) {
-            //     imageUrl = "https://via.placeholder.com/300x200/cccccc/666666?text=Category+Image";
-            // }
-            
             // Tạo slug đúng format (chỉ chữ thường, số và dấu gạch ngang)
             const generatedSlug = slugify(values.name, { 
                 lower: true, 
@@ -109,41 +105,41 @@ const CategoryAdd: React.FC = () => {
             
             // Validate dữ liệu trước khi gửi
             if (!values.name || values.name.trim().length < 2) {
-                message.error('Tên danh mục phải có ít nhất 2 ký tự');
+                error('Tên danh mục phải có ít nhất 2 ký tự');
                 return;
             }
             
             if (values.name.trim().length > 100) {
-                message.error('Tên danh mục không được quá 100 ký tự');
+                error('Tên danh mục không được quá 100 ký tự');
                 return;
             }
             
             // Validate slug
             const finalSlug = values.slug?.trim() || generatedSlug;
             if (finalSlug.length < 2) {
-                message.error('Slug phải có ít nhất 2 ký tự');
+                error('Slug phải có ít nhất 2 ký tự');
                 return;
             }
             
             if (finalSlug.length > 50) {
-                message.error('Slug không được quá 50 ký tự');
+                error('Slug không được quá 50 ký tự');
                 return;
             }
             
             if (!/^[a-z0-9-]+$/.test(finalSlug)) {
-                message.error('Slug chỉ được chứa chữ thường, số và dấu gạch ngang');
+                error('Slug chỉ được chứa chữ thường, số và dấu gạch ngang');
                 return;
             }
             
             // Validate metaTitle
             if (values.metaTitle && values.metaTitle.trim().length > 60) {
-                message.error('Meta title không được quá 60 ký tự');
+                error('Meta title không được quá 60 ký tự');
                 return;
             }
             
             // Validate metaDescription
             if (values.metaDescription && values.metaDescription.trim().length > 160) {
-                message.error('Meta description không được quá 160 ký tự');
+                error('Meta description không được quá 160 ký tự');
                 return;
             }
             
@@ -170,11 +166,11 @@ const CategoryAdd: React.FC = () => {
             console.log("📤 Color processed:", categoryData.color);
             console.log("📤 Sending category data:", categoryData);
             await createCategory(categoryData);
-            message.success('Thêm danh mục thành công!');
+            success('Thêm danh mục thành công!');
             navigate('/admin/categories');
         } catch (error: any) { 
             console.error("❌ Error creating category:", error);
-            message.error(error.message || 'Thêm danh mục thất bại!');
+            error(error.message || 'Thêm danh mục thất bại!');
         } finally {
             setLoading(false);
         }
@@ -227,14 +223,14 @@ const CategoryAdd: React.FC = () => {
                         });
                         setImageFileList(updatedFileList);
                         setPreviewImage(fullUrl);
-                        message.success("Upload ảnh thành công!");
+                        antdMessage.success("Upload ảnh thành công!");
                     }
                 } else {
-                    message.error("Upload ảnh thất bại!");
+                    antdMessage.error("Upload ảnh thất bại!");
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                message.error("Lỗi khi upload ảnh!");
+                antdMessage.error("Lỗi khi upload ảnh!");
             }
         } else if (latestFile && latestFile.url) {
             // Nếu là ảnh hiện tại (không phải file mới)
@@ -250,7 +246,7 @@ const CategoryAdd: React.FC = () => {
                 form={form}
                 layout="vertical"
                 onFinish={onFinish}
-                onFinishFailed={() => message.error('Vui lòng kiểm tra lại các trường thông tin!')}
+                onFinishFailed={() => error('Vui lòng kiểm tra lại các trường thông tin!')}
                 initialValues={{ isActive: true, parent: null, order: 0 }}
             >
                 <Row gutter={[24, 24]}>

@@ -6,7 +6,7 @@ import {
   Card,
   Tooltip,
   Modal,
-  message,
+  message as antdMessage,
   Table,
   Tag,
   Space,
@@ -18,6 +18,7 @@ import {
   Col,
   Badge
 } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -54,6 +55,7 @@ const buildTreeData = (categories: Category[], parentId: string | null = null): 
 const CategoryList: React.FC = () => {
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const { success, error } = useNotification();
   const [searchName, setSearchName] = useState("");
   const [deletedCategories, setDeletedCategories] = useState<Category[]>([]);
   const [isTrashVisible, setTrashVisible] = useState(false);
@@ -90,10 +92,10 @@ const CategoryList: React.FC = () => {
       onOk: async () => {
         try {
           await categoryApi.softDeleteCategory(id);
-          message.success("Đã chuyển danh mục vào thùng rác!");
+          success("Đã chuyển danh mục vào thùng rác!");
           fetchData();
         } catch (error: any) {
-          message.error(error.message || "Xóa danh mục thất bại!");
+          error(error.message || "Xóa danh mục thất bại!");
         }
       },
     });
@@ -110,10 +112,10 @@ const CategoryList: React.FC = () => {
       onOk: async () => {
         try {
           await categoryApi.hardDeleteCategory(id);
-          message.success("Đã xóa vĩnh viễn danh mục!");
+          success("Đã xóa vĩnh viễn danh mục!");
           fetchData(); // Refreshes both active and deleted lists
         } catch (error: any) {
-          message.error(error.message || "Xóa vĩnh viễn thất bại!");
+          error(error.message || "Xóa vĩnh viễn thất bại!");
         }
       },
     });
@@ -122,10 +124,10 @@ const CategoryList: React.FC = () => {
   const handleRestore = async (id: string) => {
     try {
       await categoryApi.restoreCategory(id);
-      message.success("Khôi phục danh mục thành công!");
+      success("Khôi phục danh mục thành công!");
       fetchData(); // Refreshes both active and deleted lists
     } catch (error: any) {
-      message.error(error.message || "Khôi phục danh mục thất bại!");
+      error(error.message || "Khôi phục danh mục thất bại!");
     }
   };
 
@@ -275,7 +277,9 @@ const CategoryList: React.FC = () => {
                 <Col>
                     <Space>
                         <Button 
-                            type="primary" 
+                            type="primary"
+                    className="admin-primary-button"
+                            className="admin-primary-button" 
                             icon={<PlusOutlined />} 
                             onClick={() => navigate('/admin/categories/add')}
                         >
@@ -324,6 +328,7 @@ const CategoryList: React.FC = () => {
             <Badge count={deletedCategories.length} showZero>
                 <Button
                     type="primary"
+                    className="admin-primary-button"
                     shape="circle"
                     size="large"
                     icon={<DeleteOutlined />}
