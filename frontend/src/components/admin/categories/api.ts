@@ -11,7 +11,15 @@ const handleResponse = async (response: Response) => {
         return response.json();
     } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Something went wrong");
+        console.error("API Error:", errorData);
+        
+        // Hiển thị chi tiết lỗi validation
+        if (errorData.details && Array.isArray(errorData.details)) {
+            const errorMessages = errorData.details.map((detail: any) => detail.msg || detail.message).join(', ');
+            throw new Error(errorMessages || errorData.message || "Something went wrong");
+        }
+        
+        throw new Error(errorData.message || errorData.error || "Something went wrong");
     }
 };
 
@@ -20,7 +28,9 @@ export const fetchCategories = async (): Promise<Category[]> => {
     const response = await fetch(API_URL, {
         headers: { Authorization: `Bearer ${token}` },
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    console.log("📥 Fetched categories:", data);
+    return data;
 };
 
 export const fetchDeletedCategories = async (): Promise<Category[]> => {
