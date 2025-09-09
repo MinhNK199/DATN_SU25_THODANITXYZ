@@ -79,6 +79,7 @@ import Orders from './pages/client/profile/orders';
 import OrderDetailProfile from './pages/client/profile/order-detail';
 import Wishlist from './pages/client/profile/wishlist';
 import Notifications from './pages/client/profile/notifications';
+import RatingDetail from './components/admin/rating/RatingDetail';
 
 function App() {
   return (
@@ -166,6 +167,7 @@ function App() {
                     <Route path="banners/edit/:id" element={<BannerEdit />} />
                     <Route path="activities" element={<Activity />} />
                     <Route path="ratings" element={<RatingList />} />
+                    <Route path="ratings/:id" element={<RatingDetail />} />
                     <Route path="vouchers" element={<VoucherList />} />
                     <Route path="vouchers/add" element={<VoucherAdd />} />
                     <Route path="vouchers/edit/:id" element={<VoucherEdit />} />
