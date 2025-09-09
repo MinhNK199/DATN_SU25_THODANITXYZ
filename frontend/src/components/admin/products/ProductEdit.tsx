@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import type { Product } from "../../../interfaces/Product"
 import {
   Form,
   Input,
@@ -16,28 +15,24 @@ import {
   Divider,
   Row,
   Col,
-  Collapse,
-  Tabs,
   Spin,
   TreeSelect,
   Typography,
   Space,
+  Upload,
+  Image,
   type UploadFile,
-  type UploadProps,
 } from "antd"
 import VariantManager from "./VariantManager"
-import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons"
+import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, PlusOutlined } from "@ant-design/icons"
+import { FaTrash } from "react-icons/fa"
 import slugify from "slugify"
 import { getCategories, getBrands, getProductById, updateProduct } from "./api"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import { validateAllVariants, cleanColorData, validateAndCleanProductData } from "./utils/validation"
 
-const { TextArea } = Input
-const { Panel } = Collapse
-const { TabPane } = Tabs
 const { Title, Text } = Typography
-const API_URL = "http://localhost:8000/api/product"
 
 interface ProductVariant {
   id: string
@@ -58,32 +53,6 @@ interface ProductVariant {
   specifications?: { [key: string]: string }
 }
 
-// Helper function để lấy tên màu từ code
-const getColorNameByCode = (code: string): string => {
-  const colorMap: { [key: string]: string } = {
-    "#000000": "Đen",
-    "#FFFFFF": "Trắng",
-    "#FF0000": "Đỏ",
-    "#00FF00": "Xanh lá",
-    "#0000FF": "Xanh dương",
-    "#FFFF00": "Vàng",
-    "#FF00FF": "Tím",
-    "#00FFFF": "Xanh cyan",
-    "#FFA500": "Cam",
-    "#800080": "Tím đậm",
-    "#FFC0CB": "Hồng",
-    "#A52A2A": "Nâu",
-    "#808080": "Xám",
-    "#C0C0C0": "Bạc",
-    "#FFD700": "Vàng kim",
-    "#8B4513": "Nâu đậm",
-    "#4B0082": "Chàm",
-    "#FF1493": "Hồng đậm",
-    "#32CD32": "Xanh lime",
-    "#87CEEB": "Xanh sky",
-  }
-  return colorMap[code] || "Màu khác"
-}
 
 const ProductEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -95,17 +64,10 @@ const ProductEdit: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([])
   const [images, setImages] = useState<string[]>([""])
   const [variants, setVariants] = useState<ProductVariant[]>([])
-  const [product, setProduct] = useState<Product | null>(null)
   const [previewImage, setPreviewImage] = useState<string>("")
-  const [fileList, setFileList] = useState<UploadFile[]>([])
+  // Thêm state cho ảnh đại diện
+  const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
 
-  const getAuthHeader = () => {
-    const token = localStorage.getItem("token")
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    }
-  }
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
@@ -176,6 +138,15 @@ const ProductEdit: React.FC = () => {
         setImages(productData.images || [])
         if (productData.images?.length > 0) {
           setPreviewImage(productData.images[0])
+          // Khởi tạo fileList cho ảnh đại diện hiện tại
+          const currentMainImage: UploadFile[] = [{
+            uid: '-1',
+            name: 'current-main-image',
+            status: 'done',
+            url: productData.images[0],
+            thumbUrl: productData.images[0]
+          }]
+          setMainImageFileList(currentMainImage)
         }
         form.setFieldsValue({
           name: productData.name,
@@ -229,13 +200,23 @@ const ProductEdit: React.FC = () => {
       console.log("📝 Form values before processing:", values)
       console.log("📝 Current variants:", variants)
 
-      const uploadedImageUrls = fileList
-        .map((file) => {
-          if (file.response && file.response.url) return file.response.url
-          if (file.url) return file.url
-          return null
-        })
-        .filter((url): url is string => url !== null)
+      // Lấy URL ảnh đại diện từ fileList đã upload
+      let mainImageUrl = ""
+      if (mainImageFileList.length > 0 && mainImageFileList[0].url) {
+        mainImageUrl = mainImageFileList[0].url
+      } else if (images.length > 0) {
+        // Fallback về ảnh gốc nếu không có ảnh mới
+        mainImageUrl = images[0]
+      }
+      
+      // Nếu không có ảnh nào, sử dụng mảng rỗng
+      const finalImages = mainImageUrl ? [mainImageUrl] : []
+      
+      // Validation: Kiểm tra có ít nhất 1 ảnh
+      if (finalImages.length === 0) {
+        message.error("Vui lòng chọn ít nhất 1 ảnh đại diện cho sản phẩm!");
+        return;
+      }
 
       // CRITICAL: Pre-process variants to ensure color is object before sending
       const processedVariants = variants.map((variant, index) => {
@@ -285,7 +266,7 @@ const ProductEdit: React.FC = () => {
         name: values.name,
         slug: slugify(values.name, { lower: true, strict: true }),
         description: values.description,
-        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : images.filter((img) => img.trim() !== ""),
+        images: finalImages,
         tags: values.tags || [],
         warranty: values.warranty,
         brand: getId(values.brand),
@@ -343,64 +324,64 @@ const ProductEdit: React.FC = () => {
     setVariants(cleanedVariants)
   }
 
-  const handleUploadChange: UploadProps["onChange"] = ({ fileList: newFileList }) => {
-    setFileList(newFileList)
-    if (newFileList.length > 0) {
-      const firstFile = newFileList.find((f) => f.status === "done" || f.originFileObj)
-      if (firstFile) {
-        if (firstFile.url) {
-          setPreviewImage(firstFile.url)
-        } else if (firstFile.originFileObj) {
-          const reader = new FileReader()
-          reader.onload = (e) => setPreviewImage(e.target?.result as string)
-          reader.readAsDataURL(firstFile.originFileObj)
+
+
+
+  // Xử lý upload ảnh đại diện
+  const handleMainImageUpload = async (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setMainImageFileList(fileList);
+
+    // Lấy file mới nhất
+    const latestFile = fileList[fileList.length - 1];
+    if (latestFile && latestFile.originFileObj) {
+      // Cập nhật preview image
+      setPreviewImage(URL.createObjectURL(latestFile.originFileObj));
+      
+      // Upload ảnh lên server ngay lập tức
+      try {
+        const token = localStorage.getItem("token");
+        const formData = new FormData();
+        formData.append("image", latestFile.originFileObj);
+        
+        const response = await fetch("http://localhost:8000/api/upload/", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.url) {
+            const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
+            // Cập nhật fileList với URL từ server
+            const updatedFileList = fileList.map((file: any, index: number) => {
+              if (index === fileList.length - 1) {
+                return {
+                  ...file,
+                  url: fullUrl,
+                  thumbUrl: fullUrl,
+                  status: 'done'
+                };
+              }
+              return file;
+            });
+            setMainImageFileList(updatedFileList);
+            setPreviewImage(fullUrl);
+            message.success("Upload ảnh thành công!");
+          }
+        } else {
+          message.error("Upload ảnh thất bại!");
         }
+      } catch (error) {
+        console.error("Upload error:", error);
+        message.error("Lỗi khi upload ảnh!");
       }
-    } else {
-      setPreviewImage("")
+    } else if (latestFile && latestFile.url) {
+      // Nếu là ảnh hiện tại (không phải file mới)
+      setPreviewImage(latestFile.url);
     }
-  }
-
-  const uploadProps: UploadProps = {
-    action: "https://api.cloudinary.com/v1_1/your_cloudinary_name/image/upload", // THAY THẾ
-    listType: "picture-card",
-    fileList,
-    onChange: handleUploadChange,
-    multiple: true,
-    data: {
-      upload_preset: "your_upload_preset", // THAY THẾ
-    },
-    onPreview: async (file) => {
-      let src = file.url as string
-      if (!src) {
-        src = await new Promise((resolve) => {
-          const reader = new FileReader()
-          reader.readAsDataURL(file.originFileObj as any)
-          reader.onload = () => resolve(reader.result as string)
-        })
-      }
-      const image = new Image()
-      image.src = src
-      const imgWindow = window.open(src)
-      imgWindow?.document.write(image.outerHTML)
-    },
-  }
-
-  const handleImageChange = (value: string, idx: number) => {
-    const newImages = [...images]
-    newImages[idx] = value
-    setImages(newImages)
-    if (idx === 0) setPreviewImage(value)
-  }
-
-  const addImageField = () => setImages([...images, ""])
-
-  const removeImageField = (idx: number) => {
-    const newImages = images.filter((_, i) => i !== idx)
-    setImages(newImages)
-    if (idx === 0 && newImages.length > 0) setPreviewImage(newImages[0])
-    if (newImages.length === 0) setPreviewImage("")
-  }
+  };
 
   if (loading) {
     return (
@@ -427,6 +408,66 @@ const ProductEdit: React.FC = () => {
               </Form.Item>
               <Form.Item name="sku" label="SKU">
                 <Input placeholder="VD: ATN-001" />
+              </Form.Item>
+              <Form.Item label="Ảnh đại diện sản phẩm">
+                <div className="space-y-2">
+                  <Upload
+                    listType="picture-card"
+                    fileList={mainImageFileList}
+                    onChange={handleMainImageUpload}
+                    beforeUpload={() => false}
+                    multiple={false}
+                    showUploadList={false}
+                  >
+                    {mainImageFileList.length < 1 && (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                        <div className="text-sm text-gray-500">Upload</div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  {/* Hiển thị preview ảnh đã upload */}
+                  <div className="flex gap-3 flex-wrap mt-3">
+                    {mainImageFileList.length > 0 && mainImageFileList.map((file, idx) => (
+                      <div key={idx} className="relative group">
+                        <Image
+                          src={file.url || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : "")}
+                          alt={`Ảnh đại diện ${idx + 1}`}
+                          width={100}
+                          height={100}
+                          className="rounded-lg border border-gray-200 object-cover shadow-sm"
+                          onError={(e) => {
+                            console.error("Image load error:", file.url);
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                        <Button
+                          size="small"
+                          danger
+                          className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          style={{
+                            padding: 0,
+                            borderRadius: "50%",
+                            width: 24,
+                            height: 24,
+                            minWidth: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => {
+                            // Xóa ảnh hiện tại
+                            setMainImageFileList([]);
+                            setPreviewImage("");
+                          }}
+                        >
+                          <FaTrash className="text-xs" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
@@ -482,20 +523,57 @@ const ProductEdit: React.FC = () => {
 
               <Divider />
 
-              <Title level={4}>Xem trước ảnh</Title>
-              {previewImage ? (
-                <img
-                  src={previewImage || "/placeholder.svg"}
-                  alt="Preview"
-                  style={{
-                    width: "100%",
-                    borderRadius: "8px",
-                    marginBottom: "1rem",
-                  }}
-                />
+              <Title level={4}>Xem trước ảnh đại diện</Title>
+              {previewImage && previewImage.trim() !== "" ? (
+                <div className="space-y-3">
+                  <div className="relative group">
+                    <Image
+                      src={previewImage || "/placeholder.svg"}
+                      alt="Preview ảnh đại diện"
+                      className="w-full h-48 object-cover rounded-lg border border-gray-200 shadow-sm"
+                      onError={(e) => {
+                        console.error("Image load error:", previewImage);
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                      <Text className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-sm font-medium">
+                        Ảnh đại diện
+                      </Text>
+                    </div>
+                  </div>
+                  
+                  {/* Nút sửa ảnh */}
+                  <Upload
+                    showUploadList={false}
+                    beforeUpload={() => false}
+                    onChange={handleMainImageUpload}
+                    accept="image/*"
+                  >
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<UploadOutlined />}
+                      block
+                      style={{
+                        background: "#1677ff",
+                        border: "none",
+                        boxShadow: "0 2px 8px rgba(22,119,255,0.2)"
+                      }}
+                    >
+                      Thay đổi ảnh
+                    </Button>
+                  </Upload>
+                </div>
               ) : (
-                <div className="h-48 flex items-center justify-center bg-gray-200 rounded-lg mb-4">
-                  <Text type="secondary">Chưa có ảnh</Text>
+                <div className="h-48 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border-2 border-dashed border-gray-300">
+                  <UploadOutlined className="text-4xl text-gray-400 mb-2" />
+                  <Text type="secondary" className="text-center">
+                    Chưa có ảnh đại diện
+                  </Text>
+                  <Text type="secondary" className="text-xs text-center mt-1">
+                    Upload ảnh để xem trước
+                  </Text>
                 </div>
               )}
 

@@ -160,7 +160,14 @@ const CategoryList: React.FC = () => {
       key: "name",
       render: (name: string, record: Category) => (
         <Space>
-          <Avatar shape="square" src={record.image || record.icon} />
+          <Avatar 
+            shape="square" 
+            src={record.image || record.icon || 'https://via.placeholder.com/40x40?text=No+Image'} 
+            onError={(e) => {
+              console.error("Avatar image error:", record.image);
+              e.currentTarget.src = 'https://via.placeholder.com/40x40?text=No+Image';
+            }}
+          />
           <Typography.Text strong>{name}</Typography.Text>
         </Space>
       ),
