@@ -2,6 +2,7 @@ import Cart from "../models/Cart.js";
 import ProductReservation from "../models/ProductReservation.js";
 import Coupon from "../models/Coupon.js";
 import Product from "../models/Product.js";
+import VariantStockService from "../services/variantStockService.js";
 
 // Helper function để lấy số lượng có sẵn thực tế
 const getAvailableStock = async (productId) => {
@@ -25,17 +26,51 @@ export const getCart = async (req, res) => {
         if (cart) {
             // Lọc bỏ các item mà product bị null (sản phẩm đã bị xóa khỏi DB)
             cart.items = cart.items.filter(item => item.product);
-            // Cập nhật số lượng có sẵn cho từng sản phẩm
+            // ✅ SỬ DỤNG VARIANT STOCK SERVICE ĐỂ LẤY STOCK CHÍNH XÁC
+            console.log(`🔍 Đang cập nhật stock cho ${cart.items.length} items trong giỏ hàng`);
+
             for (let item of cart.items) {
                 if (!item.product) continue;
-                const availableStock = await getAvailableStock(item.product._id);
-                item.product.availableStock = availableStock;
 
-                // Nếu số lượng trong giỏ hàng vượt quá số lượng có sẵn, cập nhật lại
-                if (item.quantity > availableStock) {
-                    item.quantity = availableStock;
+                let availableStock = 0;
+                let variantStock = 0;
+
+                if (item.variantId) {
+                    // ✅ XỬ LÝ SẢN PHẨM CÓ BIẾN THỂ - LẤY STOCK TỪ VARIANT
+                    console.log(`📦 Xử lý sản phẩm có biến thể: ${item.product.name} - Variant: ${item.variantId}`);
+
+                    // Lấy stock thực tế của biến thể
+                    variantStock = await VariantStockService.getVariantStock(item.product._id, item.variantId);
+
+                    // Lấy stock có sẵn (trừ đi reservation)
+                    availableStock = await VariantStockService.getAvailableVariantStock(
+                        item.product._id,
+                        item.variantId,
+                        req.user._id
+                    );
+
+                    console.log(`📊 Stock biến thể: ${variantStock}, Stock có sẵn: ${availableStock}`);
+
+                } else {
+                    // ✅ XỬ LÝ SẢN PHẨM KHÔNG CÓ BIẾN THỂ - LẤY STOCK TỪ PRODUCT
+                    console.log(`📦 Xử lý sản phẩm không có biến thể: ${item.product.name}`);
+
+                    variantStock = item.product.stock || 0;
+                    availableStock = await getAvailableStock(item.product._id);
+
+                    console.log(`📊 Stock sản phẩm: ${variantStock}, Stock có sẵn: ${availableStock}`);
                 }
-                // Bổ sung variantInfo nếu có variantId
+
+                // ✅ CẬP NHẬT AVAILABLE STOCK CHO PRODUCT (SỬ DỤNG STOCK CỦA VARIANT)
+                item.product.availableStock = variantStock;
+
+                // ✅ ĐIỀU CHỈNH SỐ LƯỢNG NẾU VƯỢT QUÁ STOCK
+                if (item.quantity > variantStock) {
+                    console.log(`⚠️ Điều chỉnh số lượng từ ${item.quantity} xuống ${variantStock} do vượt quá stock`);
+                    item.quantity = variantStock;
+                }
+
+                // ✅ BỔ SUNG VARIANTINFO VỚI STOCK CHÍNH XÁC
                 if (item.variantId && item.product.variants) {
                     const variant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
                     if (variant && typeof variant === 'object') {
@@ -45,7 +80,8 @@ export const getCart = async (req, res) => {
                             images: Array.isArray(variant.images) ? variant.images : [],
                             price: typeof variant.price === 'number' ? variant.price : 0,
                             salePrice: typeof variant.salePrice === 'number' ? variant.salePrice : 0,
-                            stock: typeof variant.stock === 'number' ? variant.stock : 0,
+                            stock: variantStock, // ✅ SỬ DỤNG STOCK CHÍNH XÁC TỪ DATABASE
+                            availableStock: variantStock, // ✅ SỬ DỤNG STOCK CỦA VARIANT
                             color: (variant.color && typeof variant.color === 'object') ? variant.color : { code: '', name: '' },
                             size: typeof variant.size === 'number' ? variant.size : 0,
                             weight: typeof variant.weight === 'number' ? variant.weight : 0,
@@ -53,6 +89,9 @@ export const getCart = async (req, res) => {
                             specifications: (variant.specifications && typeof variant.specifications === 'object') ? Object.fromEntries(Object.entries(variant.specifications)) : {},
                         };
                     }
+                } else {
+                    // ✅ THÊM AVAILABLE STOCK CHO SẢN PHẨM KHÔNG CÓ BIẾN THỂ
+                    item.product.availableStock = availableStock;
                 }
             }
             // Lưu lại giỏ hàng nếu có thay đổi
@@ -239,30 +278,67 @@ export const updateCartItem = async (req, res) => {
         const { quantity, variantId } = req.body;
         const { productId } = req.params;
 
+        console.log(`🔄 Cập nhật số lượng sản phẩm ${productId}, variant: ${variantId}, quantity: ${quantity}`);
+
         // Kiểm tra sản phẩm tồn tại
         const product = await Product.findById(productId);
         if (!product) {
             return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
         }
 
-        // Lấy số lượng có sẵn thực tế (trừ đi số lượng hiện tại trong giỏ hàng của user này)
-        const currentReservation = await ProductReservation.findOne({
-            product: productId,
-            user: req.user._id,
-            isActive: true
-        });
+        // ✅ SỬ DỤNG VARIANT STOCK SERVICE ĐỂ VALIDATE STOCK
+        let availableStock = 0;
+        let stockValidation = null;
 
-        const currentQuantity = currentReservation ? currentReservation.quantity : 0;
-        const otherReservedQuantity = await ProductReservation.getReservedQuantity(productId) - currentQuantity;
-        const availableStock = Math.max(0, product.stock - otherReservedQuantity);
+        if (variantId) {
+            // ✅ XỬ LÝ SẢN PHẨM CÓ BIẾN THỂ - VALIDATE STOCK CỦA VARIANT
+            console.log(`📦 Kiểm tra stock cho biến thể: ${variantId}`);
 
-        // Kiểm tra số lượng mới có hợp lệ không
-        if (availableStock < quantity) {
-            return res.status(400).json({
-                message: `Chỉ có thể đặt tối đa ${availableStock} sản phẩm`,
-                availableStock: availableStock
+            stockValidation = await VariantStockService.canUpdateQuantity(
+                productId,
+                variantId,
+                quantity,
+                req.user._id
+            );
+
+            availableStock = stockValidation.availableStock;
+
+            if (!stockValidation.canUpdate) {
+                console.log(`❌ Không thể cập nhật: ${stockValidation.message}`);
+                return res.status(400).json({
+                    message: stockValidation.message,
+                    availableStock: availableStock,
+                    requestedQuantity: quantity
+                });
+            }
+
+        } else {
+            // ✅ XỬ LÝ SẢN PHẨM KHÔNG CÓ BIẾN THỂ - VALIDATE STOCK CỦA PRODUCT
+            console.log(`📦 Kiểm tra stock cho sản phẩm: ${productId}`);
+
+            // Lấy số lượng có sẵn thực tế (trừ đi số lượng hiện tại trong giỏ hàng của user này)
+            const currentReservation = await ProductReservation.findOne({
+                product: productId,
+                user: req.user._id,
+                isActive: true
             });
+
+            const currentQuantity = currentReservation ? currentReservation.quantity : 0;
+            const otherReservedQuantity = await ProductReservation.getReservedQuantity(productId) - currentQuantity;
+            availableStock = Math.max(0, product.stock - otherReservedQuantity);
+
+            // Kiểm tra số lượng mới có hợp lệ không
+            if (availableStock < quantity) {
+                console.log(`❌ Không đủ stock: cần ${quantity}, có ${availableStock}`);
+                return res.status(400).json({
+                    message: `Chỉ có thể đặt tối đa ${availableStock} sản phẩm`,
+                    availableStock: availableStock,
+                    requestedQuantity: quantity
+                });
+            }
         }
+
+        console.log(`✅ Stock validation thành công: có thể cập nhật ${quantity} sản phẩm`);
 
         // Cập nhật reservation
         await ProductReservation.createReservation(productId, req.user._id, quantity);
@@ -304,17 +380,21 @@ export const updateCartItem = async (req, res) => {
                 select: 'name price salePrice images stock variants'
             });
 
-            // Bổ sung variantInfo cho item nếu có variantId
+            // ✅ BỔ SUNG VARIANTINFO VỚI STOCK CHÍNH XÁC
             if (item.variantId && item.product.variants) {
                 const variant = item.product.variants.find(v => v._id.toString() === item.variantId.toString());
                 if (variant && typeof variant === 'object') {
+                    // Lấy stock chính xác từ database
+                    const variantStock = await VariantStockService.getVariantStock(productId, item.variantId);
+
                     item.variantInfo = {
                         _id: variant._id,
                         name: variant.name || '',
                         images: Array.isArray(variant.images) ? variant.images : [],
                         price: typeof variant.price === 'number' ? variant.price : 0,
                         salePrice: typeof variant.salePrice === 'number' ? variant.salePrice : 0,
-                        stock: typeof variant.stock === 'number' ? variant.stock : 0,
+                        stock: variantStock, // ✅ SỬ DỤNG STOCK CHÍNH XÁC TỪ DATABASE
+                        availableStock: variantStock, // ✅ SỬ DỤNG STOCK CỦA VARIANT
                         color: (variant.color && typeof variant.color === 'object') ? variant.color : { code: '', name: '' },
                         size: typeof variant.size === 'number' ? variant.size : 0,
                         weight: typeof variant.weight === 'number' ? variant.weight : 0,
@@ -322,6 +402,9 @@ export const updateCartItem = async (req, res) => {
                         specifications: (variant.specifications && typeof variant.specifications === 'object') ? Object.fromEntries(Object.entries(variant.specifications)) : {},
                     };
                 }
+            } else {
+                // ✅ CẬN NHẬT AVAILABLE STOCK CHO SẢN PHẨM KHÔNG CÓ BIẾN THỂ
+                item.product.availableStock = availableStock;
             }
 
             res.json(cart);

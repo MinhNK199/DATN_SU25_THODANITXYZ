@@ -28,6 +28,7 @@ import {
     answerProductQuestion,
     deleteProductQuestion,
     addRelatedProduct,
+    updateVariantStock,
     removeRelatedProduct,
     getRelatedProducts,
     createFlashSale,
@@ -149,6 +150,9 @@ routerProduct.post('/voucher/update-usage', updateVoucherUsage);
 
 // Kiểm tra SKU trùng lặp
 routerProduct.get('/check-sku', checkSkuExists);
+
+// ✅ CẬP NHẬT STOCK CỦA VARIANT
+routerProduct.put('/:productId/variant/:variantId/stock', updateVariantStock);
 
 // Route này phải đặt cuối cùng để tránh conflict với các route cụ thể
 routerProduct.get("/:id", getProductById);

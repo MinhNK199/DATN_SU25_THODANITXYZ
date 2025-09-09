@@ -46,7 +46,7 @@ const orderSchema = new mongoose.Schema(
         "COD",
         "credit-card",
         "momo",
-        "vnpay", 
+        "vnpay",
         "BANKING",
         "paid_online",
       ],
@@ -187,6 +187,23 @@ const orderSchema = new mongoose.Schema(
         },
       },
     ],
+    // Thêm fields để quản lý trạng thái kho hàng
+    inventoryStatus: {
+      deducted: {
+        type: Boolean,
+        default: false,
+      },
+      deductedAt: {
+        type: Date,
+      },
+      restored: {
+        type: Boolean,
+        default: false,
+      },
+      restoredAt: {
+        type: Date,
+      },
+    },
   },
   {
     timestamps: true,

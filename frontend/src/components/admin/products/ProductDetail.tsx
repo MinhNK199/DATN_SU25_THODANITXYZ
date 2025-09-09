@@ -17,6 +17,7 @@ import {
   Typography,
   Table,
   List,
+  Input,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -24,8 +25,9 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
-import { getProductById, softDeleteProduct } from "./api";
+import { getProductById, softDeleteProduct, updateVariantStock } from "./api";
 import { useNotification } from "../../../hooks/useNotification";
 import type { ColumnsType } from "antd/es/table";
 
@@ -38,6 +40,8 @@ const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string>("");
+  const [editingStock, setEditingStock] = useState<{ [key: string]: number }>({});
+  const [savingStock, setSavingStock] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -89,6 +93,55 @@ const ProductDetail: React.FC = () => {
       style: "currency",
       currency: "VND",
     }).format(price);
+  };
+
+  // ✅ FUNCTION CẬP NHẬT STOCK CỦA VARIANT
+  const handleStockChange = (variantId: string, value: number) => {
+    setEditingStock(prev => ({
+      ...prev,
+      [variantId]: value
+    }));
+  };
+
+  const handleSaveStock = async (variantId: string) => {
+    if (!product) return;
+
+    const newStock = editingStock[variantId];
+    if (newStock === undefined || newStock < 0) {
+      error("Số lượng tồn kho không hợp lệ!");
+      return;
+    }
+
+    setSavingStock(variantId);
+    try {
+      await updateVariantStock(product._id!, variantId, newStock);
+
+      // Cập nhật state local
+      setProduct(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          variants: prev.variants?.map(variant =>
+            variant._id === variantId
+              ? { ...variant, stock: newStock }
+              : variant
+          )
+        };
+      });
+
+      // Xóa khỏi editing state
+      setEditingStock(prev => {
+        const newState = { ...prev };
+        delete newState[variantId];
+        return newState;
+      });
+
+      success("Cập nhật tồn kho thành công!");
+    } catch (err) {
+      error("Có lỗi xảy ra khi cập nhật tồn kho.");
+    } finally {
+      setSavingStock(null);
+    }
   };
 
   // Hàm gộp thông số kỹ thuật từ product và variants
@@ -160,7 +213,33 @@ const ProductDetail: React.FC = () => {
       key: "salePrice",
       render: formatPrice,
     },
-    { title: "Tồn kho", dataIndex: "stock", key: "stock" },
+    {
+      title: "Tồn kho",
+      dataIndex: "stock",
+      key: "stock",
+      width: 150,
+      render: (stock: number, record: ProductVariant) => (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={0}
+            value={editingStock[record._id!] !== undefined ? editingStock[record._id!] : stock}
+            onChange={(e) => handleStockChange(record._id!, parseInt(e.target.value) || 0)}
+            className="w-16"
+            size="small"
+          />
+          <Button
+            type="primary"
+            size="small"
+            icon={<SaveOutlined />}
+            loading={savingStock === record._id}
+            onClick={() => handleSaveStock(record._id!)}
+            className="bg-green-500 hover:bg-green-600 border-green-500"
+            disabled={editingStock[record._id!] === undefined || editingStock[record._id!] === stock}
+          />
+        </div>
+      )
+    },
     // {
     //   title: "Màu",
     //   dataIndex: "color",
@@ -323,11 +402,10 @@ const ProductDetail: React.FC = () => {
                           height={80}
                           alt={`${product.name} thumbnail ${index}`}
                           onClick={() => setMainImage(image)}
-                          className={`rounded-md border-2 cursor-pointer object-cover ${
-                            mainImage === image
+                          className={`rounded-md border-2 cursor-pointer object-cover ${mainImage === image
                               ? "border-blue-500"
                               : "border-gray-200"
-                          }`}
+                            }`}
                           preview={{ src: image }}
                         />
                       ))

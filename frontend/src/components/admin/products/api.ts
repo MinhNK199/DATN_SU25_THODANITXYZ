@@ -126,4 +126,14 @@ export const getBrands = async (): Promise<Brand[]> => {
 export const getCategories = async (): Promise<Category[]> => { // Thay 'any' bằng interface Category sau này
     const response = await fetch(`${API_URL}/category`, { headers: getAuthHeaders() });
     return handleResponse(response);
+};
+
+// ✅ API CẬP NHẬT STOCK CỦA VARIANT
+export const updateVariantStock = async (productId: string, variantId: string, stock: number): Promise<void> => {
+    const response = await fetch(`${API_URL}/product/${productId}/variant/${variantId}/stock`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ stock })
+    });
+    return handleResponse(response);
 }; 

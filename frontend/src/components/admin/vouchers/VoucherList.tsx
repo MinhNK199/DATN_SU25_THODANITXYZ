@@ -90,29 +90,49 @@ const VoucherList: React.FC = () => {
         dataSource={coupons}
         loading={loading}
         columns={[
-          { title: "Mã", dataIndex: "code" },
-          { title: "Tên", dataIndex: "name" },
-          { title: "Loại", dataIndex: "type", render: (type: string) => type === "percentage" ? "Phần trăm" : "Cố định" },
           {
-            title: "Giá trị", dataIndex: "discount", render: (discount: number, record: Coupon) =>
-              record.type === "percentage" ? `${discount}%` : `${discount.toLocaleString()}đ`
+            title: "Mã",
+            dataIndex: "code",
+            width: 120,
+            render: (code: string) => (
+              <span className="font-mono font-semibold text-blue-600">{code}</span>
+            )
           },
           {
-            title: "Giá trị tối đa", dataIndex: "maxDiscount", render: (maxDiscount: number) =>
-              maxDiscount ? `${maxDiscount.toLocaleString()}đ` : "Không giới hạn"
+            title: "Tên",
+            dataIndex: "name",
+            width: 200,
+            ellipsis: true
           },
-          { title: "Đơn tối thiểu", dataIndex: "minAmount", render: (minAmount: number) => `${minAmount.toLocaleString()}đ` },
-          { title: "Ngày bắt đầu", dataIndex: "startDate", render: (d: string) => d ? new Date(d).toLocaleString() : "" },
-          { title: "Ngày kết thúc", dataIndex: "endDate", render: (d: string) => d ? new Date(d).toLocaleString() : "" },
           {
-            title: "Trạng thái", dataIndex: "isActive", render: (isActive: boolean) =>
-              <span className={isActive ? "text-green-600" : "text-red-600"}>
+            title: "Giá trị",
+            dataIndex: "discount",
+            width: 120,
+            render: (discount: number, record: Coupon) => (
+              <span className="font-semibold text-green-600">
+                {record.type === "percentage" ? `${discount}%` : `${discount.toLocaleString()}đ`}
+              </span>
+            )
+          },
+          {
+            title: "Trạng thái",
+            dataIndex: "isActive",
+            width: 100,
+            render: (isActive: boolean) =>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                }`}>
                 {isActive ? "Hoạt động" : "Tạm dừng"}
               </span>
           },
           {
-            title: "Áp dụng", dataIndex: "applyToAllProducts", render: (applyToAll: boolean) =>
-              applyToAll ? "Tất cả sản phẩm" : "Sản phẩm cụ thể"
+            title: "Hạn sử dụng",
+            dataIndex: "endDate",
+            width: 120,
+            render: (endDate: string) => (
+              <span className="text-sm text-gray-600">
+                {endDate ? new Date(endDate).toLocaleDateString('vi-VN') : "Không giới hạn"}
+              </span>
+            )
           },
           {
             title: "Thao tác",

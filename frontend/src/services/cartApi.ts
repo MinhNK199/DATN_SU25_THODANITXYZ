@@ -80,8 +80,8 @@ export interface ProductAvailability {
 // Cart API functions
 export const cartApi = {
   // Lấy giỏ hàng của user
-  getCart: async (): Promise<Cart> => {
-    const response = await api.get('/cart');
+  getCart: async (queryParams = ''): Promise<Cart> => {
+    const response = await api.get(`/cart${queryParams}`);
     return response.data;
   },
 
