@@ -6,7 +6,7 @@ import {
     Input,
     Button,
     Switch,
-    message,
+    message as antdMessage,
     Typography,
     Space,
     Select,
@@ -19,6 +19,7 @@ import {
     TreeSelect,
     Upload
 } from 'antd';
+import { useNotification } from "../../../hooks/useNotification";
 import { ArrowLeftOutlined, InfoCircleOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { createCategory, fetchCategories } from './api';
 import { Category } from '../../../interfaces/Category';
@@ -66,6 +67,7 @@ const CategoryAdd: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
   const navigate = useNavigate();
+  const { success, error } = useNotification();
     const [previewImage, setPreviewImage] = useState<string>('');
 
     const watchedImageUrl = Form.useWatch('image', form);
@@ -94,10 +96,10 @@ const CategoryAdd: React.FC = () => {
                 slug: values.slug || slugify(values.name, { lower: true, strict: true })
             };
             await createCategory(categoryData);
-            message.success('Thêm danh mục thành công!');
+            success('Thêm danh mục thành công!');
             navigate('/admin/categories');
         } catch (error: any) { 
-            message.error(error.message || 'Thêm danh mục thất bại!');
+            error(error.message || 'Thêm danh mục thất bại!');
         } finally {
             setLoading(false);
         }
@@ -117,7 +119,7 @@ const CategoryAdd: React.FC = () => {
                 form={form}
                 layout="vertical"
                 onFinish={onFinish}
-                onFinishFailed={() => message.error('Vui lòng kiểm tra lại các trường thông tin!')}
+                onFinishFailed={() => error('Vui lòng kiểm tra lại các trường thông tin!')}
                 initialValues={{ isActive: true, parent: null, order: 0 }}
             >
                 <Row gutter={[24, 24]}>

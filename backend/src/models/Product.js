@@ -111,6 +111,9 @@ const productSchema = new mongoose.Schema({
         type: String,
         required: [true, "Vui lòng thêm ảnh sản phẩm"],
     }, ],
+    thumbnails: [{
+        type: String,
+    }, ],
     videos: [{
         type: String, // link YouTube, mp4, v.v.
     }, ],

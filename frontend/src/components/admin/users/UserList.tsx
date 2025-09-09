@@ -52,12 +52,41 @@ const UserList: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        setMessage("Bạn cần đăng nhập để truy cập trang này!");
+        setMessageType("error");
+        setLoading(false);
+        return;
+      }
+
       const res = await fetch(API_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      if (res.status === 403) {
+        setMessage("Bạn không có quyền truy cập trang này!");
+        setMessageType("error");
+        setLoading(false);
+        return;
+      }
+      
+      if (res.status === 401) {
+        setMessage("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        setMessageType("error");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setLoading(false);
+        return;
+      }
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
       setUsers(data.users || []);
-    } catch {
+    } catch (error) {
+      console.error("Error fetching users:", error);
       setMessage("Lỗi khi tải người dùng!");
       setMessageType("error");
     }
@@ -162,6 +191,7 @@ const UserList: React.FC = () => {
   render: (_: any, record: User) => (
     <Button
       type="primary" // Nền xanh, chữ/icon trắng
+      className="admin-primary-button"
       icon={<FaEye style={{ color: "#fff" }} />} // Đảm bảo icon trắng
       onClick={() => navigate(`/admin/users/${record._id}`)}
     />
@@ -199,6 +229,7 @@ const UserList: React.FC = () => {
       {currentUser?.role === "superadmin" && (
         <Button
           type="primary"
+          className="admin-primary-button"
           onClick={() => navigate("admin-list")}
           style={{ background: "blue-400", borderColor: "gray", marginLeft: 16 }}
         >

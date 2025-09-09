@@ -513,7 +513,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
           >
             Test API
           </Button>
-          <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
+          <Button type="primary" className="admin-primary-button" icon={<FaPlus />} onClick={addVariant}>
             Thêm biến thể
           </Button>
         </div>
@@ -872,10 +872,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       )}
 
       {variants.length > 0 && (
-        <Card size="small" className="bg-blue-50">
+        <Card size="small" className="admin-bg-blue-light">
           <div className="grid grid-cols-4 gap-4 text-sm">
             <div className="text-center">
-              <div className="font-bold text-blue-600">{variants.length}</div>
+              <div className="font-bold admin-text-blue">{variants.length}</div>
               <div className="text-gray-600">Tổng biến thể</div>
             </div>
             <div className="text-center">

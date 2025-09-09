@@ -3,7 +3,8 @@ import { FaUsers, FaBox, FaFileInvoiceDollar, FaStar, FaChartLine, FaTruck, FaEx
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend,
+  Area, AreaChart, PieChart, Pie, Cell, RadialBarChart, RadialBar, ComposedChart
 } from 'recharts';
 
 interface DashboardStats {
@@ -35,13 +36,14 @@ const Dashboard: React.FC = () => {
     topProducts: []
   });
   const [loading, setLoading] = useState(true);
-  const [revenueStats, setRevenueStats] = useState<{ daily: any[]; monthly: any[] }>({ daily: [], monthly: [] });
+  const [revenueStats, setRevenueStats] = useState<{ daily: any[]; weekly: any[]; monthly: any[] }>({ daily: [], weekly: [], monthly: [] });
   const [totalProductQuantity, setTotalProductQuantity] = useState<number>(0);
+  const [selectedChartType, setSelectedChartType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   useEffect(() => {
-    // fetchDashboardData(); // Tạm thời vô hiệu hóa vì API chưa tồn tại
-    // fetchRevenueStats(); // Tạm thời vô hiệu hóa
-    // fetchTotalProductQuantity(); // Tạm thời vô hiệu hóa
+    fetchDashboardData();
+    fetchRevenueStats();
+    fetchTotalProductQuantity();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -50,14 +52,16 @@ const Dashboard: React.FC = () => {
       const token = localStorage.getItem('token');
       
       // Fetch dashboard stats
-      const statsResponse = await axios.get('http://localhost:8000/api/admin/dashboard', { // API này không tồn tại
+      const statsResponse = await axios.get('http://localhost:8000/api/admin/dashboard', {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setStats(statsResponse.data);
+      if (statsResponse.data.success) {
+        setStats(statsResponse.data.data);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // toast.error('Không thể tải dữ liệu thống kê');
+      toast.error('Không thể tải dữ liệu thống kê');
     } finally {
       setLoading(false);
     }
@@ -66,13 +70,17 @@ const Dashboard: React.FC = () => {
   const fetchRevenueStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:8000/api/order/admin/revenue-stats', { // Sửa lại đường dẫn API
+      const res = await axios.get('http://localhost:8000/api/order/admin/revenue-stats', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      if (res.data.success) {
       setRevenueStats({
         daily: (res.data.daily || []).reverse(),
+          weekly: (res.data.weekly || []).reverse(),
         monthly: (res.data.monthly || []).reverse(),
       });
+      }
     } catch (error) {
       console.error('Error fetching revenue stats:', error);
     }
@@ -81,9 +89,16 @@ const Dashboard: React.FC = () => {
   const fetchTotalProductQuantity = async () => {
     try {
       const res = await axios.get('http://localhost:8000/api/product/total-product-quantity-by-name');
-      setTotalProductQuantity(res.data.totalProductQuantityByName || 0);
+      if (res.data.success) {
+        setTotalProductQuantity(res.data.totalProductQuantityByName || 0);
+      } else {
+        // Fallback nếu API không có success flag
+        setTotalProductQuantity(res.data.totalProductQuantityByName || 0);
+      }
     } catch (error) {
       console.error('Error fetching total product quantity:', error);
+      // Set default value nếu có lỗi
+      setTotalProductQuantity(0);
     }
   };
 
@@ -107,6 +122,53 @@ const Dashboard: React.FC = () => {
     return '';
   };
 
+  // Hàm lấy dữ liệu biểu đồ theo loại được chọn
+  const getChartData = () => {
+    const data = revenueStats[selectedChartType] || [];
+    return data.map(item => {
+      let name = '';
+      if (selectedChartType === 'daily') {
+        name = `${item._id.day}/${item._id.month}`;
+      } else if (selectedChartType === 'weekly') {
+        name = `Tuần ${item._id.week}/${item._id.year}`;
+      } else if (selectedChartType === 'monthly') {
+        name = `${item._id.month}/${item._id.year}`;
+      }
+      return {
+        ...item,
+        name
+      };
+    });
+  };
+
+  // Hàm lấy tiêu đề biểu đồ
+  const getChartTitle = () => {
+    switch (selectedChartType) {
+      case 'daily':
+        return 'Doanh thu theo ngày (30 ngày gần nhất)';
+      case 'weekly':
+        return 'Doanh thu theo tuần (12 tuần gần nhất)';
+      case 'monthly':
+        return 'Doanh thu theo tháng (12 tháng gần nhất)';
+      default:
+        return 'Doanh thu';
+    }
+  };
+
+  // Hàm lấy màu sắc cho biểu đồ
+  const getChartColors = () => {
+    switch (selectedChartType) {
+      case 'daily':
+        return { revenue: '#8884d8', orders: '#82ca9d' };
+      case 'weekly':
+        return { revenue: '#ff6b6b', orders: '#4ecdc4' };
+      case 'monthly':
+        return { revenue: '#45b7d1', orders: '#96ceb4' };
+      default:
+        return { revenue: '#8884d8', orders: '#82ca9d' };
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -127,43 +189,210 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 mt-2">Tổng quan hệ thống quản lý</p>
         </div>
 
-        {/* Biểu đồ doanh thu */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          {/* Doanh thu theo tháng */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Doanh thu theo tháng (12 tháng gần nhất)</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueStats.monthly.map(item => ({
-                ...item,
-                name: `${item._id.month}/${item._id.year}`
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={formatCurrency} />
-                <Tooltip formatter={formatCurrency} />
-                <Legend />
-                <Bar dataKey="totalRevenue" fill="#8884d8" name="Doanh thu" />
-                <Bar dataKey="orderCount" fill="#82ca9d" name="Số đơn" />
-              </BarChart>
+        {/* Biểu đồ doanh thu với dropdown */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4 sm:mb-0">
+              {getChartTitle()}
+            </h3>
+            
+            {/* Dropdown chọn loại biểu đồ */}
+            <div className="flex items-center space-x-4">
+              <label className="text-sm font-medium text-gray-700">Xem theo:</label>
+              <select
+                value={selectedChartType}
+                onChange={(e) => setSelectedChartType(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
+              >
+                <option value="daily">Theo ngày</option>
+                <option value="weekly">Theo tuần</option>
+                <option value="monthly">Theo tháng</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Biểu đồ lớn với animation */}
+          <div className="h-96 relative">
+            <ResponsiveContainer width="100%" height="100%">
+              {selectedChartType === 'daily' ? (
+                <AreaChart data={getChartData()}>
+                  <defs>
+                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={getChartColors().revenue} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={getChartColors().revenue} stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="ordersGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={getChartColors().orders} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={getChartColors().orders} stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                    tickLine={{ stroke: '#e0e0e0' }}
+                  />
+                  <YAxis 
+                    tickFormatter={formatCurrency} 
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                    tickLine={{ stroke: '#e0e0e0' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value, name) => [
+                      name === 'totalRevenue' ? formatCurrency(value as number) : value,
+                      name === 'totalRevenue' ? 'Doanh thu' : 'Số đơn'
+                    ]}
+                    labelFormatter={(label) => `Ngày: ${label}`}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="totalRevenue"
+                    stroke={getChartColors().revenue}
+                    fill="url(#revenueGradient)"
+                    name="Doanh thu"
+                    strokeWidth={3}
+                    dot={{ fill: getChartColors().revenue, strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7, stroke: getChartColors().revenue, strokeWidth: 2 }}
+                    animationBegin={0}
+                    animationDuration={1500}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="orderCount"
+                    stroke={getChartColors().orders}
+                    fill="url(#ordersGradient)"
+                    name="Số đơn"
+                    strokeWidth={3}
+                    dot={{ fill: getChartColors().orders, strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7, stroke: getChartColors().orders, strokeWidth: 2 }}
+                    animationBegin={200}
+                    animationDuration={1500}
+                  />
+                </AreaChart>
+              ) : (
+                <ComposedChart data={getChartData()}>
+                  <defs>
+                    <linearGradient id="revenueBarGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={getChartColors().revenue} stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor={getChartColors().revenue} stopOpacity={0.4}/>
+                    </linearGradient>
+                    <linearGradient id="ordersBarGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={getChartColors().orders} stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor={getChartColors().orders} stopOpacity={0.4}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                    tickLine={{ stroke: '#e0e0e0' }}
+                  />
+                  <YAxis 
+                    yAxisId="left"
+                    tickFormatter={formatCurrency} 
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                    tickLine={{ stroke: '#e0e0e0' }}
+                  />
+                  <YAxis 
+                    yAxisId="right"
+                    orientation="right"
+                    tick={{ fontSize: 12, fill: '#666' }}
+                    axisLine={{ stroke: '#e0e0e0' }}
+                    tickLine={{ stroke: '#e0e0e0' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+                    }}
+                    formatter={(value, name) => [
+                      name === 'totalRevenue' ? formatCurrency(value as number) : value,
+                      name === 'totalRevenue' ? 'Doanh thu' : 'Số đơn'
+                    ]}
+                    labelFormatter={(label) => `${selectedChartType === 'weekly' ? 'Tuần' : 'Tháng'}: ${label}`}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  <Bar 
+                    yAxisId="left"
+                    dataKey="totalRevenue" 
+                    fill="url(#revenueBarGradient)" 
+                    name="Doanh thu"
+                    radius={[6, 6, 0, 0]}
+                    animationBegin={0}
+                    animationDuration={1500}
+                  />
+                  <Bar 
+                    yAxisId="right"
+                    dataKey="orderCount" 
+                    fill="url(#ordersBarGradient)" 
+                    name="Số đơn"
+                    radius={[6, 6, 0, 0]}
+                    animationBegin={300}
+                    animationDuration={1500}
+                  />
+                </ComposedChart>
+              )}
             </ResponsiveContainer>
           </div>
-          {/* Doanh thu theo ngày */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900">Doanh thu theo ngày (30 ngày gần nhất)</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueStats.daily.map(item => ({
-                ...item,
-                name: `${item._id.day}/${item._id.month}`
-              }))}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={formatCurrency} />
-                <Tooltip formatter={formatCurrency} />
-                <Legend />
-                <Line type="monotone" dataKey="totalRevenue" stroke="#8884d8" name="Doanh thu" />
-                <Line type="monotone" dataKey="orderCount" stroke="#82ca9d" name="Số đơn" />
-              </LineChart>
-            </ResponsiveContainer>
+
+          {/* Thống kê tóm tắt */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getChartColors().revenue }}></div>
+                <span className="text-sm font-medium text-gray-600">Tổng doanh thu</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900 mt-1">
+                {formatCurrency(getChartData().reduce((sum, item) => sum + (item.totalRevenue || 0), 0))}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: getChartColors().orders }}></div>
+                <span className="text-sm font-medium text-gray-600">Tổng đơn hàng</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900 mt-1">
+                {getChartData().reduce((sum, item) => sum + (item.orderCount || 0), 0)}
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center">
+                <div className="w-3 h-3 rounded-full mr-2 bg-gray-400"></div>
+                <span className="text-sm font-medium text-gray-600">Trung bình/đơn</span>
+              </div>
+              <p className="text-lg font-bold text-gray-900 mt-1">
+                {(() => {
+                  const totalRevenue = getChartData().reduce((sum, item) => sum + (item.totalRevenue || 0), 0);
+                  const totalOrders = getChartData().reduce((sum, item) => sum + (item.orderCount || 0), 0);
+                  return totalOrders > 0 ? formatCurrency(totalRevenue / totalOrders) : '0 ₫';
+                })()}
+              </p>
+            </div>
           </div>
         </div>
 

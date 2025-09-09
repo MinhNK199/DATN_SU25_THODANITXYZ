@@ -67,13 +67,18 @@ export const createProductValidation = [
     .optional()
     .custom((value) => {
         if (typeof value === 'string') {
-            return value.length <= 50;
+            // Kiểm tra hex color hoặc rgba
+            return /^#[0-9A-F]{6}$/i.test(value) || /^rgba?\([^)]+\)$/i.test(value) || value.length <= 50;
         } else if (typeof value === 'object' && value !== null) {
-            return true; // Allow color objects
+            // Nếu là object, kiểm tra có code và name
+            if (value.code && typeof value.code === 'string') {
+                return /^#[0-9A-F]{6}$/i.test(value.code) || /^rgba?\([^)]+\)$/i.test(value.code);
+            }
+            return true; // Allow color objects without code
         }
         return false;
     })
-    .withMessage('Màu sắc phải là chuỗi hoặc object hợp lệ'),
+    .withMessage('Màu sắc phải là chuỗi hợp lệ hoặc object có code và name'),
 
     body('variants.*.size')
     .optional()
@@ -197,13 +202,18 @@ export const updateProductValidation = [
     .optional()
     .custom((value) => {
         if (typeof value === 'string') {
-            return value.length <= 50;
+            // Kiểm tra hex color hoặc rgba
+            return /^#[0-9A-F]{6}$/i.test(value) || /^rgba?\([^)]+\)$/i.test(value) || value.length <= 50;
         } else if (typeof value === 'object' && value !== null) {
-            return true; // Allow color objects
+            // Nếu là object, kiểm tra có code và name
+            if (value.code && typeof value.code === 'string') {
+                return /^#[0-9A-F]{6}$/i.test(value.code) || /^rgba?\([^)]+\)$/i.test(value.code);
+            }
+            return true; // Allow color objects without code
         }
         return false;
     })
-    .withMessage('Màu sắc phải là chuỗi hoặc object hợp lệ'),
+    .withMessage('Màu sắc phải là chuỗi hợp lệ hoặc object có code và name'),
 
     body('variants.*.size')
     .optional()

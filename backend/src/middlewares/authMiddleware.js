@@ -33,6 +33,14 @@ export const protect = async (req, res, next) => {
             return res.status(401).json({ message: "Người dùng không tồn tại hoặc đã bị khóa" });
         }
 
+        // Kiểm tra role từ token nếu có
+        if (decoded.role) {
+            console.log('🔍 Role from token:', decoded.role);
+            console.log('🔍 Role from database:', user.role);
+            // Ưu tiên role từ token nếu có
+            user.role = decoded.role;
+        }
+
         req.user = user;
         console.log('Xác thực thành công:', user.email, user.role);
         next();
@@ -61,32 +69,29 @@ export const protect = async (req, res, next) => {
 
 };
 
-export const checkAdmin = (requiredCheck = []) => {
+export const checkAdmin = (allowedRoles = ['admin', 'superadmin']) => {
     return (req, res, next) => {
         const user = req.user;
 
+        console.log('🔍 checkAdmin - User object:', JSON.stringify(user, null, 2));
+        console.log('🔍 checkAdmin - Allowed roles:', allowedRoles);
+        console.log('🔍 checkAdmin - User role:', user?.role);
+        console.log('🔍 checkAdmin - Role type:', typeof user?.role);
+
         if (!user) {
-            console.log('Chưa xác thực');
+            console.log('❌ Chưa xác thực');
             return res.status(401).json({ message: "Chưa xác thực" });
         }
 
-        // Phân quyền theo vai trò
-        const roleCheck = {
-            superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
-            admin: ["view_user", "CheckTaiKhoan"],
-            customer: [],
-        };
-
-        const userCheck = roleCheck[user.role] || [];
-
-        const okCheck = requiredCheck.every(p => userCheck.includes(p));
-
-        if (!okCheck) {
-            console.log('Không đủ quyền:', user.role, user.email);
-            return res.status(403).json({ message: "Không đủ quyền để thực hiện hành động này" });
+        // Kiểm tra role có được phép không
+        if (!allowedRoles.includes(user.role)) {
+            console.log('❌ Không đủ quyền:', user.role, user.email);
+            console.log('❌ Allowed roles:', allowedRoles);
+            console.log('❌ User role in allowed roles?', allowedRoles.includes(user.role));
+            return res.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
         }
 
-        console.log('Qua checkAdmin:', user.email, user.role);
+        console.log('✅ Qua checkAdmin:', user.email, user.role);
         next();
     };
 };

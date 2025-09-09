@@ -239,6 +239,7 @@ const UserDetail: React.FC = () => {
               {canToggleStatus() && (
                 <Button
                   type={user.active ? "default" : "primary"}
+                  className={user.active ? "" : "admin-primary-button"}
                   danger={user.active}
                   icon={user.active ? <LockOutlined /> : <UnlockOutlined />}
                   onClick={handleToggleStatus}
@@ -249,6 +250,7 @@ const UserDetail: React.FC = () => {
               {currentUser && currentUser._id === user._id && (
                 <Button
                   type="primary"
+                  className="admin-primary-button"
                   icon={<EditOutlined />}
                   onClick={() => nav(`/admin/users/edit/${user._id}`)}
                 >

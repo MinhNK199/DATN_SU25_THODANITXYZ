@@ -14,7 +14,8 @@ import { getTaxConfig } from "../../services/cartApi";
 import { getAvailableCoupons, getUsedCoupons, applyCoupon, removeCoupon } from "../../services/couponApi";
 import { Coupon } from "../../interfaces/Coupon";
 import { Product } from "../../interfaces/Product";
-import { Modal, Button, Image, message, Input, Radio } from "antd";
+import { Modal, Button, Image, Input, Radio } from "antd";
+import { useNotification } from "../../hooks/useNotification";
 import {
   calculateDisplayPrice,
   calculateSubtotal,
@@ -24,6 +25,7 @@ import {
 const Cart: React.FC = () => {
   const { state, updateQuantity, removeFromCart, loadCart } =
     useCart();
+  const { success, error, warning, info } = useNotification();
   const cartItems = state.items;
 
   // Debug log để kiểm tra component mount
@@ -257,7 +259,7 @@ const Cart: React.FC = () => {
     try {
       const coupon = availableCoupons.find(c => c._id === couponId);
       if (!coupon) {
-        message.error("Mã giảm giá không tồn tại");
+        error("Mã giảm giá không tồn tại");
         return;
       }
 
@@ -269,19 +271,19 @@ const Cart: React.FC = () => {
 
       const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
       if (selectedSubtotal < minAmount) {
-        message.warning(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
+        warning(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
         return;
       }
 
       const result = await applyCoupon(coupon.code, selectedSubtotal);
       if (result.success) {
         setAppliedDiscountCoupon(coupon);
-        message.success(`Đã áp dụng mã giảm giá "${coupon.name}"`);
+        success(`Đã áp dụng mã giảm giá "${coupon.name}"`);
       } else {
-        message.error(result.message || "Không thể áp dụng mã giảm giá");
+        error(result.message || "Không thể áp dụng mã giảm giá");
       }
     } catch {
-      message.error("Có lỗi xảy ra khi áp dụng mã giảm giá");
+      error("Có lỗi xảy ra khi áp dụng mã giảm giá");
     }
   };
 
@@ -291,9 +293,9 @@ const Cart: React.FC = () => {
       try {
         await removeCoupon(appliedDiscountCoupon._id);
         setAppliedDiscountCoupon(null);
-        message.info("Đã hủy áp dụng mã giảm giá");
+        info("Đã hủy áp dụng mã giảm giá");
       } catch {
-        message.error("Có lỗi xảy ra khi hủy mã giảm giá");
+        error("Có lỗi xảy ra khi hủy mã giảm giá");
       }
     }
   };
@@ -303,9 +305,9 @@ const Cart: React.FC = () => {
       try {
         await removeCoupon(appliedShippingCoupon._id);
         setAppliedShippingCoupon(null);
-        message.info("Đã hủy áp dụng mã vận chuyển");
+        info("Đã hủy áp dụng mã vận chuyển");
       } catch {
-        message.error("Có lỗi xảy ra khi hủy mã vận chuyển");
+        error("Có lỗi xảy ra khi hủy mã vận chuyển");
       }
     }
   };
@@ -524,7 +526,7 @@ const Cart: React.FC = () => {
                                       const newQuantity = parseInt(e.target.value) || 1;
                                       const maxStock = variant?.stock ?? item.product.stock;
                                       if (newQuantity > maxStock) {
-                                        message.warning("Đã đạt số lượng tối đa tồn kho!");
+                                        warning("Đã đạt số lượng tối đa tồn kho!");
                                         return;
                                       }
                                       updateQuantity(item._id, Math.max(1, newQuantity));
@@ -537,7 +539,7 @@ const Cart: React.FC = () => {
                                     onClick={() => {
                                       const maxStock = variant?.stock ?? item.product.stock;
                                       if (item.quantity >= maxStock) {
-                                        message.warning("Đã đạt số lượng tối đa tồn kho!");
+                                        warning("Đã đạt số lượng tối đa tồn kho!");
                                         return;
                                       }
                                       updateQuantity(item._id, item.quantity + 1);
@@ -936,7 +938,7 @@ const Cart: React.FC = () => {
                   onClick={(e) => {
                     e.preventDefault();
                     if (selectedItems.size === 0) {
-                      message.warning("Vui lòng chọn ít nhất một sản phẩm để thanh toán");
+                      warning("Vui lòng chọn ít nhất một sản phẩm để thanh toán");
                       return;
                     }
                     navigate("/checkout/shipping", {
@@ -985,13 +987,26 @@ const Cart: React.FC = () => {
           open={detailModalOpen}
           onCancel={handleCloseDetail}
           footer={null}
-          title={`Thông tin chi tiết: ${detailItem?.product.name}`}
-          width={500}
-          styles={{ body: { maxHeight: 600, overflowY: "auto", padding: 16 } }}
+          title={
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <span className="text-lg font-semibold">Thông tin chi tiết: {detailItem?.product.name}</span>
+            </div>
+          }
+          width={650}
+          styles={{ 
+            body: { 
+              maxHeight: 700, 
+              overflowY: "auto", 
+              padding: 20 
+            } 
+          }}
+          className="product-detail-modal"
         >
           {detailItem && (
-            <div className="space-y-4">
-              <div className="flex justify-center mb-4">
+            <div className="space-y-6">
+              {/* Product Image */}
+              <div className="flex justify-center mb-6">
                 <Image
                   src={
                     detailItem.variantInfo?.images?.[0] ||
@@ -999,105 +1014,201 @@ const Cart: React.FC = () => {
                     "/placeholder.svg"
                   }
                   alt={detailItem.product.name}
-                  width={200}
-                  height={200}
-                  className="object-cover rounded-lg"
+                  width={250}
+                  height={250}
+                  className="object-cover rounded-lg shadow-lg"
                 />
               </div>
-              <div className="text-lg font-bold mb-2">
-                Tên sản phẩm: {detailItem.product.name}
-              </div>
-              {detailItem.variantInfo && (
-                <div className="mb-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="font-medium text-blue-800 mb-2">🎯 Thông tin biến thể:</div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="font-medium">Tên biến thể:</span> {detailItem.variantInfo.name || "N/A"}</div>
-                    <div><span className="font-medium">Variant ID:</span> {detailItem.variantId || "N/A"}</div>
-                    <div><span className="font-medium">Giá gốc:</span> {formatPrice(detailItem.variantInfo.price || 0)}</div>
-                    <div><span className="font-medium">Giá sale:</span> {detailItem.variantInfo.salePrice ? formatPrice(detailItem.variantInfo.salePrice) : "Không có"}</div>
-                    <div><span className="font-medium">Tồn kho:</span> {detailItem.variantInfo.stock || 0}</div>
-                    <div><span className="font-medium">SKU:</span> {detailItem.variantInfo.sku || "N/A"}</div>
+
+              {/* Product Basic Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  {detailItem.product.name}
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-600">Số lượng:</span>
+                    <span className="ml-2 font-semibold text-gray-900">{detailItem.quantity}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-600">Tồn kho:</span>
+                    <span className="ml-2 font-semibold text-gray-900">
+                      {(() => {
+                        // Lấy stock từ variant hoặc product
+                        if (detailItem.variantInfo?.stock !== undefined) {
+                          return detailItem.variantInfo.stock;
+                        }
+                        if (detailItem.variantId && (detailItem.product as any).variants) {
+                          const variant = (detailItem.product as any).variants.find((v: any) => v._id.toString() === detailItem.variantId?.toString());
+                          if (variant?.stock !== undefined) {
+                            return variant.stock;
+                          }
+                        }
+                        return detailItem.product.stock;
+                      })()}
+                    </span>
                   </div>
                 </div>
-              )}
-              <div className="mb-2">
-                <div className="flex items-center space-x-2">
-                  <span>Giá:</span>
-                  <span className="text-red-600 font-semibold">
-                    {formatPrice(calculateDisplayPrice(detailItem))}
-                  </span>
-                  <span className="text-sm text-gray-500">/ sản phẩm</span>
-                </div>
+              </div>
 
-                {/* Hiển thị tổng giá theo số lượng */}
-                <div className="mt-1 text-lg font-bold text-green-600">
-                  Tổng: {formatPrice(calculateDisplayPrice(detailItem) * detailItem.quantity)}
+              {/* Variant Information */}
+              {(() => {
+                // Lấy thông tin biến thể từ variantInfo hoặc từ product.variants
+                const variantInfo = detailItem.variantInfo;
+                let variantData = variantInfo;
+                
+                // Fallback: Nếu không có variantInfo, tìm từ product.variants
+                if (!variantInfo && detailItem.variantId && (detailItem.product as any).variants) {
+                  const variant = (detailItem.product as any).variants.find((v: any) => v._id.toString() === detailItem.variantId?.toString());
+                  if (variant) {
+                    variantData = variant;
+                  }
+                }
+
+                // Chỉ hiển thị nếu có thông tin biến thể
+                if (!variantData) return null;
+
+                return (
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                    <div className="flex items-center mb-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                      <h4 className="text-lg font-semibold text-blue-800">Thông tin biến thể</h4>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-blue-700">Tên biến thể:</span>
+                        <div className="text-blue-900 font-semibold mt-1">
+                          {variantData.name || "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Mã biến thể:</span>
+                        <div className="text-blue-900 font-mono text-xs mt-1">
+                          {detailItem.variantId || variantData._id || "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">SKU:</span>
+                        <div className="text-blue-900 font-mono text-xs mt-1">
+                          {variantData.sku || "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Màu sắc:</span>
+                        <div className="flex items-center mt-1">
+                          {variantData.color?.code && (
+                            <div
+                              className="w-4 h-4 rounded-full border border-gray-300 mr-2"
+                              style={{ backgroundColor: variantData.color.code }}
+                              title={variantData.color.name || variantData.color.code}
+                            />
+                          )}
+                          <span className="text-blue-900">
+                            {variantData.color?.name || variantData.color?.code || "N/A"}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Kích thước:</span>
+                        <div className="text-blue-900 font-semibold mt-1">
+                          {variantData.size || "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Tồn kho:</span>
+                        <div className="text-blue-900 font-semibold mt-1">
+                          {variantData.stock || 0} sản phẩm
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Pricing Information */}
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="flex items-center mb-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                  <h4 className="text-lg font-semibold text-green-800">Thông tin giá</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-green-700 font-medium">Giá hiện tại:</span>
+                    <span className="text-xl font-bold text-green-900">
+                      {formatPrice(calculateDisplayPrice(detailItem))}
+                    </span>
+                  </div>
+                  {detailItem.variantInfo?.price && detailItem.variantInfo.price !== calculateDisplayPrice(detailItem) && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700 font-medium">Giá gốc:</span>
+                      <span className="text-lg text-gray-500 line-through">
+                        {formatPrice(detailItem.variantInfo.price)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="border-t border-green-200 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-green-700 font-medium">Tổng cộng:</span>
+                      <span className="text-2xl font-bold text-green-900">
+                        {formatPrice(calculateDisplayPrice(detailItem) * detailItem.quantity)}
+                      </span>
+                    </div>
+                    <div className="text-sm text-green-600 text-right">
+                      {formatPrice(calculateDisplayPrice(detailItem))} × {detailItem.quantity}
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="mb-2">
-                Số lượng: <span className="font-semibold">{detailItem.quantity}</span>
-              </div>
-              <div className="mb-2">
-                Tồn kho:{" "}
-                <span className="font-semibold">
-                  {detailItem.variantInfo?.stock ?? detailItem.product.stock}
-                </span>
-              </div>
-              <div className="mb-2">
-                SKU:{" "}
-                <span className="font-mono">
-                  {detailItem.variantInfo?.sku ?? detailItem.product.sku ?? "N/A"}
-                </span>
-              </div>
-              <div className="mb-2">
-                Màu sắc:{" "}
-                <span>
-                  {detailItem.variantInfo?.color ?? detailItem.product.color ?? "N/A"}
-                </span>
-              </div>
-              <div className="mb-2">
-                Kích thước:{" "}
-                <span>
-                  {detailItem.variantInfo?.size ?? detailItem.product.size ?? "N/A"}
-                </span>
-              </div>
-              <div className="mb-2">
-                Cân nặng:{" "}
-                <span>
-                  {typeof detailItem.variantInfo?.weight === "number"
-                    ? `${detailItem.variantInfo.weight}g`
-                    : typeof detailItem.product.weight === "number"
-                      ? `${detailItem.product.weight}g`
-                      : "N/A"}
-                </span>
-              </div>
-              {(detailItem.variantInfo?.specifications &&
-                Object.keys(detailItem.variantInfo.specifications).length > 0) ||
-                (detailItem.specifications &&
-                  Object.keys(detailItem.specifications).length > 0) ? (
-                <div className="mt-2">
-                  <div className="font-medium mb-1">Thông số kỹ thuật:</div>
-                  <table className="w-full text-sm border rounded-lg">
-                    <tbody>
-                      {Object.entries(
-                        detailItem.variantInfo?.specifications ||
-                        detailItem.specifications || {}
-                      ).map(([key, value]) => (
-                        <tr key={key}>
-                          <td className="py-2 px-2 bg-gray-50 font-medium text-gray-700">
-                            {key}
-                          </td>
-                          <td className="py-2 px-2 text-gray-600">{String(value)}</td>
-                        </tr>
+
+              {/* Technical Specifications */}
+              {(() => {
+                // Lấy thông số kỹ thuật từ variant hoặc product
+                let specifications = {};
+                
+                // Ưu tiên thông số từ variant
+                if (detailItem.variantInfo?.specifications) {
+                  specifications = detailItem.variantInfo.specifications;
+                } else if (detailItem.variantId && (detailItem.product as any).variants) {
+                  // Fallback: Tìm từ product.variants
+                  const variant = (detailItem.product as any).variants.find((v: any) => v._id.toString() === detailItem.variantId?.toString());
+                  if (variant?.specifications) {
+                    specifications = variant.specifications;
+                  }
+                } else if (detailItem.product.specifications) {
+                  // Fallback cuối cùng: từ product
+                  specifications = detailItem.product.specifications;
+                }
+
+                const hasSpecifications = Object.keys(specifications).length > 0;
+
+                if (!hasSpecifications) {
+                  return (
+                    <div className="bg-gray-50 rounded-lg p-4 text-center">
+                      <div className="text-gray-500">
+                        <div className="text-4xl mb-2">📋</div>
+                        <div>Sản phẩm này không có thông số kỹ thuật</div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                    <div className="flex items-center mb-3">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                      <h4 className="text-lg font-semibold text-purple-800">Thông số kỹ thuật</h4>
+                    </div>
+                    <div className="space-y-2">
+                      {Object.entries(specifications).map(([key, value]) => (
+                        <div key={key} className="flex justify-between items-center py-2 border-b border-purple-100 last:border-b-0">
+                          <span className="font-medium text-purple-700">{key}:</span>
+                          <span className="text-purple-900 text-right">{String(value)}</span>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-gray-500 mt-2">
-                  Sản phẩm này không có thông số kỹ thuật.
-                </div>
-              )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </Modal>
@@ -1162,13 +1273,13 @@ const Cart: React.FC = () => {
                 if (coupon) {
                   setAppliedShippingCoupon(null);
                   handleApplyDiscountCoupon(selectedCouponId);
-                  message.success("Áp dụng mã giảm giá thành công!");
+                  success("Áp dụng mã giảm giá thành công!");
                 }
               } else {
                 // Nếu không chọn voucher nào, hủy áp dụng voucher hiện tại
                 if (appliedDiscountCoupon) {
                   handleRemoveDiscountCoupon();
-                  message.info("Đã hủy áp dụng mã giảm giá");
+                  info("Đã hủy áp dụng mã giảm giá");
                 }
               }
               setIsCouponModalVisible(false);
@@ -1199,14 +1310,14 @@ const Cart: React.FC = () => {
                   if (coupon) {
                     setAppliedShippingCoupon(null);
                     handleApplyDiscountCoupon(coupon._id);
-                    message.success("Áp dụng mã giảm giá thành công!");
+                    success("Áp dụng mã giảm giá thành công!");
                     setIsCouponModalVisible(false);
                     setPromoCode("");
                   } else {
-                    message.error("Mã giảm giá không hợp lệ");
+                    error("Mã giảm giá không hợp lệ");
                   }
                 } else {
-                  message.warning("Vui lòng nhập mã giảm giá");
+                  warning("Vui lòng nhập mã giảm giá");
                 }
               }}
             >

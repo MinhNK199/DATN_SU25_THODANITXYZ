@@ -286,6 +286,7 @@ const RatingList: React.FC = () => {
           <Button
             size="small"
             type="primary"
+            className="admin-primary-button"
             onClick={() => {
               setReplyingId(record._id);
               setReplyValue("");
@@ -347,6 +348,7 @@ const RatingList: React.FC = () => {
         </Select>
         <Button
         type="primary"
+        className="admin-primary-button"
           onClick={() =>
             setFilter({
               star: null,

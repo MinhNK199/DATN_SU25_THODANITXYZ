@@ -531,9 +531,9 @@ const ProductDetail: React.FC = () => {
           <div className="py-4">
             {activeTab === 'description' && (
               <div className="prose max-w-none">
-                <p className="text-gray-700 leading-relaxed">
+                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {product.description || 'Chưa có mô tả cho sản phẩm này.'}
-                </p>
+                </div>
               </div>
             )}
             {activeTab === 'specifications' && (

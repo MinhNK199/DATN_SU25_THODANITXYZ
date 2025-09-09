@@ -10,7 +10,7 @@ import {
   InputNumber,
   Select,
   Button,
-  message,
+  message as antdMessage,
   Card,
   Switch,
   Divider,
@@ -22,16 +22,19 @@ import {
   TreeSelect,
   Typography,
   Space,
+  Upload,
+  Image,
   type UploadFile,
   type UploadProps,
 } from "antd"
 import VariantManager from "./VariantManager"
-import { ArrowLeftOutlined, SaveOutlined } from "@ant-design/icons"
+import { ArrowLeftOutlined, SaveOutlined, UploadOutlined } from "@ant-design/icons"
 import slugify from "slugify"
 import { getCategories, getBrands, getProductById, updateProduct } from "./api"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import { validateAllVariants, cleanColorData, validateAndCleanProductData } from "./utils/validation"
+import { useNotification } from "../../../hooks/useNotification"
 
 const { TextArea } = Input
 const { Panel } = Collapse
@@ -88,6 +91,7 @@ const getColorNameByCode = (code: string): string => {
 const ProductEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { success, error } = useNotification()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -98,6 +102,10 @@ const ProductEdit: React.FC = () => {
   const [product, setProduct] = useState<Product | null>(null)
   const [previewImage, setPreviewImage] = useState<string>("")
   const [fileList, setFileList] = useState<UploadFile[]>([])
+  // Thêm state cho thumbnail
+  const [thumbnailFiles, setThumbnailFiles] = useState<File[]>([])
+  const [thumbnailFileList, setThumbnailFileList] = useState<UploadFile[]>([])
+  const [existingThumbnails, setExistingThumbnails] = useState<string[]>([])
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token")
@@ -115,7 +123,7 @@ const ProductEdit: React.FC = () => {
 
   useEffect(() => {
     if (!id) {
-      message.error("ID Sản phẩm không hợp lệ.")
+      error("ID Sản phẩm không hợp lệ.")
       navigate("/admin/products")
       return
     }
@@ -176,7 +184,44 @@ const ProductEdit: React.FC = () => {
         setImages(productData.images || [])
         if (productData.images?.length > 0) {
           setPreviewImage(productData.images[0])
+          // Load existing main images into fileList for display
+          const existingMainImages = productData.images.map((url, index) => ({
+            uid: `existing-${index}`,
+            name: `image-${index}`,
+            status: 'done',
+            url: url,
+            thumbUrl: url,
+          }))
+          setFileList(existingMainImages)
         }
+        // Parse thumbnails with recursive approach
+        console.log('🔍 Raw thumbnails from API:', productData.thumbnails)
+        console.log('🔍 Type of thumbnails:', typeof productData.thumbnails)
+        
+        let thumbnails = productData.thumbnails || []
+        
+        // Recursive function to parse nested JSON strings
+        const parseThumbnails = (data) => {
+          if (Array.isArray(data)) {
+            return data.flatMap(item => parseThumbnails(item))
+          } else if (typeof data === 'string') {
+            try {
+              const parsed = JSON.parse(data)
+              return parseThumbnails(parsed)
+            } catch (e) {
+              // If it's not JSON, check if it's a valid path
+              if (data.startsWith('/uploads/')) {
+                return [data]
+              }
+              return []
+            }
+          }
+          return []
+        }
+        
+        thumbnails = parseThumbnails(thumbnails)
+        console.log('📤 Final thumbnails to set:', thumbnails)
+        setExistingThumbnails(thumbnails)
         form.setFieldsValue({
           name: productData.name,
           slug: productData.slug,
@@ -205,7 +250,7 @@ const ProductEdit: React.FC = () => {
           },
         })
       } catch (error) {
-        message.error("Không thể tải dữ liệu sản phẩm.")
+        error("Không thể tải dữ liệu sản phẩm.")
       } finally {
         setLoading(false)
       }
@@ -221,7 +266,7 @@ const ProductEdit: React.FC = () => {
     // Validate variants using utility function (isEdit = true để không yêu cầu ảnh)
     const validation = validateAllVariants(variants, true)
     if (!validation.isValid) {
-      message.error(`Lỗi:\n${validation.errors.join('\n')}`)
+      error(`Lỗi:\n${validation.errors.join('\n')}`)
       return
     }
     setSubmitting(true)
@@ -229,7 +274,14 @@ const ProductEdit: React.FC = () => {
       console.log("📝 Form values before processing:", values)
       console.log("📝 Current variants:", variants)
 
+      // Separate existing images from new uploads
+      const existingImageUrls = fileList
+        .filter(file => file.uid?.startsWith('existing-'))
+        .map(file => file.url)
+        .filter((url): url is string => url !== null)
+      
       const uploadedImageUrls = fileList
+        .filter(file => !file.uid?.startsWith('existing-'))
         .map((file) => {
           if (file.response && file.response.url) return file.response.url
           if (file.url) return file.url
@@ -280,36 +332,71 @@ const ProductEdit: React.FC = () => {
 
       const getId = (val: any) => (typeof val === "object" && val !== null && "_id" in val ? val._id : val)
 
-      // Prepare data for submission
-      const formData = {
-        name: values.name,
-        slug: slugify(values.name, { lower: true, strict: true }),
-        description: values.description,
-        images: uploadedImageUrls.length > 0 ? uploadedImageUrls : images.filter((img) => img.trim() !== ""),
-        tags: values.tags || [],
-        warranty: values.warranty,
-        brand: getId(values.brand),
-        category: getId(values.category),
-        price: processedVariants[0]?.price,
-        stock: processedVariants.reduce((sum, v) => sum + (v.stock || 0), 0),
-        variants: processedVariants, // Use pre-processed variants
-        isActive: values.isActive,
-        isFeatured: values.isFeatured,
+      // Prepare data for submission using FormData for file uploads
+      const formData = new FormData()
+      formData.append("name", values.name)
+      formData.append("slug", slugify(values.name, { lower: true, strict: true }))
+      
+      // Debug description handling
+      console.log('📝 Description from form values:', values.description)
+      console.log('📝 Description type:', typeof values.description)
+      console.log('📝 Description length:', values.description?.length)
+      console.log('📝 Description includes newlines:', values.description?.includes('\n'))
+      console.log('📝 Description includes \\n:', values.description?.includes('\\n'))
+      
+      formData.append("description", values.description)
+      // Combine existing images with new uploads
+      const allImageUrls = [...existingImageUrls, ...uploadedImageUrls]
+      formData.append("images", JSON.stringify(allImageUrls.length > 0 ? allImageUrls : images.filter((img) => img.trim() !== "")))
+      // Send existing thumbnails as URLs
+      formData.append("thumbnails", JSON.stringify([...existingThumbnails]))
+      formData.append("tags", JSON.stringify(values.tags || []))
+      formData.append("warranty", String(values.warranty || 0))
+      formData.append("brand", getId(values.brand))
+      formData.append("category", getId(values.category))
+      formData.append("price", String(processedVariants[0]?.price || 0))
+      formData.append("stock", String(processedVariants.reduce((sum, v) => sum + (v.stock || 0), 0)))
+      formData.append("variants", JSON.stringify(processedVariants))
+      formData.append("isActive", String(values.isActive))
+      formData.append("isFeatured", String(values.isFeatured))
+
+      // Add main image file if uploaded (only new files, not existing ones)
+      const newMainImageFile = fileList.find(file => !file.uid?.startsWith('existing-') && file.originFileObj)
+      if (newMainImageFile?.originFileObj) {
+        formData.append("image", newMainImageFile.originFileObj)
       }
+
+      // Add thumbnail files
+      thumbnailFiles.forEach((file, index) => {
+        formData.append(`thumbnail_${index}`, file)
+      })
 
       console.log("🧹 Data before validation:", formData)
 
-      // Validate and clean data
-      const cleanedData = validateAndCleanProductData(formData)
+      // Send FormData directly
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
 
-      console.log("✅ Final data to submit:", cleanedData)
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("❌ Error response:", errorData);
+        error(errorData.message || "Cập nhật sản phẩm thất bại.")
+        return
+      }
 
-      await updateProduct(id, cleanedData)
-      message.success("Cập nhật sản phẩm thành công!")
+      const updatedProduct = await response.json()
+      console.log("✅ Product updated successfully:", updatedProduct)
+      success("Cập nhật sản phẩm thành công!")
       navigate("/admin/products")
     } catch (error) {
       console.error("❌ Error submitting form:", error)
-      // message is handled in api.ts
+      error("Đã xảy ra lỗi. Vui lòng thử lại.")
     } finally {
       setSubmitting(false)
     }
@@ -393,6 +480,18 @@ const ProductEdit: React.FC = () => {
     if (idx === 0) setPreviewImage(value)
   }
 
+  // Xử lý upload ảnh thumbnail
+  const handleThumbnailUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setThumbnailFileList(fileList);
+
+    // Lấy tất cả files
+    const files = fileList
+      .filter((file: any) => file.originFileObj) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .map((file: any) => file.originFileObj); // eslint-disable-line @typescript-eslint/no-explicit-any
+    setThumbnailFiles(files);
+  };
+
   const addImageField = () => setImages([...images, ""])
 
   const removeImageField = (idx: number) => {
@@ -416,7 +515,7 @@ const ProductEdit: React.FC = () => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        onFinishFailed={() => message.error("Vui lòng kiểm tra lại các trường thông tin!")}
+        onFinishFailed={() => error("Vui lòng kiểm tra lại các trường thông tin!")}
       >
         <Row gutter={24}>
           <Col xs={24} lg={16}>
@@ -428,8 +527,197 @@ const ProductEdit: React.FC = () => {
               <Form.Item name="sku" label="SKU">
                 <Input placeholder="VD: ATN-001" />
               </Form.Item>
+              <Form.Item label="Ảnh đại diện sản phẩm">
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={fileList}
+                    onChange={handleUploadChange}
+                    beforeUpload={() => false}
+                    maxCount={1}
+                    showUploadList={false}
+                    className="w-full"
+                  >
+                    {fileList.length < 1 && (
+                      <div className="flex flex-col items-center justify-center h-32 w-full">
+                        <UploadOutlined className="text-3xl text-gray-400 mb-2" />
+                        <div className="text-sm text-gray-500">Upload</div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  {/* Hiển thị preview ảnh đã chọn */}
+                  {fileList.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {fileList.map((file, index) => (
+                        <div key={file.uid || index} className="relative group">
+                          <Image
+                            src={file.url || URL.createObjectURL(file.originFileObj)}
+                            alt={`Preview ảnh ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              console.error("Image load error:", file.name);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            style={{
+                              padding: 0,
+                              borderRadius: "50%",
+                              width: 24,
+                              height: 24,
+                              minWidth: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => {
+                              const newFileList = fileList.filter((_, i) => i !== index);
+                              setFileList(newFileList);
+                              if (index === 0 && newFileList.length > 0) {
+                                setPreviewImage(newFileList[0]?.url || "");
+                              } else if (newFileList.length === 0) {
+                                setPreviewImage("");
+                              }
+                            }}
+                          >
+                            ×
+                          </Button>
+                          {file.uid?.startsWith('existing-') && (
+                            <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                              Hiện có
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
+              </Form.Item>
+            </Card>
+
+            <Card className="shadow-lg rounded-xl mb-6">
+              <Title level={4}>Ảnh thumbnail</Title>
+              <Form.Item label="Ảnh thumbnail sản phẩm">
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={thumbnailFileList}
+                    onChange={handleThumbnailUpload}
+                    beforeUpload={() => false}
+                    multiple
+                    showUploadList={true}
+                    className="w-full"
+                  >
+                    {thumbnailFileList.length < 5 && (
+                      <div className="flex flex-col items-center justify-center h-24 w-full">
+                        <UploadOutlined className="text-2xl text-gray-400 mb-1" />
+                        <div className="text-xs text-gray-500">Upload</div>
+                        <div className="text-xs text-gray-400">Tối đa 5 ảnh</div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  {/* Hiển thị ảnh thumbnail hiện có */}
+                  {(() => {
+                    console.log('🔍 Rendering thumbnails, count:', existingThumbnails.length, 'data:', existingThumbnails)
+                    return null
+                  })()}
+                  {existingThumbnails.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                      {existingThumbnails.map((thumbnail, index) => {
+                        const fullUrl = thumbnail.startsWith('http') ? thumbnail : `http://localhost:8000${thumbnail}`
+                        console.log(`🖼️ Thumbnail ${index}:`, thumbnail, '→ Full URL:', fullUrl)
+                        return (
+                        <div key={`existing-thumb-${index}`} className="relative group">
+                          <Image
+                            src={fullUrl}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              console.error("Thumbnail load error:", thumbnail);
+                              console.error("Full URL attempted:", thumbnail.startsWith('http') ? thumbnail : `http://localhost:8000${thumbnail}`);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            style={{
+                              padding: 0,
+                              borderRadius: "50%",
+                              width: 20,
+                              height: 20,
+                              minWidth: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => {
+                              const newThumbnails = existingThumbnails.filter((_, i) => i !== index);
+                              setExistingThumbnails(newThumbnails);
+                            }}
+                          >
+                            ×
+                          </Button>
+                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
+                            Hiện có
+                          </div>
+                        </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* Hiển thị preview ảnh thumbnail mới */}
+                  {thumbnailFiles.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                      {thumbnailFiles.map((file, index) => (
+                        <div key={index} className="relative group">
+                          <Image
+                            src={URL.createObjectURL(file)}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              console.error("Thumbnail load error:", file.name);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            style={{
+                              padding: 0,
+                              borderRadius: "50%",
+                              width: 20,
+                              height: 20,
+                              minWidth: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => {
+                              const newFiles = thumbnailFiles.filter((_, i) => i !== index);
+                              const newFileList = thumbnailFileList.filter((_, i) => i !== index);
+                              setThumbnailFiles(newFiles);
+                              setThumbnailFileList(newFileList);
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </Form.Item>
             </Card>
 
@@ -503,7 +791,7 @@ const ProductEdit: React.FC = () => {
 
               <Title level={4}>Hành động</Title>
               <Space direction="vertical" className="w-full">
-                <Button type="primary" htmlType="submit" loading={submitting} block icon={<SaveOutlined />}>
+                <Button type="primary" className="admin-primary-button" htmlType="submit" loading={submitting} block icon={<SaveOutlined />}>
                   Lưu thay đổi
                 </Button>
                 <Button block icon={<ArrowLeftOutlined />} onClick={() => navigate("/admin/products")}>

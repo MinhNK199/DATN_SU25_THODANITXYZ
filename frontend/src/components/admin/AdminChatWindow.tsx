@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Card, 
   Avatar, 
@@ -83,39 +83,69 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
     };
   }, [conversation._id, joinConversation, leaveConversation]);
 
-  // Listen for new messages in real-time
+  // Use ChatContext for real-time updates
+  const { messages: contextMessages, loadMessages } = useChat();
+  
+  // Load messages when conversation changes
   useEffect(() => {
-    if (!socket) return;
+    if (conversation._id) {
+      console.log('AdminChatWindow: Loading messages for conversation', conversation._id);
+      loadMessages(conversation._id);
+    }
+  }, [conversation._id, loadMessages]); // Now safe to include loadMessages with useCallback
+  
+  // Filter messages for current conversation
+  const conversationMessages = contextMessages.filter(msg => msg.conversation === conversation._id);
+  
+  // Debug logs
+  useEffect(() => {
+    console.log('AdminChatWindow: Debug messages', {
+      conversationId: conversation._id,
+      totalContextMessages: contextMessages.length,
+      filteredMessages: conversationMessages.length,
+      localMessages: messages.length
+    });
+  }, [conversation._id, contextMessages.length, conversationMessages.length, messages.length]);
+  
+  // Update local messages when context changes
+  useEffect(() => {
+    if (conversationMessages.length > 0) {
+      console.log('AdminChatWindow: Updating messages from ChatContext', {
+        conversationId: conversation._id,
+        messageCount: conversationMessages.length,
+        lastMessage: conversationMessages[conversationMessages.length - 1],
+        allMessages: conversationMessages.map(m => ({ id: m._id, content: m.content, sender: m.sender?.name, role: m.sender?.role }))
+      });
+      setMessages(conversationMessages);
+    }
+  }, [conversationMessages.length, conversation._id]); // Only depend on length and conversation ID
 
-    const handleNewMessage = (data: { message: Message; conversationId: string }) => {
-      if (data.conversationId === conversation._id) {
-        console.log('AdminChatWindow: Received new message', data.message._id);
+  // Auto update priority and status for new customer messages
+  const handleAutoUpdateForNewCustomerMessage = async () => {
+    try {
+      // Only update if conversation is not already resolved or closed
+      if (conversation.status === 'resolved' || conversation.status === 'closed') {
+        console.log('Conversation is already resolved/closed, updating to pending');
         
-        setMessages(prev => {
-          // Check if this message already exists (to avoid duplicates)
-          const messageExists = prev.some(msg => msg._id === data.message._id);
-          if (messageExists) {
-            return prev;
-          }
-          
-          // Remove any temp messages with the same content and add the real message
-          const filteredMessages = prev.filter(msg => 
-            !(msg._id.startsWith('temp_') && msg.content === data.message.content)
-          );
-          
-          return [...filteredMessages, data.message];
+        // Set priority to high and status to pending for new customer messages
+        await chatApi.updateConversationStatus(conversation._id, {
+          priority: 'high',
+          status: 'pending'
         });
         
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Update local conversation state
+        onConversationUpdate({
+          ...conversation,
+          priority: 'high',
+          status: 'pending'
+        });
+      } else {
+        console.log('Conversation status is:', conversation.status, '- no auto update needed');
       }
-    };
-
-    socket.on('new_message', handleNewMessage);
-
-    return () => {
-      socket.off('new_message', handleNewMessage);
-    };
-  }, [socket, conversation._id]);
+    } catch (error) {
+      console.error('Error auto-updating conversation status:', error);
+    }
+  };
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -201,6 +231,18 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
         type: 'text'
       });
 
+      // Auto update status to active when admin responds
+      if (conversation.status === 'pending') {
+        await chatApi.updateConversationStatus(conversation._id, {
+          status: 'active'
+        });
+        
+        onConversationUpdate({
+          ...conversation,
+          status: 'active'
+        });
+      }
+
       // Note: Real message will replace temp message via socket event
     } catch (error) {
       console.error('Error sending message:', error);
@@ -243,7 +285,14 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
   const handleMarkAsRead = async () => {
     try {
       await chatApi.markAsRead(conversation._id);
-      antMessage.success('Đã đánh dấu đã đọc');
+      
+      // Update local messages to show as read
+      setMessages(prev => prev.map(msg => ({
+        ...msg,
+        readBy: [...msg.readBy, 'current_admin']
+      })));
+      
+      antMessage.success('Đã đánh dấu tất cả tin nhắn là đã đọc');
     } catch (error) {
       console.error('Error marking as read:', error);
       antMessage.error('Lỗi khi đánh dấu đã đọc');
@@ -252,6 +301,8 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
 
   const scrollToTop = () => {
     if (messagesContainerRef.current) {
+      setIsUserScrolling(true);
+      setShouldAutoScroll(false);
       messagesContainerRef.current.scrollTo({
         top: 0,
         behavior: 'smooth'
@@ -261,19 +312,87 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
+      setIsUserScrolling(false);
+      setShouldAutoScroll(true);
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
+  // State to track if user is manually scrolling
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+
+  // Auto scroll to bottom only when appropriate
+  useEffect(() => {
+    if (shouldAutoScroll && messagesEndRef.current && !isUserScrolling) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, shouldAutoScroll, isUserScrolling]);
+
+  // Handle scroll events for better UX
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 50;
+      
+      // Update auto scroll preference based on user position
+      setShouldAutoScroll(isNearBottom);
+      
+      // Detect if user is manually scrolling up
+      if (scrollTop < scrollHeight - clientHeight - 100) {
+        setIsUserScrolling(true);
+        setShouldAutoScroll(false);
+      } else {
+        setIsUserScrolling(false);
+        setShouldAutoScroll(true);
+      }
+    }
+  };
+
+  // Debounced scroll handler to prevent too many state updates
+  const debouncedHandleScroll = useCallback(() => {
+    let timeoutId: NodeJS.Timeout;
+    return () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleScroll, 100);
+    };
+  }, []);
+
+  // Use debounced scroll handler
+  useEffect(() => {
+    const debouncedScroll = debouncedHandleScroll();
+    return debouncedScroll;
+  }, [debouncedHandleScroll]);
+
+  // Reset scroll state when conversation changes
+  useEffect(() => {
+    setIsUserScrolling(false);
+    setShouldAutoScroll(true);
+  }, [conversation._id]);
+
   const handleStatusChange = async (status: string) => {
     try {
+      // Kiểm tra logic chuyển trạng thái hợp lệ
+      const currentStatus = conversation.status;
+      const validTransitions = {
+        'pending': ['active', 'closed'],
+        'active': ['resolved', 'closed', 'pending'],
+        'resolved': ['active', 'closed'],
+        'closed': ['active', 'pending']
+      };
+
+      if (!validTransitions[currentStatus]?.includes(status)) {
+        antMessage.warning(`Không thể chuyển từ "${getStatusText(currentStatus)}" sang "${getStatusText(status)}"`);
+        return;
+      }
+
       const response = await chatApi.updateConversationStatus(conversation._id, {
         status
       });
 
       if (response.success) {
         onConversationUpdate(response.data);
-        antMessage.success('Cập nhật trạng thái thành công');
+        antMessage.success(`Đã chuyển trạng thái thành "${getStatusText(status)}"`);
       }
     } catch (error) {
       console.error('Error updating status:', error);
@@ -321,19 +440,66 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
     }
   };
 
+  const handlePriorityChange = async (priority: string) => {
+    try {
+      const response = await chatApi.updateConversationStatus(conversation._id, {
+        priority
+      });
+
+      if (response.success) {
+        onConversationUpdate(response.data);
+        antMessage.success('Cập nhật mức độ ưu tiên thành công');
+      }
+    } catch (error) {
+      console.error('Error updating priority:', error);
+      antMessage.error('Lỗi khi cập nhật mức độ ưu tiên');
+    }
+  };
+
   const conversationMenu = (
     <Menu>
+      <Menu.SubMenu key="priority" title="Thay đổi ưu tiên" icon={<AlertCircle size={14} />}>
+        <Menu.Item key="urgent" onClick={() => handlePriorityChange('urgent')}>
+          🔴 Khẩn cấp
+        </Menu.Item>
+        <Menu.Item key="high" onClick={() => handlePriorityChange('high')}>
+          🟠 Cao
+        </Menu.Item>
+        <Menu.Item key="medium" onClick={() => handlePriorityChange('medium')}>
+          🔵 Trung bình
+        </Menu.Item>
+        <Menu.Item key="low" onClick={() => handlePriorityChange('low')}>
+          🟢 Thấp
+        </Menu.Item>
+      </Menu.SubMenu>
+      
+      <Menu.Divider />
+      
+      <Menu.SubMenu key="status" title="Thay đổi trạng thái" icon={<CheckCircle size={14} />}>
+        <Menu.Item key="active" onClick={() => handleStatusChange('active')}>
+          🟢 Hoạt động
+        </Menu.Item>
+        <Menu.Item key="pending" onClick={() => handleStatusChange('pending')}>
+          🟡 Chờ xử lý
+        </Menu.Item>
+        <Menu.Item key="resolved" onClick={() => handleStatusChange('resolved')}>
+          ✅ Đã giải quyết
+        </Menu.Item>
+        <Menu.Item key="closed" onClick={() => handleStatusChange('closed')}>
+          🔴 Đã đóng
+        </Menu.Item>
+      </Menu.SubMenu>
+      
+      <Menu.Divider />
+      
       <Menu.Item key="assign" icon={<User size={14} />} onClick={() => setIsAssignModalVisible(true)}>
         Gán cho admin
-      </Menu.Item>
-      <Menu.Item key="archive" icon={<Archive size={14} />} onClick={() => handleStatusChange('closed')}>
-        Lưu trữ
       </Menu.Item>
       <Menu.Item key="mark-read" icon={<CheckCircle size={14} />} onClick={handleMarkAsRead}>
         Đánh dấu đã đọc
       </Menu.Item>
-      <Menu.Item key="resolve" icon={<CheckCircle size={14} />} onClick={() => handleStatusChange('resolved')}>
-        Đánh dấu đã giải quyết
+      <Menu.Item key="close-conversation" icon={<Archive size={14} />} onClick={() => handleStatusChange('closed')}>
+        Đóng cuộc trò chuyện
       </Menu.Item>
     </Menu>
   );
@@ -374,6 +540,11 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
             <Tag color={getPriorityColor(conversation.priority)}>
               {getPriorityText(conversation.priority)}
             </Tag>
+            {conversation.status === 'resolved' && (
+              <Tag color="green">
+                ✅ Đã đọc
+              </Tag>
+            )}
           </Space>
 
           <Space>
@@ -388,6 +559,14 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
       <div 
         className="flex-1 overflow-y-auto p-4 min-w-0 relative chat-messages-container" 
         ref={messagesContainerRef}
+        onScroll={handleScroll}
+        style={{
+          scrollBehavior: 'smooth',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#d1d5db #f3f4f6',
+          maxHeight: '400px',
+          overflowY: 'scroll'
+        }}
       >
         {/* Scroll Buttons */}
         <div className="absolute right-4 top-4 z-10 flex flex-col space-y-2">
@@ -397,7 +576,7 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
               size="small"
               icon={<ChevronUp size={16} />}
               onClick={scrollToTop}
-              className="bg-white shadow-md hover:bg-gray-50"
+              className="bg-white shadow-md hover:bg-gray-50 border border-gray-200"
             />
           </Tooltip>
           <Tooltip title="Cuộn xuống cuối">
@@ -406,7 +585,7 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
               size="small"
               icon={<ChevronDown size={16} />}
               onClick={scrollToBottom}
-              className="bg-white shadow-md hover:bg-gray-50"
+              className="bg-white shadow-md hover:bg-gray-50 border border-gray-200"
             />
           </Tooltip>
         </div>
@@ -486,11 +665,21 @@ const AdminChatWindow: React.FC<AdminChatWindowProps> = ({
               placeholder="Chọn admin"
               value={selectedAdmin}
               onChange={setSelectedAdmin}
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+              }
             >
-              {/* This should be populated with actual admin users */}
+              <Option value="superadmin">Super Admin</Option>
               <Option value="admin1">Admin 1</Option>
               <Option value="admin2">Admin 2</Option>
+              <Option value="admin3">Admin 3</Option>
             </Select>
+          </div>
+          <div>
+            <Text className="text-sm text-gray-500">
+              Cuộc trò chuyện sẽ được chuyển cho admin được chọn để xử lý.
+            </Text>
           </div>
         </div>
       </Modal>

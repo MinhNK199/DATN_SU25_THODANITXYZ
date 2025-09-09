@@ -5,7 +5,7 @@ import {
   Card,
   Button,
   Modal,
-  message,
+  message as antdMessage,
   Image,
   Tag,
   Divider,
@@ -26,6 +26,7 @@ import {
   CloseCircleOutlined,
 } from "@ant-design/icons";
 import { getProductById, softDeleteProduct } from "./api";
+import { useNotification } from "../../../hooks/useNotification";
 import type { ColumnsType } from "antd/es/table";
 
 const { Title, Text, Paragraph } = Typography;
@@ -33,13 +34,14 @@ const { Title, Text, Paragraph } = Typography;
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success, error } = useNotification();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string>("");
 
   useEffect(() => {
     if (!id) {
-      message.error("ID sản phẩm không hợp lệ.");
+      error("ID sản phẩm không hợp lệ.");
       navigate("/admin/products");
       return;
     }
@@ -72,7 +74,7 @@ const ProductDetail: React.FC = () => {
       onOk: async () => {
         try {
           await softDeleteProduct(id);
-          message.success("Sản phẩm đã được chuyển vào thùng rác.");
+          success("Sản phẩm đã được chuyển vào thùng rác.");
           navigate("/admin/products");
         } catch (error) {
           // message handled in api.ts
@@ -436,10 +438,10 @@ const ProductDetail: React.FC = () => {
                       </Row>
                       <Divider />
                       <Title level={5}>Mô tả</Title>
-                      <Paragraph className="text-base">
+                      <div className="text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
                         {product.description ||
                           "Chưa có mô tả cho sản phẩm này."}
-                      </Paragraph>
+                      </div>
                     </div>
                   ),
                 },

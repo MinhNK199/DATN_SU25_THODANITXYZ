@@ -6,13 +6,14 @@ import {
   Input,
   Button,
   Switch,
-  message,
+  message as antdMessage,
   Typography,
   Space,
   Row,
   Col,
   Upload,
 } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import {
   ArrowLeftOutlined,
   PlusOutlined,
@@ -32,6 +33,7 @@ const BannerAdd: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string>("");
   const navigate = useNavigate();
+  const { success, error } = useNotification();
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -42,7 +44,7 @@ const BannerAdd: React.FC = () => {
 
   const onFinish = async (values: Banner) => {
     if (!file) {
-      message.error("❌ Vui lòng chọn ảnh!");
+      error("❌ Vui lòng chọn ảnh!");
       return;
     }
 
@@ -69,14 +71,14 @@ const BannerAdd: React.FC = () => {
       });
 
       if (res.ok) {
-        message.success("✅ Thêm banner thành công!");
+        success("✅ Thêm banner thành công!");
         navigate("/admin/banners");
       } else {
         const err = await res.json();
-        message.error(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
+        error(`❌ Thêm thất bại: ${err.message || "Lỗi máy chủ"}`);
       }
     } catch (error) {
-      message.error("❌ Lỗi kết nối máy chủ!");
+      error("❌ Lỗi kết nối máy chủ!");
     } finally {
       setLoading(false);
     }
@@ -238,6 +240,7 @@ setPreviewImage(URL.createObjectURL(file));
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <Button
                     type="primary"
+                    className="admin-primary-button"
                     htmlType="submit"
                     loading={loading}
                     icon={<PlusOutlined />}

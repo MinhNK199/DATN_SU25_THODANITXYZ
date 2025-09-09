@@ -31,6 +31,35 @@
     background: #6b7280;
 }
 
+/* Chat messages scrollbar */
+.chat-messages-container {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.chat-messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-messages-container::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.chat-messages-container::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.chat-messages-container::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.chat-messages-container::-webkit-scrollbar-thumb:active {
+    background: #6b7280;
+}
+
 /* Cart specific scrollbar */
 .cart-scrollable {
     scrollbar-width: thin;
@@ -88,4 +117,29 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+}
+
+/* Product Detail Modal Scrollbar */
+.product-detail-modal .ant-modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 #f1f5f9;
+}
+
+.product-detail-modal .ant-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.product-detail-modal .ant-modal-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.product-detail-modal .ant-modal-body::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.product-detail-modal .ant-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
 }

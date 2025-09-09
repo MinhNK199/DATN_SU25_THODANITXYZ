@@ -157,6 +157,7 @@ const BrandList: React.FC = () => {
         <Space>
           <Button
             type="primary"
+            className="admin-primary-button"
             icon={<FaEdit />}
             onClick={() => {
               setEditingBrand(record);
@@ -178,7 +179,7 @@ const BrandList: React.FC = () => {
       {contextHolder}
       <div className="flex justify-between items-center mb-4">
         <Typography.Title level={3}>Danh sách Thương hiệu</Typography.Title>
-        <Button type="primary" onClick={() => setIsAdding(true)}>
+        <Button type="primary" className="admin-primary-button" onClick={() => setIsAdding(true)}>
           + Thêm mới
         </Button>
       </div>

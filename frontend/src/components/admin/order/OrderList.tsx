@@ -182,6 +182,7 @@ const OrderList: React.FC = () => {
             <Link to={`/admin/orders/${record._id}`}>
                 <Button
                 type="primary"
+                className="admin-primary-button"
                 icon={<FaEye />}
                 />
             </Link>
@@ -230,7 +231,7 @@ const OrderList: React.FC = () => {
           </Select>
         </Col>
         <Col span={6}>
-          <Button type="primary" onClick={() => {
+          <Button type="primary" className="admin-primary-button" onClick={() => {
             setCustomerName(filterCustomerName);
             setOrderId(filterOrderId);
             setStatus(filterStatus);
@@ -242,7 +243,7 @@ const OrderList: React.FC = () => {
             setCustomerName("");
             setOrderId("");
             setStatus("");
-          }}>Xóa bộ lọc</Button>
+          }} className="admin-bg-blue-light hover:admin-bg-blue text-white">Xóa bộ lọc</Button>
         </Col>
       </Row>
 
