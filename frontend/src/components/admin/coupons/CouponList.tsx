@@ -40,7 +40,6 @@ const CouponList: React.FC = () => {
     switch (type) {
       case 'percentage': return 'blue';
       case 'fixed': return 'green';
-      case 'shipping': return 'orange';
       default: return 'default';
     }
   };
@@ -49,7 +48,6 @@ const CouponList: React.FC = () => {
     switch (type) {
       case 'percentage': return 'Phần trăm';
       case 'fixed': return 'Cố định';
-      case 'shipping': return 'Vận chuyển';
       default: return type;
     }
   };
@@ -93,8 +91,6 @@ const CouponList: React.FC = () => {
       render: (discount: number, record: Coupon) => {
         if (record.type === 'percentage') {
           return `${discount}%`;
-        } else if (record.type === 'shipping') {
-          return "Miễn phí ship";
         } else {
           return formatPrice(discount);
         }
@@ -129,7 +125,7 @@ const CouponList: React.FC = () => {
         const startDate = new Date(record.startDate);
         const endDate = new Date(record.endDate);
         const isActive = record.isActive && now >= startDate && now <= endDate;
-        
+
         return (
           <Tag color={isActive ? "green" : "red"}>
             {isActive ? "Hoạt động" : "Không hoạt động"}

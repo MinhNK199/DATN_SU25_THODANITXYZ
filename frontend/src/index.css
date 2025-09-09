@@ -1,3 +1,91 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Scrollbar Styles */
+.scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:active {
+    background: #6b7280;
+}
+
+/* Cart specific scrollbar */
+.cart-scrollable {
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 #e5e7eb;
+}
+
+.cart-scrollable::-webkit-scrollbar {
+    width: 10px;
+}
+
+.cart-scrollable::-webkit-scrollbar-track {
+    background: #e5e7eb;
+    border-radius: 5px;
+}
+
+.cart-scrollable::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+
+.cart-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #2563eb;
+}
+
+.cart-scrollable::-webkit-scrollbar-thumb:active {
+    background: #1d4ed8;
+}
+
+/* Cart Layout Balance */
+.cart-layout {
+    min-height: 600px;
+}
+
+.cart-left-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 1.5rem;
+}
+
+.cart-items-container {
+    flex: 1;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.cart-coupon-container {
+    flex-shrink: 0;
+    min-height: 200px;
+}
+
+.cart-right-column {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
