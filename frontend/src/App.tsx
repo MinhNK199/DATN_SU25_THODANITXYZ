@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import './App.css';
+import './styles/admin-buttons.css';
 import ClientLayout from './layout/ClientLayout';
 import Home from './pages/client/Home';
 import PrivateRouteAdmin from "./components/privateRouteAdmin";
@@ -33,7 +34,6 @@ import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
 import VariantDetail from "./components/admin/variants/VariantDetail";
 import { Toaster } from "react-hot-toast";
-import { NotificationProvider } from './components/client/ModernNotification';
 import Cart from './pages/client/Cart';
 import ProductListClient from './pages/client/ProductList';
 import ProductDetailClient from './pages/client/ProductDetail';
@@ -48,6 +48,7 @@ import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
@@ -64,6 +65,7 @@ import CouponAdd from './components/admin/coupons/CouponAdd';
 import CouponEdit from './components/admin/coupons/CouponEdit';
 import BlogPage from './pages/admin/BlogPage';
 import ChatPage from './pages/admin/ChatPage';
+import DetailedStats from './pages/admin/DetailedStats';
 import CheckoutSuccess from './pages/client/CheckoutSuccess';
 import BlogList from './pages/client/BlogList';
 import BlogDetail from './pages/client/BlogDetail';
@@ -176,6 +178,7 @@ function App() {
                     <Route path="coupons/edit/:id" element={<CouponEdit />} />
                     <Route path="blogs" element={<BlogPage />} />
                     <Route path="chat" element={<ChatPage />} />
+                    <Route path="detailed-stats" element={<DetailedStats />} />
                   </Route>
                 </Routes>
 

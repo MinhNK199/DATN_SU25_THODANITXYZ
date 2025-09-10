@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { ChatState, Conversation, Message, User, TypingUser } from '../interfaces/Chat';
+import { chatApi } from '../services/chatApi';
+import { useNotification } from './NotificationContext';
 
 interface ChatContextType extends ChatState {
   socket: Socket | null;
@@ -18,6 +20,10 @@ interface ChatContextType extends ChatState {
   updateMessage: (messageId: string, updates: Partial<Message>) => void;
   addConversation: (conversation: Conversation) => void;
   updateConversation: (conversationId: string, updates: Partial<Conversation>) => void;
+  // Load functions
+  loadConversations: () => Promise<void>;
+  loadAdminConversations: () => Promise<void>;
+  loadMessages: (conversationId: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -82,11 +88,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         auth: {
           token: token
         },
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionAttempts: 5,
+        timeout: 20000
       });
 
       newSocket.on('connect', () => {
-        console.log('ChatContext: Connected to chat server', { socketId: newSocket.id });
+        console.log('ChatContext: Connected to chat server', { socketId: newSocket.id, userRole: user.role });
         setIsConnected(true);
       });
 
@@ -100,16 +110,75 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         setState(prev => ({ ...prev, error: 'Lỗi kết nối chat server' }));
       });
 
-      // Message events - only update conversations, not messages
+      // Message events - update both conversations and messages
       newSocket.on('new_message', (data: { message: Message; conversationId: string }) => {
-        setState(prev => ({
-          ...prev,
-          conversations: prev.conversations.map(conv => 
-            conv._id === data.conversationId 
-              ? { ...conv, lastMessage: data.message, lastMessageAt: data.message.createdAt }
-              : conv
-          )
-        }));
+        console.log('ChatContext: Received new_message', {
+          messageId: data.message._id,
+          content: data.message.content,
+          sender: data.message.sender?.name,
+          role: data.message.sender?.role,
+          conversationId: data.conversationId
+        });
+        
+        // Show notification for new messages from customers
+        if (data.message.sender?.role === 'customer') {
+          // Dispatch custom event for notification
+          const notificationEvent = new CustomEvent('chat-notification', {
+            detail: {
+              title: `Tin nhắn mới từ ${data.message.sender.name || 'Khách hàng'}`,
+              message: data.message.content.length > 50 
+                ? `${data.message.content.substring(0, 50)}...` 
+                : data.message.content,
+              type: 'message',
+              conversationId: data.conversationId
+            }
+          });
+          window.dispatchEvent(notificationEvent);
+        }
+        
+        setState(prev => {
+          // Check if message already exists to avoid duplicates
+          const messageExists = prev.messages.some(msg => msg._id === data.message._id);
+          
+          if (messageExists) {
+            console.log('ChatContext: Message already exists, skipping');
+            return prev; // Don't update if message already exists
+          }
+          
+          // Replace temp message if it exists (like client does)
+          const hasTemp = prev.messages.some(msg => 
+            msg._id.startsWith('temp_') && 
+            msg.conversation === data.conversationId &&
+            msg.content === data.message.content
+          );
+          
+          let updatedMessages = prev.messages;
+          if (hasTemp) {
+            // Replace temp message with real message
+            updatedMessages = prev.messages.map(msg => 
+              msg._id.startsWith('temp_') && 
+              msg.conversation === data.conversationId &&
+              msg.content === data.message.content
+                ? data.message
+                : msg
+            );
+            console.log('ChatContext: Replaced temp message with real message');
+          } else {
+            // Add new message
+            updatedMessages = [...prev.messages, data.message];
+            console.log('ChatContext: Added new message to messages array');
+          }
+          
+          return {
+            ...prev,
+            conversations: prev.conversations.map(conv => 
+              conv._id === data.conversationId 
+                ? { ...conv, lastMessage: data.message, lastMessageAt: data.message.createdAt }
+                : conv
+            ),
+            messages: updatedMessages
+          };
+        });
       });
 
       newSocket.on('message_read', (data: { messageId: string; userId: string; readAt: string }) => {
@@ -171,6 +240,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
 
       // Conversation events
       newSocket.on('conversation_updated', (data: { conversation: Conversation; updatedBy: User }) => {
+        // Debug log removed to avoid console spam
         setState(prev => ({
           ...prev,
           conversations: prev.conversations.map(conv =>
@@ -180,6 +250,63 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
             ? data.conversation 
             : prev.currentConversation
         }));
+      });
+
+      // New conversation events for admin
+      newSocket.on('new_conversation', (data: { conversation: Conversation; message: string }) => {
+        console.log('ChatContext: Received new_conversation event', {
+          conversationId: data.conversation._id,
+          participants: data.conversation.participants?.length,
+          message: data.message
+        });
+        
+        setState(prev => {
+          // Check if conversation already exists
+          const exists = prev.conversations.some(conv => conv._id === data.conversation._id);
+          if (exists) {
+            console.log('ChatContext: Conversation already exists, updating instead');
+            return {
+              ...prev,
+              conversations: prev.conversations.map(conv =>
+                conv._id === data.conversation._id ? data.conversation : conv
+              )
+            };
+          }
+          
+          console.log('ChatContext: Adding new conversation to list');
+          return {
+            ...prev,
+            conversations: [data.conversation, ...prev.conversations]
+          };
+        });
+      });
+
+      newSocket.on('admin_new_conversation', (data: { conversation: Conversation; message: string }) => {
+        console.log('ChatContext: Received admin_new_conversation event', {
+          conversationId: data.conversation._id,
+          participants: data.conversation.participants?.length,
+          message: data.message
+        });
+        
+        setState(prev => {
+          // Check if conversation already exists
+          const exists = prev.conversations.some(conv => conv._id === data.conversation._id);
+          if (exists) {
+            console.log('ChatContext: Conversation already exists, updating instead');
+            return {
+              ...prev,
+              conversations: prev.conversations.map(conv =>
+                conv._id === data.conversation._id ? data.conversation : conv
+              )
+            };
+          }
+          
+          console.log('ChatContext: Adding new conversation to admin list');
+          return {
+            ...prev,
+            conversations: [data.conversation, ...prev.conversations]
+          };
+        });
       });
 
       // Error handling
@@ -194,6 +321,77 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         setSocket(null);
         setIsConnected(false);
       };
+    }
+  }, [user, token]);
+
+  // Load conversations
+  const loadConversations = async () => {
+    try {
+      const response = await chatApi.getConversations();
+      if (response.success) {
+        setState(prev => ({ ...prev, conversations: response.data.conversations }));
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+
+  const loadAdminConversations = async () => {
+    try {
+      const response = await chatApi.getConversations({ status: '', priority: '', assignedTo: '', search: '' });
+      if (response.success) {
+        setState(prev => ({ ...prev, conversations: response.data.conversations }));
+      }
+    } catch (error) {
+      console.error('Error loading admin conversations:', error);
+    }
+  };
+
+  const loadMessages = useCallback(async (conversationId: string) => {
+    try {
+      console.log('ChatContext: Loading messages for conversation', conversationId);
+      const response = await chatApi.getMessages(conversationId);
+      if (response.success) {
+        setState(prev => {
+          // Only update if messages are different to avoid unnecessary re-renders
+          const currentMessages = prev.messages.filter(msg => msg.conversation === conversationId);
+          const newMessages = response.data.messages;
+          
+          if (currentMessages.length === newMessages.length && 
+              currentMessages.every((msg, index) => msg._id === newMessages[index]?._id)) {
+            console.log('ChatContext: Messages unchanged, skipping update');
+            return prev;
+          }
+          
+          console.log('ChatContext: Updating messages', { 
+            conversationId, 
+            oldCount: currentMessages.length, 
+            newCount: newMessages.length 
+          });
+          
+          return { 
+            ...prev, 
+            messages: [
+              ...prev.messages.filter(msg => msg.conversation !== conversationId),
+              ...newMessages
+            ],
+            currentConversation: prev.conversations.find(conv => conv._id === conversationId) || null
+          };
+        });
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  }, []);
+
+  // Load conversations when user changes
+  useEffect(() => {
+    if (user && token) {
+      if (user.role === 'admin' || user.role === 'superadmin') {
+        loadAdminConversations();
+      } else {
+        loadConversations();
+      }
     }
   }, [user, token]);
 
@@ -303,7 +501,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     addMessage,
     updateMessage,
     addConversation,
-    updateConversation
+    updateConversation,
+    loadConversations,
+    loadAdminConversations,
+    loadMessages
   };
 
   return (

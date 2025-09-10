@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, InputNumber, Select, DatePicker, Switch, Button, Card, message, Row, Col, Checkbox } from "antd";
+import { Form, Input, InputNumber, Select, DatePicker, Switch, Button, Card, message as antdMessage, Row, Col, Checkbox } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import { useNavigate } from "react-router-dom";
 import { createCoupon } from "./api";
 import dayjs from "dayjs";
@@ -17,6 +18,7 @@ const CouponAdd: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const navigate = useNavigate();
+  const { success, error } = useNotification();
 
   useEffect(() => {
     fetch("/api/product?pageSize=1000")
@@ -35,10 +37,10 @@ const CouponAdd: React.FC = () => {
       };
 
       await createCoupon(couponData);
-      message.success("Tạo mã giảm giá thành công");
+      success("Tạo mã giảm giá thành công");
       navigate("/admin/coupons");
     } catch (error: any) {
-      message.error(error.message || "Lỗi khi tạo mã giảm giá");
+      error(error.message || "Lỗi khi tạo mã giảm giá");
     } finally {
       setLoading(false);
     }

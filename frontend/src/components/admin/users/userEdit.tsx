@@ -223,6 +223,7 @@ const UserEdit: React.FC = () => {
                 </Button>
                 <Button
                   type="primary"
+                  className="admin-primary-button"
                   htmlType="submit"
                   block
                   icon={<SaveOutlined />}

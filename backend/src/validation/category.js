@@ -21,7 +21,18 @@ export const validateCreateCategory = [
 
     body('image')
     .trim()
-    .isURL()
+    .custom((value) => {
+        // Cho phép localhost và các URL hợp lệ
+        if (value.includes('localhost') || value.includes('127.0.0.1')) {
+            return true;
+        }
+        // Kiểm tra URL hợp lệ cho các domain khác
+        const urlPattern = /^https?:\/\/.+/;
+        if (!urlPattern.test(value)) {
+            throw new Error('URL hình ảnh không hợp lệ');
+        }
+        return true;
+    })
     .withMessage('URL hình ảnh không hợp lệ'),
 
     body('icon')
@@ -83,7 +94,18 @@ export const validateUpdateCategory = [
     body('image')
     .optional()
     .trim()
-    .isURL()
+    .custom((value) => {
+        // Cho phép localhost và các URL hợp lệ
+        if (value.includes('localhost') || value.includes('127.0.0.1')) {
+            return true;
+        }
+        // Kiểm tra URL hợp lệ cho các domain khác
+        const urlPattern = /^https?:\/\/.+/;
+        if (!urlPattern.test(value)) {
+            throw new Error('URL hình ảnh không hợp lệ');
+        }
+        return true;
+    })
     .withMessage('URL hình ảnh không hợp lệ'),
 
     body('icon')

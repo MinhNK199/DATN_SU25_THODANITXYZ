@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, message, Popconfirm, Space, Tag, Card, Row, Col, Statistic, Divider, Badge } from "antd";
+import { Table, Button, Modal, message as antdMessage, Popconfirm, Space, Tag, Card, Row, Col, Statistic, Divider, Badge } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import { useNavigate } from "react-router-dom";
 import { getCoupons, deleteCoupon } from "../coupons/api";
 import { Coupon } from "../../../interfaces/Coupon";
@@ -24,6 +25,7 @@ const VoucherList: React.FC = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const navigate = useNavigate();
+  const { success, error } = useNotification();
 
   useEffect(() => {
     fetchCoupons();
@@ -53,20 +55,20 @@ const VoucherList: React.FC = () => {
   const handleSoftDelete = async (coupon: Coupon) => {
     try {
       await deleteCoupon(coupon._id, false); // Soft delete
-      message.success("Đã tạm dừng voucher thành công");
+      success("Đã tạm dừng voucher thành công");
       fetchCoupons();
     } catch (error) {
-      message.error("Có lỗi xảy ra khi tạm dừng voucher");
+      error("Có lỗi xảy ra khi tạm dừng voucher");
     }
   };
 
   const handleHardDelete = async (coupon: Coupon) => {
     try {
       await deleteCoupon(coupon._id, true); // Hard delete
-      message.success("Đã xóa voucher thành công");
+      success("Đã xóa voucher thành công");
       fetchCoupons();
     } catch (error) {
-      message.error("Có lỗi xảy ra khi xóa voucher");
+      error("Có lỗi xảy ra khi xóa voucher");
     }
   };
 

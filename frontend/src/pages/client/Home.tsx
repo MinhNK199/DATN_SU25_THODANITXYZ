@@ -128,9 +128,13 @@ const Home: React.FC = () => {
                 >
                   <div className="relative overflow-hidden rounded-2xl shadow-lg group-hover:shadow-2xl transition-all duration-300">
                     <img
-                      src={category.image || 'https://via.placeholder.com/300'}
+                      src={category.image || 'https://via.placeholder.com/300x200/cccccc/666666?text=No+Image'}
                       alt={category.name}
                       className="w-full h-48 object-cover object-center group-hover:scale-110 transition-transform duration-300"
+                      onError={(e) => {
+                        console.error("Category image error:", category.image);
+                        e.currentTarget.src = 'https://via.placeholder.com/300x200/cccccc/666666?text=No+Image';
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
                       <div className="p-6 text-white">

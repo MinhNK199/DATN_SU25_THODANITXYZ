@@ -9,7 +9,7 @@ import {
   InputNumber,
   Select,
   Button,
-  message,
+  message as antdMessage,
   Space,
   Card,
   Row,
@@ -28,6 +28,7 @@ import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import VariantManager from "./VariantManager"
 import { validateAllVariants, cleanColorData } from "./utils/validation"
+import { useNotification } from "../../../hooks/useNotification"
 import type { UploadFile } from "antd/es/upload/interface"
 
 const { Title, Text } = Typography
@@ -49,6 +50,7 @@ const buildCategoryTree = (categories: Category[], parentId: string | null = nul
 const ProductAddPage: React.FC = () => {
   const [form] = Form.useForm()
   const navigate = useNavigate()
+  const { success, error } = useNotification()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -56,6 +58,9 @@ const ProductAddPage: React.FC = () => {
   // Thêm state cho file ảnh đại diện
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
+  // Thêm state cho file ảnh thumbnail
+  const [thumbnailFiles, setThumbnailFiles] = useState<File[]>([])
+  const [thumbnailFileList, setThumbnailFileList] = useState<UploadFile[]>([])
 
   useEffect(() => {
     const currentSpecs = form.getFieldValue("specifications")
@@ -77,7 +82,7 @@ const ProductAddPage: React.FC = () => {
         setCategories(cats)
         setBrands(brs)
       } catch (error) {
-        message.error("Không thể tải dữ liệu cho danh mục và thương hiệu.")
+        error("Không thể tải dữ liệu cho danh mục và thương hiệu.")
       }
     }
     fetchData()
@@ -116,7 +121,7 @@ const ProductAddPage: React.FC = () => {
   const onFinish = async (values: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const validation = validateAllVariants(variants)
     if (!validation.isValid) {
-      message.error(`Lỗi:\n${validation.errors.join('\n')}`)
+      error(`Lỗi:\n${validation.errors.join('\n')}`)
       return
     }
     setLoading(true)
@@ -137,27 +142,27 @@ const ProductAddPage: React.FC = () => {
 
   // Validation trước khi gửi
   if (!productName || productName.length < 2) {
-    message.error("Tên sản phẩm phải có ít nhất 2 ký tự");
+    error("Tên sản phẩm phải có ít nhất 2 ký tự");
     return;
   }
   if (!productDescription || productDescription.length < 10) {
-    message.error("Mô tả sản phẩm phải có ít nhất 10 ký tự");
+    error("Mô tả sản phẩm phải có ít nhất 10 ký tự");
     return;
   }
   if (!productPrice || productPrice <= 0) {
-    message.error("Giá sản phẩm phải lớn hơn 0");
+    error("Giá sản phẩm phải lớn hơn 0");
     return;
   }
   if (!productCategory) {
-    message.error("Vui lòng chọn danh mục");
+    error("Vui lòng chọn danh mục");
     return;
   }
   if (!productBrand) {
-    message.error("Vui lòng chọn thương hiệu");
+    error("Vui lòng chọn thương hiệu");
     return;
   }
   if (variants.length === 0) {
-    message.error("Phải có ít nhất 1 biến thể");
+    error("Phải có ít nhất 1 biến thể");
     return;
   }
 
@@ -176,6 +181,13 @@ const ProductAddPage: React.FC = () => {
       // Ảnh đại diện
       if (mainImageFile) {
         formData.append("image", mainImageFile)
+      }
+
+      // Ảnh thumbnail
+      if (thumbnailFiles.length > 0) {
+        thumbnailFiles.forEach((file, index) => {
+          formData.append(`thumbnail_${index}`, file)
+        })
       }
 
       // Biến thể
@@ -211,13 +223,13 @@ const ProductAddPage: React.FC = () => {
       if (!response.ok) {
         const errorData = await response.json()
         console.error("❌ Error response:", errorData);
-        message.error(errorData.message || "Thêm sản phẩm thất bại.")
+        error(errorData.message || "Thêm sản phẩm thất bại.")
         return
       }
-      message.success("Thêm sản phẩm thành công!")
+      success("Thêm sản phẩm thành công!")
       navigate("/admin/products")
     } catch (error) {
-      message.error("Đã xảy ra lỗi. Vui lòng thử lại.")
+      error("Đã xảy ra lỗi. Vui lòng thử lại.")
     } finally {
       setLoading(false)
     }
@@ -242,6 +254,18 @@ const ProductAddPage: React.FC = () => {
     }
   };
 
+  // Xử lý upload ảnh thumbnail
+  const handleThumbnailUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setThumbnailFileList(fileList);
+
+    // Lấy tất cả files
+    const files = fileList
+      .filter((file: any) => file.originFileObj) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .map((file: any) => file.originFileObj); // eslint-disable-line @typescript-eslint/no-explicit-any
+    setThumbnailFiles(files);
+  };
+
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <Form
@@ -251,7 +275,7 @@ const ProductAddPage: React.FC = () => {
           specifications: {},
         }}
         onFinish={onFinish}
-        onFinishFailed={() => message.error("Vui lòng kiểm tra lại các trường thông tin!")}
+        onFinishFailed={() => error("Vui lòng kiểm tra lại các trường thông tin!")}
       >
         <Row gutter={24}>
           {/* Cột chính cho Form */}
@@ -327,6 +351,73 @@ const ProductAddPage: React.FC = () => {
               </Form.Item>
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
+              </Form.Item>
+            </Card>
+
+            <Card className="shadow-lg rounded-xl mb-6">
+              <Title level={4}>Ảnh thumbnail</Title>
+              <Form.Item label="Ảnh thumbnail sản phẩm">
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={thumbnailFileList}
+                    onChange={handleThumbnailUpload}
+                    beforeUpload={() => false}
+                    multiple
+                    showUploadList={true}
+                    className="w-full"
+                  >
+                    {thumbnailFileList.length < 5 && (
+                      <div className="flex flex-col items-center justify-center h-24 w-full">
+                        <UploadOutlined className="text-2xl text-gray-400 mb-1" />
+                        <div className="text-xs text-gray-500">Upload</div>
+                        <div className="text-xs text-gray-400">Tối đa 5 ảnh</div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  {/* Hiển thị preview ảnh thumbnail đã chọn */}
+                  {thumbnailFiles.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                      {thumbnailFiles.map((file, index) => (
+                        <div key={index} className="relative group">
+                          <Image
+                            src={URL.createObjectURL(file)}
+                            alt={`Thumbnail ${index + 1}`}
+                            className="w-full h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            onError={(e) => {
+                              console.error("Thumbnail load error:", file.name);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            style={{
+                              padding: 0,
+                              borderRadius: "50%",
+                              width: 20,
+                              height: 20,
+                              minWidth: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => {
+                              const newFiles = thumbnailFiles.filter((_, i) => i !== index);
+                              const newFileList = thumbnailFileList.filter((_, i) => i !== index);
+                              setThumbnailFiles(newFiles);
+                              setThumbnailFileList(newFileList);
+                            }}
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </Form.Item>
             </Card>
 
@@ -433,6 +524,7 @@ const ProductAddPage: React.FC = () => {
               <Space direction="vertical" className="w-full">
                 <Button
                   type="primary"
+                  className="admin-primary-button"
                   htmlType="submit"
                   loading={loading}
                   icon={<PlusOutlined />}

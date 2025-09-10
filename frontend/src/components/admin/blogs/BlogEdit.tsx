@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaUpload, FaImage, FaSpinner } from 'react-icons/fa';
+import { useNotification } from '../../../hooks/useNotification';
 
 interface Blog {
   _id: string;
@@ -19,6 +20,7 @@ interface BlogEditProps {
 }
 
 const BlogEdit: React.FC<BlogEditProps> = ({ blog, onClose, onSuccess }) => {
+  const { success, error } = useNotification();
   const [formData, setFormData] = useState({
     title: blog.title,
     summary: blog.summary,
@@ -93,7 +95,7 @@ const BlogEdit: React.FC<BlogEditProps> = ({ blog, onClose, onSuccess }) => {
       formData.append('image', file);
 
       // Sử dụng proxy thay vì gọi trực tiếp
-      const response = await fetch('/api/upload/image', {
+      const response = await fetch('http://localhost:8000/api/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -210,11 +212,11 @@ const BlogEdit: React.FC<BlogEditProps> = ({ blog, onClose, onSuccess }) => {
         throw new Error(errorData.message || 'Lỗi khi cập nhật bài viết');
       }
 
-      alert('Cập nhật bài viết thành công!');
+      success('Cập nhật bài viết thành công!');
       onSuccess();
     } catch (error) {
       console.error('Lỗi:', error);
-      alert(error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật bài viết');
+      error(error instanceof Error ? error.message : 'Có lỗi xảy ra khi cập nhật bài viết');
     } finally {
       setLoading(false);
     }
@@ -499,7 +501,7 @@ const BlogEdit: React.FC<BlogEditProps> = ({ blog, onClose, onSuccess }) => {
             <button
               type="submit"
               disabled={loading || uploading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-6 py-2 admin-bg-blue text-white rounded-lg hover:admin-bg-blue disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>

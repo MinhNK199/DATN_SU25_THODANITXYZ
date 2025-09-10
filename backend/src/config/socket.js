@@ -176,20 +176,86 @@ export const initializeSocket = (server) => {
           conversationId
         });
 
-        // Emit to admin room if it's a customer support message
-        if (conversation.type === 'customer_support') {
-          io.to('admin_room').emit('new_support_message', {
-            message,
-            conversation,
-            isFromAdmin: socket.user.role === 'admin' || socket.user.role === 'superadmin'
-          });
-        }
+        // Emit to admin room for all messages (not just customer_support type)
+        console.log('📢 Emitting new_support_message to admin_room:', {
+          messageId: message._id,
+          senderRole: message.sender.role,
+          conversationId: conversationId,
+          isFromAdmin: socket.user.role === 'admin' || socket.user.role === 'superadmin'
+        });
+        
+        // Populate the message for the response
+        const populatedMessage = await Message.findById(message._id)
+          .populate('sender', 'name email avatar role');
+        
+        // Emit new_message to admin room for real-time updates
+        console.log('📢 Emitting new_message to admin_room:', {
+          messageId: populatedMessage._id,
+          content: populatedMessage.content,
+          sender: populatedMessage.sender.name,
+          role: populatedMessage.sender.role,
+          conversationId: conversationId
+        });
+        
+        io.to('admin_room').emit('new_message', {
+          message: populatedMessage,
+          conversationId: conversationId
+        });
+        
+        // Also emit new_support_message for backward compatibility
+        io.to('admin_room').emit('new_support_message', {
+          message: populatedMessage,
+          conversation,
+          isFromAdmin: socket.user.role === 'admin' || socket.user.role === 'superadmin'
+        });
 
         // Update conversation last message
         await Conversation.findByIdAndUpdate(conversationId, {
           lastMessage: message._id,
           lastMessageAt: message.createdAt
         });
+
+        // Get updated conversation with populated lastMessage
+        const updatedConversation = await Conversation.findById(conversationId)
+          .populate('participants', 'name email avatar role')
+          .populate('lastMessage')
+          .populate('assignedTo', 'name email avatar');
+
+        // Auto update conversation status and priority for new customer messages
+        if (message.sender.role === 'customer' || message.sender.role === 'user') {
+          console.log('Auto updating conversation status for customer message');
+          try {
+            const updatedConversation = await Conversation.findByIdAndUpdate(
+              conversationId,
+              {
+                priority: 'high',
+                status: 'pending'
+              },
+              { new: true }
+            ).populate('participants', 'name email avatar role')
+             .populate({
+               path: 'lastMessage',
+               populate: {
+                 path: 'sender',
+                 select: 'name email avatar role'
+               }
+             })
+             .populate('assignedTo', 'name email avatar');
+            
+            console.log('Conversation updated:', {
+              id: updatedConversation._id,
+              status: updatedConversation.status,
+              priority: updatedConversation.priority
+            });
+
+            // Emit conversation update to all connected clients
+            io.emit('conversation_updated', {
+              conversation: updatedConversation
+            });
+          } catch (updateError) {
+            console.error('Error updating conversation status:', updateError);
+          }
+        }
 
       } catch (error) {
         console.error('Error sending message:', error);

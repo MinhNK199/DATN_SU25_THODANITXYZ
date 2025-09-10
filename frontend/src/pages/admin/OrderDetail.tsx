@@ -21,7 +21,7 @@ import {
   Select,
   Input,
   Form,
-  message,
+  message as antdMessage,
   Steps,
   Image,
 } from "antd";
@@ -36,6 +36,7 @@ import {
   FaShippingFast,
   FaBan,
 } from "react-icons/fa";
+import { useNotification } from "../../hooks/useNotification";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -156,6 +157,7 @@ const getStepStatus = (
 const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success, error: showError } = useNotification();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +208,7 @@ const OrderDetail: React.FC = () => {
         );
         setOrder(updatedOrder);
         form.resetFields();
-        message.success("Cập nhật trạng thái đơn hàng thành công!");
+        success("Cập nhật trạng thái đơn hàng thành công!");
         
         // ✅ CẬP NHẬT: Reload lại danh sách trạng thái có thể chuyển đổi
         try {
@@ -224,7 +226,7 @@ const OrderDetail: React.FC = () => {
           // Maybe auto-update payment status for COD? Depends on business logic.
         }
       } catch (err: any) {
-        message.error(err.message || "Cập nhật thất bại!");
+        showError(err.message || "Cập nhật thất bại!");
       } finally {
         setUpdating(false);
       }
@@ -477,12 +479,12 @@ const OrderDetail: React.FC = () => {
                       onClick={async () => {
                         try {
                           await updateOrderPaidCOD(order._id);
-                          message.success(
+                          success(
                             "Cập nhật trạng thái thanh toán COD thành công!"
                           );
                           fetchOrder();
                         } catch (err: any) {
-                          message.error(
+                          showError(
                             err.message ||
                               "Cập nhật trạng thái thanh toán thất bại!"
                           );
@@ -621,7 +623,7 @@ const OrderDetail: React.FC = () => {
                         "refunded",
                         "Tự động hoàn tiền do vượt quá 3 lần yêu cầu"
                       );
-                      message.success(
+                      success(
                         "Đã hoàn tiền cho khách hàng (tự động do quá 3 lần yêu cầu)!"
                       );
                       fetchOrder();
@@ -633,10 +635,10 @@ const OrderDetail: React.FC = () => {
                         "refunded",
                         "Chấp nhận hoàn tiền"
                       );
-                      message.success("Đã hoàn tiền cho khách hàng!");
+                      success("Đã hoàn tiền cho khách hàng!");
                       fetchOrder();
                     } catch (err: any) {
-                      message.error(err.message || "Thao tác thất bại!");
+                      showError(err.message || "Thao tác thất bại!");
                     }
                   }}
                 >
@@ -683,12 +685,12 @@ const OrderDetail: React.FC = () => {
                           "delivered_success",
                           rejectReason || "Từ chối hoàn tiền"
                         );
-                        message.success("Đã từ chối yêu cầu hoàn tiền!");
+                        success("Đã từ chối yêu cầu hoàn tiền!");
                         setShowRejectModal(false);
                         setRejectReason("");
                         fetchOrder();
                       } catch (err: any) {
-                        message.error(err.message || "Thao tác thất bại!");
+                        showError(err.message || "Thao tác thất bại!");
                       } finally {
                         setRejectLoading(false);
                       }

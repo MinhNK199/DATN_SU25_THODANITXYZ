@@ -1,0 +1,121 @@
+/* Custom admin button styles to match Home button gradient */
+.admin-primary-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.admin-primary-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  border-color: #2563eb !important;
+  color: white !important;
+}
+
+.admin-primary-button:focus {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.admin-primary-button:active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%) !important;
+  border-color: #1d4ed8 !important;
+  color: white !important;
+}
+
+/* Override Ant Design primary button styles */
+.ant-btn-primary.admin-primary-button {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.ant-btn-primary.admin-primary-button:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+  border-color: #2563eb !important;
+  color: white !important;
+}
+
+.ant-btn-primary.admin-primary-button:focus {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+  border-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.ant-btn-primary.admin-primary-button:active {
+  background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%) !important;
+  border-color: #1d4ed8 !important;
+  color: white !important;
+}
+
+/* Custom blue background classes */
+.admin-bg-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+}
+
+.admin-bg-blue-light {
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%) !important;
+}
+
+.admin-text-blue {
+  color: #3b82f6 !important;
+}
+
+.admin-border-blue {
+  border-color: #3b82f6 !important;
+}
+
+/* Override specific blue classes used in admin */
+.bg-blue-500 {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+}
+
+.bg-blue-600 {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+}
+
+.bg-blue-700 {
+  background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%) !important;
+}
+
+.bg-blue-50 {
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%) !important;
+}
+
+.bg-blue-100 {
+  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%) !important;
+}
+
+.text-blue-500 {
+  color: #3b82f6 !important;
+}
+
+.text-blue-600 {
+  color: #3b82f6 !important;
+}
+
+.border-blue-500 {
+  border-color: #3b82f6 !important;
+}
+
+.border-l-blue-500 {
+  border-left-color: #3b82f6 !important;
+}
+
+/* Switch component styling */
+.ant-switch-checked {
+  background-color: #3b82f6 !important;
+}
+
+.ant-switch-checked:hover:not(.ant-switch-disabled) {
+  background-color: #2563eb !important;
+}
+
+.ant-switch-checked:focus {
+  background-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.ant-switch-checked:active {
+  background-color: #1d4ed8 !important;
+}

@@ -43,7 +43,13 @@ export const getConversations = async (req, res) => {
 
     const conversations = await Conversation.find(filter)
       .populate('participants', 'name email avatar role')
-      .populate('lastMessage')
+      .populate({
+        path: 'lastMessage',
+        populate: {
+          path: 'sender',
+          select: 'name email avatar role'
+        }
+      })
       .populate('assignedTo', 'name email avatar')
       .sort({ lastMessageAt: -1 })
       .limit(limit * 1)
@@ -56,7 +62,16 @@ export const getConversations = async (req, res) => {
       total, 
       conversations: conversations.map(c => ({ 
         id: c._id, 
-        participants: c.participants.map(p => ({ id: p._id, name: p.name, role: p.role }))
+        participants: c.participants.map(p => ({ id: p._id, name: p.name, role: p.role })),
+        lastMessage: c.lastMessage ? {
+          id: c.lastMessage._id,
+          content: c.lastMessage.content,
+          sender: c.lastMessage.sender ? {
+            id: c.lastMessage.sender._id,
+            name: c.lastMessage.sender.name,
+            role: c.lastMessage.sender.role
+          } : null
+        } : null
       }))
     });
 
@@ -196,6 +211,22 @@ export const createConversation = async (req, res) => {
 
     await conversation.save();
     await conversation.populate('participants', 'name email avatar role');
+
+    // Emit socket event to notify admin about new conversation
+    const io = req.app.get('io');
+    if (io) {
+      console.log('Emitting new_conversation event to admin:', adminId);
+      io.to(`user_${adminId}`).emit('new_conversation', {
+        conversation: conversation,
+        message: 'Có cuộc trò chuyện mới từ khách hàng'
+      });
+      
+      // Also emit to all admins in case the specific admin is not online
+      io.emit('admin_new_conversation', {
+        conversation: conversation,
+        message: 'Có cuộc trò chuyện mới từ khách hàng'
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -352,6 +383,23 @@ export const sendMessage = async (req, res) => {
       role: message.sender.role,
       content: message.content.substring(0, 50) + '...'
     });
+
+    // Auto update conversation status and priority for new customer messages
+    if (message.sender.role === 'customer' || message.sender.role === 'user') {
+      console.log('Auto updating conversation status for customer message via API');
+      try {
+        await Conversation.findByIdAndUpdate(
+          conversationId,
+          {
+            priority: 'high',
+            status: 'pending'
+          }
+        );
+        console.log('Conversation status updated via API');
+      } catch (updateError) {
+        console.error('Error updating conversation status via API:', updateError);
+      }
+    }
 
     res.status(201).json({
       success: true,

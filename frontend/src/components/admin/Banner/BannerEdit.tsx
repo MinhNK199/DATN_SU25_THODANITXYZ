@@ -323,6 +323,7 @@ maxCount={1}
                 <Space direction="vertical" style={{ width: "100%" }}>
                   <Button
                     type="primary"
+                    className="admin-primary-button"
                     htmlType="submit"
                     loading={submitting}
                     icon={<PlusOutlined />}

@@ -6,7 +6,7 @@ import {
   Select,
   Button,
   DatePicker,
-  message,
+  message as antdMessage,
   Card,
   Row,
   Col,
@@ -14,6 +14,7 @@ import {
   Space,
   Checkbox,
 } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import { PlusOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { createCoupon } from "../coupons/api";
@@ -31,6 +32,7 @@ const VoucherAdd: React.FC = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const { success, error } = useNotification();
   const [form, setForm] = useState({
     code: "",
     name: "",
@@ -90,7 +92,7 @@ const VoucherAdd: React.FC = () => {
     e.preventDefault();
     const error = validate();
     if (error) {
-      message.error(error);
+      error(error);
       return;
     }
     setLoading(true);
@@ -113,13 +115,13 @@ const VoucherAdd: React.FC = () => {
       };
 
       await createCoupon(couponData);
-      message.success("Tạo voucher thành công!");
+      success("Tạo voucher thành công!");
       navigate("/admin/vouchers");
     } catch (error) {
       if (error instanceof Error) {
-        message.error(error.message || "Đã xảy ra lỗi không xác định");
+        error(error.message || "Đã xảy ra lỗi không xác định");
       } else {
-        message.error("Đã xảy ra lỗi không xác định");
+        error("Đã xảy ra lỗi không xác định");
       }
     } finally {
       setLoading(false);
@@ -298,7 +300,7 @@ const VoucherAdd: React.FC = () => {
             </Col>
           </Row>
           <Space style={{ marginTop: 24 }}>
-            <Button type="primary" htmlType="submit" loading={loading} icon={<PlusOutlined />}>Tạo voucher</Button>
+            <Button type="primary" className="admin-primary-button" htmlType="submit" loading={loading} icon={<PlusOutlined />}>Tạo voucher</Button>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/admin/vouchers")}>Quay lại</Button>
           </Space>
         </form>

@@ -376,6 +376,8 @@ const ProductListPage: React.FC = () => {
           <Col>
             <Button
               type="primary"
+            className="admin-primary-button"
+              className="admin-primary-button"
               icon={<PlusOutlined />}
               onClick={() => navigate("/admin/products/add")}
             >
@@ -486,6 +488,7 @@ const ProductListPage: React.FC = () => {
         <Badge count={deletedProducts.length} showZero>
           <Button
             type="primary"
+            className="admin-primary-button"
             shape="circle"
             size="large"
             icon={<DeleteOutlined />}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaEdit, FaTrash, FaEye, FaRocket, FaSearch, FaCog, FaImage } from 'react-icons/fa';
+import { useNotification } from '../../../hooks/useNotification';
 import BlogAdd from './BlogAdd';
 import BlogEdit from './BlogEdit';
 import BlogDetail from './BlogDetail';
@@ -18,6 +19,7 @@ interface Blog {
 }
 
 const BlogManager: React.FC = () => {
+  const { success, error } = useNotification();
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,10 +67,10 @@ const BlogManager: React.FC = () => {
           throw new Error('Lỗi khi xóa bài viết');
         }
 
-        alert('Xóa bài viết thành công!');
+        success('Xóa bài viết thành công!');
         fetchBlogs();
       } catch (error) {
-        alert(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+        error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
       }
     }
   };
@@ -87,10 +89,10 @@ const BlogManager: React.FC = () => {
         throw new Error('Lỗi khi publish bài viết');
       }
 
-      alert('Publish bài viết thành công!');
+      success('Publish bài viết thành công!');
       fetchBlogs();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Có lỗi xảy ra');
+      error(error instanceof Error ? error.message : 'Có lỗi xảy ra');
     }
   };
 
@@ -177,10 +179,10 @@ const BlogManager: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-4 py-2 admin-bg-blue text-white rounded-lg hover:admin-bg-blue transition-colors flex items-center gap-2"
           >
             <FaPlus />
-            + Thêm bài viết
+             Thêm bài viết
           </button>
         </div>
       </div>

@@ -404,6 +404,20 @@ export const createProduct = async(req, res) => {
             return res.status(400).json({ message: "Phải có ít nhất 1 hình ảnh" });
         }
 
+        // Xử lý ảnh thumbnail upload
+        let thumbnailUrls = [];
+        if (req.body.thumbnails) {
+            if (typeof req.body.thumbnails === "string") {
+                try {
+                    thumbnailUrls = JSON.parse(req.body.thumbnails);
+                } catch (e) {
+                    thumbnailUrls = [req.body.thumbnails];
+                }
+            } else if (Array.isArray(req.body.thumbnails)) {
+                thumbnailUrls = req.body.thumbnails;
+            }
+        }
+
         // Parse variants robustly
         let processedVariants = [];
         if (req.body.variants) {
@@ -433,6 +447,7 @@ export const createProduct = async(req, res) => {
             salePrice,
             user: req.user && req.user._id,
             images: imageUrls,
+            thumbnails: thumbnailUrls,
             videos: req.body.videos || [],
             brand,
             category,
@@ -476,6 +491,7 @@ export const updateProduct = async(req, res) => {
             salePrice,
             description,
             images,
+            thumbnails,
             brand,
             category,
             stock,
@@ -491,6 +507,8 @@ export const updateProduct = async(req, res) => {
             dimensions,
             videos,
         } = req.body
+
+        console.log("📝 Description received:", JSON.stringify(description))
 
         const product = await Product.findById(req.params.id)
         if (!product) {
@@ -561,8 +579,17 @@ export const updateProduct = async(req, res) => {
         product.name = name
         product.price = price
         product.salePrice = salePrice
-        product.description = description || product.description
+        if (description !== undefined) {
+            console.log("📝 Updating description from:", JSON.stringify(product.description))
+            console.log("📝 Updating description to:", JSON.stringify(description))
+            console.log("📝 Description type:", typeof description)
+            console.log("📝 Description length:", description?.length)
+            console.log("📝 Description includes newlines:", description?.includes('\n'))
+            console.log("📝 Description includes \\n:", description?.includes('\\n'))
+            product.description = description
+        }
         product.images = images || product.images
+        product.thumbnails = thumbnails || product.thumbnails
         product.videos = videos || product.videos
         product.brand = brand
         product.category = category
@@ -597,6 +624,11 @@ export const updateProduct = async(req, res) => {
 
         // Log final result để debug
         console.log("\n🎯 FINAL RESULT:")
+        console.log("📝 Saved product description:", JSON.stringify(updatedProduct.description))
+        console.log("📝 Description type:", typeof updatedProduct.description)
+        console.log("📝 Description length:", updatedProduct.description?.length)
+        console.log("📝 Description includes newlines:", updatedProduct.description?.includes('\n'))
+        console.log("📝 Description includes \\n:", updatedProduct.description?.includes('\\n'))
         console.log("📤 Saved product variants:")
         updatedProduct.variants.forEach((v, index) => {
             console.log(`   Variant ${index}:`)
@@ -2697,9 +2729,17 @@ export const getTotalProductWithVariantsByName = async(req, res) => {
 // Tổng số lượng sản phẩm (gộp theo tên, gồm stock sản phẩm gốc và biến thể, mỗi tên chỉ tính 1 lần)
 export const getTotalProductQuantityByName = async(req, res) => {
     try {
-        // Tạm thời vô hiệu hóa để tránh lỗi 500, sẽ tối ưu sau
-        res.json({ totalProductQuantityByName: 0 })
-        return
+        const result = await Product.aggregate([
+            { $match: { isActive: true } },
+            { $group: { _id: null, totalQuantity: { $sum: '$stock' } } }
+        ]);
+
+        const totalProductQuantityByName = result.length > 0 ? result[0].totalQuantity : 0;
+
+        res.json({
+            success: true,
+            totalProductQuantityByName
+        });
 
         /*
           const uniqueNames = await Product.distinct('name');

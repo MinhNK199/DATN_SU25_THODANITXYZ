@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaTimes, FaUpload, FaImage, FaSpinner } from 'react-icons/fa';
+import { useNotification } from '../../../hooks/useNotification';
 
 interface BlogAddProps {
   onClose: () => void;
@@ -7,6 +8,7 @@ interface BlogAddProps {
 }
 
 const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
+  const { success, error } = useNotification();
   const [formData, setFormData] = useState({
     title: '',
     summary: '',
@@ -88,9 +90,9 @@ const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
       }
       console.log('Token đã có:', token.substring(0, 20) + '...');
 
-      // Sử dụng proxy thay vì gọi trực tiếp
-      console.log('Gửi request upload đến /api/upload/image');
-      const response = await fetch('/api/upload/image', {
+      // Gọi trực tiếp đến backend
+      console.log('Gửi request upload đến http://localhost:8000/api/upload');
+      const response = await fetch('http://localhost:8000/api/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -207,7 +209,7 @@ const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
           console.log('Đã cập nhật imagePreview với URL mới:', imageUrl);
         } catch (uploadError) {
           console.error('Lỗi upload ảnh:', uploadError);
-          alert('Lỗi khi upload ảnh: ' + (uploadError instanceof Error ? uploadError.message : 'Không thể upload ảnh'));
+          error('Lỗi khi upload ảnh: ' + (uploadError instanceof Error ? uploadError.message : 'Không thể upload ảnh'));
           setUploading(false);
           setLoading(false);
           return;
@@ -287,7 +289,7 @@ const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
       const result = await response.json();
       console.log('Tạo blog thành công:', result);
       
-      alert('Tạo bài viết thành công!');
+      success('Tạo bài viết thành công!');
       onSuccess();
     } catch (error) {
       console.error('Lỗi:', error);
@@ -319,7 +321,7 @@ const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
       }
       
       console.error('Hiển thị lỗi cho user:', errorMessage);
-      alert(errorMessage);
+      error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -580,7 +582,7 @@ const BlogAdd: React.FC<BlogAddProps> = ({ onClose, onSuccess }) => {
             <button
               type="submit"
               disabled={loading || uploading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              className="px-6 py-2 admin-bg-blue text-white rounded-lg hover:admin-bg-blue disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               {loading ? (
                 <>

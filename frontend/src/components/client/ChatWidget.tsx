@@ -120,7 +120,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ className = '' }) => {
       if (createResponse.success) {
         setConversation(createResponse.data);
         console.log('ChatWidget: Created new conversation:', createResponse.data._id);
-        loadMessages(createResponse.data._id);
+        // Load messages will be triggered by useEffect when conversation is set
       }
     } catch (error) {
       console.error('ChatWidget: Error loading/creating conversation:', error);
@@ -137,8 +137,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ className = '' }) => {
       if (response.success) {
         setConversation(response.data);
         console.log('ChatWidget: Successfully loaded conversation from localStorage', conversationId);
-        // Load messages for this conversation
-        loadMessages(response.data._id);
+        // Load messages will be triggered by useEffect when conversation is set
       } else {
         // If conversation doesn't exist, remove from localStorage
         localStorage.removeItem('chat_conversation_id');

@@ -343,9 +343,6 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     updateVariant(variantId, "specifications", validSpecs)
   }
 
-
-
-
   const handleRemoveImage = (variantId: string, imgUrl: string) => {
     const updatedVariants = variants.map((v) =>
       v.id === variantId
@@ -471,48 +468,6 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Sản phẩm biến thể</h3>
         <div className="flex gap-2">
-          <Button 
-            type="default" 
-            onClick={async () => {
-              console.log("🧪 Testing SKU check API...");
-              
-              // Test 1: Check if backend is running
-              try {
-                const response = await fetch('http://localhost:8000/api/product/check-sku?sku=test123', {
-                  method: 'GET',
-                  headers: { 
-                    'Authorization': `Bearer ${localStorage.getItem("token")}`,
-                    'Content-Type': 'application/json'
-                  }
-                });
-                console.log("📡 Backend response status:", response.status);
-                
-                if (response.status === 404) {
-                  console.log("❌ Backend is running but endpoint not found");
-                  message.error("Backend đang chạy nhưng endpoint không tồn tại");
-                } else if (response.status === 401) {
-                  console.log("❌ Backend is running but token invalid");
-                  message.error("Backend đang chạy nhưng token không hợp lệ");
-                } else if (response.status === 500) {
-                  console.log("❌ Backend is running but has internal error");
-                  const errorData = await response.json();
-                  console.log("❌ Error details:", errorData);
-                  message.error(`Backend lỗi: ${errorData.message}`);
-                } else {
-                  console.log("✅ Backend is running and responding");
-                  message.success("Backend đang hoạt động bình thường");
-                }
-              } catch (error) {
-                console.log("❌ Backend is not running or network error:", error);
-                message.error("Backend không chạy hoặc lỗi mạng");
-              }
-              
-              // Test 2: Check actual SKU
-              checkSkuInDatabase("123A", "test");
-            }}
-          >
-            Test API
-          </Button>
           <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
             Thêm biến thể
           </Button>
@@ -872,10 +827,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       )}
 
       {variants.length > 0 && (
-        <Card size="small" className="bg-blue-50">
+        <Card size="small" className="admin-bg-blue-light">
           <div className="grid grid-cols-4 gap-4 text-sm">
             <div className="text-center">
-              <div className="font-bold text-blue-600">{variants.length}</div>
+              <div className="font-bold admin-text-blue">{variants.length}</div>
               <div className="text-gray-600">Tổng biến thể</div>
             </div>
             <div className="text-center">

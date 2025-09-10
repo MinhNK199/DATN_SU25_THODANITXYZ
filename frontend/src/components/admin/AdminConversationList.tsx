@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { List, Avatar, Badge, Tag, Typography, Space, Tooltip, Button, Dropdown, Menu } from 'antd';
+import { List, Avatar, Badge, Tag, Typography, Space, Tooltip } from 'antd';
 import { 
   MessageCircle, 
   Clock, 
-  User, 
-  MoreVertical,
-  Archive,
-  CheckCircle
+  User
 } from 'lucide-react';
 // import { format, formatDistanceToNow } from 'date-fns';
 import { useChat } from '../../contexts/ChatContext';
-import { chatApi } from '../../services/chatApi';
 import { Conversation, ChatFilters } from '../../interfaces/Chat';
 
 const { Text, Title } = Typography;
@@ -32,34 +28,74 @@ const AdminConversationList: React.FC<AdminConversationListProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   // Load admin conversations
-  useEffect(() => {
-    const loadConversations = async () => {
-      setIsLoading(true);
-      try {
-        // Use regular getConversations API since we fixed the controller
-        const response = await chatApi.getConversations(filters);
-        console.log('AdminConversationList: API Response:', response);
-        if (response.success) {
-          console.log('AdminConversationList: Conversations loaded:', response.data.conversations.length);
-          setConversations(response.data.conversations);
-        }
-      } catch (error) {
-        console.error('Error loading admin conversations:', error);
-      } finally {
-        setIsLoading(false);
+  // Load conversations function
+  const loadConversations = async () => {
+    setIsLoading(true);
+    try {
+      // Use regular getConversations API since we fixed the controller
+      const response = await chatApi.getConversations(filters);
+      console.log('AdminConversationList: API Response:', response);
+      if (response.success) {
+        console.log('AdminConversationList: Conversations loaded:', response.data.conversations.length);
+        setConversations(response.data.conversations);
       }
-    };
+    } catch (error) {
+      console.error('Error loading admin conversations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  // Load conversations when filters change
+  useEffect(() => {
     loadConversations();
   }, [filters]);
 
+  // Use ChatContext for real-time updates
+  const { conversations: contextConversations } = useChat();
+  
+  // Update local conversations when context changes
+  useEffect(() => {
+    if (contextConversations.length > 0) {
+      setConversations(prev => {
+        // Check if conversations have actually changed (including lastMessage)
+        const hasChanged = prev.length !== contextConversations.length || 
+          !prev.every((conv, index) => {
+            const newConv = contextConversations[index];
+            if (!newConv) return false;
+            
+            // Check if lastMessage has changed
+            const oldLastMessage = conv.lastMessage;
+            const newLastMessage = newConv.lastMessage;
+            
+            if (oldLastMessage?._id !== newLastMessage?._id) {
+              return false; // lastMessage changed
+            }
+            
+            return conv._id === newConv._id;
+          });
+        
+        if (hasChanged) {
+          // Debug log removed to avoid console spam
+          return contextConversations;
+        }
+        return prev;
+      });
+    }
+  }, [contextConversations]); // Depend on the entire array to catch lastMessage changes
+
   // Filter conversations based on filters
   useEffect(() => {
-    let filtered = [...conversations];
-    console.log('AdminConversationList: Filtering conversations:', {
-      total: conversations.length,
-      filters: filters
-    });
+    // Debounce filtering to avoid excessive re-renders
+    const timeoutId = setTimeout(() => {
+      let filtered = [...conversations];
+      // Only log when there are actual changes
+      if (conversations.length > 0) {
+        console.log('AdminConversationList: Filtering conversations:', {
+          total: conversations.length,
+          filters: filters
+        });
+      }
 
     if (filters.status) {
       filtered = filtered.filter(conv => conv.status === filters.status);
@@ -93,48 +129,14 @@ const AdminConversationList: React.FC<AdminConversationListProps> = ({
       new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime()
     );
 
-    console.log('AdminConversationList: Final filtered conversations:', filtered.length);
-    setFilteredConversations(filtered);
+      console.log('AdminConversationList: Final filtered conversations:', filtered.length);
+      setFilteredConversations(filtered);
+    }, 100); // 100ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [conversations, filters]);
 
-  // Listen for new messages and conversation updates
-  useEffect(() => {
-    if (socket) {
-      const handleNewMessage = (data: { message: any; conversationId: string }) => {
-        // Update conversation list when new message arrives
-        setConversations(prev => 
-          prev.map(conv => 
-            conv._id === data.conversationId 
-              ? { ...conv, lastMessage: data.message, lastMessageAt: data.message.createdAt }
-              : conv
-          )
-        );
-      };
-
-      const handleNewSupportMessage = (data: { message: any; conversation: Conversation }) => {
-        // Add new conversation if it doesn't exist
-        setConversations(prev => {
-          const exists = prev.some(conv => conv._id === data.conversation._id);
-          if (!exists) {
-            return [data.conversation, ...prev];
-          }
-          return prev.map(conv => 
-            conv._id === data.conversation._id 
-              ? { ...conv, lastMessage: data.message, lastMessageAt: data.message.createdAt }
-              : conv
-          );
-        });
-      };
-
-      socket.on('new_message', handleNewMessage);
-      socket.on('new_support_message', handleNewSupportMessage);
-
-      return () => {
-        socket.off('new_message', handleNewMessage);
-        socket.off('new_support_message', handleNewSupportMessage);
-      };
-    }
-  }, [socket]);
+  // ChatContext handles all real-time updates, no need for duplicate listeners
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -194,37 +196,7 @@ const AdminConversationList: React.FC<AdminConversationListProps> = ({
     return conversation.participants.find(p => p.role === 'customer');
   };
 
-  const handleConversationAction = async (action: string, conversation: Conversation) => {
-    try {
-      switch (action) {
-        case 'assign':
-          // Handle assign to admin
-          break;
-        case 'archive':
-          await chatApi.updateConversationStatus(conversation._id, { status: 'closed' });
-          break;
-        case 'close':
-          await chatApi.updateConversationStatus(conversation._id, { status: 'resolved' });
-          break;
-      }
-    } catch (error) {
-      console.error('Error handling conversation action:', error);
-    }
-  };
 
-  const conversationMenu = (conversation: Conversation) => (
-    <Menu onClick={({ key }) => handleConversationAction(key, conversation)}>
-      <Menu.Item key="assign" icon={<User size={14} />}>
-        Gán cho admin
-      </Menu.Item>
-      <Menu.Item key="archive" icon={<Archive size={14} />}>
-        Lưu trữ
-      </Menu.Item>
-      <Menu.Item key="close" icon={<CheckCircle size={14} />}>
-        Đóng cuộc trò chuyện
-      </Menu.Item>
-    </Menu>
-  );
 
   const renderConversationItem = (conversation: Conversation) => {
     const customer = getCustomer(conversation);
@@ -269,7 +241,7 @@ const AdminConversationList: React.FC<AdminConversationListProps> = ({
                 </Text>
               </div>
 
-              <div className="flex items-center space-x-2 mb-2">
+              <div className="flex flex-wrap items-center gap-2 mb-2">
                 <Tag color={getStatusColor(conversation.status)} size="small">
                   {getStatusText(conversation.status)}
                 </Tag>
@@ -284,22 +256,31 @@ const AdminConversationList: React.FC<AdminConversationListProps> = ({
                 </Text>
               )}
 
-              {conversation.lastMessage && (
-                <div className="flex items-center justify-between">
-                  <Text className="text-sm text-gray-500 truncate flex-1">
-                    {conversation.lastMessage.sender?.role === 'customer' ? 'Khách hàng: ' : 'Bạn: '}
-                    {conversation.lastMessage.content}
-                  </Text>
-                  {hasUnread && (
-                    <Badge count={1} size="small" className="ml-2" />
-                  )}
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                <Text className="text-sm text-gray-500 truncate flex-1">
+                  {(() => {
+                    if (conversation.lastMessage && conversation.lastMessage.content) {
+                      const senderRole = conversation.lastMessage.sender?.role;
+                      const isCustomer = senderRole === 'customer' || senderRole === 'user';
+                      const prefix = isCustomer ? 'Khách hàng: ' : 'Bạn: ';
+                      
+                      // Debug log removed to avoid console spam
+                      
+                      return prefix + conversation.lastMessage.content;
+                    } else {
+                      return 'Chưa có tin nhắn';
+                    }
+                  })()}
+                </Text>
+                {hasUnread && (
+                  <Badge count={1} size="small" className="ml-2" />
+                )}
+              </div>
 
               {conversation.assignedTo && (
                 <div className="flex items-center space-x-1 mt-2">
-                  <User size={12} className="text-gray-400" />
-                  <Text className="text-xs text-gray-500">
+                  <User size={12} className="text-gray-400 flex-shrink-0" />
+                  <Text className="text-xs text-gray-500 truncate">
                     Gán cho: {conversation.assignedTo.name}
                   </Text>
                 </div>
@@ -307,14 +288,6 @@ const AdminConversationList: React.FC<AdminConversationListProps> = ({
             </div>
           </div>
 
-          <Dropdown overlay={conversationMenu(conversation)} trigger={['click']}>
-            <Button
-              type="text"
-              size="small"
-              icon={<MoreVertical size={14} />}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </Dropdown>
         </div>
       </List.Item>
     );
