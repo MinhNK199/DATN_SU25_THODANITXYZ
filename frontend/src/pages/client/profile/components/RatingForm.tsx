@@ -7,35 +7,48 @@ interface RatingFormProps {
   orderId: string;
 }
 
+interface RatingData {
+  rating: number;
+  comment: string;
+  images: string[];
+  reply?: string; // ✅ thêm reply
+}
+
 const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>("");
-  const [images, setImages] = useState<string[]>([]); // URLs sau khi upload
-  const [filePreviews, setFilePreviews] = useState<string[]>([]); // Preview trước khi submit
+  const [images, setImages] = useState<string[]>([]);
+  const [filePreviews, setFilePreviews] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [ratingData, setRatingData] = useState<RatingData | null>(null);
 
-  // Check xem user đã đánh giá chưa
+  // Khi load trang, check xem user đã đánh giá chưa
   useEffect(() => {
     const fetchRating = async () => {
       try {
         const res = await axiosInstance.get("/rating/check", {
           params: { productId, orderId },
         });
+
         if (res.data?.hasRated) {
           setHasRated(true);
-          setRating(res.data.rating?.rating || 0);
-          setComment(res.data.rating?.comment || "");
-          setImages(res.data.rating?.images || []);
+          setRatingData({
+            rating: res.data.rating?.rating || 0,
+            comment: res.data.rating?.comment || "",
+            images: res.data.rating?.images || [],
+            reply: res.data.rating?.reply || "", // ✅ thêm reply
+          });
         }
       } catch (err) {
-        console.error("Lỗi khi check rating:", err);
+        console.error("❌ Lỗi khi check rating:", err);
       }
     };
+
     fetchRating();
   }, [productId, orderId]);
 
-  // Xử lý chọn ảnh
+  // Upload ảnh
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -45,7 +58,6 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
     );
     setFilePreviews((prev) => [...prev, ...previews]);
 
-    // Upload từng file
     for (const file of files) {
       const formData = new FormData();
       formData.append("image", file);
@@ -61,6 +73,7 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
     }
   };
 
+  // Gửi đánh giá
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rating) {
@@ -78,6 +91,7 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
       });
       toast.success("Đánh giá thành công!");
       setHasRated(true);
+      setRatingData({ rating, comment, images });
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Có lỗi xảy ra");
     } finally {
@@ -85,41 +99,68 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
     }
   };
 
-  if (hasRated) {
+  // Nếu đã đánh giá → chỉ hiển thị đánh giá đã nhập + phản hồi
+  if (hasRated && ratingData) {
     return (
-      <div className="p-3 bg-gray-100 rounded-md">
-        <p className="font-medium">Bạn đã đánh giá:</p>
-        <p>Số sao: {rating}⭐</p>
-        <p>Bình luận: {comment}</p>
-        <div className="flex gap-2 mt-2">
-          {images.map((img, idx) => (
-            <img
-              key={idx}
-              src={img}
-              alt="Uploaded"
-              className="w-20 h-20 object-cover rounded"
-            />
-          ))}
+      <div className="p-3 bg-gray-100 rounded-md border space-y-3">
+        <div>
+          <p className="font-medium mb-1">Bạn đã đánh giá:</p>
+          <div className="flex items-center gap-1 text-yellow-500 text-lg">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <span key={star}>{star <= ratingData.rating ? "★" : "☆"}</span>
+            ))}
+          </div>
+          <p className="mt-2">
+            Bình luận: {ratingData.comment || "(Không có bình luận)"}
+          </p>
+          {ratingData.images.length > 0 && (
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {ratingData.images.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt="Uploaded"
+                  className="w-20 h-20 object-cover rounded border"
+                />
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* ✅ hiển thị phản hồi admin */}
+        {ratingData.reply && ratingData.reply.trim() !== "" && (
+          <div className="p-3 bg-white rounded border border-blue-200">
+            <p className="font-semibold text-blue-600 mb-1">Phản hồi từ Admin:</p>
+            <p className="text-gray-700">{ratingData.reply}</p>
+          </div>
+        )}
       </div>
     );
   }
 
+  // Nếu chưa đánh giá → hiển thị form
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 bg-white p-4 rounded-md border">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-3 bg-white p-4 rounded-md border"
+    >
+      {/* Chọn số sao */}
       <div className="flex items-center gap-2">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
             type="button"
             onClick={() => setRating(star)}
-            className={`text-2xl ${star <= rating ? "text-yellow-500" : "text-gray-300"}`}
+            className={`text-2xl ${
+              star <= rating ? "text-yellow-500" : "text-gray-300"
+            }`}
           >
             ★
           </button>
         ))}
       </div>
 
+      {/* Nhập bình luận */}
       <textarea
         value={comment}
         onChange={(e) => setComment(e.target.value)}
@@ -127,15 +168,27 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
         className="w-full border rounded p-2"
       />
 
+      {/* Upload ảnh */}
       <div>
-        <input type="file" accept="image/*" multiple onChange={handleFileChange} />
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+        />
         <div className="flex gap-2 mt-2 flex-wrap">
           {filePreviews.map((src, idx) => (
-            <img key={idx} src={src} alt="preview" className="w-20 h-20 object-cover rounded border" />
+            <img
+              key={idx}
+              src={src}
+              alt="preview"
+              className="w-20 h-20 object-cover rounded border"
+            />
           ))}
         </div>
       </div>
 
+      {/* Nút gửi */}
       <button
         type="submit"
         disabled={loading}

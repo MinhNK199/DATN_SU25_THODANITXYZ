@@ -259,16 +259,17 @@ const Orders = () => {
   };
 
   const getOrderTimeline = (order: Order) => {
-    if (!order.statusHistory || order.statusHistory.length === 0) return [];
-    return order.statusHistory.map((history, index) => ({
-      id: index,
-      status: history.status,
-      text: getStatusText(history.status),
-      date: new Date(history.date).toLocaleString("vi-VN"),
-      note: history.note || "",
-      isLatest: index === order.statusHistory.length - 1,
-    }));
-  };
+  if (!order.statusHistory || order.statusHistory.length === 0) return [];
+  return order.statusHistory.map((history, index) => ({
+    id: index,
+    status: history.status,
+    text: getStatusText(history.status),
+    date: new Date(history.date).toLocaleString("vi-VN"),
+    note: history.note || "",
+    isLatest: index === (order.statusHistory?.length ?? 0) - 1,
+  }));
+};
+
 
   const filteredOrders = React.useMemo(() => {
     if (!Array.isArray(orders)) return [];

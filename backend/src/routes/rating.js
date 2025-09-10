@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { protect } from "../middlewares/authMiddleware.js";
-import { analyzeSentiment, createRating, deleteRating, getRatings, replyRating, checkUserRating, updateRating } from "../controllers/rating.js";
+import { analyzeSentiment, createRating, deleteRating, getRatings, replyRating, checkUserRating, updateRating, getRatingDetail } from "../controllers/rating.js";
 
 const routerRating = Router();
 
@@ -14,6 +14,8 @@ routerRating.post("/", protect, createRating);
 routerRating.put("/:id", protect, updateRating);
 
 routerRating.get('/check', protect, checkUserRating);
+
+routerRating.get("/:id", protect, getRatingDetail);
 
 // Xóa đánh giá (yêu cầu đăng nhập)
 routerRating.delete("/:id", protect, deleteRating);

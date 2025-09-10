@@ -1,21 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Table,
-  Tag,
-  Typography,
   Spin,
   message,
-  Input,
   Button,
-  Form,
+  Tooltip,
+  Input,
   Select,
+  Checkbox,
+  Radio,
   DatePicker,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import axios from "axios";
 import dayjs from "dayjs";
+import axiosInstance from "../../../api/axiosInstance";
+import { useNavigate } from "react-router-dom";
+import { EyeOutlined } from "@ant-design/icons";
 
-const { Text } = Typography;
+const { Search } = Input;
+const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 interface User {
@@ -28,6 +31,7 @@ interface Product {
   _id: string;
   name: string;
   price: number;
+  images?: string[];
 }
 
 interface Rating {
@@ -41,248 +45,189 @@ interface Rating {
   reply?: string;
 }
 
-interface FilterOptions {
-  star?: number | null;
-  productId?: string | null;
-  dateRange?: [dayjs.Dayjs | null, dayjs.Dayjs | null];
-  replyStatus?: "all" | "replied" | "not_replied";
-}
-
 const RatingList: React.FC = () => {
   const [data, setData] = useState<Rating[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-  });
-  const [replyingId, setReplyingId] = useState<string | null>(null);
-  const [replyValue, setReplyValue] = useState<string>("");
-  const [replyLoading, setReplyLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-
-  const [filter, setFilter] = useState<FilterOptions>({
-    star: null,
-    productId: null,
-    dateRange: [null, null],
-    replyStatus: "all",
+  const [loading, setLoading] = useState(false);
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [replyValue, setReplyValue] = useState("");
+  const [filters, setFilters] = useState({
+    search: "",
+    rating: null as number | null,
+    hasImage: false,
+    replied: "all" as "all" | "yes" | "no",
+    sortDate: "desc" as "asc" | "desc",
   });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchRatings(pagination.current, pagination.pageSize);
+    fetchRatings();
     fetchProducts();
   }, []);
 
-  const fetchProducts = async () => {
-    try {
-      const res = await axios.get("/api/product?pageSize=1000");
-      if (res.data && Array.isArray(res.data.products)) {
-        setProducts(res.data.products);
-      } else {
-        setProducts([]);
-        message.warning("Không lấy được danh sách sản phẩm hoặc dữ liệu trả về không đúng định dạng.");
-        console.error("API /api/product trả về dữ liệu không đúng định dạng:", res.data);
-      }
-    } catch (err) {
-      setProducts([]);
-      message.error("Lỗi khi lấy danh sách sản phẩm");
-      console.error("Lỗi khi fetch /api/product:", err);
-    }
-  };
-
-  const fetchRatings = async (page = 1, pageSize = 10) => {
+  const fetchRatings = async () => {
     setLoading(true);
     try {
-      const res = await axios.get("http://localhost:8000/api/rating", {
-        params: { page, limit: pageSize },
-      });
-      if (res.data && Array.isArray(res.data.data) && res.data.pagination) {
-        setData(res.data.data);
-        setPagination({
-          current: page,
-          pageSize,
-          total: res.data.pagination.total,
-        });
-      } else {
-        setData([]);
-        setPagination({ current: 1, pageSize: 10, total: 0 });
-        message.warning("Không lấy được danh sách đánh giá hoặc dữ liệu trả về không đúng định dạng.");
-        console.error("API /api/rating trả về dữ liệu không đúng định dạng:", res.data);
-      }
+      const res = await axiosInstance.get("/rating");
+      setData(res.data.data || res.data || []);
     } catch (err) {
-      setData([]);
-      setPagination({ current: 1, pageSize: 10, total: 0 });
       message.error("Không thể tải danh sách đánh giá");
-      console.error("Lỗi khi fetch /api/rating:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTableChange = (pagination: any) => {
-    fetchRatings(pagination.current, pagination.pageSize);
+  const fetchProducts = async () => {
+    try {
+      const res = await axiosInstance.get("/product");
+      setProducts(res.data.data || res.data || []);
+    } catch (err) {
+      console.error("Không thể tải danh sách sản phẩm");
+    }
   };
 
-  const handleReply = async (id: string) => {
-  if (!replyValue.trim()) {
-    message.warning("Vui lòng nhập phản hồi");
-    return;
-  }
-  const token = localStorage.getItem("token");
-  if (!token) {
-    message.error("Bạn chưa đăng nhập");
-    return;
-  }
-  setReplyLoading(true);
-  try {
-    await axios.post(
-      `http://localhost:8000/api/rating/${id}/reply`,
-      { reply: replyValue },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    message.success("Phản hồi thành công");
-    setReplyingId(null);
-    setReplyValue("");
-    fetchRatings(pagination.current, pagination.pageSize);
-  } catch (err: any) {
-    if (err.response?.status === 401) {
-      message.error("Phiên hết hạn, vui lòng đăng nhập lại");
-      // nếu cần: navigate("/login");
-    } else if (err.response?.data?.error?.code === "ALREADY_REPLIED") {
-      message.error("Đánh giá này đã được trả lời và không thể sửa");
-    } else {
-      message.error("Phản hồi thất bại");
+  // ✅ Lọc dữ liệu FE
+  const filteredData = useMemo(() => {
+    let result = [...data];
+
+    // Lọc theo tên sản phẩm
+    if (filters.search.trim()) {
+      result = result.filter((item) =>
+        item.productId?.name
+          ?.toLowerCase()
+          .includes(filters.search.toLowerCase())
+      );
     }
-  } finally {
-    setReplyLoading(false);
-  }
-};
 
+    // Lọc theo số sao
+    if (filters.rating) {
+      result = result.filter((item) => item.rating === filters.rating);
+    }
 
-  const filterRatings = (ratings: Rating[]) => {
-    return ratings.filter((item) => {
-      if (filter.star && item.rating !== filter.star) return false;
-      if (filter.productId && item.productId._id !== filter.productId) return false;
-      if (filter.dateRange && filter.dateRange[0] && filter.dateRange[1]) {
-        const created = dayjs(item.createdAt);
-        if (
-          created.isBefore(filter.dateRange[0].startOf("day")) ||
-          created.isAfter(filter.dateRange[1].endOf("day"))
-        )
-          return false;
-      }
-      if (filter.replyStatus === "replied" && (!item.reply || item.reply.trim() === "")) return false;
-      if (filter.replyStatus === "not_replied" && item.reply && item.reply.trim() !== "") return false;
-      return true;
+    // Lọc theo có ảnh
+    if (filters.hasImage) {
+      result = result.filter((item) => item.images && item.images.length > 0);
+    }
+
+    // Lọc theo phản hồi
+    if (filters.replied === "yes") {
+      result = result.filter((item) => item.reply && item.reply.trim() !== "");
+    } else if (filters.replied === "no") {
+      result = result.filter((item) => !item.reply || item.reply.trim() === "");
+    }
+
+    // Sắp xếp theo ngày
+    result.sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return filters.sortDate === "desc" ? dateB - dateA : dateA - dateB;
     });
+
+    return result;
+  }, [data, filters]);
+
+  const handleReply = async (ratingId: string) => {
+    if (!replyValue.trim()) {
+      message.warning("Vui lòng nhập nội dung phản hồi");
+      return;
+    }
+
+    try {
+      await axiosInstance.put(`/rating/${ratingId}/reply`, {
+        reply: replyValue,
+      });
+      message.success("Phản hồi thành công");
+      setReplyingId(null);
+      setReplyValue("");
+      fetchRatings();
+    } catch (err) {
+      message.error("Không thể gửi phản hồi");
+    }
   };
 
   const columns: ColumnsType<Rating> = [
     {
       title: "STT",
-      dataIndex: "index",
-      key: "index",
-      render: (_text, _record, index) => index + 1,
-    },
-    {
-      title: "Người đánh giá",
-      render: (_, record) => (
-        <div className="flex flex-col">
-          <span className="font-medium text-gray-800">{record.userId?.name}</span>
-          <span className="text-gray-500 text-sm">{record.userId?.email}</span>
-        </div>
-      ),
+      render: (_, __, index) => index + 1,
+      width: 60,
     },
     {
       title: "Sản phẩm",
       render: (_, record) => (
-        <div>
-          <div className="text-gray-900">{record.productId?.name}</div>
-          <div className="text-gray-500 text-sm">
-            {record.productId?.price?.toLocaleString()}₫
+        <div className="flex items-center gap-3">
+          {record.productId?.images?.[0] && (
+            <img
+              src={record.productId.images[0]}
+              alt={record.productId.name}
+              className="w-14 h-14 rounded-lg object-cover border"
+            />
+          )}
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-800">
+              {record.productId?.name}
+            </span>
+            <span className="text-gray-500 text-sm">
+              {record.productId?.price?.toLocaleString("vi-VN")}₫
+            </span>
           </div>
         </div>
       ),
+      width: "30%",
     },
     {
       title: "Số sao",
       dataIndex: "rating",
       render: (rating: number) => (
-        <Tag color={rating >= 4 ? "green" : rating === 3 ? "orange" : "red"}>
-          {rating} ★
-        </Tag>
+        <span className="font-semibold text-yellow-500">{rating} ★</span>
       ),
-    },
-    {
-      title: "Bình luận",
-      dataIndex: "comment",
-      render: (comment: string) => <span>{comment || <i>Không có</i>}</span>,
-    },
-    {
-      title: "Ảnh",
-      dataIndex: "images",
-      render: (images?: string[]) =>
-        images && images.length > 0 ? (
-          <div className="flex gap-2">
-            {images.map((img, idx) => (
-              <img
-                key={idx}
-                src={img}
-                alt="img"
-                className="w-10 h-10 rounded object-cover border"
-              />
-            ))}
-          </div>
-        ) : (
-          <span className="text-gray-400">Không có</span>
-        ),
+      width: 100,
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
-      render: (date: string) =>
-        new Date(date).toLocaleString("vi-VN", {
-          dateStyle: "short",
-          timeStyle: "short",
-        }),
+      render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      width: 180,
     },
     {
       title: "Phản hồi",
-      dataIndex: "reply",
-      render: (reply: string, record) =>
-        reply && reply.trim() !== "" ? (
-          <div className="text-gray-700">{reply}</div>
-        ) : replyingId === record._id ? (
-          <Form
-            onFinish={() => handleReply(record._id)}
-            className="flex gap-2"
-          >
-            <Input
-              value={replyValue}
-              onChange={(e) => setReplyValue(e.target.value)}
-              className="w-60"
-              placeholder="Nhập phản hồi"
-              disabled={replyLoading}
-            />
-            <Button type="primary" htmlType="submit" loading={replyLoading}>
-              Gửi
-            </Button>
-            <Button
-              onClick={() => {
-                setReplyingId(null);
-                setReplyValue("");
-              }}
-              disabled={replyLoading}
-            >
-              Hủy
-            </Button>
-          </Form>
-        ) : (
+      render: (_, record) => {
+        if (record.reply && record.reply.trim() !== "") {
+          return <span className="text-green-600 font-medium">Đã phản hồi</span>;
+        }
+        
+        if (replyingId === record._id) {
+          return (
+            <div className="space-y-2">
+              <Input.TextArea
+                value={replyValue}
+                onChange={(e) => setReplyValue(e.target.value)}
+                placeholder="Nhập phản hồi..."
+                rows={2}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => handleReply(record._id)}
+                >
+                  Gửi
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setReplyingId(null);
+                    setReplyValue("");
+                  }}
+                >
+                  Hủy
+                </Button>
+              </div>
+            </div>
+          );
+        }
+        
+        return (
           <Button
             size="small"
             type="primary"
@@ -294,88 +239,94 @@ const RatingList: React.FC = () => {
           >
             Trả lời
           </Button>
-        ),
+        );
+      },
+      width: 200,
+    },
+    {
+      title: "Hành động",
+      align: "center",
+      render: (_, record) => (
+        <div className="flex justify-center">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              shape="circle"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/admin/ratings/${record._id}`)}
+            />
+          </Tooltip>
+        </div>
+      ),
+      width: 120,
     },
   ];
 
   return (
-    <div className="p-4">
-      <div className="flex flex-wrap gap-4 mb-4">
-        <Select
-          allowClear
-          placeholder="Số sao"
-          className="w-32"
-          value={filter.star}
-          onChange={(v) => setFilter((f) => ({ ...f, star: v ?? null }))}
-        >
-          {[5, 4, 3, 2, 1].map((star) => (
-            <Select.Option key={star} value={star}>
-              {star} sao
-            </Select.Option>
-          ))}
-        </Select>
-        <Select
-          allowClear
-          placeholder="Sản phẩm"
-          className="w-48"
-          value={filter.productId}
-          onChange={(v) => setFilter((f) => ({ ...f, productId: v ?? null }))}
-        >
-          {products.map((p) => (
-            <Select.Option key={p._id} value={p._id}>
-              {p.name}
-            </Select.Option>
-          ))}
-        </Select>
-        <RangePicker
-          value={filter.dateRange}
-          onChange={(dates) =>
-            setFilter((f) => ({
-              ...f,
-              dateRange: dates as [dayjs.Dayjs | null, dayjs.Dayjs | null],
-            }))
-          }
-          format="DD/MM/YYYY"
-        />
-        <Select
-          className="w-40"
-          value={filter.replyStatus}
-          onChange={(v) => setFilter((f) => ({ ...f, replyStatus: v }))}
-        >
-          <Select.Option value="all">Tất cả</Select.Option>
-          <Select.Option value="replied">Đã trả lời</Select.Option>
-          <Select.Option value="not_replied">Chưa trả lời</Select.Option>
-        </Select>
-        <Button
-        type="primary"
-        className="admin-primary-button"
-          onClick={() =>
-            setFilter({
-              star: null,
-              productId: null,
-              dateRange: [null, null],
-              replyStatus: "all",
-            })
-          }
-        >
-          Đặt lại
-        </Button>
-      </div>
-      <Spin spinning={loading}>
-        <div className="bg-white rounded-xl shadow p-4">
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <div className="bg-white shadow-lg rounded-xl p-4">
+        <h2 className="text-lg font-semibold mb-4">Danh sách đánh giá</h2>
+
+        {/* Bộ lọc */}
+        <div className="flex flex-wrap gap-4 mb-4">
+          <Search
+            placeholder="Tìm theo tên sản phẩm"
+            allowClear
+            onSearch={(value) => setFilters({ ...filters, search: value })}
+            style={{ width: 250 }}
+          />
+          <Select
+            placeholder="Số sao"
+            allowClear
+            onChange={(value) =>
+              setFilters({ ...filters, rating: value || null })
+            }
+            style={{ width: 120 }}
+          >
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Option key={star} value={star}>
+                {star} ★
+              </Option>
+            ))}
+          </Select>
+          <Checkbox
+            checked={filters.hasImage}
+            onChange={(e) =>
+              setFilters({ ...filters, hasImage: e.target.checked })
+            }
+          >
+            Có ảnh
+          </Checkbox>
+          <Select
+            defaultValue="all"
+            style={{ width: 160 }}
+            onChange={(value) =>
+              setFilters({ ...filters, replied: value as any })
+            }
+          >
+            <Option value="all">Tất cả</Option>
+            <Option value="yes">Đã phản hồi</Option>
+            <Option value="no">Chưa phản hồi</Option>
+          </Select>
+          <Radio.Group
+            value={filters.sortDate}
+            onChange={(e) =>
+              setFilters({ ...filters, sortDate: e.target.value })
+            }
+          >
+            <Radio.Button value="desc">Mới nhất</Radio.Button>
+            <Radio.Button value="asc">Cũ nhất</Radio.Button>
+          </Radio.Group>
+        </div>
+
+        <Spin spinning={loading}>
           <Table
             columns={columns}
-            dataSource={filterRatings(data)}
+            dataSource={filteredData}
             rowKey="_id"
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-            }}
-            onChange={handleTableChange}
+            pagination={{ pageSize: 10 }}
           />
-        </div>
-      </Spin>
+        </Spin>
+      </div>
     </div>
   );
 };
