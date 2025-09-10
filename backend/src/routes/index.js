@@ -25,6 +25,7 @@ import routerBlog from "./blog.js";
 import routerChat from "./chat.js";
 import routerAdmin from "./admin.js";
 import routerAdminNotification from "./adminNotification.js";
+import routerReservation from "./reservation.js";
 import { getProvinces, getWards, getDistricts } from '../controllers/provinceController.js';
 
 const router = Router();
@@ -51,6 +52,7 @@ router.use("/blogs", routerBlog);
 router.use("/chat", routerChat);
 router.use("/admin", routerAdmin);
 router.use("/admin-notification", routerAdminNotification);
+router.use("/reservation", routerReservation);
 router.get('/provinces', getProvinces);
 router.get('/provinces/:provinceCode/districts', getDistricts);
 router.get('/districts/:districtCode/wards', getWards);

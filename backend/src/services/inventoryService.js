@@ -20,8 +20,6 @@ class InventoryService {
         };
 
         try {
-            console.log(`📦 Bắt đầu trừ kho cho đơn hàng ${orderId}`);
-
             for (const item of orderItems) {
                 try {
                     const { product: productId, quantity, variantId } = item;
@@ -60,7 +58,6 @@ class InventoryService {
 
                         // Trừ số lượng biến thể
                         variant.stock -= quantity;
-                        console.log(`📦 Trừ ${quantity} sản phẩm từ biến thể ${variant.name} (${variantId})`);
 
                     } else {
                         // Xử lý trừ kho cho sản phẩm không có biến thể
@@ -74,7 +71,6 @@ class InventoryService {
 
                         // Trừ số lượng sản phẩm chính
                         product.stock -= quantity;
-                        console.log(`📦 Trừ ${quantity} sản phẩm từ ${product.name}`);
                     }
 
                     // Lưu sản phẩm đã cập nhật
@@ -101,9 +97,7 @@ class InventoryService {
             // Nếu có lỗi, đánh dấu kết quả là thất bại
             if (results.errors.length > 0) {
                 results.success = false;
-                console.error(`❌ Có ${results.errors.length} lỗi khi trừ kho cho đơn hàng ${orderId}`);
-            } else {
-                console.log(`✅ Trừ kho thành công cho đơn hàng ${orderId}`);
+                console.error(`Có ${results.errors.length} lỗi khi trừ kho cho đơn hàng ${orderId}`);
             }
 
             return results;
@@ -136,12 +130,9 @@ class InventoryService {
         try {
             // Kiểm tra xem đã hoàn trả chưa để tránh trùng lặp
             if (alreadyRestored) {
-                console.log(`⚠️ Đơn hàng ${orderId} đã được hoàn trả kho trước đó, bỏ qua`);
                 results.skipped = true;
                 return results;
             }
-
-            console.log(`🔄 Bắt đầu hoàn trả kho cho đơn hàng ${orderId}`);
 
             for (const item of orderItems) {
                 try {
@@ -171,12 +162,10 @@ class InventoryService {
 
                         // Hoàn trả số lượng biến thể
                         variant.stock += quantity;
-                        console.log(`🔄 Hoàn trả ${quantity} sản phẩm cho biến thể ${variant.name} (${variantId})`);
 
                     } else {
                         // Hoàn trả số lượng sản phẩm chính
                         product.stock += quantity;
-                        console.log(`🔄 Hoàn trả ${quantity} sản phẩm cho ${product.name}`);
                     }
 
                     // Lưu sản phẩm đã cập nhật
@@ -203,9 +192,7 @@ class InventoryService {
             // Nếu có lỗi, đánh dấu kết quả là thất bại
             if (results.errors.length > 0) {
                 results.success = false;
-                console.error(`❌ Có ${results.errors.length} lỗi khi hoàn trả kho cho đơn hàng ${orderId}`);
-            } else {
-                console.log(`✅ Hoàn trả kho thành công cho đơn hàng ${orderId}`);
+                console.error(`Có ${results.errors.length} lỗi khi hoàn trả kho cho đơn hàng ${orderId}`);
             }
 
             return results;
@@ -312,8 +299,6 @@ class InventoryService {
         };
 
         try {
-            console.log(`🧹 Bắt đầu xóa reservation cho user ${userId}`);
-
             for (const item of orderItems) {
                 try {
                     const { product: productId } = item;
@@ -334,7 +319,6 @@ class InventoryService {
                             reservationId: reservation._id
                         });
 
-                        console.log(`🧹 Đã xóa reservation cho sản phẩm ${productId}`);
                     }
 
                 } catch (itemError) {
@@ -350,7 +334,6 @@ class InventoryService {
                 results.success = false;
             }
 
-            console.log(`✅ Xóa reservation hoàn tất cho user ${userId}`);
             return results;
 
         } catch (error) {

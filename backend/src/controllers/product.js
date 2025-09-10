@@ -10,41 +10,33 @@ import removeAccents from "remove-accents";
 
 // Helper function để xử lý color object - FIXED
 const processColorData = (colorData) => {
-    console.log("🎨 Processing color data:", JSON.stringify(colorData), typeof colorData)
-
     if (!colorData) {
-        console.log("⚠️ No color data provided, using default")
         return { code: "#000000", name: "" }
     }
 
     // Nếu đã là object hợp lệ
     if (typeof colorData === "object" && colorData !== null) {
-        console.log("✅ Valid color object received")
         const result = {
             code: typeof colorData.code === "string" ? colorData.code : "#000000",
             name: typeof colorData.name === "string" ? colorData.name : "",
         }
-        console.log("✅ Processed color result:", JSON.stringify(result))
         return result
     }
 
     // Xử lý trường hợp string
     if (typeof colorData === "string") {
         if (colorData === "[object Object]" || colorData === "undefined" || colorData === "null") {
-            console.log("⚠️ Invalid color string detected, using default")
             return { code: "#000000", name: "" }
         }
 
         // Kiểm tra nếu là hex color hoặc rgba hợp lệ
         if (colorData.startsWith("#") || colorData.startsWith("rgb")) {
-            console.log("✅ Valid color string:", colorData)
             return { code: colorData, name: "" }
         }
 
         // Cố gắng parse JSON
         try {
             const parsed = JSON.parse(colorData)
-            console.log("✅ Parsed color from JSON:", parsed)
             if (parsed && typeof parsed === "object") {
                 return {
                     code: typeof parsed.code === "string" ? parsed.code : "#000000",
@@ -52,29 +44,22 @@ const processColorData = (colorData) => {
                 }
             }
         } catch (e) {
-            console.log("⚠️ Failed to parse color JSON, using default")
             return { code: "#000000", name: "" }
         }
     }
 
-    console.log("⚠️ Fallback to default color")
     return { code: "#000000", name: "" }
 }
 
 // Helper function để xử lý specifications - FIXED
 const processSpecifications = (specsData) => {
-    console.log("📋 Processing specifications:", JSON.stringify(specsData), typeof specsData)
-
     if (!specsData) {
-        console.log("📋 No specs data, returning empty object")
         return {}
     }
 
     // Nếu đã là object hợp lệ
     if (typeof specsData === "object" && specsData !== null) {
-        console.log("✅ Valid specs object received")
         const result = { ...specsData }
-        console.log("✅ Processed specs result:", JSON.stringify(result))
         return result
     }
 
@@ -86,11 +71,9 @@ const processSpecifications = (specsData) => {
 
         try {
             const parsed = JSON.parse(specsData)
-            console.log("✅ Parsed specs from JSON:", parsed)
             return parsed
         } catch (e) {
             // Nếu không parse được JSON, coi như là text format "key: value"
-            console.log("🔧 Parsing specs from text format")
             const specs = {}
             specsData.split("\n").forEach((line) => {
                 const [key, ...rest] = line.split(":")
@@ -111,18 +94,11 @@ const processVariantData = (variant, index = 0) => {
         throw new Error("Invalid variant data")
     }
 
-    console.log(`🔄 Processing variant ${index}:`, variant.name || "unnamed")
-    console.log(`📥 Raw variant ${index} data:`, JSON.stringify(variant, null, 2))
-
-    // Process color với logging chi tiết
-    console.log(`🎨 Processing color for variant ${index}:`, JSON.stringify(variant.color))
+    // Process color
     const processedColor = processColorData(variant.color)
-    console.log(`✅ Processed color for variant ${index}:`, JSON.stringify(processedColor))
 
-    // Process specifications với logging chi tiết
-    console.log(`📋 Processing specs for variant ${index}:`, JSON.stringify(variant.specifications))
+    // Process specifications
     const processedSpecs = processSpecifications(variant.specifications)
-    console.log(`✅ Processed specs for variant ${index}:`, JSON.stringify(processedSpecs))
 
     // Only set _id if it is a valid ObjectId (24-char hex string)
     let processedVariant = {
@@ -334,12 +310,7 @@ export const getProductById = async (req, res) => {
 }
 
 export const createProduct = async (req, res) => {
-    // Log dữ liệu nhận được từ FE để debug
-    console.log("[DEBUG] req.body:", req.body);
-    console.log("[DEBUG] req.file:", req.file);
-    console.log("[DEBUG] req.files:", req.files);
     try {
-        console.log("🆕 Creating new product:", JSON.stringify(req.body, null, 2))
 
         // Parse và ép kiểu các trường khi nhận từ FormData
         const name = req.body.name || "";
@@ -482,9 +453,6 @@ export const createProduct = async (req, res) => {
 // Cập nhật sản phẩm - ENHANCED LOGGING
 export const updateProduct = async (req, res) => {
     try {
-        console.log("🔄 Updating product:", req.params.id)
-        console.log("📥 Received raw data:", JSON.stringify(req.body, null, 2))
-
         let {
             name,
             price,
@@ -507,8 +475,6 @@ export const updateProduct = async (req, res) => {
             dimensions,
             videos,
         } = req.body
-
-        console.log("📝 Description received:", JSON.stringify(description))
 
         const product = await Product.findById(req.params.id)
         if (!product) {
@@ -539,31 +505,14 @@ export const updateProduct = async (req, res) => {
             return res.status(400).json({ message: "Số lượng tồn kho không được âm" })
         }
 
-        // Process variants với logging chi tiết hơn
+        // Process variants
         let processedVariants = []
         if (variants && Array.isArray(variants)) {
-            console.log("🔄 Processing variants...")
-            console.log("📥 Raw variants received:", JSON.stringify(variants, null, 2))
-
             try {
                 processedVariants = variants.map((variant, index) => {
-                    console.log(`\n--- Processing Variant ${index} ---`)
-                    console.log(`📝 Variant name: ${variant.name}`)
-                    console.log(`🎨 Raw color:`, JSON.stringify(variant.color))
-                    console.log(`📋 Raw specifications:`, JSON.stringify(variant.specifications))
-
                     const processed = processVariantData(variant, index)
-
-                    console.log(`✅ Final processed variant ${index}:`)
-                    console.log(`   - Name: ${processed.name}`)
-                    console.log(`   - Color:`, JSON.stringify(processed.color))
-                    console.log(`   - Specifications:`, JSON.stringify(processed.specifications))
-
                     return processed
                 })
-
-                console.log("\n🎯 All variants processed successfully!")
-                console.log("📤 Final processed variants:", JSON.stringify(processedVariants, null, 2))
             } catch (error) {
                 console.error("❌ Error processing variants:", error)
                 return res.status(400).json({ message: error.message })
@@ -571,21 +520,13 @@ export const updateProduct = async (req, res) => {
         }
 
         // Process main specifications
-        console.log("📋 Processing main specifications:", JSON.stringify(specifications))
         const processedSpecifications = processSpecifications(specifications)
-        console.log("✅ Processed main specifications:", JSON.stringify(processedSpecifications))
 
         // Gán lại dữ liệu
         product.name = name
         product.price = price
         product.salePrice = salePrice
         if (description !== undefined) {
-            console.log("📝 Updating description from:", JSON.stringify(product.description))
-            console.log("📝 Updating description to:", JSON.stringify(description))
-            console.log("📝 Description type:", typeof description)
-            console.log("📝 Description length:", description?.length)
-            console.log("📝 Description includes newlines:", description?.includes('\n'))
-            console.log("📝 Description includes \\n:", description?.includes('\\n'))
             product.description = description
         }
         product.images = images || product.images
@@ -618,25 +559,7 @@ export const updateProduct = async (req, res) => {
         if (isActive !== undefined) product.isActive = isActive
         if (isFeatured !== undefined) product.isFeatured = isFeatured
 
-        console.log("💾 Saving product to database...")
         const updatedProduct = await product.save()
-        console.log("✅ Product saved successfully!")
-
-        // Log final result để debug
-        console.log("\n🎯 FINAL RESULT:")
-        console.log("📝 Saved product description:", JSON.stringify(updatedProduct.description))
-        console.log("📝 Description type:", typeof updatedProduct.description)
-        console.log("📝 Description length:", updatedProduct.description?.length)
-        console.log("📝 Description includes newlines:", updatedProduct.description?.includes('\n'))
-        console.log("📝 Description includes \\n:", updatedProduct.description?.includes('\\n'))
-        console.log("📤 Saved product variants:")
-        updatedProduct.variants.forEach((v, index) => {
-            console.log(`   Variant ${index}:`)
-            console.log(`     - Name: ${v.name}`)
-            console.log(`     - Color:`, JSON.stringify(v.color))
-            console.log(`     - Specifications:`, JSON.stringify(v.specifications))
-        })
-
         res.json(updatedProduct)
     } catch (error) {
         console.error("❌ Error updating product:", error)

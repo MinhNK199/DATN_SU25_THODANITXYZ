@@ -17,7 +17,6 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
-        console.log('Không có token');
         return res.status(401).json({ message: "Không có token, không được phép truy cập" });
     }
 
@@ -29,20 +28,16 @@ export const protect = async (req, res, next) => {
         const user = await User.findById(decoded.id).select("-password");
 
         if (!user || user.active === false) {
-            console.log('User không tồn tại hoặc bị khóa');
             return res.status(401).json({ message: "Người dùng không tồn tại hoặc đã bị khóa" });
         }
 
         // Kiểm tra role từ token nếu có
         if (decoded.role) {
-            console.log('🔍 Role from token:', decoded.role);
-            console.log('🔍 Role from database:', user.role);
             // Ưu tiên role từ token nếu có
             user.role = decoded.role;
         }
 
         req.user = user;
-        console.log('Xác thực thành công:', user.email, user.role);
         next();
     } catch (error) {
         console.error('Token không hợp lệ:', error);
@@ -73,25 +68,15 @@ export const checkAdmin = (allowedRoles = ['admin', 'superadmin']) => {
     return (req, res, next) => {
         const user = req.user;
 
-        console.log('🔍 checkAdmin - User object:', JSON.stringify(user, null, 2));
-        console.log('🔍 checkAdmin - Allowed roles:', allowedRoles);
-        console.log('🔍 checkAdmin - User role:', user?.role);
-        console.log('🔍 checkAdmin - Role type:', typeof user?.role);
-
         if (!user) {
-            console.log('❌ Chưa xác thực');
             return res.status(401).json({ message: "Chưa xác thực" });
         }
 
         // Kiểm tra role có được phép không
         if (!allowedRoles.includes(user.role)) {
-            console.log('❌ Không đủ quyền:', user.role, user.email);
-            console.log('❌ Allowed roles:', allowedRoles);
-            console.log('❌ User role in allowed roles?', allowedRoles.includes(user.role));
             return res.status(403).json({ message: "Chỉ admin mới có quyền truy cập" });
         }
 
-        console.log('✅ Qua checkAdmin:', user.email, user.role);
         next();
     };
 };

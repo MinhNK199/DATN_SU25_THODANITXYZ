@@ -3,7 +3,6 @@ dotenv.config();
 import passport from 'passport';
 import FacebookStrategy from 'passport-facebook';
 import User from '../models/User.js';
-console.log('FACEBOOK_APP_ID:', process.env.FACEBOOK_APP_ID);
 passport.use(new FacebookStrategy.Strategy({
         clientID: process.env.FACEBOOK_APP_ID,
         clientSecret: process.env.FACEBOOK_APP_SECRET,
