@@ -68,59 +68,8 @@ const CheckoutStatus: React.FC = () => {
         zp_ResponseCode,
       });
 
-      // ✅ ƯU TIÊN 1: URL Parameters (thành công)
-      if (
-        resultCode === "0" ||
-        vnp_ResponseCode === "00" ||
-        zp_ResponseCode === "1"
-      ) {
-        console.log(
-          "✅ Payment successful based on URL params, redirecting to success page"
-        );
-        setStatus("success");
-        setTimeout(() => {
-          navigate(
-            `/checkout/success?orderId=${orderId}&paymentMethod=${
-              order.paymentMethod || paymentMethod
-            }&resultCode=${resultCode}`
-          );
-        }, 1000);
-      }
-      // ❌ ƯU TIÊN 2: URL Parameters (thất bại)
-      else if (
-        (resultCode && resultCode !== "0") ||
-        (vnp_ResponseCode && vnp_ResponseCode !== "00") ||
-        (zp_ResponseCode && zp_ResponseCode !== "1")
-      ) {
-        console.log(
-          "❌ Payment failed based on URL params, redirecting to failed page"
-        );
-        setStatus("failed");
-        setTimeout(() => {
-          navigate(
-            `/checkout/failed?orderId=${orderId}&paymentMethod=${
-              order.paymentMethod || paymentMethod
-            }&error=payment_failed&resultCode=${resultCode}&amount=${
-              order.totalPrice || ""
-            }`
-          );
-        }, 1000);
-      }
-      // ✅ ƯU TIÊN 3: COD luôn thành công
-      else if (
-        order.paymentMethod?.toUpperCase() === "COD" ||
-        paymentMethod?.toUpperCase() === "COD"
-      ) {
-        console.log("✅ COD order created, treating as success");
-        setStatus("success");
-        setTimeout(() => {
-          navigate(
-            `/checkout/success?orderId=${orderId}&paymentMethod=COD`
-          );
-        }, 1000);
-      }
-      // ✅ Backend báo đã thanh toán
-      else if (order.isPaid && order.paymentStatus === "paid") {
+      // ✅ ƯU TIÊN 1: Backend báo đã thanh toán (CHÍNH XÁC NHẤT)
+      if (order.isPaid && order.paymentStatus === "paid") {
         console.log(
           "✅ Payment successful from backend status, redirecting to success page"
         );
@@ -149,6 +98,103 @@ const CheckoutStatus: React.FC = () => {
             }&error=payment_failed&amount=${order.totalPrice || ""}`
           );
         }, 1000);
+      }
+      // ✅ ƯU TIÊN 2: COD luôn thành công
+      else if (
+        order.paymentMethod?.toUpperCase() === "COD" ||
+        paymentMethod?.toUpperCase() === "COD"
+      ) {
+        console.log("✅ COD order created, treating as success");
+        setStatus("success");
+        setTimeout(() => {
+          navigate(
+            `/checkout/success?orderId=${orderId}&paymentMethod=COD`
+          );
+        }, 1000);
+      }
+      // ✅ ƯU TIÊN 3: URL Parameters (thành công) - XỬ LÝ TRỰC TIẾP
+      else if (
+        resultCode === "0" ||
+        vnp_ResponseCode === "00" ||
+        zp_ResponseCode === "1"
+      ) {
+        console.log(
+          "✅ Payment successful based on URL params - updating order status directly"
+        );
+        setStatus("checking");
+        
+        // Cập nhật trạng thái đơn hàng trực tiếp
+        try {
+          const token = localStorage.getItem("token");
+          console.log("🔄 Updating order status to paid...");
+          
+          await axios.put(
+            `http://localhost:8000/api/order/${orderId}/payment-success`,
+            {
+              paymentMethod: paymentMethod,
+              resultCode: resultCode,
+              message: "Payment successful via URL params"
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          console.log("✅ Order status updated to paid successfully");
+          
+          // Redirect to success page
+          setTimeout(() => {
+            navigate(
+              `/checkout/success?orderId=${orderId}&paymentMethod=${paymentMethod}`
+            );
+          }, 1000);
+          
+        } catch (error) {
+          console.error("❌ Error updating order status:", error);
+          setStatus("error");
+        }
+      }
+      // ❌ URL Parameters (thất bại)
+      else if (
+        (resultCode && resultCode !== "0") ||
+        (vnp_ResponseCode && vnp_ResponseCode !== "00") ||
+        (zp_ResponseCode && zp_ResponseCode !== "1")
+      ) {
+        console.log(
+          "❌ Payment failed based on URL params, redirecting to failed page"
+        );
+        setStatus("failed");
+        setTimeout(() => {
+          navigate(
+            `/checkout/failed?orderId=${orderId}&paymentMethod=${
+              order.paymentMethod || paymentMethod
+            }&error=payment_failed&resultCode=${resultCode}&amount=${
+              order.totalPrice || ""
+            }`
+          );
+        }, 1000);
+      }
+      // ⏳ Đơn hàng đang chờ thanh toán (draft + awaiting_payment) - CHỈ KHI KHÔNG CÓ URL PARAMS THÀNH CÔNG
+      else if (
+        order.status === "draft" && 
+        order.paymentStatus === "awaiting_payment" &&
+        order.paymentMethod === "momo" &&
+        !resultCode && !vnp_ResponseCode && !zp_ResponseCode
+      ) {
+        console.log(
+          "⏳ Order is waiting for MoMo payment, redirecting to MoMo payment page"
+        );
+        console.log("🔍 Order details for retry:", {
+          orderId: order._id,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod,
+          isPaid: order.isPaid
+        });
+        setStatus("checking");
+        // Redirect về MoMo payment page để user thanh toán
+        setTimeout(() => {
+          console.log("🔄 Redirecting to retry payment page");
+          navigate(`/checkout/payment?orderId=${orderId}&retry=true`);
+        }, 2000);
       }
       // ⏳ Chưa rõ trạng thái → retry
       else {

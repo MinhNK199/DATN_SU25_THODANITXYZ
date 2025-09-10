@@ -54,6 +54,8 @@ const CheckoutSuccess: React.FC = () => {
 
   const handlePaymentSuccess = async () => {
     try {
+      console.log('🔍 CheckoutSuccess handlePaymentSuccess:', { paymentMethod, resultCode, orderId });
+      
       const token = localStorage.getItem('token');
       if (!token) {
         setError('Vui lòng đăng nhập để xem thông tin đơn hàng');
@@ -63,6 +65,7 @@ const CheckoutSuccess: React.FC = () => {
 
       // Xử lý theo phương thức thanh toán
       if (paymentMethod === "momo") {
+        console.log('🔍 MoMo payment check:', { resultCode, isSuccess: resultCode === "0" });
         // Kiểm tra từ URL parameters
         if (resultCode === "0") {
           // ✅ Thanh toán Momo thành công
@@ -87,11 +90,30 @@ const CheckoutSuccess: React.FC = () => {
           }, 2000); // Đợi 2 giây cho callback xử lý
 
         } else {
-          // ❌ Thanh toán Momo thất bại
-          await axios.delete(`/api/order/${orderId}`, {
+          // ❌ Thanh toán MoMo thất bại - CHỈ XÓA KHI THỰC SỰ THẤT BẠI
+          console.log('❌ MoMo payment failed, checking if order exists:', { resultCode, orderId });
+          
+          // Kiểm tra xem đơn hàng có tồn tại và đã thanh toán chưa
+          try {
+            const orderResponse = await axiosInstance.get(`/order/${orderId}`);
+            const order = orderResponse.data;
+            
+            if (order.isPaid && order.paymentStatus === 'paid') {
+              console.log('✅ Order already paid, not deleting');
+              // Đơn hàng đã thanh toán, chỉ fetch details
+              await fetchOrderDetails();
+              return;
+            }
+          } catch (error) {
+            console.log('❌ Error checking order status:', error);
+          }
+          
+          // Chỉ xóa khi thực sự thất bại
+          console.log('❌ MoMo payment failed, deleting order:', { resultCode, orderId });
+          await axiosInstance.delete(`/order/${orderId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
-          showError("Thanh toán Momo thất bại", "Đơn hàng đã bị hủy");
+          showError("Thanh toán MoMo thất bại", "Đơn hàng đã bị hủy");
           navigate("/checkout?error=payment_cancelled");
           return;
         }
@@ -122,7 +144,7 @@ const CheckoutSuccess: React.FC = () => {
 
         } else {
           // ❌ Thanh toán VNPay thất bại
-          await axios.delete(`/api/order/${orderId}`, {
+          await axiosInstance.delete(`/order/${orderId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           showError("Thanh toán VNPay thất bại", "Đơn hàng đã bị hủy");

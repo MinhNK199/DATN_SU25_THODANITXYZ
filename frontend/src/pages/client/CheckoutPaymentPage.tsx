@@ -41,6 +41,20 @@ const CheckoutPaymentPage: React.FC = () => {
       .then((cfg) => setTaxRate(cfg.rate))
       .catch(() => setTaxRate(0.08));
 
+    // Kiểm tra retry payment từ URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+    const retry = urlParams.get('retry');
+    
+    console.log("🔍 CheckoutPaymentPage URL params:", { orderId, retry });
+    
+    if (retry === 'true' && orderId) {
+      console.log("🔄 Retry payment detected, calling handleRetryPayment");
+      // Xử lý retry payment cho MoMo
+      handleRetryPayment(orderId);
+      return;
+    }
+
     // Lấy thông tin shipping từ localStorage
     const shippingData = localStorage.getItem('checkoutShippingData');
     if (shippingData) {
@@ -57,6 +71,82 @@ const CheckoutPaymentPage: React.FC = () => {
       navigate('/cart');
     }
   }, [navigate, cartState.items]);
+
+  const handleRetryPayment = async (orderId: string) => {
+    try {
+      console.log('🔄 Retrying MoMo payment for order:', orderId);
+      
+      // Lấy thông tin đơn hàng từ backend
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/order/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch order details');
+      }
+      
+      const order = await response.json();
+      console.log('📋 Order details for retry:', {
+        orderId: order._id,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        paymentMethod: order.paymentMethod,
+        isPaid: order.isPaid,
+        totalPrice: order.totalPrice
+      });
+      
+      // Kiểm tra nếu đơn hàng đã thanh toán thành công
+      if (order.isPaid && order.paymentStatus === 'paid') {
+        console.log('✅ Order already paid, redirecting to success page');
+        navigate(`/checkout/success?orderId=${orderId}&paymentMethod=${order.paymentMethod}`);
+        return;
+      }
+      
+      // Kiểm tra nếu đơn hàng đã thất bại
+      if (order.paymentStatus === 'failed') {
+        console.log('❌ Order payment failed, redirecting to failed page');
+        navigate(`/checkout/failed?orderId=${orderId}&paymentMethod=${order.paymentMethod}&error=payment_failed`);
+        return;
+      }
+      
+      // Nếu đơn hàng đang chờ thanh toán, tạo lại payment MoMo
+      if (order.status === 'draft' && order.paymentStatus === 'awaiting_payment' && order.paymentMethod === 'momo') {
+        console.log('🔄 Creating new MoMo payment for retry');
+        
+        const { createMomoPayment } = await import('../../services/orderApi');
+        const momoRes = await createMomoPayment({
+          amount: order.totalPrice,
+          orderId: order._id,
+          orderInfo: `Thanh toán đơn hàng ${order._id}`,
+          redirectUrl: window.location.origin + "/checkout/status?orderId=" + order._id + "&paymentMethod=momo",
+          ipnUrl: "http://localhost:8000/api/payment/momo/webhook",
+          extraData: "",
+        });
+
+        console.log('📤 MoMo payment response:', momoRes);
+
+        if (momoRes && momoRes.payUrl) {
+          console.log('✅ MoMo payment created successfully, redirecting to payment');
+          console.log('🔗 MoMo payUrl:', momoRes.payUrl);
+          window.location.href = momoRes.payUrl;
+          return;
+        } else {
+          throw new Error('Failed to create MoMo payment');
+        }
+      } else {
+        console.log('⚠️ Order not in retry state:', {
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          paymentMethod: order.paymentMethod
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Error retrying payment:', error);
+      navigate(`/checkout/failed?orderId=${orderId}&error=retry_failed`);
+    }
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
