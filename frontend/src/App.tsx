@@ -49,6 +49,7 @@ import { WishlistProvider } from './contexts/WishlistContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { InventoryProvider } from './contexts/InventoryContext';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
@@ -56,6 +57,8 @@ import ScrollToTop from './components/ScrollToTop';
 import TestAPI from './components/client/TestAPI';
 import TestLogin from './components/client/TestLogin';
 import TestProductAPI from './components/client/TestProductAPI';
+import RealtimeInventoryDemo from './components/client/RealtimeInventoryDemo';
+import SimpleInventoryTest from './components/client/SimpleInventoryTest';
 import LoginSuccess from './components/LoginSuccess';
 import VoucherAdd from './components/admin/vouchers/VoucherAdd';
 import VoucherList from './components/admin/vouchers/VoucherList';
@@ -88,15 +91,18 @@ function App() {
     <div className="App">
       <AuthProvider>
         <NotificationProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <ChatProvider>
+          <InventoryProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <ChatProvider>
                 <ScrollToTop />
                 <Routes>
                   {/* Test routes */}
                   <Route path="/test-api" element={<TestAPI />} />
                   <Route path="/test-login" element={<TestLogin />} />
                   <Route path="/test-product-api" element={<TestProductAPI />} />
+                  <Route path="/test-realtime-inventory" element={<RealtimeInventoryDemo productId="test-product-1" productName="Test Product" initialStock={10} />} />
+                  <Route path="/test-simple-inventory" element={<SimpleInventoryTest />} />
 
                   {/* Auth routes */}
                   <Route path="/login" element={<Login />} />
@@ -185,9 +191,10 @@ function App() {
                 {/* Global Components */}
                 <PromotionBanner />
                 <Toaster />
-              </ChatProvider>
-            </WishlistProvider>
-          </CartProvider>
+                </ChatProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </InventoryProvider>
         </NotificationProvider>
       </AuthProvider>
     </div>

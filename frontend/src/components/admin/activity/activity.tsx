@@ -131,7 +131,7 @@ const Activity: React.FC = () => {
         <Button onClick={handleReset} className="w-full admin-bg-blue-light hover:admin-bg-blue text-white">
           Đặt lại
         </Button>
-        <Button type="primary" className="admin-primary-button" onClick={fetchLogs} className="w-full">
+        <Button type="primary" className="admin-primary-button w-full" onClick={fetchLogs}>
           Tải lại
         </Button>
       </div>

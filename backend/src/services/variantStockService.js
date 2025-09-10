@@ -17,24 +17,23 @@ class VariantStockService {
             // Tìm sản phẩm và biến thể
             const product = await Product.findById(productId);
             if (!product) {
-                console.error(`❌ Không tìm thấy sản phẩm với ID: ${productId}`);
+                console.error(`Không tìm thấy sản phẩm với ID: ${productId}`);
                 return 0;
             }
 
             // Tìm biến thể cụ thể
             const variant = product.variants.find(v => v._id.toString() === variantId.toString());
             if (!variant) {
-                console.error(`❌ Không tìm thấy biến thể với ID: ${variantId} trong sản phẩm ${productId}`);
+                console.error(`Không tìm thấy biến thể với ID: ${variantId} trong sản phẩm ${productId}`);
                 return 0;
             }
 
             // Trả về stock của biến thể
             const variantStock = typeof variant.stock === 'number' ? variant.stock : 0;
-            console.log(`📦 Stock của biến thể ${variantId}: ${variantStock}`);
 
             return variantStock;
         } catch (error) {
-            console.error(`❌ Lỗi khi lấy stock của biến thể ${variantId}:`, error);
+            console.error(`Lỗi khi lấy stock của biến thể ${variantId}:`, error);
             return 0;
         }
     }
@@ -52,7 +51,6 @@ class VariantStockService {
             // Vì mỗi variant có stock riêng biệt và không bị ảnh hưởng bởi reservation của product
             const variantStock = await this.getVariantStock(productId, variantId);
 
-            console.log(`📦 Stock có sẵn của biến thể ${variantId}: ${variantStock} (variant stock)`);
 
             return variantStock;
         } catch (error) {

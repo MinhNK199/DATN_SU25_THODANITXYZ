@@ -205,20 +205,23 @@ export const momoWebhook = async (req, res) => {
       console.log('✅ MoMo payment successful for order:', orderId);
       
       try {
+        // ✅ Tìm đơn hàng và kiểm tra trạng thái hiện tại
+        const order = await Order.findById(orderId);
+        if (!order) {
+          console.error('❌ Order not found:', orderId);
+          return res.status(404).json({ 
+            message: 'Order not found',
+            returnCode: -1
+          });
+        }
+
         // ✅ Kiểm tra xem đơn hàng đã được xử lý chưa
-        const existingOrder = await Order.findById(orderId);
-        if (existingOrder && existingOrder.isPaid && existingOrder.paymentStatus === 'paid') {
+        if (order.isPaid && order.paymentStatus === 'paid') {
           console.log('✅ Order already confirmed, skipping duplicate processing');
+          console.log(`✅ Order current status: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
         } else {
-          // ✅ Cập nhật trạng thái thanh toán trực tiếp
-          const order = await Order.findById(orderId);
-          if (!order) {
-            console.error('❌ Order not found:', orderId);
-            return res.status(404).json({ 
-              message: 'Order not found',
-              returnCode: -1
-            });
-          }
+          console.log(`🔄 Processing MoMo payment for order: ${orderId}`);
+          console.log(`📋 Order before update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
 
           // ✅ CẬP NHẬT TRẠNG THÁI THANH TOÁN THÀNH CÔNG
           order.status = 'pending'; // Chờ xác nhận từ admin

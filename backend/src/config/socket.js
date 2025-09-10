@@ -126,13 +126,7 @@ export const initializeSocket = (server) => {
       try {
         const { conversationId, content, type = 'text', replyTo, attachments = [] } = data;
         
-        console.log('Socket send_message received:', {
-          conversationId,
-          userId: socket.userId,
-          userRole: socket.user.role,
-          content: content?.substring(0, 50) + '...',
-          type
-        });
+        // Processing message
 
         // Verify user has access to conversation
         const conversation = await Conversation.findById(conversationId);
@@ -157,18 +151,10 @@ export const initializeSocket = (server) => {
           attachments
         });
 
-        console.log('Saving message to database...');
         await message.save();
-        console.log('Message saved successfully:', message._id);
         
         await message.populate('sender', 'name email avatar role');
         await message.populate('replyTo');
-        console.log('Message populated:', {
-          id: message._id,
-          sender: message.sender.name,
-          role: message.sender.role,
-          content: message.content.substring(0, 50) + '...'
-        });
 
         // Emit message to conversation room
         io.to(`conversation_${conversationId}`).emit('new_message', {
@@ -189,13 +175,6 @@ export const initializeSocket = (server) => {
           .populate('sender', 'name email avatar role');
         
         // Emit new_message to admin room for real-time updates
-        console.log('📢 Emitting new_message to admin_room:', {
-          messageId: populatedMessage._id,
-          content: populatedMessage.content,
-          sender: populatedMessage.sender.name,
-          role: populatedMessage.sender.role,
-          conversationId: conversationId
-        });
         
         io.to('admin_room').emit('new_message', {
           message: populatedMessage,
@@ -223,7 +202,6 @@ export const initializeSocket = (server) => {
 
         // Auto update conversation status and priority for new customer messages
         if (message.sender.role === 'customer' || message.sender.role === 'user') {
-          console.log('Auto updating conversation status for customer message');
           try {
             const updatedConversation = await Conversation.findByIdAndUpdate(
               conversationId,
@@ -242,11 +220,6 @@ export const initializeSocket = (server) => {
              })
              .populate('assignedTo', 'name email avatar');
             
-            console.log('Conversation updated:', {
-              id: updatedConversation._id,
-              status: updatedConversation.status,
-              priority: updatedConversation.priority
-            });
 
             // Emit conversation update to all connected clients
             io.emit('conversation_updated', {
@@ -334,6 +307,32 @@ export const initializeSocket = (server) => {
       }
     });
 
+    // ===== REALTIME INVENTORY EVENTS =====
+    
+    // Handle joining product room for realtime stock updates
+    socket.on('join_product_room', (productId) => {
+      socket.join(`product_${productId}`);
+      socket.emit('joined_product_room', { productId });
+    });
+
+    // Handle leaving product room
+    socket.on('leave_product_room', (productId) => {
+      socket.leave(`product_${productId}`);
+      socket.emit('left_product_room', { productId });
+    });
+
+    // Handle joining inventory room for global stock updates
+    socket.on('join_inventory_room', () => {
+      socket.join('inventory_room');
+      socket.emit('joined_inventory_room');
+    });
+
+    // Handle leaving inventory room
+    socket.on('leave_inventory_room', () => {
+      socket.leave('inventory_room');
+      socket.emit('left_inventory_room');
+    });
+
     // Handle disconnect
     socket.on('disconnect', () => {
       console.log(`User ${socket.user.name} disconnected`);
@@ -373,4 +372,56 @@ export const emitToUser = (io, userId, event, data) => {
 // Helper function to emit to admin room
 export const emitToAdmins = (io, event, data) => {
   io.to('admin_room').emit(event, data);
+};
+
+// ===== REALTIME INVENTORY HELPER FUNCTIONS =====
+
+// Store io instance globally
+let globalIo = null;
+
+// Set io instance
+export const setIoInstance = (io) => {
+  globalIo = io;
+};
+
+// Helper function to emit stock update to specific product room
+export const emitStockUpdate = (productId, stockData) => {
+  if (globalIo) {
+    globalIo.to(`product_${productId}`).emit('stock_updated', {
+      productId,
+      ...stockData,
+      timestamp: new Date()
+    });
+  }
+};
+
+// Helper function to emit stock update to inventory room (global)
+export const emitGlobalStockUpdate = (stockData) => {
+  if (globalIo) {
+    globalIo.to('inventory_room').emit('inventory_updated', {
+      ...stockData,
+      timestamp: new Date()
+    });
+  }
+};
+
+// Helper function to emit reservation update
+export const emitReservationUpdate = (productId, reservationData) => {
+  if (globalIo) {
+    globalIo.to(`product_${productId}`).emit('reservation_updated', {
+      productId,
+      ...reservationData,
+      timestamp: new Date()
+    });
+  }
+};
+
+// Helper function to emit cart sync update
+export const emitCartSyncUpdate = (userId, cartData) => {
+  if (globalIo) {
+    globalIo.to(`user_${userId}`).emit('cart_sync', {
+      ...cartData,
+      timestamp: new Date()
+    });
+  }
 };

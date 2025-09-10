@@ -278,7 +278,6 @@ const CategoryList: React.FC = () => {
                     <Space>
                         <Button 
                             type="primary"
-                    className="admin-primary-button"
                             className="admin-primary-button" 
                             icon={<PlusOutlined />} 
                             onClick={() => navigate('/admin/categories/add')}

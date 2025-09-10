@@ -56,7 +56,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const loadNotifications = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (token) {
+        const userRole = localStorage.getItem('userRole');
+        
+        // Only load admin notifications if user is admin or superadmin
+        if (token && (userRole === 'admin' || userRole === 'superadmin')) {
           console.log('Loading notifications from database...');
           const response = await fetch('http://localhost:8000/api/admin-notification', {
             headers: {
@@ -90,6 +93,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             const errorData = await response.json();
             console.error('Failed to load notifications:', errorData);
           }
+        } else {
+          // For non-admin users, just initialize with empty notifications
+          console.log('User is not admin, skipping admin notifications load');
         }
       } catch (error) {
         console.error('Could not load notifications from database:', error);

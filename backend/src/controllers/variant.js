@@ -142,25 +142,16 @@ export const getVariantById = async(req, res) => {
 // Create new variant
 export const createVariant = async(req, res) => {
     try {
-        console.log('🔍 Creating variant with data:', req.body);
-
         const { product: productId, ...variantData } = req.body;
-
-        console.log('📦 Product ID:', productId);
-        console.log('📦 Variant data:', variantData);
 
         const product = await Product.findById(productId);
         if (!product) {
-            console.log('❌ Product not found:', productId);
             return res.status(404).json({ message: 'Product not found' });
         }
-
-        console.log('✅ Product found:', product.name);
 
         // Check if SKU already exists
         const existingVariant = product.variants.find(v => v.sku === variantData.sku);
         if (existingVariant) {
-            console.log('❌ SKU already exists:', variantData.sku);
             return res.status(400).json({ message: 'SKU already exists for this product' });
         }
 
@@ -195,7 +186,6 @@ export const createVariant = async(req, res) => {
             }
         }
 
-        console.log('🧹 Cleaned variant data:', cleanVariantData);
 
         // Add variant to product
         product.variants.push(cleanVariantData);
@@ -203,15 +193,12 @@ export const createVariant = async(req, res) => {
 
         const newVariant = product.variants[product.variants.length - 1];
 
-        console.log('✅ Variant created successfully:', newVariant._id);
-
         res.status(201).json({
             message: 'Variant created successfully',
             variant: newVariant
         });
     } catch (error) {
-        console.error('❌ Error creating variant:', error);
-        console.error('❌ Error stack:', error.stack);
+        console.error('Error creating variant:', error);
         res.status(500).json({
             message: 'Internal server error',
             error: error.message

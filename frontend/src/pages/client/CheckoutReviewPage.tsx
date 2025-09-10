@@ -136,7 +136,7 @@ const CheckoutReviewPage: React.FC = () => {
           amount: orderData.totalPrice,
           orderId: res._id,
           orderInfo: `Thanh toán đơn hàng ${res._id}`,
-          redirectUrl: window.location.origin + "/checkout/status",
+          redirectUrl: window.location.origin + "/checkout/status?orderId=" + res._id + "&paymentMethod=momo",
           ipnUrl: "http://localhost:8000/api/payment/momo/webhook",
           extraData: "",
         });
