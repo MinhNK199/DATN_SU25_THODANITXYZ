@@ -441,6 +441,7 @@ export const createProduct = async (req, res) => {
         const mainSpecifications = processSpecifications(req.body.specifications);
 
         const product = new Product({
+
             name,
             slug: req.body.slug,
             price,
@@ -448,6 +449,7 @@ export const createProduct = async (req, res) => {
             user: req.user && req.user._id,
             images: imageUrls,
             thumbnails: thumbnailUrls,
+
             videos: req.body.videos || [],
             brand,
             category,

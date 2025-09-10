@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 export const protect = async (req, res, next) => {
+
     let token;
 
     // Lấy token từ header
@@ -21,12 +22,16 @@ export const protect = async (req, res, next) => {
         return res.status(401).json({ message: "Không có token, không được phép truy cập" });
     }
 
-    try {
-        // Giải mã token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Tìm user tương ứng (bỏ mật khẩu)
-        const user = await User.findById(decoded.id).select("-password");
+    try {
+        const token = req.headers.authorization?.split(" ")[1];
+        if (!token) {
+            return res.status(401).json({ message: "Không có token, vui lòng đăng nhập" });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = await User.findById(decoded.id);
+
 
         if (!user || user.active === false) {
             console.log('User không tồn tại hoặc bị khóa');
@@ -65,6 +70,7 @@ export const protect = async (req, res, next) => {
                 error: "TOKEN_ERROR"
             });
         }
+
     }
 
 };

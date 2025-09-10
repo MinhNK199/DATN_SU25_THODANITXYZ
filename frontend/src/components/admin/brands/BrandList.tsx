@@ -56,14 +56,16 @@ const BrandList: React.FC = () => {
             method: "DELETE",
             headers: getAuthHeader(),
           });
+
           if (res.ok) {
             messageApi.success("Xóa thành công!");
             fetchBrands();
           } else {
-            throw new Error("Failed to delete brand");
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Xóa thất bại!");
           }
         } catch (error) {
-          messageApi.error("Xóa thất bại!");
+          messageApi.error(error instanceof Error ? error.message : "Xóa thất bại!");
         }
       },
     });
@@ -167,7 +169,6 @@ const BrandList: React.FC = () => {
             
           </Button>
           <Button danger icon={<FaTrash />} onClick={() => handleDelete(record._id!)}>
-            
           </Button>
         </Space>
       ),
