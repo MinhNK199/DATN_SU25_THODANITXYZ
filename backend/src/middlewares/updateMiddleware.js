@@ -38,3 +38,8 @@ export const uploadBanner = multer({
   fileFilter: imageFileFilter,
   limits: { fileSize: 5 * 1024 * 1024 },
 });
+export const uploadCate = multer({
+  storage: createStorage("categories"), 
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // tối đa 5MB
+});

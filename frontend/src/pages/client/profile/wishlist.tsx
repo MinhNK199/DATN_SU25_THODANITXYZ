@@ -24,7 +24,6 @@ const Wishlist = () => {
   const [filteredItems, setFilteredItems] = useState<WishlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
 
   useEffect(() => {
@@ -33,7 +32,7 @@ const Wishlist = () => {
 
   useEffect(() => {
     filterAndSortItems();
-  }, [wishlistItems, searchTerm, categoryFilter, sortBy]);
+  }, [wishlistItems, searchTerm, sortBy]);
 
   const fetchWishlist = async () => {
     try {
@@ -72,10 +71,6 @@ const Wishlist = () => {
       filtered = filtered.filter((item) =>
         item.productName.toLowerCase().includes(searchTerm.toLowerCase())
       );
-    }
-
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((item) => item.category === categoryFilter);
     }
 
     switch (sortBy) {
@@ -148,7 +143,6 @@ const Wishlist = () => {
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
-  const categories = [...new Set(wishlistItems.map((item) => item.category))];
 
   if (isLoading) {
     return (
@@ -186,20 +180,6 @@ const Wishlist = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {/* Category Filter */}
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">Tất cả danh mục</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-
             {/* Sort */}
             <select
               value={sortBy}
@@ -221,16 +201,16 @@ const Wishlist = () => {
         <div className="text-center py-12">
           <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {searchTerm || categoryFilter !== "all"
+            {searchTerm !== "all"
               ? "Không tìm thấy sản phẩm"
               : "Danh sách yêu thích trống"}
           </h3>
           <p className="text-gray-500 mb-6">
-            {searchTerm || categoryFilter !== "all"
+            {searchTerm !== "all"
               ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm"
               : "Thêm sản phẩm vào danh sách yêu thích để theo dõi"}
           </p>
-          {!searchTerm && categoryFilter === "all" && (
+          {!searchTerm === "all" && (
             <Link
               to="/products"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"

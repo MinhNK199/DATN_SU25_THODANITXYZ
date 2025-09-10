@@ -18,7 +18,7 @@ const categorySchema = new mongoose.Schema({
     },
     image: {
         type: String,
-        required: [true, 'Vui lòng nhập URL hình ảnh'],
+        required: [true, 'Vui lòng nhập hình ảnh'],
     },
     icon: {
         type: String,

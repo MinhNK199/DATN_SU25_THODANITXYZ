@@ -19,10 +19,7 @@ export const validateCreateCategory = [
     .isLength({ max: 500 })
     .withMessage('Mô tả không được quá 500 ký tự'),
 
-    body('image')
-    .trim()
-    .isURL()
-    .withMessage('URL hình ảnh không hợp lệ'),
+ 
 
     body('icon')
     .optional()
@@ -80,11 +77,6 @@ export const validateUpdateCategory = [
     .isLength({ max: 500 })
     .withMessage('Mô tả không được quá 500 ký tự'),
 
-    body('image')
-    .optional()
-    .trim()
-    .isURL()
-    .withMessage('URL hình ảnh không hợp lệ'),
 
     body('icon')
     .optional()

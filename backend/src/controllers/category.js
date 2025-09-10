@@ -1,5 +1,7 @@
 import Category from "../models/Category.js";
 import Product from "../models/Product.js";
+import fs from "fs";
+import path from "path";
 
 // Lấy tất cả danh mục
 export const getCategories = async (req, res) => {
@@ -54,80 +56,108 @@ export const getCategoryById = async (req, res) => {
     }
 };
 
-// Tạo danh mục mới
+// Tạo danh mục mới (có upload ảnh)
 export const createCategory = async (req, res) => {
-    try {
-        const { 
-            name, 
-            slug, 
-            description, 
-            parent, 
-            image, 
-            icon, 
-            color, 
-            order, 
-            isActive, 
-            metaTitle, 
-            metaDescription 
-        } = req.body;
-        
-        const category = new Category({
-            name,
-            slug,
-            description,
-            parent,
-            image,
-            icon,
-            color,
-            order,
-            isActive,
-            metaTitle,
-            metaDescription,
-        });
-        const createdCategory = await category.save();
-        res.status(201).json(createdCategory);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
+  try {
+    const {
+      name,
+      slug,
+      description,
+      parent,
+      icon,
+      color,
+      order,
+      isActive,
+      metaTitle,
+      metaDescription,
+    } = req.body;
+
+    if (!name || !slug) {
+      return res.status(400).json({ message: "Thiếu thông tin bắt buộc (name, slug)" });
     }
+
+    // Nếu có file ảnh
+    let imagePath = null;
+    if (req.file) {
+      imagePath = `/uploads/categories/${req.file.filename}`;
+    }
+
+    const category = new Category({
+      name,
+      slug,
+      description,
+      parent,
+      image: imagePath,
+      icon,
+      color,
+      order,
+      isActive,
+      metaTitle,
+      metaDescription,
+    });
+
+    const createdCategory = await category.save();
+    res.status(201).json(createdCategory);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 };
 
-// Cập nhật danh mục
+// Cập nhật danh mục (có upload ảnh)
 export const updateCategory = async (req, res) => {
-    try {
-        const { 
-            name, 
-            slug, 
-            description, 
-            parent, 
-            image, 
-            icon, 
-            color, 
-            order, 
-            isActive, 
-            metaTitle, 
-            metaDescription 
-        } = req.body;
-        
-        const category = await Category.findById(req.params.id);
-        if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
+  try {
+    const {
+      name,
+      slug,
+      description,
+      parent,
+      icon,
+      color,
+      order,
+      isActive,
+      metaTitle,
+      metaDescription,
+    } = req.body;
 
-        category.name = name;
-        category.slug = slug;
-        category.description = description;
-        category.parent = parent;
-        category.image = image;
-        category.icon = icon;
-        category.color = color;
-        category.order = order;
-        category.isActive = isActive;
-        category.metaTitle = metaTitle;
-        category.metaDescription = metaDescription;
+    const category = await Category.findById(req.params.id);
+    if (!category) return res.status(404).json({ message: "Không tìm thấy danh mục" });
 
-        const updatedCategory = await category.save();
-        res.json(updatedCategory);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
+    // Nếu có file ảnh mới
+    if (req.file) {
+      const newImagePath = `/uploads/categories/${req.file.filename}`;
+
+      // Xoá ảnh cũ nếu có
+      if (category.image) {
+        const oldPath = path.join(process.cwd(), category.image);
+        if (fs.existsSync(oldPath)) {
+          try {
+            fs.unlinkSync(oldPath);
+          } catch (err) {
+            console.error("Không thể xoá file:", err);
+          }
+        }
+      }
+
+      category.image = newImagePath;
     }
+
+    // Update các trường khác
+    category.name = name;
+    category.slug = slug;
+    category.description = description;
+    category.parent = parent;
+    category.icon = icon;
+    category.color = color;
+    category.order = order;
+    category.isActive = isActive;
+    category.metaTitle = metaTitle;
+    category.metaDescription = metaDescription;
+
+    const updatedCategory = await category.save();
+    res.json(updatedCategory);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 };
 
 // Ẩn danh mục 

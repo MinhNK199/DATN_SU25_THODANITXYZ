@@ -58,15 +58,14 @@ export const restoreCategory = async (id: string): Promise<void> => {
     await handleResponse(response);
 };
 
-export const createCategory = async (categoryData: Omit<Category, '_id'>): Promise<Category> => {
+export const createCategory = async (formData: FormData): Promise<Category> => {
     const token = getAuthToken();
     const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(categoryData),
+        body: formData,
     });
     return handleResponse(response);
 };
@@ -77,15 +76,23 @@ export const getCategoryById = async (id: string): Promise<Category | undefined>
     return categories.find(category => category._id === id);
 }
 
-export const updateCategory = async (id: string, categoryData: Partial<Category>): Promise<Category> => {
-    const token = getAuthToken();
-    const response = await fetch(`${API_URL}/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+export const updateCategory = async (
+  id: string,
+  categoryData: Partial<Category> | FormData,
+  isMultipart: boolean = false
+): Promise<Category> => {
+  const token = getAuthToken();
+
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: "PUT",
+    headers: isMultipart
+      ? { Authorization: `Bearer ${token}` } // multipart thì KHÔNG set Content-Type, browser tự thêm boundary
+      : {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(categoryData),
-    });
-    return handleResponse(response);
-}; 
+    body: isMultipart ? (categoryData as FormData) : JSON.stringify(categoryData),
+  });
+
+  return handleResponse(response);
+};

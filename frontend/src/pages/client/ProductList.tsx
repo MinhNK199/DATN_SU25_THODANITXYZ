@@ -34,16 +34,20 @@ const ProductList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const search = params.get('search') || '';
-    const category = params.get('category') || '';
-    setSearchTerm(search);
+  const params = new URLSearchParams(location.search);
+  const search = params.get('search') || '';
+  const categoryParam = params.get('category') || '';
+  setSearchTerm(search);
 
-    // Nếu có category từ URL, sử dụng trực tiếp (backend đã hỗ trợ slug)
-    if (category) {
-      setFilterCategory(category);
+  if (categoryParam) {
+    // Tìm trong categories slug tương ứng
+    const matchedCat = categories.find(cat => cat.slug === categoryParam || cat._id === categoryParam);
+    if (matchedCat) {
+      setFilterCategory(matchedCat._id); // nếu BE chỉ hiểu _id
     }
-  }, [location.search]);
+  }
+}, [location.search, categories]);
+
 
   const fetchProducts = async (pageNum = 1) => {
     setLoading(true);
