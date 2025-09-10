@@ -127,25 +127,6 @@ const RatingList: React.FC = () => {
     return result;
   }, [data, filters]);
 
-  const handleReply = async (ratingId: string) => {
-    if (!replyValue.trim()) {
-      message.warning("Vui lòng nhập nội dung phản hồi");
-      return;
-    }
-
-    try {
-      await axiosInstance.put(`/rating/${ratingId}/reply`, {
-        reply: replyValue,
-      });
-      message.success("Phản hồi thành công");
-      setReplyingId(null);
-      setReplyValue("");
-      fetchRatings();
-    } catch (err) {
-      message.error("Không thể gửi phản hồi");
-    }
-  };
-
   const columns: ColumnsType<Rating> = [
     {
       title: "STT",
@@ -191,57 +172,15 @@ const RatingList: React.FC = () => {
     },
     {
       title: "Phản hồi",
-      render: (_, record) => {
-        if (record.reply && record.reply.trim() !== "") {
-          return <span className="text-green-600 font-medium">Đã phản hồi</span>;
-        }
-        
-        if (replyingId === record._id) {
-          return (
-            <div className="space-y-2">
-              <Input.TextArea
-                value={replyValue}
-                onChange={(e) => setReplyValue(e.target.value)}
-                placeholder="Nhập phản hồi..."
-                rows={2}
-              />
-              <div className="flex gap-2">
-                <Button
-                  size="small"
-                  type="primary"
-                  onClick={() => handleReply(record._id)}
-                >
-                  Gửi
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setReplyingId(null);
-                    setReplyValue("");
-                  }}
-                >
-                  Hủy
-                </Button>
-              </div>
-            </div>
-          );
-        }
-        
-        return (
-          <Button
-            size="small"
-            type="primary"
-            className="admin-primary-button"
-            onClick={() => {
-              setReplyingId(record._id);
-              setReplyValue("");
-            }}
-          >
-            Trả lời
-          </Button>
+      dataIndex: "reply",
+      render: (reply: string | undefined) => {
+        return reply && reply.trim() !== "" ? (
+          <span className="text-green-600 font-medium">Đã phản hồi</span>
+        ) : (
+          <span className="text-red-600 font-medium">Chưa phản hồi</span>
         );
       },
-      width: 200,
+      width: 150,
     },
     {
       title: "Hành động",

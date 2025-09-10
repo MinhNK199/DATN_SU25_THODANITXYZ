@@ -49,29 +49,35 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
   }, [productId, orderId]);
 
   // Upload ảnh
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+ const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files) return;
 
-    const previews = Array.from(files).map((file) =>
-      URL.createObjectURL(file)
-    );
-    setFilePreviews((prev) => [...prev, ...previews]);
+  // Giới hạn tổng số ảnh = 5
+  if (filePreviews.length + files.length > 5) {
+    toast.error("Bạn chỉ có thể tải lên tối đa 5 ảnh");
+    return;
+  }
 
-    for (const file of files) {
-      const formData = new FormData();
-      formData.append("image", file);
+  const previews = Array.from(files).map((file) =>
+    URL.createObjectURL(file)
+  );
+  setFilePreviews((prev) => [...prev, ...previews]);
 
-      try {
-        const res = await axiosInstance.post("/upload", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        setImages((prev) => [...prev, res.data.url]);
-      } catch (error) {
-        toast.error("Upload ảnh thất bại");
-      }
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await axiosInstance.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setImages((prev) => [...prev, res.data.url]);
+    } catch (error) {
+      toast.error("Upload ảnh thất bại");
     }
-  };
+  }
+};
 
   // Gửi đánh giá
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,12 +176,13 @@ const RatingForm: React.FC<RatingFormProps> = ({ productId, orderId }) => {
 
       {/* Upload ảnh */}
       <div>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleFileChange}
-        />
+       <input
+  type="file"
+  accept="image/*"
+  multiple
+  onChange={handleFileChange}
+  disabled={filePreviews.length >= 5}
+/>
         <div className="flex gap-2 mt-2 flex-wrap">
           {filePreviews.map((src, idx) => (
             <img
