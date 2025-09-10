@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
+import { useCheckout } from "../../contexts/CheckoutContext";
 import { useToast } from "../../components/client/ToastContainer";
 import axios from "axios";
 import { createOrder, createMomoPayment } from "../../services/orderApi";
@@ -35,6 +36,7 @@ const CheckoutReviewPage: React.FC = () => {
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
 
   const { state: cartState, removeOrderedItemsFromCart } = useCart();
+  const { voucher } = useCheckout();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
 
@@ -46,11 +48,11 @@ const CheckoutReviewPage: React.FC = () => {
     // Lấy thông tin shipping và payment từ localStorage
     const shippingData = localStorage.getItem('checkoutShippingData');
     const paymentData = localStorage.getItem('checkoutPaymentData');
-    
+
     if (shippingData && paymentData) {
       const { selectedAddress: savedAddress, formData: savedFormData } = JSON.parse(shippingData);
       const { formData: savedPaymentData, cardInfo: savedCardInfo, walletInfo: savedWalletInfo, bankTransferInfo: savedBankTransferInfo } = JSON.parse(paymentData);
-      
+
       setSelectedAddress(savedAddress);
       setFormData({ ...savedFormData, ...savedPaymentData });
       setCardInfo(savedCardInfo);
@@ -60,7 +62,7 @@ const CheckoutReviewPage: React.FC = () => {
       // Nếu không có thông tin đầy đủ, quay về trang shipping
       navigate('/checkout/shipping');
     }
-    
+
     // Kiểm tra nếu không có sản phẩm trong giỏ hàng, redirect về Cart
     if (!cartState.items || cartState.items.length === 0) {
       navigate('/cart');
@@ -92,6 +94,12 @@ const CheckoutReviewPage: React.FC = () => {
       return;
     }
 
+    // Kiểm tra giới hạn COD
+    if (formData.paymentMethod === "COD" && !isCODAllowed) {
+      alert("Đơn hàng có giá trị trên 100 triệu ₫ không được phép thanh toán COD. Vui lòng chọn phương thức thanh toán trực tuyến.");
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const orderData = {
@@ -112,9 +120,10 @@ const CheckoutReviewPage: React.FC = () => {
         },
         paymentMethod: formData.paymentMethod,
         itemsPrice: cartState.total,
-        taxPrice: cartState.total * taxRate,
+        voucherDiscount: voucherDiscount,
+        taxPrice: taxPrice,
         shippingPrice: shippingFee,
-        totalPrice: cartState.total + shippingFee + cartState.total * taxRate,
+        totalPrice: finalTotal,
       };
 
       const res = await createOrder(orderData);
@@ -238,7 +247,7 @@ const CheckoutReviewPage: React.FC = () => {
         console.error("❌ Error response data:", (err as any).response.data);
         console.error("❌ Error response status:", (err as any).response.status);
       }
-      
+
       let errorMessage = "payment_error";
       if (
         err &&
@@ -255,7 +264,7 @@ const CheckoutReviewPage: React.FC = () => {
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-      
+
       // Chuyển hướng đến trang thất bại
       navigate(`/checkout/failed?error=${errorMessage}&amount=${finalTotal}`);
     } finally {
@@ -268,9 +277,14 @@ const CheckoutReviewPage: React.FC = () => {
   };
 
   const subtotal = cartState.total || 0;
+  const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
   const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const taxPrice = subtotal * taxRate;
-  const finalTotal = subtotal + shippingFee + taxPrice;
+  const taxPrice = (subtotal - voucherDiscount) * taxRate;
+  const finalTotal = subtotal - voucherDiscount + shippingFee + taxPrice;
+
+  // Kiểm tra giới hạn COD (100 triệu)
+  const COD_LIMIT = 100000000; // 100 triệu VND
+  const isCODAllowed = finalTotal <= COD_LIMIT;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -317,7 +331,7 @@ const CheckoutReviewPage: React.FC = () => {
                   <div className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg"></div>
                 </div>
               </div>
-              
+
               <div className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-600 text-white shadow-xl scale-110">
@@ -332,7 +346,7 @@ const CheckoutReviewPage: React.FC = () => {
                   <div className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg"></div>
                 </div>
               </div>
-              
+
               <div className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-600 text-white shadow-xl scale-110">
@@ -361,7 +375,7 @@ const CheckoutReviewPage: React.FC = () => {
                 </h2>
                 <p className="text-blue-100">Kiểm tra lại thông tin trước khi đặt hàng</p>
               </div>
-              
+
               <div className="p-8">
                 <CheckoutReview
                   selectedAddress={selectedAddress}
@@ -405,11 +419,10 @@ const CheckoutReviewPage: React.FC = () => {
                     </div>
                   </div>
                 </button>
-                
+
                 {/* Collapsible Content */}
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                  isOrderSummaryOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
-                }`}>
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isOrderSummaryOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
                   <div className="p-6">
                     {/* Order Items Preview - Compact */}
                     <div className="mb-6">
@@ -422,8 +435,8 @@ const CheckoutReviewPage: React.FC = () => {
                           <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                             <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
                               {item.product.images?.[0] ? (
-                                <img 
-                                  src={item.product.images[0]} 
+                                <img
+                                  src={item.product.images[0]}
                                   alt={item.product.name}
                                   className="w-full h-full object-cover"
                                 />
@@ -469,6 +482,12 @@ const CheckoutReviewPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Tạm tính:</span>
                           <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                         </div>
+                        {voucherDiscount > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span className="text-green-700 text-sm">Giảm giá voucher:</span>
+                            <span className="font-semibold text-green-600">-{formatPrice(voucherDiscount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center py-2 border-b border-gray-200">
                           <span className="text-gray-700 text-sm">Phí vận chuyển:</span>
                           <span className={`font-semibold ${shippingFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
@@ -479,7 +498,7 @@ const CheckoutReviewPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Thuế VAT (8%):</span>
                           <span className="font-semibold text-gray-900">{formatPrice(taxPrice)}</span>
                         </div>
-                        
+
                         <div className="pt-3">
                           <div className="flex justify-between items-center">
                             <span className="text-lg font-bold text-gray-900">Tổng cộng:</span>
@@ -490,6 +509,78 @@ const CheckoutReviewPage: React.FC = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Payment Method Display */}
+                    <div className="mb-6">
+                      <h4 className="text-base font-bold text-gray-800 mb-3 flex items-center">
+                        <span className="mr-2">💳</span>
+                        Phương thức thanh toán
+                      </h4>
+                      <div className={`p-4 rounded-xl border-2 ${formData.paymentMethod === "COD" && !isCODAllowed
+                          ? 'border-red-200 bg-red-50'
+                          : 'border-gray-200 bg-gray-50'
+                        }`}>
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.paymentMethod === "COD" && !isCODAllowed
+                              ? 'bg-red-100'
+                              : formData.paymentMethod === "COD"
+                                ? 'bg-green-100'
+                                : 'bg-blue-100'
+                            }`}>
+                            {formData.paymentMethod === "COD" ? (
+                              <span className="text-lg">🚚</span>
+                            ) : (
+                              <span className="text-lg">💳</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className={`font-semibold ${formData.paymentMethod === "COD" && !isCODAllowed
+                                ? 'text-red-800'
+                                : 'text-gray-800'
+                              }`}>
+                              {formData.paymentMethod === "COD"
+                                ? "Thanh toán khi nhận hàng (COD)"
+                                : formData.paymentMethod === "momo"
+                                  ? "Thanh toán qua MoMo"
+                                  : formData.paymentMethod === "vnpay"
+                                    ? "Thanh toán qua VNPay"
+                                    : "Thanh toán trực tuyến"
+                              }
+                              {formData.paymentMethod === "COD" && !isCODAllowed && (
+                                <span className="text-sm text-red-600 ml-2">(Không khả dụng)</span>
+                              )}
+                            </p>
+                            {formData.paymentMethod === "COD" && !isCODAllowed && (
+                              <p className="text-sm text-red-600 mt-1">
+                                Đơn hàng có giá trị {finalTotal.toLocaleString('vi-VN')}₫ vượt quá giới hạn 100 triệu ₫ cho thanh toán COD
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* COD Restriction Warning */}
+                    {!isCODAllowed && (
+                      <div className="mb-6">
+                        <div className="bg-red-100 border border-red-200 rounded-xl p-4">
+                          <div className="flex items-start space-x-3">
+                            <div className="w-6 h-6 bg-red-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="text-red-600 text-sm">!</span>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold text-red-800 mb-1">
+                                Giới hạn thanh toán COD
+                              </h4>
+                              <p className="text-sm text-red-700">
+                                Đơn hàng có giá trị trên 100 triệu ₫ không được phép thanh toán COD.
+                                Vui lòng quay lại trang thanh toán để chọn phương thức thanh toán trực tuyến.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Promotional Message - Compact */}
                     {shippingFee > 0 && (
@@ -503,7 +594,7 @@ const CheckoutReviewPage: React.FC = () => {
                               Thêm {formatPrice(500000 - cartState.total)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
-                              <div 
+                              <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
                                 style={{ width: `${Math.min((cartState.total / 500000) * 100, 100)}%` }}
                               ></div>
@@ -570,13 +661,21 @@ const CheckoutReviewPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={isProcessing}
-                        className="w-full inline-flex items-center justify-center px-6 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-xl hover:shadow-2xl font-bold text-lg"
+                        disabled={isProcessing || (formData.paymentMethod === "COD" && !isCODAllowed)}
+                        className={`w-full inline-flex items-center justify-center px-6 py-4 rounded-2xl transition-all duration-300 shadow-xl font-bold text-lg ${isProcessing || (formData.paymentMethod === "COD" && !isCODAllowed)
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 hover:shadow-2xl'
+                          }`}
                       >
                         {isProcessing ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                             Đang xử lý...
+                          </>
+                        ) : formData.paymentMethod === "COD" && !isCODAllowed ? (
+                          <>
+                            <span>COD không khả dụng - Chọn phương thức khác</span>
+                            <span className="ml-3 text-xl">⚠️</span>
                           </>
                         ) : (
                           <>
