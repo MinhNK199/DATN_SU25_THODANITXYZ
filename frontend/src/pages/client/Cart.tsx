@@ -13,6 +13,7 @@ import { useCart } from "../../contexts/CartContext";
 import { getTaxConfig } from "../../services/cartApi";
 import { getAvailableCoupons, getUsedCoupons, applyCoupon, removeCoupon } from "../../services/couponApi";
 import { Coupon } from "../../interfaces/Coupon";
+import { getVariantStockMessage, validateQuantityUpdate, formatStockDisplay } from "../../utils/stockUtils";
 import { Product } from "../../interfaces/Product";
 import { Modal, Button, Image, Input, Radio } from "antd";
 import { useNotification } from "../../hooks/useNotification";
@@ -25,6 +26,16 @@ import {
 const Cart: React.FC = () => {
   const { state, updateQuantity, removeFromCart, loadCart } =
     useCart();
+
+  // ✅ FUNCTION ĐỂ FORCE REFRESH CART
+  const handleRefreshCart = async () => {
+    try {
+      await loadCart(true); // Force refresh
+      success('Đã cập nhật giỏ hàng');
+    } catch (error) {
+      error('Lỗi khi cập nhật giỏ hàng');
+    }
+  };
   const { success, error, warning, info } = useNotification();
   const cartItems = state.items;
 
@@ -368,7 +379,17 @@ const Cart: React.FC = () => {
                   <div className="px-6 py-4 border-b border-gray-200 flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <h2 className="text-xl font-bold text-gray-900">Giỏ hàng</h2>
-                      <span className="text-sm text-gray-600">{state.itemCount} sản phẩm</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600">{state.itemCount} sản phẩm</span>
+                        {/* ✅ BUTTON REFRESH CART */}
+                        <button
+                          onClick={handleRefreshCart}
+                          className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                          title="Cập nhật giỏ hàng"
+                        >
+                          🔄
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -524,57 +545,50 @@ const Cart: React.FC = () => {
                                     value={item.quantity}
                                     onChange={(e) => {
                                       const newQuantity = parseInt(e.target.value) || 1;
-                                      const maxStock = variant?.stock ?? item.product.stock;
-                                      if (newQuantity > maxStock) {
-                                        warning("Đã đạt số lượng tối đa tồn kho!");
+
+                                      // ✅ SỬ DỤNG UTILITY FUNCTION ĐỂ VALIDATE
+                                      const validation = validateQuantityUpdate(item, newQuantity);
+
+                                      if (!validation.isValid) {
+                                        warning(validation.message || 'Số lượng không hợp lệ!');
                                         return;
                                       }
+
+                                      if (validation.warning) {
+                                        warning(validation.warning);
+                                      }
+
                                       updateQuantity(item._id, Math.max(1, newQuantity));
                                     }}
                                     className="w-8 sm:w-12 h-6 sm:h-8 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm"
                                     min="1"
-                                    max={variant?.stock ?? item.product.stock}
+                                    max={variant?.availableStock ?? item.product.availableStock ?? variant?.stock ?? item.product.stock}
                                   />
                                   <button
                                     onClick={() => {
-                                      const maxStock = variant?.stock ?? item.product.stock;
-                                      if (item.quantity >= maxStock) {
-                                        warning("Đã đạt số lượng tối đa tồn kho!");
+                                      const newQuantity = item.quantity + 1;
+
+                                      // ✅ SỬ DỤNG UTILITY FUNCTION ĐỂ VALIDATE
+                                      const validation = validateQuantityUpdate(item, newQuantity);
+
+                                      if (!validation.isValid) {
+                                        warning(validation.message || 'Số lượng không hợp lệ!');
                                         return;
                                       }
-                                      updateQuantity(item._id, item.quantity + 1);
+
+                                      if (validation.warning) {
+                                        warning(validation.warning);
+                                      }
+
+                                      updateQuantity(item._id, newQuantity);
                                     }}
-                                    disabled={item.quantity >= (variant?.stock ?? item.product.stock)}
+                                    disabled={!validateQuantityUpdate(item, item.quantity + 1).isValid}
                                     className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     <FaPlus className="w-2 h-2 sm:w-3 sm:h-3" />
                                   </button>
                                 </div>
 
-                                {/* Stock Info - Moved here */}
-                                <div className="text-center">
-                                  <span className="text-xs text-gray-500">
-                                    {(() => {
-                                      // Lấy stock của variant cụ thể hoặc product
-                                      const variantStock = variant?.stock;
-                                      const productStock = item.product.stock;
-                                      const currentStock = variantStock !== undefined ? variantStock : productStock;
-
-                                      if (typeof currentStock === "number") {
-                                        const remainingStock = currentStock - item.quantity;
-                                        if (remainingStock <= 0) {
-                                          return <span className="text-red-600 font-medium">Hết hàng</span>;
-                                        } else if (remainingStock <= 5) {
-                                          return <span className="text-orange-500 font-medium">Chỉ còn {remainingStock}</span>;
-                                        } else {
-                                          return <span className="text-green-600 font-medium">Còn {remainingStock} sản phẩm</span>;
-                                        }
-                                      } else {
-                                        return <span className="text-gray-500">Tồn kho: {currentStock}</span>;
-                                      }
-                                    })()}
-                                  </span>
-                                </div>
                               </div>
                             </div>
 
@@ -994,12 +1008,12 @@ const Cart: React.FC = () => {
             </div>
           }
           width={650}
-          styles={{ 
-            body: { 
-              maxHeight: 700, 
-              overflowY: "auto", 
-              padding: 20 
-            } 
+          styles={{
+            body: {
+              maxHeight: 700,
+              overflowY: "auto",
+              padding: 20
+            }
           }}
           className="product-detail-modal"
         >
@@ -1034,17 +1048,9 @@ const Cart: React.FC = () => {
                     <span className="font-medium text-gray-600">Tồn kho:</span>
                     <span className="ml-2 font-semibold text-gray-900">
                       {(() => {
-                        // Lấy stock từ variant hoặc product
-                        if (detailItem.variantInfo?.stock !== undefined) {
-                          return detailItem.variantInfo.stock;
-                        }
-                        if (detailItem.variantId && (detailItem.product as any).variants) {
-                          const variant = (detailItem.product as any).variants.find((v: any) => v._id.toString() === detailItem.variantId?.toString());
-                          if (variant?.stock !== undefined) {
-                            return variant.stock;
-                          }
-                        }
-                        return detailItem.product.stock;
+                        // ✅ SỬ DỤNG UTILITY FUNCTION ĐỂ LẤY STOCK
+                        const stockMessage = getVariantStockMessage(detailItem);
+                        return stockMessage.availableStock;
                       })()}
                     </span>
                   </div>
@@ -1056,7 +1062,7 @@ const Cart: React.FC = () => {
                 // Lấy thông tin biến thể từ variantInfo hoặc từ product.variants
                 const variantInfo = detailItem.variantInfo;
                 let variantData = variantInfo;
-                
+
                 // Fallback: Nếu không có variantInfo, tìm từ product.variants
                 if (!variantInfo && detailItem.variantId && (detailItem.product as any).variants) {
                   const variant = (detailItem.product as any).variants.find((v: any) => v._id.toString() === detailItem.variantId?.toString());
@@ -1117,7 +1123,7 @@ const Cart: React.FC = () => {
                       <div>
                         <span className="font-medium text-blue-700">Tồn kho:</span>
                         <div className="text-blue-900 font-semibold mt-1">
-                          {variantData.stock || 0} sản phẩm
+                          {formatStockDisplay(variantData.availableStock ?? variantData.stock ?? 0)}
                         </div>
                       </div>
                     </div>
@@ -1164,7 +1170,7 @@ const Cart: React.FC = () => {
               {(() => {
                 // Lấy thông số kỹ thuật từ variant hoặc product
                 let specifications = {};
-                
+
                 // Ưu tiên thông số từ variant
                 if (detailItem.variantInfo?.specifications) {
                   specifications = detailItem.variantInfo.specifications;
@@ -1342,7 +1348,7 @@ const Cart: React.FC = () => {
                   }`}
                 onClick={() => setSelectedCouponId(null)}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center">
                   <div className="flex items-center space-x-3">
                     <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
                       {selectedCouponId === null && (
@@ -1370,7 +1376,14 @@ const Cart: React.FC = () => {
                       setSelectedCouponId(selectedCouponId === coupon._id ? null : coupon._id);
                     }}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start">
+                      <div className="flex items-center space-x-3 mr-3">
+                        <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
+                          {selectedCouponId === coupon._id && (
+                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          )}
+                        </div>
+                      </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -1400,16 +1413,6 @@ const Cart: React.FC = () => {
                             Điều kiện
                           </a>
                         </div>
-                      </div>
-
-                      <div className="ml-4">
-                        <Radio
-                          checked={selectedCouponId === coupon._id}
-                          onChange={() => {
-                            // Nếu đã chọn voucher này, bỏ chọn; nếu chưa chọn, chọn voucher này
-                            setSelectedCouponId(selectedCouponId === coupon._id ? null : coupon._id);
-                          }}
-                        />
                       </div>
                     </div>
 

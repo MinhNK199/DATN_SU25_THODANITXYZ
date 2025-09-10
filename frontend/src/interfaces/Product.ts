@@ -9,6 +9,7 @@ export interface ProductVariant {
     price: number;
     salePrice?: number;
     stock: number;
+    availableStock?: number; // ✅ THÊM AVAILABLE STOCK CHO VARIANT
     color?: { code: string; name: string };
     size?: number;
     weight?: number;

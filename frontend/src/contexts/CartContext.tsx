@@ -27,7 +27,7 @@ const CartContext = createContext<{
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   isInCart: (productId: string) => boolean;
-  loadCart: () => Promise<void>;
+  loadCart: (forceRefresh?: boolean) => Promise<void>;
   removeOrderedItemsFromCart: (orderItems: any[]) => Promise<void>; // ✅ Thêm vào interface
 } | null>(null);
 
@@ -111,7 +111,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   // Load cart from backend on mount
-  const loadCart = useCallback(async () => {
+  const loadCart = useCallback(async (forceRefresh = false) => {
     const token = localStorage.getItem('token');
     if (!token) {
       // Nếu chưa đăng nhập, load từ localStorage
@@ -139,7 +139,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const cart = await cartApi.getCart();
+      // ✅ THÊM TIMESTAMP ĐỂ TRÁNH CACHE
+      const cart = await cartApi.getCart(forceRefresh ? `?t=${Date.now()}` : '');
       dispatch({ type: 'LOAD_CART', payload: cart });
     } catch (error: any) {
       // Silently handle error - don't show error message if server is offline
@@ -255,13 +256,42 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // ✅ VALIDATE STOCK TRƯỚC KHI GỬI REQUEST
+    const variant = item.variantInfo;
+    const maxStock = variant?.availableStock ??
+      item.product.availableStock ??
+      variant?.stock ??
+      item.product.stock ?? 0;
+
+    if (quantity > maxStock) {
+      toast.error(`Chỉ còn ${maxStock} sản phẩm trong kho!`);
+      return;
+    }
+
+    if (quantity < 1) {
+      toast.error('Số lượng phải lớn hơn 0!');
+      return;
+    }
+
     try {
       // Truyền variantId nếu có để backend có thể xử lý đúng
       const cart = await cartApi.updateCartItem(item.product._id, quantity, item.variantId);
       dispatch({ type: 'LOAD_CART', payload: cart });
+
+      // ✅ HIỂN THỊ THÔNG BÁO THÀNH CÔNG
+      if (quantity === maxStock) {
+        toast.warning(`Đã đạt số lượng tối đa tồn kho (${maxStock})`);
+      }
     } catch (error: any) {
-      // Silently handle error - show user-friendly message
-      toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng');
+      // ✅ XỬ LÝ LỖI CHI TIẾT HƠN
+      const errorMessage = error.response?.data?.message || 'Không thể cập nhật số lượng';
+      const availableStock = error.response?.data?.availableStock;
+
+      if (availableStock !== undefined) {
+        toast.error(`${errorMessage} (Còn lại: ${availableStock} sản phẩm)`);
+      } else {
+        toast.error(errorMessage);
+      }
     }
   }, [state.items]);
 
