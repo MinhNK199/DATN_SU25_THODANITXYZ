@@ -276,10 +276,9 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
 // Lấy đơn hàng theo id
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate(
-      "user",
-      "name email"
-    );
+    const order = await Order.findById(req.params.id)
+      .populate("user", "name email")
+      .populate("shipper", "fullName phone email vehicleType");
     if (!order)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     
@@ -424,16 +423,17 @@ export const getOrders = async (req, res) => {
     const pageSize = 10;
     const page = Number(req.query.page) || 1;
 
-    // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng TRỪ payment_failed (bao gồm cả draft đã thanh toán)
-    let filter = {
-      status: { 
-        $ne: 'payment_failed' // Chỉ loại trừ payment_failed
-      }
-    };
+    // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng (bao gồm cả draft, pending, v.v.)
+    let filter = {};
 
     // Filter theo status nếu có
     if (req.query.status && req.query.status !== "all") {
       filter.status = req.query.status;
+    }
+
+    // Filter orders chưa được assign shipper
+    if (req.query.unassigned === 'true') {
+      filter.shipper = { $exists: false };
     }
 
     // Search filter
@@ -446,6 +446,7 @@ export const getOrders = async (req, res) => {
 
     let ordersQuery = Order.find(filter)
       .populate("user", "id name email")
+      .populate("shipper", "fullName phone email vehicleType")
       .sort({ createdAt: -1 });
 
     const count = await Order.countDocuments(filter);
@@ -485,10 +486,12 @@ export const getOrders = async (req, res) => {
     })));
 
     res.json({
-      orders,
-      page,
-      pages: Math.ceil(count / pageSize),
-      total: count,
+      data: {
+        orders,
+        page,
+        pages: Math.ceil(count / pageSize),
+        total: count,
+      }
     });
   } catch (error) {
     console.error("❌ Lỗi getOrders:", error);
@@ -1077,6 +1080,43 @@ export const cancelOrder = async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: "Có lỗi xảy ra khi hủy đơn hàng" 
+    });
+  }
+};
+
+// Xác nhận đơn hàng (chuyển từ pending sang confirmed)
+export const confirmOrder = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    if (order.status !== 'pending' && order.status !== 'draft') {
+      return res.status(400).json({ message: "Chỉ có thể xác nhận đơn hàng ở trạng thái pending hoặc draft" });
+    }
+
+    order.status = 'confirmed';
+    order.statusHistory.push({
+      status: 'confirmed',
+      note: 'Admin đã xác nhận đơn hàng',
+      date: new Date()
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Xác nhận đơn hàng thành công',
+      order
+    });
+  } catch (error) {
+    console.error('Confirm order error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Lỗi server khi xác nhận đơn hàng',
+      error: error.message 
     });
   }
 };

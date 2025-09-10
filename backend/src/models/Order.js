@@ -127,7 +127,11 @@ const orderSchema = new mongoose.Schema(
         "pending", // Chờ xác nhận từ admin
         "confirmed", // Đã xác nhận từ admin
         "processing", // Đang xử lý và đóng gói
-        "shipped", // Đang giao hàng
+        "assigned", // Đã phân công cho shipper
+        "picked_up", // Shipper đã nhận hàng từ shop
+        "shipped", // Đang giao hàng (legacy)
+        "in_transit", // Đang trên đường giao
+        "arrived", // Đã đến điểm giao
         "delivered_success", // Giao hàng thành công
         "delivered_failed", // Giao hàng thất bại
         "partially_delivered", // Giao hàng một phần
@@ -175,6 +179,22 @@ const orderSchema = new mongoose.Schema(
     retryDeliveryCount: {
       type: Number,
       default: 0,
+    },
+    // Thông tin shipper
+    shipper: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Shipper",
+      default: null,
+    },
+    orderTracking: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "OrderTracking",
+      default: null,
+    },
+    // Thời gian tự động xác nhận đơn hàng
+    autoConfirmAt: {
+      type: Date,
+      default: null,
     },
     zalopayTransId: { type: String },
     vnpayTransId: { type: String },

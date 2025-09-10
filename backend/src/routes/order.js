@@ -16,7 +16,8 @@ import {
   cancelOrder,
   getValidOrderStatusOptions,
   handlePaymentFailed,
-  confirmOrderAfterPayment
+  confirmOrderAfterPayment,
+  confirmOrder
 } from "../controllers/order.js";
 import { 
   createZaloPayOrder, 
@@ -53,6 +54,7 @@ routerOrder.put("/:id/return-request", protect, requestReturn);
 routerOrder.put("/:id/confirm-satisfaction", protect, confirmSatisfaction);
 routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
 routerOrder.put("/:id/cancel", protect, cancelOrder);
+routerOrder.put("/:id/confirm", protect, confirmOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
 routerOrder.put("/:id/payment-failed", protect, handlePaymentFailed);
 
