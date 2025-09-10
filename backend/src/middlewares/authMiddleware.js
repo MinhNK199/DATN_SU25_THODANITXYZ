@@ -30,8 +30,7 @@ export const protect = async (req, res, next) => {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = await User.findById(decoded.id);
-
+        const user = await User.findById(decoded.id);
 
         if (!user || user.active === false) {
             console.log('User không tồn tại hoặc bị khóa');

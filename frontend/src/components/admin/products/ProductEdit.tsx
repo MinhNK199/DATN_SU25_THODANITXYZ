@@ -54,7 +54,7 @@ interface ProductVariant {
   specifications?: { [key: string]: string }
 }
 
-const API_URL = "http://localhost:8000/api/products"
+const API_URL = "http://localhost:8000/api/product"
 
 const ProductEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>()
