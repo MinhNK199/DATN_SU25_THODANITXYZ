@@ -57,6 +57,9 @@ const ProductList: React.FC = () => {
     // Nếu có category từ URL, sử dụng trực tiếp (backend đã hỗ trợ slug)
     if (category) {
       console.log("🔍 Category from URL:", category);
+      console.log("🔍 Available categories:", categories);
+      const foundCategory = categories.find(cat => cat._id === category || cat.slug === category);
+      console.log("🔍 Found category match:", foundCategory);
       setFilterCategory(category);
       setPage(1); // Reset về trang 1 khi có category mới
       setSearchTerm(''); // Clear search term khi có category
@@ -64,7 +67,7 @@ const ProductList: React.FC = () => {
       // Reset filter nếu không có category trong URL
       setFilterCategory('');
     }
-  }, [location.search, debouncedSearch]);
+  }, [location.search, debouncedSearch, categories]); // Thêm categories vào dependency
 
   // Update active filters
   useEffect(() => {
@@ -114,6 +117,10 @@ const ProductList: React.FC = () => {
   };
 
   const fetchProducts = async (pageNum = 1) => {
+    if (loading) {
+      console.log("⏸️ Skipping fetch - already loading");
+      return;
+    }
     setLoading(true);
     setError(null);
     let url = `/api/product?page=${pageNum}`;
@@ -153,6 +160,7 @@ const ProductList: React.FC = () => {
       console.log("📦 API Response:", res.data);
       console.log("📦 Products received:", filtered.length);
       console.log("📦 Total products:", res.data.total);
+      console.log("📦 Current filterCategory when setting products:", filterCategory);
       setProducts(filtered);
       setPage(res.data.page || 1);
       setPages(res.data.pages || 1);
@@ -175,6 +183,18 @@ const ProductList: React.FC = () => {
       style: 'currency',
       currency: 'VND',
     }).format(price);
+  };
+
+  const formatPriceCompact = (price: number) => {
+    if (price >= 1000000000) {
+      return `${(price / 1000000000).toFixed(1)}B đ`;
+    } else if (price >= 1000000) {
+      return `${(price / 1000000).toFixed(0)}M đ`;
+    } else if (price >= 1000) {
+      return `${(price / 1000).toFixed(0)}K đ`;
+    } else {
+      return `${price} đ`;
+    }
   };
 
   return (
@@ -232,26 +252,61 @@ const ProductList: React.FC = () => {
                   Xóa tất cả
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {activeFilters.map((filter, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 text-xs rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
-                  >
-                    {filter}
-                    <button
-                      onClick={() => {
-                        if (filter.startsWith('Danh mục:')) removeFilter('category');
-                        else if (filter.startsWith('Thương hiệu:')) removeFilter('brand');
-                        else if (filter.startsWith('Giá:')) removeFilter('price');
-                        else if (filter === 'Còn hàng') removeFilter('stock');
-                      }}
-                      className="hover:text-red-600 hover:bg-red-50 p-0.5 rounded-md transition-all duration-200"
+              <div className="space-y-2">
+                {/* Category and Stock filters - vertical layout */}
+                <div className="flex flex-col gap-2">
+                  {activeFilters.filter(filter => filter.startsWith('Danh mục:')).map((filter, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 text-xs rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 w-fit"
                     >
-                      <FaTimes className="w-2.5 h-2.5" />
-                    </button>
-                  </span>
-                ))}
+                      {filter}
+                      <button
+                        onClick={() => removeFilter('category')}
+                        className="hover:text-red-600 hover:bg-red-50 p-0.5 rounded-md transition-all duration-200"
+                      >
+                        <FaTimes className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {activeFilters.filter(filter => filter === 'Còn hàng').map((filter, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 text-xs rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 w-fit"
+                    >
+                      {filter}
+                      <button
+                        onClick={() => removeFilter('stock')}
+                        className="hover:text-red-600 hover:bg-red-50 p-0.5 rounded-md transition-all duration-200"
+                      >
+                        <FaTimes className="w-2.5 h-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                
+                {/* Other filters */}
+                {activeFilters.filter(filter => !filter.startsWith('Danh mục:') && filter !== 'Còn hàng').length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {activeFilters.filter(filter => !filter.startsWith('Danh mục:') && filter !== 'Còn hàng').map((filter, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 text-xs rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+                      >
+                        {filter}
+                        <button
+                          onClick={() => {
+                            if (filter.startsWith('Thương hiệu:')) removeFilter('brand');
+                            else if (filter.startsWith('Giá:')) removeFilter('price');
+                          }}
+                          className="hover:text-red-600 hover:bg-red-50 p-0.5 rounded-md transition-all duration-200"
+                        >
+                          <FaTimes className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -292,6 +347,23 @@ const ProductList: React.FC = () => {
                 </select>
               </div>
 
+              {/* Stock Filter */}
+              <div className="bg-gray-50 rounded-2xl p-3">
+                <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                  Tình trạng
+                </h3>
+                <label className="flex items-center gap-2 cursor-pointer select-none p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={filterInStock}
+                    onChange={e => setFilterInStock(e.target.checked)}
+                    className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
+                  />
+                  <span className="text-gray-700 text-sm font-medium">Chỉ hiển thị còn hàng</span>
+                </label>
+              </div>
+
               {/* Brand Filter */}
               <div className="bg-gray-50 rounded-2xl p-3">
                 <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
@@ -322,44 +394,33 @@ const ProductList: React.FC = () => {
                       type="number"
                       min={0}
                       max={filterPriceRange[1]}
-                      value={filterPriceRange[0]}
-                      onChange={e => setFilterPriceRange([Number(e.target.value), filterPriceRange[1]])}
-                      className="flex-1 px-2 py-1.5 border-0 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs bg-white shadow-sm"
+                      value={filterPriceRange[0] || ''}
+                      onChange={e => {
+                        const value = e.target.value === '' ? 0 : Number(e.target.value);
+                        setFilterPriceRange([value, filterPriceRange[1]]);
+                      }}
+                      className="w-16 px-1 py-1.5 border-0 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs bg-white shadow-sm"
                       placeholder="Từ"
                     />
                     <span className="text-gray-400 text-xs">-</span>
                     <input
                       type="number"
                       min={filterPriceRange[0]}
-                      value={filterPriceRange[1]}
-                      onChange={e => setFilterPriceRange([filterPriceRange[0], Number(e.target.value)])}
-                      className="flex-1 px-2 py-1.5 border-0 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs bg-white shadow-sm"
+                      value={filterPriceRange[1] || ''}
+                      onChange={e => {
+                        const value = e.target.value === '' ? 0 : Number(e.target.value);
+                        setFilterPriceRange([filterPriceRange[0], value]);
+                      }}
+                      className="w-16 px-1 py-1.5 border-0 rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 text-xs bg-white shadow-sm"
                       placeholder="Đến"
                     />
                   </div>
-                  <div className="bg-white rounded-lg p-2 text-center">
-                    <span className="text-xs text-gray-600">
-                      {formatPrice(filterPriceRange[0])} - {formatPrice(filterPriceRange[1])}
+                  <div className="bg-white rounded-lg p-1.5 text-center">
+                    <span className="text-xs text-gray-600 truncate block">
+                      {formatPriceCompact(filterPriceRange[0])} - {formatPriceCompact(filterPriceRange[1])}
                     </span>
                   </div>
                 </div>
-              </div>
-
-              {/* Stock Filter */}
-              <div className="bg-gray-50 rounded-2xl p-3">
-                <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                  Tình trạng
-                </h3>
-                <label className="flex items-center gap-2 cursor-pointer select-none p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={filterInStock}
-                    onChange={e => setFilterInStock(e.target.checked)}
-                    className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-                  />
-                  <span className="text-gray-700 text-sm font-medium">Chỉ hiển thị còn hàng</span>
-                </label>
               </div>
             </div>
           </aside>
