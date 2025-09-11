@@ -57,6 +57,8 @@ const ProductAddPage: React.FC = () => {
   // Thêm state cho file ảnh đại diện
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
+  const [additionalImages, setAdditionalImages] = useState<File[]>([])
+  const [additionalImageFileList, setAdditionalImageFileList] = useState<UploadFile[]>([])
 
   useEffect(() => {
     const currentSpecs = form.getFieldValue("specifications")
@@ -179,6 +181,11 @@ const ProductAddPage: React.FC = () => {
         formData.append("image", mainImageFile)
       }
 
+      // Ảnh phụ
+      additionalImages.forEach((file, index) => {
+        formData.append(`additionalImages`, file)
+      })
+
 
       // Biến thể
       formData.append("variants", JSON.stringify(variants.map((v) => {
@@ -242,6 +249,16 @@ const ProductAddPage: React.FC = () => {
     if (latestFile && latestFile.originFileObj) {
       setMainImageFile(latestFile.originFileObj);
     }
+  };
+
+  // Xử lý upload ảnh phụ
+  const handleAdditionalImagesUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setAdditionalImageFileList(fileList);
+
+    // Lấy tất cả files
+    const files = fileList.map((file: any) => file.originFileObj).filter(Boolean); // eslint-disable-line @typescript-eslint/no-explicit-any
+    setAdditionalImages(files);
   };
 
 
@@ -328,6 +345,32 @@ const ProductAddPage: React.FC = () => {
                   )}
                 </div>
               </Form.Item>
+
+              <Form.Item label="Ảnh phụ (tối đa 5 ảnh)">
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={additionalImageFileList}
+                    onChange={handleAdditionalImagesUpload}
+                    beforeUpload={() => false}
+                    maxCount={5}
+                    multiple
+                    className="w-full"
+                  >
+                    {additionalImageFileList.length < 5 && (
+                      <div className="flex flex-col items-center justify-center h-24 w-full">
+                        <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                        <div className="text-sm text-gray-500">Thêm ảnh phụ</div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  <Text type="secondary" className="text-xs">
+                    Ảnh phụ sẽ hiển thị trong trang chi tiết sản phẩm khi có ít biến thể
+                  </Text>
+                </div>
+              </Form.Item>
+
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
               </Form.Item>

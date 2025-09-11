@@ -375,6 +375,14 @@ export const createProduct = async(req, res) => {
             return res.status(400).json({ message: "Phải có ít nhất 1 hình ảnh" });
         }
 
+        // Xử lý ảnh phụ
+        let additionalImageUrls = [];
+        if (req.files && Array.isArray(req.files)) {
+            // Lọc ra ảnh phụ từ req.files (có thể có nhiều loại ảnh)
+            const additionalImages = req.files.filter(f => f.fieldname === 'additionalImages');
+            additionalImageUrls = additionalImages.map(f => `/uploads/images/${f.filename}`);
+        }
+
 
         // Parse variants robustly
         let processedVariants = [];
@@ -406,6 +414,7 @@ export const createProduct = async(req, res) => {
             salePrice,
             user: req.user && req.user._id,
             images: imageUrls,
+            additionalImages: additionalImageUrls,
 
             videos: req.body.videos || [],
             brand,
@@ -540,6 +549,30 @@ export const updateProduct = async(req, res) => {
             product.variants = processedVariants
             product.markModified("variants")
             console.log("✅ Product variants updated and marked as modified")
+        }
+
+        // Xử lý ảnh phụ
+        let additionalImageUrls = [];
+        if (req.files && Array.isArray(req.files)) {
+            // Lọc ra ảnh phụ từ req.files
+            const additionalImages = req.files.filter(f => f.fieldname === 'additionalImages');
+            additionalImageUrls = additionalImages.map(f => `/uploads/images/${f.filename}`);
+        }
+
+        // Xử lý ảnh phụ hiện có
+        if (req.body.existingAdditionalImages) {
+            let existingAdditionalImages = [];
+            try {
+                existingAdditionalImages = JSON.parse(req.body.existingAdditionalImages);
+            } catch (e) {
+                console.error("Error parsing existing additional images:", e);
+            }
+            
+            // Merge ảnh phụ mới và cũ
+            product.additionalImages = [...existingAdditionalImages, ...additionalImageUrls];
+        } else if (additionalImageUrls.length > 0) {
+            // Chỉ có ảnh phụ mới
+            product.additionalImages = additionalImageUrls;
         }
 
         if (isActive !== undefined) product.isActive = isActive

@@ -70,6 +70,10 @@ const ProductEdit: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>("")
   // Thêm state cho ảnh đại diện
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
+  // State cho ảnh phụ
+  const [additionalImages, setAdditionalImages] = useState<File[]>([])
+  const [additionalImageFileList, setAdditionalImageFileList] = useState<UploadFile[]>([])
+  const [existingAdditionalImages, setExistingAdditionalImages] = useState<string[]>([])
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
@@ -149,6 +153,19 @@ const ProductEdit: React.FC = () => {
             thumbUrl: productData.images[0]
           }]
           setMainImageFileList(currentMainImage)
+        }
+
+        // Load ảnh phụ hiện có
+        if (productData.additionalImages && productData.additionalImages.length > 0) {
+          setExistingAdditionalImages(productData.additionalImages)
+          const currentAdditionalImages: UploadFile[] = productData.additionalImages.map((img: string, index: number) => ({
+            uid: `existing-${index}`,
+            name: `additional-image-${index}`,
+            status: 'done',
+            url: img,
+            thumbUrl: img
+          }))
+          setAdditionalImageFileList(currentAdditionalImages)
         }
         
         
@@ -296,6 +313,24 @@ const ProductEdit: React.FC = () => {
         formData.append("image", newMainImageFile.originFileObj)
       }
 
+      // Add additional images (only new files, not existing ones)
+      const newAdditionalImages = additionalImageFileList
+        .filter(file => !file.uid?.startsWith('existing-') && file.originFileObj)
+        .map(file => file.originFileObj)
+      
+      newAdditionalImages.forEach((file, index) => {
+        formData.append(`additionalImages`, file)
+      })
+
+      // Add existing additional images URLs
+      const existingAdditionalImageUrls = additionalImageFileList
+        .filter(file => file.uid?.startsWith('existing-') && file.url)
+        .map(file => file.url)
+      
+      if (existingAdditionalImageUrls.length > 0) {
+        formData.append("existingAdditionalImages", JSON.stringify(existingAdditionalImageUrls))
+      }
+
 
       console.log("🧹 Data before validation:", formData)
 
@@ -412,6 +447,18 @@ const ProductEdit: React.FC = () => {
     }
   };
 
+  // Xử lý upload ảnh phụ
+  const handleAdditionalImagesUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    setAdditionalImageFileList(fileList);
+
+    // Lấy tất cả files mới
+    const newFiles = fileList
+      .filter((file: any) => file.originFileObj) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .map((file: any) => file.originFileObj); // eslint-disable-line @typescript-eslint/no-explicit-any
+    setAdditionalImages(newFiles);
+  };
+
 
   if (loading) {
     return (
@@ -499,6 +546,32 @@ const ProductEdit: React.FC = () => {
                   </div>
                 </div>
               </Form.Item>
+
+              <Form.Item label="Ảnh phụ (tối đa 5 ảnh)">
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={additionalImageFileList}
+                    onChange={handleAdditionalImagesUpload}
+                    beforeUpload={() => false}
+                    maxCount={5}
+                    multiple
+                    className="w-full"
+                  >
+                    {additionalImageFileList.length < 5 && (
+                      <div className="flex flex-col items-center justify-center h-24 w-full">
+                        <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                        <div className="text-sm text-gray-500">Thêm ảnh phụ</div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  <Text type="secondary" className="text-xs">
+                    Ảnh phụ sẽ hiển thị trong trang chi tiết sản phẩm khi có ít biến thể
+                  </Text>
+                </div>
+              </Form.Item>
+
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
               </Form.Item>
