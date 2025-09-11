@@ -376,7 +376,6 @@ const ProductListPage: React.FC = () => {
           <Col>
             <Button
               type="primary"
-            className="admin-primary-button"
               className="admin-primary-button"
               icon={<PlusOutlined />}
               onClick={() => navigate("/admin/products/add")}

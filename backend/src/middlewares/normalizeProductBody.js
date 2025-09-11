@@ -62,26 +62,5 @@ export const normalizeProductBody = (req, res, next) => {
         }
     }
 
-    // Parse thumbnails from uploaded files
-    const thumbnailFiles = [];
-    if (req.files) {
-        Object.keys(req.files).forEach(key => {
-            if (key.startsWith('thumbnail_')) {
-                thumbnailFiles.push(`/uploads/images/${req.files[key][0].filename}`);
-            }
-        });
-    }
-    
-    // Also parse thumbnails from form data (fallback)
-    Object.keys(req.body).forEach(key => {
-        if (key.startsWith('thumbnail_')) {
-            thumbnailFiles.push(req.body[key]);
-            delete req.body[key];
-        }
-    });
-    
-    if (thumbnailFiles.length > 0) {
-        req.body.thumbnails = thumbnailFiles;
-    }
     next();
 };

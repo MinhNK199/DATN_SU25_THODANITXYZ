@@ -87,14 +87,9 @@ export const handleMulterError = (error, req, res, next) => {
 // Controller xử lý upload ảnh
 export const handleImageUpload = async (req, res) => {
   try {
-    console.log('Bắt đầu xử lý upload ảnh');
-    
     if (!req.file) {
-      console.log('Không có file được upload');
       return res.status(400).json({ message: 'Vui lòng chọn file ảnh để upload' });
     }
-
-    console.log('File upload thành công:', req.file);
 
     // Tạo URL cho ảnh đã upload
     const imageUrl = `/uploads/images/${req.file.filename}`;

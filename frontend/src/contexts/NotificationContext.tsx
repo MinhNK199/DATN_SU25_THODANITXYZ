@@ -56,7 +56,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     const loadNotifications = async () => {
       try {
         const token = localStorage.getItem('token');
-        if (token) {
+        const userRole = localStorage.getItem('userRole');
+        
+        // Only load admin notifications if user is admin or superadmin
+        if (token && (userRole === 'admin' || userRole === 'superadmin')) {
           console.log('Loading notifications from database...');
           const response = await fetch('http://localhost:8000/api/admin-notification', {
             headers: {
@@ -90,6 +93,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
             const errorData = await response.json();
             console.error('Failed to load notifications:', errorData);
           }
+        } else {
+          // For non-admin users, just initialize with empty notifications
+          console.log('User is not admin, skipping admin notifications load');
         }
       } catch (error) {
         console.error('Could not load notifications from database:', error);
@@ -134,48 +140,60 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
       
       if (token) {
-        console.log('Saving notification to database:', {
-          title: notification.title,
-          message: notification.message,
-          type: notification.type,
-          link: notification.actionUrl,
-          data: notification.metadata
-        });
+        const userRole = localStorage.getItem('userRole');
         
-        const response = await fetch('http://localhost:8000/api/admin-notification', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
+        // Only try to save to database if user has admin permissions
+        if (userRole === 'admin' || userRole === 'superadmin') {
+          console.log('Saving notification to database:', {
             title: notification.title,
             message: notification.message,
             type: notification.type,
             link: notification.actionUrl,
             data: notification.metadata
-          })
-        });
-        
-        if (response.ok) {
-          const savedData = await response.json();
-          console.log('Notification saved successfully:', savedData);
-          console.log('Saved data structure:', {
-            _id: savedData._id,
-            createdAt: savedData.createdAt,
-            isRead: savedData.isRead
           });
           
-          // Create notification with database ID
-          savedNotification = {
-            ...notification,
-            id: savedData._id,
-            timestamp: new Date(savedData.createdAt),
-            isRead: savedData.isRead
-          };
+          const response = await fetch('http://localhost:8000/api/admin-notification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              title: notification.title,
+              message: notification.message,
+              type: notification.type,
+              link: notification.actionUrl,
+              data: notification.metadata
+            })
+          });
+        
+          if (response.ok) {
+            const savedData = await response.json();
+            console.log('Notification saved successfully:', savedData);
+            console.log('Saved data structure:', {
+              _id: savedData._id,
+              createdAt: savedData.createdAt,
+              isRead: savedData.isRead
+            });
+            
+            // Create notification with database ID
+            savedNotification = {
+              ...notification,
+              id: savedData._id,
+              timestamp: new Date(savedData.createdAt),
+              isRead: savedData.isRead
+            };
+          } else {
+            // Only log error if it's not a permission error (403)
+            if (response.status !== 403) {
+              const errorData = await response.json();
+              console.error('Failed to save notification:', errorData);
+            } else {
+              console.log('Notification not saved to database (insufficient permissions), using temporary notification');
+            }
+          }
         } else {
-          const errorData = await response.json();
-          console.error('Failed to save notification:', errorData);
+          console.log('User does not have admin permissions, using temporary notification');
         }
       }
     } catch (error) {

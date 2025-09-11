@@ -30,23 +30,20 @@ async function loadAddressData() {
             const fileData = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
             addressDataCache = fileData;
             lastCacheTime = now;
-            console.log('✅ Đã load dữ liệu địa chỉ từ file');
             return fileData;
         }
     } catch (error) {
-        console.warn('⚠️ Không thể load dữ liệu từ file:', error.message);
+        console.warn('Không thể load dữ liệu từ file:', error.message);
     }
 
     // Nếu không có file, load từ API
     try {
-        console.log('🔄 Đang load dữ liệu từ API...');
         const response = await axios.get(`${PROVINCE_API_BASE}/p/`);
         const provinces = response.data.map(p => ({ code: p.code, name: p.name }));
         
         addressDataCache = { provinces, districts: {}, wards: {} };
         lastCacheTime = now;
         
-        console.log('✅ Đã load dữ liệu địa chỉ từ API');
         return addressDataCache;
     } catch (error) {
         console.error('❌ Lỗi khi load dữ liệu từ API:', error.message);

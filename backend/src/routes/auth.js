@@ -89,7 +89,7 @@ routerAuth.post(
 );
 
 routerAuth.patch("/users/:id/role", protect, checkAdmin(["capQuyen"]), updateUserRole);
-routerAuth.get("/users", protect, checkAdmin(["admin", "superadmin"]), getAllUsers);
+routerAuth.get("/users", protect, checkAdmin(["view_user"]), getAllUsers);
 routerAuth.get("/me", protect, getCurrentUser);
 routerAuth.get("/users/:id", protect, getUserById);
 routerAuth.patch("/users/:id/status", protect, checkAdmin(["CheckTaiKhoan"]), toggleUserStatus);

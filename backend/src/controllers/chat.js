@@ -10,7 +10,7 @@ export const getConversations = async (req, res) => {
     const userRole = req.user.role;
     const { page = 1, limit = 20, status } = req.query;
 
-    console.log('getConversations called:', { userId, userRole, status });
+    // Get conversations
 
     // Build filter based on user role
     let filter = {};
@@ -39,7 +39,7 @@ export const getConversations = async (req, res) => {
       }
     }
 
-    console.log('getConversations filter:', filter);
+    // Apply filter
 
     const conversations = await Conversation.find(filter)
       .populate('participants', 'name email avatar role')
@@ -57,23 +57,7 @@ export const getConversations = async (req, res) => {
 
     const total = await Conversation.countDocuments(filter);
 
-    console.log('getConversations result:', { 
-      found: conversations.length, 
-      total, 
-      conversations: conversations.map(c => ({ 
-        id: c._id, 
-        participants: c.participants.map(p => ({ id: p._id, name: p.name, role: p.role })),
-        lastMessage: c.lastMessage ? {
-          id: c.lastMessage._id,
-          content: c.lastMessage.content,
-          sender: c.lastMessage.sender ? {
-            id: c.lastMessage.sender._id,
-            name: c.lastMessage.sender.name,
-            role: c.lastMessage.sender.role
-          } : null
-        } : null
-      }))
-    });
+    // Return conversations
 
     res.json({
       success: true,
@@ -335,13 +319,7 @@ export const sendMessage = async (req, res) => {
     const userId = req.user.id;
     const { content, type = 'text', replyTo, attachments = [] } = req.body;
 
-    console.log('sendMessage called:', { 
-      conversationId, 
-      userId, 
-      userRole: req.user.role,
-      content: content?.substring(0, 50) + '...',
-      type 
-    });
+    // Send message
 
     // Check if user has access to conversation
     const conversation = await Conversation.findById(conversationId);
@@ -371,22 +349,13 @@ export const sendMessage = async (req, res) => {
       attachments
     });
 
-    console.log('Saving message to database...');
     await message.save();
-    console.log('Message saved successfully:', message._id);
     
     await message.populate('sender', 'name email avatar role');
     await message.populate('replyTo');
-    console.log('Message populated:', { 
-      id: message._id, 
-      sender: message.sender.name, 
-      role: message.sender.role,
-      content: message.content.substring(0, 50) + '...'
-    });
 
     // Auto update conversation status and priority for new customer messages
     if (message.sender.role === 'customer' || message.sender.role === 'user') {
-      console.log('Auto updating conversation status for customer message via API');
       try {
         await Conversation.findByIdAndUpdate(
           conversationId,

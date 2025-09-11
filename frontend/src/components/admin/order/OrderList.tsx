@@ -65,6 +65,7 @@ const OrderList: React.FC = () => {
 
   const getStatusColor = (status: string): string => {
     switch (status) {
+      case "draft": return "gray";
       case "pending": return "orange";
       case "processing": return "blue";
       case "shipped": return "purple";
@@ -76,12 +77,14 @@ const OrderList: React.FC = () => {
       case "returned": return "volcano";
       case "refund_requested": return "gold";
       case "refunded": return "lime";
+      case "payment_failed": return "red";
       default: return "gray";
     }
   };
 
   const getStatusText = (status: string): string => {
     switch (status) {
+      case "draft": return "Đang tạo";
       case "pending": return "Chờ xác nhận";
       case "processing": return "Đang xử lý";
       case "shipped": return "Đang giao";
@@ -93,6 +96,7 @@ const OrderList: React.FC = () => {
       case "returned": return "Hoàn hàng";
       case "refund_requested": return "Yêu cầu hoàn tiền";
       case "refunded": return "Hoàn tiền thành công";
+      case "payment_failed": return "Thanh toán thất bại";
       default: return "Không xác định";
     }
   };

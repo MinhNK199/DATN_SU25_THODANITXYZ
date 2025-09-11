@@ -27,10 +27,10 @@ import VariantManager from "./VariantManager"
 import { ArrowLeftOutlined, SaveOutlined, UploadOutlined, PlusOutlined } from "@ant-design/icons"
 import { FaTrash } from "react-icons/fa"
 import slugify from "slugify"
-import { getCategories, getBrands, getProductById, updateProduct } from "./api"
+import { getCategories, getBrands, getProductById } from "./api"
 import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
-import { validateAllVariants, cleanColorData, validateAndCleanProductData } from "./utils/validation"
+import { validateAllVariants, cleanColorData } from "./utils/validation"
 import { useNotification } from "../../../hooks/useNotification"
 
 const { Title, Text } = Typography
@@ -70,10 +70,6 @@ const ProductEdit: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>("")
   // Thêm state cho ảnh đại diện
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
-  // Thêm state cho thumbnail
-  const [thumbnailFiles, setThumbnailFiles] = useState<File[]>([])
-  const [thumbnailFileList, setThumbnailFileList] = useState<UploadFile[]>([])
-  const [existingThumbnails, setExistingThumbnails] = useState<string[]>([])
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
@@ -155,34 +151,6 @@ const ProductEdit: React.FC = () => {
           setMainImageFileList(currentMainImage)
         }
         
-        // Parse thumbnails with recursive approach
-        console.log('🔍 Raw thumbnails from API:', productData.thumbnails)
-        console.log('🔍 Type of thumbnails:', typeof productData.thumbnails)
-        
-        let thumbnails = productData.thumbnails || []
-        
-        // Recursive function to parse nested JSON strings
-        const parseThumbnails = (data) => {
-          if (Array.isArray(data)) {
-            return data.flatMap(item => parseThumbnails(item))
-          } else if (typeof data === 'string') {
-            try {
-              const parsed = JSON.parse(data)
-              return parseThumbnails(parsed)
-            } catch (e) {
-              // If it's not JSON, check if it's a valid path
-              if (data.startsWith('/uploads/')) {
-                return [data]
-              }
-              return []
-            }
-          }
-          return []
-        }
-        
-        thumbnails = parseThumbnails(thumbnails)
-        console.log('📤 Final thumbnails to set:', thumbnails)
-        setExistingThumbnails(thumbnails)
         
         form.setFieldsValue({
           name: productData.name,
@@ -311,10 +279,9 @@ const ProductEdit: React.FC = () => {
       
       formData.append("description", values.description)
       formData.append("images", JSON.stringify(finalImages))
-      // Send existing thumbnails as URLs
-      formData.append("thumbnails", JSON.stringify([...existingThumbnails]))
       formData.append("tags", JSON.stringify(values.tags || []))
       formData.append("warranty", String(values.warranty || 0))
+      formData.append("sku", values.sku || "")
       formData.append("brand", getId(values.brand))
       formData.append("category", getId(values.category))
       formData.append("price", String(processedVariants[0]?.price || 0))
@@ -329,10 +296,6 @@ const ProductEdit: React.FC = () => {
         formData.append("image", newMainImageFile.originFileObj)
       }
 
-      // Add thumbnail files
-      thumbnailFiles.forEach((file, index) => {
-        formData.append(`thumbnail_${index}`, file)
-      })
 
       console.log("🧹 Data before validation:", formData)
 
@@ -357,8 +320,8 @@ const ProductEdit: React.FC = () => {
       console.log("✅ Product updated successfully:", updatedProduct)
       success("Cập nhật sản phẩm thành công!")
       navigate("/admin/products")
-    } catch (error) {
-      console.error("❌ Error submitting form:", error)
+    } catch (err: unknown) {
+      console.error("❌ Error submitting form:", err)
       error("Đã xảy ra lỗi. Vui lòng thử lại.")
     } finally {
       setSubmitting(false)
@@ -449,17 +412,6 @@ const ProductEdit: React.FC = () => {
     }
   };
 
-  // Xử lý upload ảnh thumbnail
-  const handleThumbnailUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    const { fileList } = info;
-    setThumbnailFileList(fileList);
-
-    // Lấy tất cả files
-    const files = fileList
-      .filter((file: any) => file.originFileObj) // eslint-disable-line @typescript-eslint/no-explicit-any
-      .map((file: any) => file.originFileObj); // eslint-disable-line @typescript-eslint/no-explicit-any
-    setThumbnailFiles(files);
-  };
 
   if (loading) {
     return (
@@ -552,124 +504,6 @@ const ProductEdit: React.FC = () => {
               </Form.Item>
             </Card>
 
-            <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Ảnh thumbnail</Title>
-              <Form.Item label="Ảnh thumbnail sản phẩm">
-                <div className="space-y-4">
-                  <Upload
-                    listType="picture-card"
-                    fileList={thumbnailFileList}
-                    onChange={handleThumbnailUpload}
-                    beforeUpload={() => false}
-                    multiple
-                    showUploadList={true}
-                    className="w-full"
-                  >
-                    {thumbnailFileList.length < 5 && (
-                      <div className="flex flex-col items-center justify-center h-24 w-full">
-                        <UploadOutlined className="text-2xl text-gray-400 mb-1" />
-                        <div className="text-xs text-gray-500">Upload</div>
-                        <div className="text-xs text-gray-400">Tối đa 5 ảnh</div>
-                      </div>
-                    )}
-                  </Upload>
-                  
-                  {/* Hiển thị ảnh thumbnail hiện có */}
-                  {(() => {
-                    console.log('🔍 Rendering thumbnails, count:', existingThumbnails.length, 'data:', existingThumbnails)
-                    return null
-                  })()}
-                  {existingThumbnails.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                      {existingThumbnails.map((thumbnail, index) => {
-                        const fullUrl = thumbnail.startsWith('http') ? thumbnail : `http://localhost:8000${thumbnail}`
-                        console.log(`🖼️ Thumbnail ${index}:`, thumbnail, '→ Full URL:', fullUrl)
-                        return (
-                        <div key={`existing-thumb-${index}`} className="relative group">
-                          <Image
-                            src={fullUrl}
-                            alt={`Thumbnail ${index + 1}`}
-                            className="w-full h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
-                            onError={(e) => {
-                              console.error("Thumbnail load error:", thumbnail);
-                              console.error("Full URL attempted:", thumbnail.startsWith('http') ? thumbnail : `http://localhost:8000${thumbnail}`);
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                          <Button
-                            size="small"
-                            danger
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            style={{
-                              padding: 0,
-                              borderRadius: "50%",
-                              width: 20,
-                              height: 20,
-                              minWidth: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                            onClick={() => {
-                              const newThumbnails = existingThumbnails.filter((_, i) => i !== index);
-                              setExistingThumbnails(newThumbnails);
-                            }}
-                          >
-                            ×
-                          </Button>
-                          <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-xs px-1 rounded">
-                            Hiện có
-                          </div>
-                        </div>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {/* Hiển thị preview ảnh thumbnail mới */}
-                  {thumbnailFiles.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                      {thumbnailFiles.map((file, index) => (
-                        <div key={index} className="relative group">
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={`Thumbnail ${index + 1}`}
-                            className="w-full h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
-                            onError={(e) => {
-                              console.error("Thumbnail load error:", file.name);
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                          <Button
-                            size="small"
-                            danger
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            style={{
-                              padding: 0,
-                              borderRadius: "50%",
-                              width: 20,
-                              height: 20,
-                              minWidth: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                            onClick={() => {
-                              const newFiles = thumbnailFiles.filter((_, i) => i !== index);
-                              const newFileList = thumbnailFileList.filter((_, i) => i !== index);
-                              setThumbnailFiles(newFiles);
-                              setThumbnailFileList(newFileList);
-                            }}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Form.Item>
-            </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
               <Title level={4}>Thông tin bổ sung</Title>

@@ -232,7 +232,6 @@ const getImageSrc = (image?: string) => {
           <Tooltip title="Xem chi tiết">
             <Button
               type="primary"
-            className="admin-primary-button"
               className="admin-primary-button"
               icon={<FaEye />}
               onClick={() => showBannerDetail(record)}
@@ -327,8 +326,7 @@ const getImageSrc = (image?: string) => {
 </Button>
                     <Button
                       type="primary"
-            className="admin-primary-button"
-              className="admin-primary-button"
+                      className="admin-primary-button"
                       icon={<FaEdit />}
                       onClick={() =>
                         navigate(`/admin/banners/edit/${selectedBanner._id}`)

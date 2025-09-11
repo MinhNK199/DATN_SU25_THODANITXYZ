@@ -42,11 +42,11 @@ app.use(cors({
     credentials: true
 }));
 
-// Debug middleware
-app.use((req, res, next) => {
-    console.log(`📡 ${req.method} ${req.path}`);
-    next();
-});
+// Debug middleware (disabled for production)
+// app.use((req, res, next) => {
+//     console.log(`📡 ${req.method} ${req.path}`);
+//     next();
+// });
 
 // Token refresh middleware
 app.use(checkAndRefreshToken);
@@ -82,6 +82,9 @@ try {
   console.error('❌ Error initializing Socket.io:', error);
 }
 
+// Export io for use in other modules
+export { io };
+
 // Start server
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, async() => {
@@ -91,6 +94,15 @@ server.listen(PORT, async() => {
     console.log(`🔌 Socket.io: Enabled`);
     console.log(`📁 Thư mục uploads: ${uploadsDir}`);
     console.log(`⏰ Thời gian: ${new Date().toLocaleString('vi-VN')}`);
+
+    // Set global io instance for helper functions
+    try {
+        const { setIoInstance } = await import('./config/socket.js');
+        setIoInstance(io);
+        console.log('✅ Socket.io helper functions initialized');
+    } catch (error) {
+        console.error('❌ Error initializing socket helper functions:', error);
+    }
 
     // Kết nối database sau khi server khởi động
     try {
