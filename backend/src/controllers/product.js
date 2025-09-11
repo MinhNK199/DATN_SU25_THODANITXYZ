@@ -567,7 +567,7 @@ export const updateProduct = async(req, res) => {
             } catch (e) {
                 console.error("Error parsing existing additional images:", e);
             }
-            
+
             // Merge ảnh phụ mới và cũ
             product.additionalImages = [...existingAdditionalImages, ...additionalImageUrls];
         } else if (additionalImageUrls.length > 0) {
