@@ -10,62 +10,58 @@ interface SpecificationEditorProps {
 }
 
 const SpecificationEditor: React.FC<SpecificationEditorProps> = ({ value = {}, onChange }) => {
-  const [specs, setSpecs] = React.useState<{ key: string; value: string }[]>(() => {
-    // Khởi tạo từ value prop
-    const entries = Object.entries(value || {})
-    return entries.length > 0 ? entries.map(([key, val]) => ({ key, value: val })) : [{ key: "", value: "" }] // Luôn có ít nhất 1 dòng
-  })
+  const [specs, setSpecs] = React.useState<{ key: string; value: string }[]>([])
+  const [initialized, setInitialized] = React.useState(false)
 
-  // Sync với value prop khi thay đổi từ bên ngoài
+  // Khởi tạo từ value prop
   React.useEffect(() => {
-    const entries = Object.entries(value || {})
-    if (entries.length > 0) {
-      const newSpecs = entries.map(([key, val]) => ({ key, value: val }))
-      // Chỉ update nếu thực sự khác biệt
-      if (JSON.stringify(newSpecs) !== JSON.stringify(specs)) {
-        setSpecs(newSpecs)
+    if (!initialized) {
+      const entries = Object.entries(value || {})
+      if (entries.length > 0) {
+        setSpecs(entries.map(([key, val]) => ({ key, value: val })))
+      } else {
+        setSpecs([{ key: "", value: "" }])
       }
+      setInitialized(true)
     }
-  }, [value])
+  }, [value, initialized])
 
-  // Gọi onChange khi specs thay đổi
-  React.useEffect(() => {
+  const updateParent = (newSpecs: { key: string; value: string }[]) => {
     const newSpecsObject = Object.fromEntries(
-      specs
+      newSpecs
         .filter((s) => s.key.trim() && s.value.trim())
         .map((s) => [s.key.trim(), s.value.trim()])
     )
-
-    // Chỉ gọi onChange nếu dữ liệu thực sự thay đổi
-    if (JSON.stringify(newSpecsObject) !== JSON.stringify(value)) {
-      onChange(newSpecsObject)
-    }
-  }, [specs, onChange, value])
-
-  const handleAdd = () => {
-    setSpecs([...specs, { key: "", value: "" }])
-  }
-
-  const handleRemove = (idx: number) => {
-    if (specs.length <= 1) {
-      // Không cho xóa hết, luôn giữ ít nhất 1 dòng
-      setSpecs([{ key: "", value: "" }])
-    } else {
-      setSpecs(specs.filter((_, i) => i !== idx))
-    }
+    onChange(newSpecsObject)
   }
 
   const handleChange = (idx: number, field: "key" | "value", val: string) => {
     const newSpecs = [...specs]
     newSpecs[idx][field] = val
     setSpecs(newSpecs)
+    updateParent(newSpecs)
+  }
+
+  const handleAdd = () => {
+    const newSpecs = [...specs, { key: "", value: "" }]
+    setSpecs(newSpecs)
+    updateParent(newSpecs)
+  }
+
+  const handleRemove = (idx: number) => {
+    if (specs.length <= 1) {
+      const newSpecs = [{ key: "", value: "" }]
+      setSpecs(newSpecs)
+      updateParent(newSpecs)
+    } else {
+      const newSpecs = specs.filter((_, i) => i !== idx)
+      setSpecs(newSpecs)
+      updateParent(newSpecs)
+    }
   }
 
   const validateKey = (key: string, idx: number) => {
-    if (!key.trim()) {
-      return true // Cho phép để trống
-    }
-
+    if (!key.trim()) return true
     const duplicateIndex = specs.findIndex((s, i) => s.key.trim() === key.trim() && i !== idx)
     if (duplicateIndex !== -1) {
       message.error("Tên thông số bị trùng!")
