@@ -13,18 +13,23 @@ const SpecificationEditor: React.FC<SpecificationEditorProps> = ({ value = {}, o
   const [specs, setSpecs] = React.useState<{ key: string; value: string }[]>([])
   const [initialized, setInitialized] = React.useState(false)
 
+  console.log("🔍 SpecificationEditor received value:", value);
+
   // Khởi tạo từ value prop
   React.useEffect(() => {
-    if (!initialized) {
-      const entries = Object.entries(value || {})
-      if (entries.length > 0) {
-        setSpecs(entries.map(([key, val]) => ({ key, value: val })))
-      } else {
-        setSpecs([{ key: "", value: "" }])
-      }
-      setInitialized(true)
+    console.log("🔍 useEffect triggered:", { value, initialized });
+    const entries = Object.entries(value || {})
+    console.log("🔍 Entries:", entries);
+    if (entries.length > 0) {
+      const newSpecs = entries.map(([key, val]) => ({ key, value: val }))
+      console.log("🔍 Setting specs from value:", newSpecs);
+      setSpecs(newSpecs)
+    } else if (specs.length === 0) {
+      console.log("🔍 Setting empty specs");
+      setSpecs([{ key: "", value: "" }])
     }
-  }, [value, initialized])
+    setInitialized(true)
+  }, [value, specs.length])
 
   const updateParent = (newSpecs: { key: string; value: string }[]) => {
     const newSpecsObject = Object.fromEntries(

@@ -84,10 +84,11 @@ const VariantEdit: React.FC = () => {
           product: variant.product?._id || variant.product || ''
         });
         
-        // Set specifications với delay để đảm bảo component đã mount
-        setTimeout(() => {
-          setSpecifications(variant.specifications || {});
-        }, 100);
+        // Set specifications ngay lập tức
+        console.log("🔍 VariantEdit: variant.specifications:", variant.specifications);
+        const specs = variant.specifications || {};
+        console.log("🔍 VariantEdit: setting specifications:", specs);
+        setSpecifications(specs);
       } catch (error) {
         console.error('Error fetching variant:', error);
         error('Không thể tải thông tin biến thể');
