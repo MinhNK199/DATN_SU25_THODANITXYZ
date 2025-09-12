@@ -10,6 +10,7 @@ import {
   FaCrown,
   FaUserTie,
 } from "react-icons/fa";
+import LoginModeToggle from './LoginModeToggle';
 import axios from "axios";
 
 export default function Login() {
@@ -20,6 +21,7 @@ export default function Login() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showRoleChoice, setShowRoleChoice] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loginMode, setLoginMode] = useState<'user' | 'shipper'>('user');
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -45,25 +47,51 @@ export default function Login() {
     if (isLogin) {
       // Logic đăng nhập
       try {
-        const res = await axios.post("/api/auth/login", {
-          email: formData.email,
-          password: formData.password,
-        });
+        if (loginMode === 'shipper') {
+          // Đăng nhập shipper
+          const res = await axios.post("/api/shipper/login", {
+            email: formData.email,
+            password: formData.password,
+          });
 
-        setSuccess(res.data.message || "Đăng nhập thành công!");
-        localStorage.setItem("token", res.data.token);
-
-        const user = res.data.user;
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        setCurrentUser(user);
-
-        const role = user?.role;
-        if (role === "admin" || role === "superadmin") {
-          setShowRoleChoice(true);
-        } else {
+          setSuccess("Đăng nhập shipper thành công!");
+          
+          // Lưu vào localStorage
+          localStorage.setItem("shipperToken", res.data.data.token);
+          localStorage.setItem("shipper", JSON.stringify(res.data.data.shipper));
+          
+          console.log('🚚 Shipper login success!');
+          console.log('📦 Token saved:', res.data.data.token);
+          console.log('📦 Shipper data saved:', res.data.data.shipper);
+          
+          // Đợi một chút để localStorage được lưu
           setTimeout(() => {
-            navigate("/");
-          }, 1500);
+            console.log('🔄 Redirecting to /shipper/dashboard...');
+            console.log('🔍 Verify token in localStorage:', localStorage.getItem("shipperToken"));
+            window.location.href = "/shipper/dashboard"; // Force reload
+          }, 500);
+        } else {
+          // Đăng nhập user/admin
+          const res = await axios.post("/api/auth/login", {
+            email: formData.email,
+            password: formData.password,
+          });
+
+          setSuccess(res.data.message || "Đăng nhập thành công!");
+          localStorage.setItem("token", res.data.token);
+
+          const user = res.data.user;
+          localStorage.setItem("user", JSON.stringify(res.data.user));
+          setCurrentUser(user);
+
+          const role = user?.role;
+          if (role === "admin" || role === "superadmin") {
+            setShowRoleChoice(true);
+          } else {
+            setTimeout(() => {
+              navigate("/");
+            }, 1500);
+          }
         }
       } catch (err: any) {
         const errorMessage =
@@ -179,9 +207,14 @@ export default function Login() {
           </h2>
           <p className="text-gray-600">
             {isLogin
-              ? "Đăng nhập vào tài khoản để tiếp tục"
+              ? (loginMode === 'shipper' ? 'Đăng nhập với tài khoản shipper' : 'Đăng nhập vào tài khoản để tiếp tục')
               : "Tham gia cùng chúng tôi và bắt đầu mua sắm ngay hôm nay"}
           </p>
+          
+          {/* Login Mode Toggle */}
+          {isLogin && (
+            <LoginModeToggle loginMode={loginMode} setLoginMode={setLoginMode} />
+          )}
         </div>
 
         {/* Error/Success Messages */}
@@ -347,15 +380,17 @@ export default function Login() {
               className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl ${
                 isLoading
                   ? "bg-gray-400 cursor-not-allowed text-white"
-                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  : loginMode === 'shipper'
+                    ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
               }`}
             >
               {isLoading
                 ? isLogin
-                  ? "Đang đăng nhập..."
+                  ? (loginMode === 'shipper' ? "Đang đăng nhập shipper..." : "Đang đăng nhập...")
                   : "Đang đăng ký..."
                 : isLogin
-                ? "Đăng nhập"
+                ? (loginMode === 'shipper' ? "🚚 Đăng nhập Shipper" : "Đăng nhập")
                 : "Tạo tài khoản"}
             </button>
           </form>

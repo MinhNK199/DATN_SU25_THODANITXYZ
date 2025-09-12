@@ -76,6 +76,15 @@ import BlogDetail from './pages/client/BlogDetail';
 import CheckoutFailed from './pages/client/CheckoutFailed';
 import CheckoutStatus from './pages/client/CheckoutStatus';
 
+// Import Shipper components
+import ShipperLogin from './components/shipper/ShipperLoginSimple';
+import ShipperRegister from './components/shipper/ShipperRegister';
+import ShipperDashboard from './components/shipper/ShipperDashboard';
+import ShipperOrderDetail from './components/shipper/OrderDetail';
+import ShipperManagement from './components/admin/shipper/ShipperManagement';
+import { ShipperProvider } from './contexts/ShipperContext';
+import PrivateRouteShipper from './components/PrivateRouteShipper';
+
 // Import Profile components
 import ProfileLayout from './pages/client/profile/components/ProfileLayout';
 import PersonalInfo from './pages/client/profile/personal-info';
@@ -112,6 +121,32 @@ function App() {
                       <Route path="/register" element={<Register />} />
                       <Route path="/admin-dky" element={<RegisterAdmin />} />
                       <Route path="/admin-list" element={<Listadmin />} />
+
+                      {/* Shipper routes */}
+                      <Route path="/shipper/login" element={
+                        <ShipperProvider>
+                          <ShipperLogin />
+                        </ShipperProvider>
+                      } />
+                      <Route path="/shipper/register" element={
+                        <ShipperProvider>
+                          <ShipperRegister />
+                        </ShipperProvider>
+                      } />
+                      <Route path="/shipper/dashboard" element={
+                        <ShipperProvider>
+                          <PrivateRouteShipper>
+                            <ShipperDashboard />
+                          </PrivateRouteShipper>
+                        </ShipperProvider>
+                      } />
+                      <Route path="/shipper/order/:orderId" element={
+                        <ShipperProvider>
+                          <PrivateRouteShipper>
+                            <ShipperOrderDetail />
+                          </PrivateRouteShipper>
+                        </ShipperProvider>
+                      } />
 
                       {/* Client Routes */}
                       <Route path="/" element={<ClientLayout />}>
@@ -187,6 +222,7 @@ function App() {
                         <Route path="blogs" element={<BlogPage />} />
                         <Route path="chat" element={<ChatPage />} />
                         <Route path="detailed-stats" element={<DetailedStats />} />
+                        <Route path="shipper" element={<ShipperManagement />} />
                       </Route>
                     </Routes>
 

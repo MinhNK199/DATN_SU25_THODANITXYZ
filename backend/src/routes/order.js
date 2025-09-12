@@ -16,7 +16,8 @@ import {
   cancelOrder,
   getValidOrderStatusOptions,
   handlePaymentFailed,
-  confirmOrderAfterPayment
+  confirmOrderAfterPayment,
+  confirmOrder
 } from "../controllers/order.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import Order from "../models/Order.js";
@@ -41,6 +42,7 @@ routerOrder.put("/:id/return-request", protect, requestReturn);
 routerOrder.put("/:id/confirm-satisfaction", protect, confirmSatisfaction);
 routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
 routerOrder.put("/:id/cancel", protect, cancelOrder);
+routerOrder.put("/:id/confirm", protect, confirmOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
