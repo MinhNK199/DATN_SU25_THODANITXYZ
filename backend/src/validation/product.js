@@ -128,6 +128,44 @@ export const createProductValidation = [
     .withMessage('Trạng thái nổi bật phải là boolean'),
 ];
 
+export const updateAdditionalImagesValidation = [
+    body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 200 })
+    .withMessage('Tên sản phẩm phải có từ 2 đến 200 ký tự'),
+
+    body('price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Giá sản phẩm phải là số dương'),
+
+    body('category')
+    .optional()
+    .isMongoId()
+    .withMessage('Danh mục không hợp lệ'),
+
+    body('brand')
+    .optional()
+    .isMongoId()
+    .withMessage('Thương hiệu không hợp lệ'),
+
+    body('variants')
+    .optional()
+    .isArray()
+    .withMessage('Biến thể phải là một mảng'),
+
+    body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('Trạng thái kích hoạt phải là boolean'),
+
+    body('isFeatured')
+    .optional()
+    .isBoolean()
+    .withMessage('Trạng thái nổi bật phải là boolean'),
+];
+
 export const updateProductValidation = [
     body('name')
     .optional()

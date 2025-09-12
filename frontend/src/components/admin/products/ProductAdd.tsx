@@ -182,16 +182,17 @@ const ProductAddPage: React.FC = () => {
       }
 
       // Ảnh phụ
-      additionalImages.forEach((file, index) => {
-        formData.append(`additionalImages`, file)
-      })
-
-
       // Biến thể
       formData.append("variants", JSON.stringify(variants.map((v) => {
         const { imageFile, ...rest } = v; // eslint-disable-line @typescript-eslint/no-unused-vars
         return rest;
       })))
+
+      // Thêm ảnh phụ
+      additionalImages.forEach((file, index) => {
+        formData.append('additionalImages', file);
+        console.log(`📤 Added additional image ${index + 1}:`, file.name);
+      });
 
       // Debug: Log form data
       console.log("📤 Sending product data:");
@@ -204,6 +205,7 @@ const ProductAddPage: React.FC = () => {
       console.log("SKU:", values.sku);
       console.log("Variants:", variants);
       console.log("Main image file:", mainImageFile);
+      console.log("Additional images:", additionalImages);
 
       // Gửi request
       const token = localStorage.getItem("token")
@@ -356,18 +358,33 @@ const ProductAddPage: React.FC = () => {
                     maxCount={5}
                     multiple
                     className="w-full"
+                    showUploadList={{
+                      showPreviewIcon: true,
+                      showRemoveIcon: true,
+                    }}
                   >
                     {additionalImageFileList.length < 5 && (
                       <div className="flex flex-col items-center justify-center h-24 w-full">
                         <PlusOutlined className="text-2xl text-gray-400 mb-2" />
                         <div className="text-sm text-gray-500">Thêm ảnh phụ</div>
+                        <div className="text-xs text-gray-400">
+                          {additionalImageFileList.length}/5
+                        </div>
                       </div>
                     )}
                   </Upload>
                   
-                  <Text type="secondary" className="text-xs">
-                    Ảnh phụ sẽ hiển thị trong trang chi tiết sản phẩm khi có ít biến thể
-                  </Text>
+                  <div className="space-y-1">
+                    <Text type="secondary" className="text-xs block">
+                      • Ảnh phụ sẽ hiển thị trong trang chi tiết sản phẩm
+                    </Text>
+                    <Text type="secondary" className="text-xs block">
+                      • Tối đa 5 ảnh phụ mỗi lần upload
+                    </Text>
+                    <Text type="secondary" className="text-xs block">
+                      • Định dạng: JPG, PNG, JPEG (tối đa 5MB/ảnh)
+                    </Text>
+                  </div>
                 </div>
               </Form.Item>
 

@@ -456,7 +456,7 @@ const ProductDetail: React.FC = () => {
                       return (
                         <img
                           src={allImages[selectedImage]}
-                          alt={product.name}
+                    alt={product.name}
                           className="max-w-full max-h-full object-contain"
                         />
                       );
@@ -541,8 +541,8 @@ const ProductDetail: React.FC = () => {
                         
                         {/* All Images (Product + Variants) */}
                         {allImages.map((image: string, index: number) => (
-                          <button
-                            key={index}
+                      <button
+                        key={index}
                             onClick={() => {
                               setSelectedImage(index);
                               setIsVideoMode(false);
@@ -552,15 +552,15 @@ const ProductDetail: React.FC = () => {
                                 ? "border-red-500"
                                 : "border-gray-200 hover:border-gray-300"
                             }`}
-                          >
-                            <img
-                              src={image}
-                              alt={`${product.name} ${index + 1}`}
+                      >
+                        <img
+                          src={image}
+                          alt={`${product.name} ${index + 1}`}
                               className="w-full h-full object-cover rounded"
-                            />
-                          </button>
-                        ))}
-                      </div>
+                        />
+                      </button>
+                    ))}
+                  </div>
                       
                       {/* Right Navigation Arrow for Thumbnails */}
                       <button className="absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-16 bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-lg rounded-l transition-all duration-200">
@@ -568,7 +568,7 @@ const ProductDetail: React.FC = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
-                    </div>
+              </div>
                   );
                 })()}
 
@@ -593,22 +593,22 @@ const ProductDetail: React.FC = () => {
                 {/* Rating and Reviews */}
                 <div className="flex items-center space-x-4">
                   <div className="flex items-center space-x-1">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, index) => (
-                        <FaStar
-                          key={index}
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, index) => (
+                      <FaStar
+                        key={index}
                           className={`w-4 h-4 ${
-                            index < Math.floor(product.rating || 0)
-                              ? "text-yellow-400"
-                              : "text-gray-300"
-                          }`}
-                        />
-                      ))}
-                    </div>
+                          index < Math.floor(product.rating || 0)
+                            ? "text-yellow-400"
+                            : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
                     <span className="text-sm font-medium text-gray-700">
                       {product.rating || 0}
-                    </span>
-                  </div>
+                  </span>
+                </div>
                   <div className="h-4 w-px bg-gray-300"></div>
                   <span className="text-sm text-gray-600">
                     {product.reviewCount || 0} đánh giá
@@ -685,7 +685,7 @@ const ProductDetail: React.FC = () => {
                       <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
                         Giảm 50k
                       </button>
-                    </div>
+                </div>
                   </div>
 
                   {/* Installment Section */}
@@ -942,19 +942,19 @@ const ProductDetail: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-3 mt-2">
                   <div className="flex gap-3">
-                    <button
-                      onClick={handleAddToCart}
-                      disabled={
-                        product.stock <= 0 ||
-                        (product.variants &&
-                          product.variants.length > 0 &&
-                          !selectedVariantId)
-                      }
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={
+                      product.stock <= 0 ||
+                      (product.variants &&
+                        product.variants.length > 0 &&
+                        !selectedVariantId)
+                    }
                       className="flex-1 bg-red-500 border-2 border-red-500 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
                       <FaShoppingCart className="w-4 h-4" />
                       <span>Thêm vào giỏ hàng</span>
-                    </button>
+                  </button>
                     <button className="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-red-700 transition-colors">
                       Mua ngay
                     </button>
@@ -1157,6 +1157,70 @@ const ProductDetail: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Section Ảnh phụ sản phẩm */}
+      {product.additionalImages && product.additionalImages.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <span className="w-1 h-6 bg-red-500 rounded-full mr-3"></span>
+              Ảnh phụ sản phẩm
+              <span className="ml-2 text-sm text-gray-500 font-normal">
+                ({product.additionalImages.length} ảnh)
+              </span>
+            </h3>
+            <div className="text-sm text-gray-500">
+              💡 Click để xem trong gallery
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+            {product.additionalImages.map((image: string, index: number) => (
+              <div
+                key={index}
+                className="relative group cursor-pointer transform hover:scale-105 transition-all duration-200"
+                onClick={() => {
+                  // Thêm ảnh phụ vào danh sách ảnh chính để xem
+                  if (!product.images?.includes(image)) {
+                    const newImages = [...(product.images || []), image];
+                    setProduct({...product, images: newImages});
+                    setSelectedImage(newImages.length - 1);
+                  } else {
+                    const mainImageIndex = product.images?.findIndex((mainImg: string) => mainImg === image);
+                    if (mainImageIndex !== -1) {
+                      setSelectedImage(mainImageIndex);
+                    }
+                  }
+                  setIsVideoMode(false);
+                }}
+              >
+                <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 group-hover:border-red-500 transition-all duration-200">
+                  <img
+                    src={image}
+                    alt={`Ảnh phụ ${index + 1}`}
+                    className="w-full h-28 object-cover group-hover:scale-110 transition-transform duration-200"
+                    loading="lazy"
+                  />
+                  
+                  {/* Overlay với icon */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <svg className="w-8 h-8 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Số thứ tự */}
+                  <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">
+                    {index + 1}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Modal
         open={showVariantModal}

@@ -61,8 +61,8 @@ import {
 } from "../controllers/product.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
-import { createProductValidation, updateProductValidation } from "../validation/product.js";
-import { uploadImage, uploadMultipleImages } from "../controllers/upload.js";
+import { createProductValidation, updateProductValidation, updateAdditionalImagesValidation } from "../validation/product.js";
+import { uploadImage, uploadMultipleImages, uploadAdditionalImages, uploadFlexible, handleMulterError } from "../controllers/upload.js";
 import { normalizeProductBody } from "../middlewares/normalizeProductBody.js";
 
 const routerProduct = express.Router();
@@ -84,8 +84,16 @@ routerProduct.delete("/:id/favorite", protect, removeFromFavorites);
 routerProduct.get("/:id/variant-stats", protect, getVariantStats);
 
 routerProduct.get("/", getProducts);
-routerProduct.post("/", protect, uploadMultipleImages, normalizeProductBody, createProductValidation, validateRequest, createProduct);
-routerProduct.put("/:id", protect, uploadMultipleImages, normalizeProductBody, updateProductValidation, validateRequest, updateProduct);
+routerProduct.post("/", protect, uploadMultipleImages, handleMulterError, normalizeProductBody, createProductValidation, validateRequest, createProduct);
+
+// ✅ CẬP NHẬT ẢNH PHỤ SẢN PHẨM (phải đặt trước PUT /:id để tránh conflict)
+routerProduct.put('/:id/additional-images', (req, res, next) => {
+    console.log('🔍 Additional images route hit:', req.method, req.path);
+    console.log('🔍 Product ID:', req.params.id);
+    next();
+}, protect, uploadFlexible, handleMulterError, normalizeProductBody, updateAdditionalImagesValidation, validateRequest, updateProduct);
+
+routerProduct.put("/:id", protect, uploadMultipleImages, handleMulterError, normalizeProductBody, updateProductValidation, validateRequest, updateProduct);
 routerProduct.delete("/:id", protect, deleteProduct);
 routerProduct.put("/:id/soft-delete", protect, softDeleteProduct);
 routerProduct.put("/:id/restore", protect, restoreProduct);
