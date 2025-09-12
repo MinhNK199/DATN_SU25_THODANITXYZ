@@ -485,6 +485,7 @@ export const updateCartItem = async(req, res) => {
 export const removeFromCart = async(req, res) => {
     try {
         const { productId } = req.params;
+        const { variantId } = req.body;
 
         // Xóa reservation
         await ProductReservation.updateMany({
@@ -501,7 +502,13 @@ export const removeFromCart = async(req, res) => {
             return res.status(404).json({ message: "Không tìm thấy giỏ hàng" });
         }
 
-        cart.items = cart.items.filter(item => item.product.toString() !== productId);
+        // Lọc item theo productId và variantId (nếu có)
+        cart.items = cart.items.filter(item => {
+            const productMatch = item.product.toString() === productId;
+            const variantMatch = variantId ? String(item.variantId || '') === String(variantId) : true;
+            return !(productMatch && variantMatch);
+        });
+
         await cart.save();
 
         await cart.populate('items.product', 'name price salePrice images stock');

@@ -233,7 +233,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const cart = await cartApi.removeFromCart(productId);
+      // Truyền variantId nếu có để backend có thể xử lý đúng
+      const cart = await cartApi.removeFromCart(productId, variantId);
       dispatch({ type: 'LOAD_CART', payload: cart });
       toast.success('Đã xóa sản phẩm khỏi giỏ hàng');
     } catch (error: any) {
