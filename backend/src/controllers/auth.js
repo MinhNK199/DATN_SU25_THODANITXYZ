@@ -84,7 +84,7 @@ export const dangNhap = async (req, res) => {
     if (!user.active) {
       return res.status(403).json({ message: "Tài khoản đang bị khóa" });
     }
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
     await logActivity({
@@ -442,7 +442,7 @@ export const googleLogin = async (req, res) => {
       return res.status(403).json({ message: "Tài khoản đang bị khóa." });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
 

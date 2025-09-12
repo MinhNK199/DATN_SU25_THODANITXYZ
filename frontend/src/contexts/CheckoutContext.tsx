@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import voucherService, { VoucherInfo } from '../services/voucherService';
 
 export interface FormDataType {
   lastName: string;
@@ -35,6 +36,10 @@ interface CheckoutContextType {
   setWalletInfo: React.Dispatch<React.SetStateAction<WalletInfoType>>;
   bankTransferInfo: BankTransferInfoType;
   setBankTransferInfo: React.Dispatch<React.SetStateAction<BankTransferInfoType>>;
+  voucher: VoucherInfo | null;
+  setVoucher: React.Dispatch<React.SetStateAction<VoucherInfo | null>>;
+  clearVoucher: () => void;
+  revalidateVoucher: (orderValue: number) => Promise<void>;
 }
 
 const defaultFormData: FormDataType = {
@@ -70,6 +75,33 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [cardInfo, setCardInfo] = useState<CardInfoType>(defaultCardInfo);
   const [walletInfo, setWalletInfo] = useState<WalletInfoType>(defaultWalletInfo);
   const [bankTransferInfo, setBankTransferInfo] = useState<BankTransferInfoType>(defaultBankTransferInfo);
+  const [voucher, setVoucher] = useState<VoucherInfo | null>(null);
+
+  // Load voucher từ localStorage khi component mount
+  useEffect(() => {
+    const storedVoucher = voucherService.getVoucherFromStorage();
+    if (storedVoucher) {
+      setVoucher(storedVoucher);
+    }
+  }, []);
+
+  const clearVoucher = () => {
+    setVoucher(null);
+    voucherService.clearVoucherFromStorage();
+  };
+
+  const revalidateVoucher = async (orderValue: number) => {
+    if (!voucher) return;
+
+    try {
+      const updatedVoucher = await voucherService.revalidateStoredVoucher(orderValue);
+      if (updatedVoucher) {
+        setVoucher(updatedVoucher);
+      }
+    } catch (error) {
+      console.error('Error revalidating voucher:', error);
+    }
+  };
 
   return (
     <CheckoutContext.Provider
@@ -82,6 +114,10 @@ export const CheckoutProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setWalletInfo,
         bankTransferInfo,
         setBankTransferInfo,
+        voucher,
+        setVoucher,
+        clearVoucher,
+        revalidateVoucher,
       }}
     >
       {children}

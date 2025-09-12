@@ -128,10 +128,10 @@ const Activity: React.FC = () => {
           format="DD/MM/YYYY"
           className="w-full"
         />
-        <Button onClick={handleReset} className="w-full bg-gray-100 hover:bg-gray-200">
+        <Button onClick={handleReset} className="w-full admin-bg-blue-light hover:admin-bg-blue text-white">
           Đặt lại
         </Button>
-        <Button type="primary" onClick={fetchLogs} className="w-full">
+        <Button type="primary" className="admin-primary-button w-full" onClick={fetchLogs}>
           Tải lại
         </Button>
       </div>

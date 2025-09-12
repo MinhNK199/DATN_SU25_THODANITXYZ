@@ -154,10 +154,8 @@ export const deleteCategory = async (req, res) => {
         if (!category) {
             return res.status(404).json({ message: "Không tìm thấy danh mục" });
         }
-        const hasChildren = await Category.exists({ parent: category._id });
-        if (hasChildren) {
-            return res.status(400).json({ message: "Không thể xóa danh mục có danh mục con" });
-        }
+
+        // Loại bỏ logic kiểm tra danh mục con
         await Category.findByIdAndDelete(req.params.id); 
         res.json({ message: "Đã xóa danh mục thành công" });
     } catch (error) {

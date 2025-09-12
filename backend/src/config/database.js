@@ -2,13 +2,8 @@ import mongoose from "mongoose";
 
 const connectDB = async() => {
     try {
-        // Fallback to local MongoDB if no MONGODB_URI is set
-        const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/datn_su25";
-        
-        await mongoose.connect(mongoURI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/DATN';
+        await mongoose.connect(mongoURI);
         console.log("Kết nối DB DATN thành công ✅");
         console.log("MongoDB URI:", mongoURI);
     } catch (error) {
@@ -17,7 +12,7 @@ const connectDB = async() => {
         
         // Fallback to MongoDB Atlas
         try {
-            const atlasURI = "mongodb+srv://admin:admin123@cluster0.mongodb.net/datn_su25?retryWrites=true&w=majority";
+            const atlasURI = "mongodb+srv://admin:admin123@cluster0.mongodb.net/DATN?retryWrites=true&w=majority";
             await mongoose.connect(atlasURI, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
@@ -30,4 +25,4 @@ const connectDB = async() => {
         }
     }
 };
-export default connectDB;
+export default connec tDB;

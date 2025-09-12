@@ -1,11 +1,13 @@
 "use client"
 
 import type React from "react"
-import { useRef } from "react"
-import { Button, Input, InputNumber, Switch, Row, Col, Card, Space, Tooltip, ColorPicker, message, Select } from "antd"
+import { useState, useEffect } from "react"
+import { Button, Input, InputNumber, Switch, Row, Col, Card, Space, Tooltip, ColorPicker, message, Select, Upload, Image } from "antd"
+import type { UploadFile } from "antd/es/upload/interface"
 import { FaPlus, FaTrash } from "react-icons/fa"
+import { PlusOutlined } from "@ant-design/icons"
 import SpecificationEditor from "./SpecificationEditor"
-import { validateVariant, cleanColorData, COLOR_OPTIONS, type ProductVariant } from "./utils/validation"
+import { COLOR_OPTIONS, type ProductVariant } from "./utils/validation"
 
 interface VariantManagerProps {
   variants: ProductVariant[]
@@ -13,6 +15,126 @@ interface VariantManagerProps {
 }
 
 const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsChange }) => {
+  const [fileLists, setFileLists] = useState<Record<string, UploadFile[]>>({})
+  const [touchedVariants, setTouchedVariants] = useState<Set<string>>(new Set())
+  // State để lưu trữ lỗi SKU từ database
+  const [skuErrors, setSkuErrors] = useState<Record<string, string>>({})
+  const [skuCheckTimeouts, setSkuCheckTimeouts] = useState<Record<string, number>>({})
+
+  // Initialize file lists for existing variants
+  useEffect(() => {
+    const newFileLists: Record<string, UploadFile[]> = {};
+    variants.forEach(variant => {
+      if (variant.images && variant.images.length > 0 && !fileLists[variant.id]) {
+        newFileLists[variant.id] = variant.images.map((imgUrl, index) => ({
+          uid: `existing-${variant.id}-${index}`,
+          name: `image-${index}`,
+          status: 'done',
+          url: imgUrl,
+          thumbUrl: imgUrl
+        }));
+      }
+    });
+    if (Object.keys(newFileLists).length > 0) {
+      setFileLists(prev => ({ ...prev, ...newFileLists }));
+    }
+  }, [variants]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(skuCheckTimeouts).forEach(timeout => {
+        if (timeout) clearTimeout(timeout);
+      });
+    };
+  }, [skuCheckTimeouts]);
+
+  // Hàm kiểm tra SKU với database
+  const checkSkuInDatabase = async (sku: string, variantId: string) => {
+    if (!sku?.trim()) {
+      // Xóa lỗi nếu SKU trống
+      setSkuErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[variantId];
+        return newErrors;
+      });
+      return;
+    }
+
+    try {
+      console.log(`🔍 Checking SKU "${sku}" for variant ${variantId}`);
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        console.error("❌ No token found");
+        setSkuErrors(prev => ({ ...prev, [variantId]: "Vui lòng đăng nhập để kiểm tra SKU" }));
+        return;
+      }
+
+      const url = `http://localhost:8000/api/product/check-sku?sku=${encodeURIComponent(sku)}`;
+      console.log(`📡 Making request to: ${url}`);
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log(`📡 SKU check response status: ${response.status}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`📋 SKU check result:`, data);
+        
+        if (data.exists) {
+          setSkuErrors(prev => ({ ...prev, [variantId]: data.message }));
+          console.log(`❌ SKU "${sku}" exists: ${data.message}`);
+        } else {
+          setSkuErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[variantId];
+            return newErrors;
+          });
+          console.log(`✅ SKU "${sku}" is available`);
+        }
+      } else {
+        const errorText = await response.text();
+        console.error(`❌ SKU check failed: ${response.status} - ${errorText}`);
+        
+        // Nếu backend không hoạt động, không hiển thị lỗi để tránh làm phiền người dùng
+        // Chỉ log vào console để debug
+        if (response.status === 404) {
+          console.log("⚠️ Backend endpoint not found - skipping database validation");
+        } else if (response.status === 401) {
+          console.log("⚠️ Token invalid - skipping database validation");
+        } else if (response.status === 500) {
+          console.log("⚠️ Backend error - skipping database validation");
+        } else {
+          console.log(`⚠️ Unknown error ${response.status} - skipping database validation`);
+        }
+        
+        // Xóa lỗi cũ nếu có
+        setSkuErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[variantId];
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error("❌ Error checking SKU:", error);
+      console.log("⚠️ Network error - skipping database validation");
+      
+      // Xóa lỗi cũ nếu có
+      setSkuErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[variantId];
+        return newErrors;
+      });
+    }
+  };
+
   // Validation functions
   const validateVariant = (variant: ProductVariant): { isValid: boolean; errors: string[] } => {
     const errors: string[] = []
@@ -45,6 +167,33 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       errors.push("Chiều cao phải lớn hơn 0")
     }
 
+    // Kiểm tra trùng lặp SKU trong form hiện tại
+    if (variant.sku?.trim()) {
+      const duplicateSku = variants.filter(v => 
+        v.id !== variant.id && 
+        v.sku?.trim().toLowerCase() === variant.sku.trim().toLowerCase()
+      );
+      if (duplicateSku.length > 0) {
+        errors.push(`SKU "${variant.sku}" đã tồn tại trong biến thể khác`)
+      }
+    }
+
+    // Kiểm tra trùng lặp tên biến thể
+    if (variant.name?.trim()) {
+      const duplicateName = variants.filter(v => 
+        v.id !== variant.id && 
+        v.name?.trim().toLowerCase() === variant.name.trim().toLowerCase()
+      );
+      if (duplicateName.length > 0) {
+        errors.push(`Tên biến thể "${variant.name}" đã tồn tại`)
+      }
+    }
+
+    // Kiểm tra lỗi SKU từ database
+    if (skuErrors[variant.id]) {
+      errors.push(skuErrors[variant.id]);
+    }
+
     // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
     //if ((!variant.images || variant.images.length === 0) && !variant.imageFile) {
      // errors.push("Phải upload ít nhất 1 ảnh biến thể")
@@ -56,8 +205,9 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   }
 
   const addVariant = () => {
+    const newVariantId = Date.now().toString();
     const newVariant: ProductVariant = {
-      id: Date.now().toString(),
+      id: newVariantId,
       name: "",
       sku: "",
       price: 0,
@@ -74,11 +224,18 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       isActive: true,
       specifications: {},
     }
+    
+    // Khởi tạo fileList trống cho variant mới
+    setFileLists(prev => ({ ...prev, [newVariantId]: [] }));
+    
     onVariantsChange([...variants, newVariant])
   }
 
   const updateVariant = (id: string, field: keyof ProductVariant, value: unknown) => {
     console.log(`🔄 Updating variant ${id}, field: ${field}, value:`, value)
+
+    // Đánh dấu variant đã được tương tác
+    setTouchedVariants(prev => new Set(prev).add(id))
 
     const updatedVariants = variants.map((v) => {
       if (v.id === id) {
@@ -148,10 +305,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     }).format(price)
   }
 
-  const validatePositiveNumber = (value: any) => {
+  const validatePositiveNumber = (value: number | undefined) => {
     if (typeof value !== "number" || value <= 0 || isNaN(value)) {
       return {
-        validateStatus: "error" as const,
+        status: "error" as const,
         help: "Phải nhập số dương",
       }
     }
@@ -159,7 +316,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
   }
 
   // CRITICAL FIX: Xử lý ColorPicker change event đúng cách
-  const handleColorChange = (variantId: string, _: any, hex?: string) => {
+  const handleColorChange = (variantId: string, _: unknown, hex?: string) => {
     const currentVariant = variants.find((v) => v.id === variantId)
     const currentColor = currentVariant?.color || { code: "#000000", name: "" }
 
@@ -186,68 +343,6 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     updateVariant(variantId, "specifications", validSpecs)
   }
 
-  // Validate all variants
-  const validateAllVariants = () => {
-    const allErrors: { variantId: string; errors: string[] }[] = []
-    
-    variants.forEach((variant, index) => {
-      const validation = validateVariant(variant)
-      if (!validation.isValid) {
-        allErrors.push({
-          variantId: variant.id,
-          errors: validation.errors
-        })
-      }
-    })
-    
-    return allErrors
-  }
-
-  const handleImageChange = async (variantId: string, file: File) => {
-    const formData = new FormData();
-    formData.append("image", file);
-
-    const response = await fetch("http://localhost:8000/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await response.json();
-
-    if (data?.url) {
-      const updatedVariants = variants.map((v) =>
-        v.id === variantId
-          ? { ...v, images: [data.url] }
-          : v
-      );
-      onVariantsChange(updatedVariants);
-    }
-  };
-
-  const handleImagesUpload = async (variantId: string, files: FileList) => {
-    const token = localStorage.getItem("token");
-    const uploadedUrls: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const formData = new FormData();
-      formData.append("image", files[i]);
-      const response = await fetch("http://localhost:8000/api/upload/image", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await response.json();
-      if (data?.url) {
-        uploadedUrls.push(data.url);
-      }
-    }
-    // Cập nhật mảng images cho biến thể
-    const updatedVariants = variants.map((v) =>
-      v.id === variantId
-        ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
-        : v
-    );
-    onVariantsChange(updatedVariants);
-  };
-
   const handleRemoveImage = (variantId: string, imgUrl: string) => {
     const updatedVariants = variants.map((v) =>
       v.id === variantId
@@ -257,20 +352,140 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
     onVariantsChange(updatedVariants);
   };
 
+  const handleImageUpload = async (variantId: string, info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const { fileList } = info;
+    console.log("📸 Upload info:", info);
+    console.log("📸 File list:", fileList);
+    
+    setFileLists(prev => ({ ...prev, [variantId]: fileList }));
+
+    // Upload files that are new (có originFileObj và chưa được upload)
+    const newFiles = fileList.filter((file: UploadFile) => 
+      file.originFileObj && 
+      file.status !== 'error' &&
+      !file.url // Chưa có URL nghĩa là chưa được upload
+    );
+    
+    console.log("📸 New files to upload:", newFiles);
+    
+    if (newFiles.length > 0) {
+      const token = localStorage.getItem("token");
+      const uploadedUrls: string[] = [];
+      
+      try {
+        for (const file of newFiles) {
+          if (file.originFileObj) {
+            console.log("📸 Uploading file:", file.name);
+            console.log("📸 File size:", file.originFileObj.size);
+            console.log("📸 File type:", file.originFileObj.type);
+            
+            const formData = new FormData();
+            formData.append("image", file.originFileObj);
+            
+            console.log("📸 Sending request to: http://localhost:8000/api/upload/");
+            console.log("📸 Token exists:", !!token);
+            
+            const response = await fetch("http://localhost:8000/api/upload/", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: formData,
+            });
+            
+            console.log("📸 Upload response status:", response.status);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("📸 Upload error response:", errorText);
+              throw new Error(`Upload failed for file ${file.name}: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log("📸 Upload response data:", data);
+            
+            if (data?.url) {
+              // Đảm bảo URL đầy đủ
+              const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
+              uploadedUrls.push(fullUrl);
+              console.log("📸 Successfully uploaded:", fullUrl);
+            } else {
+              console.error("📸 No URL in response:", data);
+            }
+          }
+        }
+        
+        // Update variant with new images
+        if (uploadedUrls.length > 0) {
+          const updatedVariants = variants.map((v) =>
+            v.id === variantId
+              ? { ...v, images: [...(v.images || []), ...uploadedUrls] }
+              : v
+          );
+          onVariantsChange(updatedVariants);
+          
+          // Cập nhật fileList với URL đã upload
+          const updatedFileList = fileList.map((file: UploadFile, index: number) => {
+            if (index < uploadedUrls.length && file.originFileObj) {
+              return {
+                ...file,
+                status: 'done',
+                url: uploadedUrls[index],
+                thumbUrl: uploadedUrls[index]
+              };
+            }
+            return file;
+          });
+          
+          setFileLists(prev => ({ ...prev, [variantId]: updatedFileList }));
+          message.success(`Đã upload ${uploadedUrls.length} ảnh thành công`);
+        }
+      } catch (error) {
+        console.error("📸 Error uploading images:", error);
+        message.error(`Lỗi khi upload ảnh: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    } else {
+      // Nếu không có file mới, kiểm tra xem có file nào đã được upload chưa
+      console.log("📸 No new files to upload, checking existing files...");
+      const existingFiles = fileList.filter((file: UploadFile) => file.url);
+      console.log("📸 Existing files with URLs:", existingFiles);
+      
+      if (existingFiles.length > 0) {
+        const existingUrls = existingFiles.map((file: UploadFile) => file.url).filter(Boolean);
+        console.log("📸 Existing URLs:", existingUrls);
+        
+        // Cập nhật variant với URLs hiện có
+        const updatedVariants = variants.map((v) =>
+          v.id === variantId
+            ? { ...v, images: existingUrls }
+            : v
+        );
+        onVariantsChange(updatedVariants);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Sản phẩm biến thể</h3>
-        <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
-          Thêm biến thể
-        </Button>
+        <div className="flex gap-2">
+          <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
+            Thêm biến thể
+          </Button>
+        </div>
       </div>
 
       {variants.map((variant, index) => {
         const validation = validateVariant(variant)
+        const isTouched = touchedVariants.has(variant.id)
+        
+        // Hiển thị validation cho lỗi trùng lặp ngay lập tức, các lỗi khác chỉ khi đã tương tác
+        const hasDuplicateErrors = validation.errors.some(error => 
+          error.includes('đã tồn tại') || error.includes('đã tồn tại trong biến thể khác') || error.includes('đã tồn tại trong sản phẩm')
+        )
+        const shouldShowValidation = (isTouched && !validation.isValid) || hasDuplicateErrors
         
         return (
-          <Card key={variant.id} className={`mb-4 ${!validation.isValid ? 'border-red-300 bg-red-50' : ''}`}>
+          <Card key={variant.id} className={`mb-4 ${shouldShowValidation ? 'border-red-300 bg-red-50' : ''}`}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">
@@ -278,11 +493,11 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                   {variant.color &&
                     typeof variant.color === "object" &&
                     "code" in variant.color &&
-                    (variant.color as any).code !== "#000000" && (
+                    (variant.color as { code: string; name: string }).code !== "#000000" && (
                       <span
                         className="ml-2 inline-block w-4 h-4 rounded border"
-                        style={{ backgroundColor: (variant.color as any).code }}
-                        title={`${(variant.color as any).name || "Unnamed"} (${(variant.color as any).code})`}
+                        style={{ backgroundColor: (variant.color as { code: string; name: string }).code }}
+                        title={`${(variant.color as { code: string; name: string }).name || "Unnamed"} (${(variant.color as { code: string; name: string }).code})`}
                       />
                     )}
                 </h4>
@@ -305,7 +520,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               </div>
 
               {/* Validation errors */}
-              {!validation.isValid && (
+              {shouldShowValidation && (
                 <div className="bg-red-100 border border-red-300 rounded p-2">
                   <div className="text-red-700 text-sm font-medium mb-1">Lỗi:</div>
                   <ul className="text-red-600 text-xs list-disc list-inside">
@@ -322,15 +537,38 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     placeholder="Tên biến thể *"
                     value={variant.name}
                     onChange={(e) => updateVariant(variant.id, "name", e.target.value)}
-                    status={!variant.name?.trim() ? "error" : undefined}
+                    status={
+                      (isTouched && !variant.name?.trim()) || 
+                      validation.errors.some(error => error.includes('Tên biến thể') && error.includes('đã tồn tại'))
+                        ? "error" : undefined
+                    }
                   />
                 </Col>
                 <Col span={8}>
                   <Input
                     placeholder="SKU *"
                     value={variant.sku}
-                    onChange={(e) => updateVariant(variant.id, "sku", e.target.value)}
-                    status={!variant.sku?.trim() ? "error" : undefined}
+                    onChange={(e) => {
+                      updateVariant(variant.id, "sku", e.target.value);
+                      
+                      // Clear existing timeout
+                      if (skuCheckTimeouts[variant.id]) {
+                        clearTimeout(skuCheckTimeouts[variant.id]);
+                      }
+                      
+                      // Set new timeout for SKU check
+                      const timeout = setTimeout(() => {
+                        checkSkuInDatabase(e.target.value, variant.id);
+                      }, 1000);
+                      
+                      setSkuCheckTimeouts(prev => ({ ...prev, [variant.id]: timeout }));
+                    }}
+                    status={
+                      (isTouched && !variant.sku?.trim()) || 
+                      validation.errors.some(error => error.includes('SKU') && error.includes('đã tồn tại')) ||
+                      skuErrors[variant.id]
+                        ? "error" : undefined
+                    }
                   />
                 </Col>
                 <Col span={8}>
@@ -351,7 +589,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     value={variant.price || undefined}
                     onChange={(value) => updateVariant(variant.id, "price", value || 0)}
                     className="w-full"
-                    status={!variant.price || variant.price <= 0 ? "error" : undefined}
+                    status={isTouched && (!variant.price || variant.price <= 0) ? "error" : undefined}
                     formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   />
                 </Col>
@@ -371,7 +609,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                     onChange={(value) => updateVariant(variant.id, "stock", value || 0)}
                     className="w-full"
                     min={0}
-                    status={variant.stock < 0 ? "error" : undefined}
+                    status={isTouched && variant.stock < 0 ? "error" : undefined}
                   />
                 </Col>
               </Row>
@@ -379,45 +617,56 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
               {/* Color Selection */}
               <Row gutter={16}>
                 <Col span={12}>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Màu sắc:</label>
-                    <div className="flex gap-2 items-center">
-                      <ColorPicker
-                        value={variant.color?.code || "#000000"}
-                        onChange={(color, hex) => handleColorChange(variant.id, color, hex)}
-                        showText
-                        size="middle"
-                      />
-                      <Select
-                        placeholder="Chọn màu có sẵn"
-                        style={{ width: 200 }}
-                        value={variant.color?.code}
-                        onChange={(value) => {
-                          const selectedColor = COLOR_OPTIONS.find(c => c.code === value)
-                          if (selectedColor) {
-                            handleColorSelect(variant.id, selectedColor)
-                          }
-                        }}
-                        options={COLOR_OPTIONS.map(color => ({
-                          label: (
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-4 h-4 rounded border"
-                                style={{ backgroundColor: color.code }}
-                              />
-                              <span>{color.name}</span>
-                            </div>
-                          ),
-                          value: color.code
-                        }))}
-                      />
-                    </div>
-                    {variant.color?.name && (
-                      <div className="text-xs text-gray-500">
-                        Tên màu: {variant.color.name}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Màu sắc:</label>
+                      <div className="space-y-2">
+                        <div className="flex gap-2 items-center">
+                          <ColorPicker
+                            value={variant.color?.code || "#000000"}
+                            onChange={(color, hex) => handleColorChange(variant.id, color, hex)}
+                            showText
+                            size="large"
+                            style={{ height: 32 }}
+                          />
+                          <Select
+                            placeholder="Chọn màu có sẵn"
+                            style={{ width: 200, height: 40 }}
+                            value={variant.color?.code}
+                            onChange={(value) => {
+                              const selectedColor = COLOR_OPTIONS.find(c => c.code === value)
+                              if (selectedColor) {
+                                handleColorSelect(variant.id, selectedColor)
+                              }
+                            }}
+                            options={COLOR_OPTIONS.map(color => ({
+                              label: (
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-4 h-4 rounded border"
+                                    style={{ backgroundColor: color.code }}
+                                  />
+                                  <span>{color.name}</span>
+                                </div>
+                              ),
+                              value: color.code
+                            }))}
+                          />
+                        </div>
+                        <Input
+                          placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
+                          style={{ width: 325, height: 32 }}
+                          value={variant.color?.name || ""}
+                          onChange={(e) => {
+                            const newColor = {
+                              code: variant.color?.code || "#000000",
+                              name: e.target.value
+                            };
+                            updateVariant(variant.id, "color", newColor);
+                          }}
+                          
+                        />
                       </div>
-                    )}
-                  </div>
+                    </div>
                 </Col>
                 <Col span={12}>
                   <div className="space-y-2">
@@ -447,7 +696,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                           onChange={(value) => updateVariant(variant.id, "length", value || 0)}
                           min={1}
                           style={{ width: 80 }}
-                          status={!variant.length || variant.length <= 0 ? "error" : undefined}
+                          status={isTouched && (!variant.length || variant.length <= 0) ? "error" : undefined}
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -458,7 +707,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                           onChange={(value) => updateVariant(variant.id, "width", value || 0)}
                           min={1}
                           style={{ width: 80 }}
-                          status={!variant.width || variant.width <= 0 ? "error" : undefined}
+                          status={isTouched && (!variant.width || variant.width <= 0) ? "error" : undefined}
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -469,7 +718,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                           onChange={(value) => updateVariant(variant.id, "height", value || 0)}
                           min={1}
                           style={{ width: 80 }}
-                          status={!variant.height || variant.height <= 0 ? "error" : undefined}
+                          status={isTouched && (!variant.height || variant.height <= 0) ? "error" : undefined}
                         />
                       </div>
                     </div>
@@ -481,48 +730,58 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                 <Col span={24}>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Ảnh biến thể:</label>
-                    <input
-                      type="file"
-                      accept="image/*"
+                    <Upload
+                      listType="picture-card"
+                      fileList={fileLists[variant.id] || []}
+                      onChange={(info) => handleImageUpload(variant.id, info)}
+                      beforeUpload={() => false}
                       multiple
-                      onChange={e => {
-                        const files = e.target.files;
-                        if (files && files.length > 0) handleImagesUpload(variant.id, files);
-                      }}
-                    />
+                      showUploadList={false}
+                    >
+                      {(fileLists[variant.id] || []).length < 8 && (
+                        <div className="flex flex-col items-center justify-center h-full">
+                          <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                          <div className="text-sm text-gray-500">Upload</div>
+                        </div>
+                      )}
+                    </Upload>
+                    
                     {/* Hiển thị preview ảnh đã upload */}
-                    {variant.images && variant.images.length > 0 && (
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
-                        {variant.images.map((imgUrl: string, idx: number) => (
-                          <div key={idx} style={{ position: "relative", display: "inline-block" }}>
-                            <img
-                              src={imgUrl}
-                              alt={`Ảnh biến thể ${idx + 1}`}
-                              style={{ width: 80, height: 80, borderRadius: 8, border: "1px solid #eee" }}
-                            />
-                            <Button
-                              size="small"
-                              danger
-                              style={{
-                                position: "absolute",
-                                top: 2,
-                                right: 2,
-                                padding: 0,
-                                borderRadius: "50%",
-                                width: 22,
-                                height: 22,
-                                minWidth: 0,
-                                lineHeight: "22px",
-                                fontSize: 14,
-                              }}
-                              onClick={() => handleRemoveImage(variant.id, imgUrl)}
-                            >
-                              <FaTrash />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex gap-3 flex-wrap mt-3">
+                      {variant.images && variant.images.length > 0 && variant.images.map((imgUrl: string, idx: number) => (
+                        <div key={idx} className="relative group">
+                          <Image
+                            src={imgUrl}
+                            alt={`Ảnh biến thể ${idx + 1}`}
+                            width={100}
+                            height={100}
+                            className="rounded-lg border border-gray-200 object-cover shadow-sm"
+                            onError={(e) => {
+                              console.error("Image load error:", imgUrl);
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                          <Button
+                            size="small"
+                            danger
+                            className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            style={{
+                              padding: 0,
+                              borderRadius: "50%",
+                              width: 24,
+                              height: 24,
+                              minWidth: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => handleRemoveImage(variant.id, imgUrl)}
+                          >
+                            <FaTrash className="text-xs" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </Col>
               </Row>
@@ -568,10 +827,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       )}
 
       {variants.length > 0 && (
-        <Card size="small" className="bg-blue-50">
+        <Card size="small" className="admin-bg-blue-light">
           <div className="grid grid-cols-4 gap-4 text-sm">
             <div className="text-center">
-              <div className="font-bold text-blue-600">{variants.length}</div>
+              <div className="font-bold admin-text-blue">{variants.length}</div>
               <div className="text-gray-600">Tổng biến thể</div>
             </div>
             <div className="text-center">

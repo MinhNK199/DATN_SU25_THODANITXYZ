@@ -4,77 +4,77 @@ export const getOrderStatusDisplay = (order) => {
 
     // ✅ CẬP NHẬT: Trạng thái đơn hàng với các trạng thái mới
     const statusMap = {
-        'draft': {
+        draft: {
             label: 'Đang tạo',
             description: 'Đơn hàng đang được tạo',
             color: 'gray'
         },
-        'pending': {
+        pending: {
             label: 'Chờ xác nhận',
             description: 'Đơn hàng đang chờ admin xác nhận',
             color: 'blue'
         },
-        'confirmed': {
+        confirmed: {
             label: 'Đã xác nhận',
             description: 'Admin đã xác nhận đơn hàng',
             color: 'green'
         },
-        'processing': {
+        processing: {
             label: 'Đang xử lý',
             description: 'Đơn hàng đang được đóng gói',
             color: 'orange'
         },
-        'shipped': {
+        shipped: {
             label: 'Đang giao hàng',
             description: 'Đơn hàng đang được vận chuyển',
             color: 'purple'
         },
-        'delivered_success': {
+        delivered_success: {
             label: 'Giao hàng thành công',
             description: 'Đơn hàng đã được giao thành công',
             color: 'green'
         },
-        'delivered_failed': {
+        delivered_failed: {
             label: 'Giao hàng thất bại',
             description: 'Giao hàng không thành công',
             color: 'red'
         },
-        'partially_delivered': {
+        partially_delivered: {
             label: 'Giao hàng một phần',
             description: 'Một phần đơn hàng đã được giao',
             color: 'orange'
         },
-        'returned': {
+        returned: {
             label: 'Hoàn hàng',
             description: 'Đơn hàng đã được hoàn về',
             color: 'purple'
         },
-        'on_hold': {
+        on_hold: {
             label: 'Tạm dừng',
             description: 'Đơn hàng tạm thời bị dừng xử lý',
             color: 'gray'
         },
-        'completed': {
+        completed: {
             label: 'Hoàn thành',
             description: 'Đơn hàng đã hoàn thành',
             color: 'green'
         },
-        'cancelled': {
+        cancelled: {
             label: 'Đã hủy',
             description: 'Đơn hàng đã bị hủy',
             color: 'red'
         },
-        'refund_requested': {
+        refund_requested: {
             label: 'Yêu cầu hoàn tiền',
             description: 'Đang xử lý yêu cầu hoàn tiền',
             color: 'orange'
         },
-        'refunded': {
+        refunded: {
             label: 'Đã hoàn tiền',
             description: 'Đã hoàn tiền cho khách hàng',
             color: 'blue'
         },
-        'payment_failed': {
+        payment_failed: {
             label: 'Thanh toán thất bại',
             description: 'Thanh toán không thành công',
             color: 'red'
@@ -83,27 +83,27 @@ export const getOrderStatusDisplay = (order) => {
 
     // ✅ CẬP NHẬT: Trạng thái thanh toán
     const paymentStatusMap = {
-        'pending': {
+        pending: {
             label: 'Chờ thanh toán',
             description: 'Chưa thanh toán',
             color: 'gray'
         },
-        'awaiting_payment': {
+        awaiting_payment: {
             label: 'Chờ thanh toán online',
             description: 'Đang chờ thanh toán qua cổng thanh toán',
             color: 'orange'
         },
-        'paid': {
+        paid: {
             label: 'Đã thanh toán',
             description: 'Thanh toán thành công',
             color: 'green'
         },
-        'failed': {
+        failed: {
             label: 'Thanh toán thất bại',
             description: 'Thanh toán không thành công',
             color: 'red'
         },
-        'cancelled': {
+        cancelled: {
             label: 'Đã hủy',
             description: 'Thanh toán đã bị hủy',
             color: 'red'
@@ -116,7 +116,6 @@ export const getOrderStatusDisplay = (order) => {
 
     // ✅ CẬP NHẬT: Xử lý trường hợp đặc biệt
     let finalStatus = orderStatus;
-    let finalDescription = orderStatus.description;
 
     // Nếu đơn hàng đã thanh toán online thành công
     if (isPaid && paymentStatus === 'paid' && status === 'pending') {
@@ -182,7 +181,7 @@ export const canTransitionTo = (currentStatus, targetStatus) => {
         payment_failed: ["cancelled"],
     };
 
-    return validTransitions[currentStatus] ? .includes(targetStatus) || false;
+    return validTransitions[currentStatus]?.includes(targetStatus) || false;
 };
 
 // ✅ THÊM: Hàm lấy danh sách trạng thái có thể chuyển đổi

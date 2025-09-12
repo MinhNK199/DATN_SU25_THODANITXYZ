@@ -13,7 +13,8 @@ import {
   FaChartBar,
   FaCog,
   FaTicketAlt,
-  FaTruck
+  FaTruck,
+  FaComments
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -66,6 +67,20 @@ const AdminSidebar = () => {
         >
           <FaChartBar className={iconClass} />
           <span className="truncate">Dashboard</span>
+        </button>
+
+        {/* Detailed Stats */}
+        <button
+          onClick={() => navigate("/admin/detailed-stats")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname === "/admin/detailed-stats"
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaChartBar className={iconClass} />
+          <span className="truncate">Thống kê chi tiết</span>
         </button>
 
         {/* Products */}
@@ -178,6 +193,20 @@ const AdminSidebar = () => {
         >
           <FaTruck className={iconClass} />
           <span className="truncate">Shipper</span>
+        </button>
+
+        {/* Chat */}
+        <button
+          onClick={() => navigate("/admin/chat")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/chat")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaComments className={iconClass} />
+          <span className="truncate">Chat</span>
         </button>
 
         {/* Ratings */}

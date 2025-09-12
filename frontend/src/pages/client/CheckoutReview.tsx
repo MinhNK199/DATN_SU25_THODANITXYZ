@@ -32,8 +32,6 @@ const CheckoutReview: React.FC<Props> = ({
         return <FaTruck className="w-5 h-5 text-green-600" />;
       case 'momo':
         return <img src="/images/wallets/momo.png" alt="MoMo" className="w-5 h-5" />;
-      case 'zalopay':
-        return <img src="/images/wallets/zalopay.png" alt="ZaloPay" className="w-5 h-5" />;
       case 'vnpay':
         return <img src="/images/wallets/vnpay.png" alt="VNPAY" className="w-5 h-5" />;
       default:
@@ -47,8 +45,6 @@ const CheckoutReview: React.FC<Props> = ({
         return 'Thanh toán khi nhận hàng';
       case 'momo':
         return 'Thanh toán qua MoMo';
-      case 'zalopay':
-        return 'Thanh toán qua ZaloPay';
       case 'vnpay':
         return 'Thanh toán qua VNPAY';
       default:

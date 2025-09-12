@@ -72,7 +72,7 @@ routerAuth.get(
     passport.authenticate("facebook", { session: false, failureRedirect: "/login" }),
     async(req, res) => {
         const user = req.user;
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
         res.redirect(`${process.env.CLIENT_URL}/login-success?token=${token}`);
     }
 );

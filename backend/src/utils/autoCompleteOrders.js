@@ -22,8 +22,6 @@ export const autoCompleteOrders = async () => {
       }
     });
 
-    console.log(`🔍 Tìm thấy ${ordersToComplete.length} đơn hàng cần tự động hoàn thành`);
-
     for (const order of ordersToComplete) {
       try {
         // Cập nhật trạng thái thành completed
@@ -35,8 +33,6 @@ export const autoCompleteOrders = async () => {
         });
 
         await order.save();
-
-        console.log(`✅ Đã tự động hoàn thành đơn hàng #${order._id}`);
 
         // Gửi thông báo cho khách hàng (nếu có)
         try {
@@ -58,7 +54,6 @@ export const autoCompleteOrders = async () => {
       }
     }
 
-    console.log(`✅ Hoàn thành xử lý tự động ${ordersToComplete.length} đơn hàng`);
 
   } catch (error) {
     console.error('❌ Lỗi trong quá trình tự động hoàn thành đơn hàng:', error);
@@ -68,18 +63,14 @@ export const autoCompleteOrders = async () => {
 // Khởi tạo cron job chạy mỗi ngày lúc 2:00 sáng
 export const initAutoCompleteCron = () => {
   cron.schedule('0 2 * * *', async () => {
-    console.log('🕐 Bắt đầu chạy cron job tự động hoàn thành đơn hàng...');
     await autoCompleteOrders();
   }, {
     scheduled: true,
     timezone: "Asia/Ho_Chi_Minh"
   });
-
-  console.log('✅ Đã khởi tạo cron job tự động hoàn thành đơn hàng (chạy mỗi ngày lúc 2:00 sáng)');
 };
 
 // Hàm test (có thể gọi thủ công)
 export const testAutoComplete = async () => {
-  console.log('🧪 Bắt đầu test tự động hoàn thành đơn hàng...');
   await autoCompleteOrders();
 };

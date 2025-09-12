@@ -22,8 +22,15 @@ import { runCleanupNow } from "../utils/cleanupJob.js";
 import { getTaxConfig, updateTaxConfig } from '../controllers/taxConfig.js';
 import { protect, checkAdmin } from '../middlewares/authMiddleware.js';
 import routerBlog from "./blog.js";
+
 import routerShipper from "./shipper.js";
 import routerAdminShipper from "./adminShipper.js";
+
+import routerChat from "./chat.js";
+import routerAdmin from "./admin.js";
+import routerAdminNotification from "./adminNotification.js";
+import routerReservation from "./reservation.js";
+
 import { getProvinces, getWards, getDistricts } from '../controllers/provinceController.js';
 
 const router = Router();
@@ -47,11 +54,18 @@ router.use('/payment/momo', paymentMomoRouter);
 router.use('/payment/vnpay', paymentVnpayRouter);
 router.use('/payment/credit-card', paymentCreditCardRouter);
 router.use("/blogs", routerBlog);
+
 router.use("/shipper", routerShipper);
 router.use("/admin/shipper", routerAdminShipper);
+
+router.use("/chat", routerChat);
+router.use("/admin", routerAdmin);
+router.use("/admin-notification", routerAdminNotification);
+router.use("/reservation", routerReservation);
+
 router.get('/provinces', getProvinces);
-router.get('/wards', getWards);
-router.get('/districts', getDistricts);
+router.get('/provinces/:provinceCode/districts', getDistricts);
+router.get('/districts/:districtCode/wards', getWards);
 router.get('/tax', getTaxConfig);
 router.put('/tax', protect, checkAdmin(['Superadmin']), updateTaxConfig);
 

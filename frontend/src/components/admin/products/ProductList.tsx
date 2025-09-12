@@ -71,15 +71,33 @@ const ProductListPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string | undefined>(
     undefined
   );
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
+
   const navigate = useNavigate();
 
-  const fetchData = async () => {
+  const fetchData = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
-      const [productsData, deletedProductsData, brandsData] = await Promise.all(
-        [getProducts('-createdAt'), getDeletedProducts(), getBrands()]
-      );
-      setProducts(productsData);
+      const filters = {
+        keyword: searchTerm || undefined,
+        brand: filterBrand,
+        isActive: filterStatus === 'active' ? true : filterStatus === 'inactive' ? false : undefined,
+      };
+
+      const [productsResponse, deletedProductsData, brandsData] = await Promise.all([
+        getProducts('-createdAt', page, size, filters),
+        getDeletedProducts(),
+        getBrands()
+      ]);
+
+      setProducts(productsResponse.products);
+      setTotalPages(productsResponse.pages);
+      setTotalProducts(productsResponse.total);
       setDeletedProducts(deletedProductsData);
       setBrands(brandsData);
     } catch (error) {
@@ -92,6 +110,12 @@ const ProductListPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Refetch data when filters change
+  useEffect(() => {
+    setCurrentPage(1); // Reset to first page when filters change
+    fetchData(1, pageSize);
+  }, [searchTerm, filterBrand, filterStatus, filterStock]);
 
   const handleSoftDelete = (id: string) => {
     confirm({
@@ -151,22 +175,29 @@ const ProductListPage: React.FC = () => {
     []
   );
 
-  const filteredProducts = products
-    .filter((p) =>
-      typeof p.name === "string"
-        ? p.name.toLowerCase().includes(searchTerm.toLowerCase())
-        : false
-    )
-    .filter((p) => {
-      if (filterStock === "inStock") return p.stock > 0;
-      if (filterStock === "outOfStock") return p.stock === 0;
-      return true;
-    })
-    .filter((p) => {
-      if (filterStatus === "active") return p.isActive;
-      if (filterStatus === "inactive") return !p.isActive;
-      return true;
-    });
+  // Pagination handlers
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+      fetchData(page, size);
+    } else {
+      fetchData(page, pageSize);
+    }
+  };
+
+  const handlePageSizeChange = (current: number, size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+    fetchData(1, size);
+  };
+
+  // Client-side filtering for stock (backend doesn't support stock filtering yet)
+  const filteredProducts = products.filter((p) => {
+    if (filterStock === "inStock") return p.stock > 0;
+    if (filterStock === "outOfStock") return p.stock === 0;
+    return true;
+  });
 
   const columns: ColumnsType<Product> = [
     {
@@ -182,12 +213,33 @@ const ProductListPage: React.FC = () => {
       width: "30%",
       render: (_, record) => (
         <Space>
-          <Avatar shape="square" size={64} src={record.images[0]} />
+          <div style={{ position: "relative" }}>
+            <Avatar shape="square" size={64} src={record.images[0]} />
+            {/* Hiển thị số lượng ảnh phụ */}
+            {record.additionalImages && record.additionalImages.length > 0 && (
+              <Badge 
+                count={record.additionalImages.length} 
+                style={{ 
+                  position: "absolute", 
+                  top: -8, 
+                  right: -8,
+                  backgroundColor: "#52c41a",
+                  fontSize: "10px"
+                }} 
+              />
+            )}
+          </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <Text strong>{record.name}</Text>
             <Text type="secondary">
               SKU: {record.sku || record.variants?.[0]?.sku || "N/A"}
             </Text>
+            {/* Hiển thị thông tin ảnh phụ */}
+            {record.additionalImages && record.additionalImages.length > 0 && (
+              <Text type="secondary" style={{ fontSize: "11px" }}>
+                +{record.additionalImages.length} ảnh phụ
+              </Text>
+            )}
           </div>
         </Space>
       ),
@@ -338,11 +390,14 @@ const ProductListPage: React.FC = () => {
             <Title level={3} className="!m-0">
               Quản lý Sản phẩm
             </Title>
-            <Text type="secondary">Tổng quan và quản lý các sản phẩm.</Text>
+            <Text type="secondary">
+              Tổng quan và quản lý các sản phẩm. Hiển thị {filteredProducts.length} / {totalProducts} sản phẩm
+            </Text>
           </Col>
           <Col>
             <Button
               type="primary"
+              className="admin-primary-button"
               icon={<PlusOutlined />}
               onClick={() => navigate("/admin/products/add")}
             >
@@ -407,7 +462,19 @@ const ProductListPage: React.FC = () => {
             onClick: () => navigate(`/admin/products/detail/${record._id}`),
             style: { cursor: "pointer" },
           })}
-          pagination={{ pageSize: 10, showSizeChanger: true, responsive: true }}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: totalProducts,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} của ${total} sản phẩm`,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            onChange: handlePageChange,
+            onShowSizeChange: handlePageSizeChange,
+            responsive: true,
+          }}
         />
       </Card>
 
@@ -441,6 +508,7 @@ const ProductListPage: React.FC = () => {
         <Badge count={deletedProducts.length} showZero>
           <Button
             type="primary"
+            className="admin-primary-button"
             shape="circle"
             size="large"
             icon={<DeleteOutlined />}

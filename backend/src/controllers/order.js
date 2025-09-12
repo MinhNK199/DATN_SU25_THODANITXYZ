@@ -2,11 +2,11 @@ import Order from "../models/Order.js";
 import Notification from "../models/Notification.js";
 import { sendMail } from "../utils/mailer.js";
 import User from "../models/User.js";
+import InventoryService from "../services/inventoryService.js";
 
 const paidMethods = [
   "credit-card",
   "momo",
-  "zalopay",
   "vnpay",
   "BANKING",
   "paid_online",
@@ -31,9 +31,22 @@ export const createOrder = async (req, res) => {
         .json({ message: "Không có sản phẩm trong đơn hàng" });
     }
 
+    // ✅ KIỂM TRA TÍNH KHẢ DỤNG CỦA SẢN PHẨM TRƯỚC KHI TẠO ĐƠN HÀNG
+    console.log("🔍 Kiểm tra tính khả dụng của sản phẩm...");
+    const availabilityCheck = await InventoryService.checkAvailability(orderItems);
+
+    if (!availabilityCheck.available) {
+      console.error("❌ Một số sản phẩm không khả dụng:", availabilityCheck.unavailableItems);
+      return res.status(400).json({
+        message: "Một số sản phẩm không khả dụng",
+        unavailableItems: availabilityCheck.unavailableItems
+      });
+    }
+
+    console.log("✅ Tất cả sản phẩm đều khả dụng");
+
     // ✅ SỬA LOGIC: Luôn tạo đơn hàng draft cho tất cả các phương thức thanh toán online
     const isOnlinePayment = [
-      "zalopay",
       "momo",
       "vnpay",
       "credit-card",
@@ -64,6 +77,11 @@ export const createOrder = async (req, res) => {
           date: Date.now(),
         },
       ],
+      // Khởi tạo trạng thái kho hàng
+      inventoryStatus: {
+        deducted: false,
+        restored: false
+      }
     });
 
     console.log(
@@ -75,23 +93,50 @@ export const createOrder = async (req, res) => {
 
     const createdOrder = await order.save();
 
-    // Chỉ xóa sản phẩm khỏi giỏ hàng nếu là COD
-    if (paymentMethod === "COD") {
-      try {
-        const Cart = (await import("../models/Cart.js")).default;
-        const cart = await Cart.findOne({ user: req.user._id });
+    // ✅ TRỪ SỐ LƯỢNG KHO NGAY KHI TẠO ĐƠN HÀNG (CHO CẢ COD VÀ ONLINE PAYMENT)
+    console.log("📦 Bắt đầu trừ kho cho đơn hàng...");
+    const inventoryResult = await InventoryService.deductInventory(orderItems, createdOrder._id);
 
-        if (cart && cart.items.length > 0) {
-          const orderedProductIds = orderItems.map((item) => item.product);
-          cart.items = cart.items.filter(
-            (item) => !orderedProductIds.includes(item.product.toString())
-          );
-          await cart.save();
-          console.log(`✅ Đã xóa sản phẩm khỏi giỏ hàng cho đơn COD`);
-        }
-      } catch (cartError) {
-        console.error("Lỗi khi cập nhật giỏ hàng:", cartError);
+    if (!inventoryResult.success) {
+      console.error("❌ Lỗi khi trừ kho, hủy đơn hàng:", inventoryResult.errors);
+      // Xóa đơn hàng nếu không thể trừ kho
+      await Order.findByIdAndDelete(createdOrder._id);
+      return res.status(400).json({
+        message: "Không thể trừ kho cho một số sản phẩm",
+        errors: inventoryResult.errors
+      });
+    }
+
+    // Cập nhật trạng thái đã trừ kho
+    createdOrder.inventoryStatus.deducted = true;
+    createdOrder.inventoryStatus.deductedAt = new Date();
+    await createdOrder.save();
+
+    console.log("✅ Đã trừ kho thành công cho đơn hàng", createdOrder._id);
+
+    // ✅ XÓA SẢN PHẨM KHỎI GIỎ HÀNG VÀ XÓA RESERVATION (CHO TẤT CẢ PHƯƠNG THỨC THANH TOÁN)
+    try {
+      const Cart = (await import("../models/Cart.js")).default;
+      const cart = await Cart.findOne({ user: req.user._id });
+
+      if (cart && cart.items.length > 0) {
+        const orderedProductIds = orderItems.map((item) => item.product);
+        const originalItemCount = cart.items.length;
+
+        cart.items = cart.items.filter(
+          (item) => !orderedProductIds.includes(item.product.toString())
+        );
+
+        await cart.save();
+        console.log(`🛒 Đã xóa ${originalItemCount - cart.items.length} sản phẩm khỏi giỏ hàng`);
       }
+
+      // Xóa reservation
+      await InventoryService.clearReservations(req.user._id, orderItems);
+
+    } catch (cartError) {
+      console.error("Lỗi khi cập nhật giỏ hàng:", cartError);
+      // Không hủy đơn hàng vì đã trừ kho thành công
     }
 
     res.status(201).json(createdOrder);
@@ -106,7 +151,7 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
   try {
     console.log(`🔄 confirmOrderAfterPayment called for order: ${orderId}`);
     console.log(`📋 Payment info:`, paymentInfo);
-    
+
     const order = await Order.findById(orderId);
     if (!order) {
       throw new Error("Không tìm thấy đơn hàng");
@@ -119,7 +164,7 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
     order.isPaid = true;
     order.paidAt = Date.now();
     order.paymentStatus = 'paid'; // Đã thanh toán thành công
-    
+
     // ✅ CẬP NHẬT THÔNG TIN THANH TOÁN CHI TIẾT
     order.paymentResult = {
       id: paymentInfo.id || paymentInfo.transactionId || paymentInfo.transId,
@@ -136,13 +181,11 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
       ...(paymentInfo.orderType && { orderType: paymentInfo.orderType }),
       ...(paymentInfo.transType && { transType: paymentInfo.transType }),
       ...(paymentInfo.extraData && { extraData: paymentInfo.extraData }),
-      ...(paymentInfo.app_trans_id && { app_trans_id: paymentInfo.app_trans_id }),
-      ...(paymentInfo.zp_trans_id && { zp_trans_id: paymentInfo.zp_trans_id }),
       ...(paymentInfo.vnp_TransactionNo && { vnp_TransactionNo: paymentInfo.vnp_TransactionNo }),
       ...(paymentInfo.vnp_BankCode && { vnp_BankCode: paymentInfo.vnp_BankCode }),
       ...(paymentInfo.vnp_PayDate && { vnp_PayDate: paymentInfo.vnp_PayDate })
     };
-    
+
     // ✅ Thêm vào lịch sử trạng thái
     if (!order.statusHistory) order.statusHistory = [];
     order.statusHistory.push({
@@ -150,7 +193,7 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
       note: `Thanh toán ${paymentInfo.method?.toUpperCase() || order.paymentMethod.toUpperCase()} thành công - Đơn hàng chờ xác nhận từ admin`,
       date: Date.now()
     });
-    
+
     // ✅ Thêm vào lịch sử payment
     order.statusHistory.push({
       status: 'payment_success',
@@ -163,25 +206,8 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
     console.log(`✅ Đơn hàng giờ sẽ hiển thị trong profile và admin panel`);
     console.log(`✅ Payment method: ${order.paymentMethod}, Total: ${order.totalPrice}`);
 
-    // ✅ XÓA SẢN PHẨM KHỎI GIỎ HÀNG KHI THANH TOÁN THÀNH CÔNG
-    try {
-      const Cart = (await import("../models/Cart.js")).default;
-      const cart = await Cart.findOne({ user: order.user });
-      
-      if (cart && cart.items.length > 0) {
-        const orderedProductIds = order.orderItems.map(item => item.product.toString());
-        const originalItemCount = cart.items.length;
-        
-        cart.items = cart.items.filter(item => 
-          !orderedProductIds.includes(item.product.toString())
-        );
-        
-        await cart.save();
-        console.log(`🛒 Đã xóa ${originalItemCount - cart.items.length} sản phẩm khỏi giỏ hàng sau thanh toán thành công`);
-      }
-    } catch (cartError) {
-      console.error("Lỗi khi cập nhật giỏ hàng:", cartError);
-    }
+    // ✅ GIỎ HÀNG ĐÃ ĐƯỢC XÓA TRONG createOrder, KHÔNG CẦN XÓA LẠI
+    console.log("ℹ️ Giỏ hàng đã được xóa khi tạo đơn hàng, không cần xóa lại");
 
     // ✅ GỬI THÔNG BÁO CHO USER
     try {
@@ -208,7 +234,7 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
   try {
     console.log(`❌ handlePaymentFailed called for order: ${orderId}`);
     console.log(`📋 Failure reason: ${reason}`);
-    
+
     const order = await Order.findById(orderId);
     if (!order) {
       throw new Error("Không tìm thấy đơn hàng");
@@ -221,7 +247,7 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
     order.paymentStatus = 'failed';
     order.isPaid = false;
     order.paidAt = undefined;
-    
+
     // ✅ CẬP NHẬT THÔNG TIN THANH TOÁN THẤT BẠI
     order.paymentResult = {
       id: order.paymentResult?.id || 'N/A',
@@ -233,7 +259,7 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
       failure_reason: reason,
       failure_time: new Date().toISOString()
     };
-    
+
     // ✅ Thêm vào lịch sử trạng thái
     if (!order.statusHistory) order.statusHistory = [];
     order.statusHistory.push({
@@ -245,7 +271,7 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
     await order.save();
     console.log(`✅ Order after failure handling: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
     console.log(`✅ Đơn hàng đã được cập nhật trạng thái thất bại`);
-    
+
     // ✅ GỬI THÔNG BÁO CHO USER
     try {
       await createNotificationForUser(
@@ -259,13 +285,13 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
     } catch (notificationError) {
       console.error("Lỗi khi gửi thông báo thất bại:", notificationError);
     }
-    
-    return { 
-      success: false, 
-      orderId: order._id, 
-      status: order.status, 
+
+    return {
+      success: false,
+      orderId: order._id,
+      status: order.status,
       paymentStatus: order.paymentStatus,
-      reason: reason 
+      reason: reason
     };
   } catch (error) {
     console.error("Lỗi xử lý thanh toán thất bại:", error);
@@ -281,17 +307,23 @@ export const getOrderById = async (req, res) => {
       .populate("shipper", "fullName phone email vehicleType");
     if (!order)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    
+
     // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
-    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
-    const statusInfo = getOrderStatusMessage(order);
-    
-    const orderWithStatus = {
-      ...order.toObject(),
-      statusInfo
-    };
-    
-    res.json(orderWithStatus);
+    try {
+      const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+      const statusInfo = getOrderStatusMessage(order);
+
+      const orderWithStatus = {
+        ...order.toObject(),
+        statusInfo
+      };
+
+      res.json(orderWithStatus);
+    } catch (helperError) {
+      console.error('Error loading orderStatusHelper:', helperError);
+      // Fallback nếu helper không load được
+      res.json(order.toObject());
+    }
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -377,7 +409,7 @@ export const updateOrderToDelivered = async (req, res) => {
 export const getMyOrders = async (req, res) => {
   try {
     console.log(`🔍 getMyOrders called for user: ${req.user._id}`);
-    
+
     // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng TRỪ payment_failed (bao gồm cả draft đã thanh toán)
     const orders = await Order.find({
       user: req.user._id,
@@ -385,20 +417,27 @@ export const getMyOrders = async (req, res) => {
     }).sort({ createdAt: -1 });
 
     console.log(`📋 Found ${orders.length} orders for user ${req.user._id}`);
-    
+
     // Sử dụng helper để có thông tin trạng thái rõ ràng hơn
-    const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
-    
-    const ordersWithStatus = orders.map(order => {
-      const orderObj = order.toObject();
-      const statusInfo = getOrderStatusMessage(order);
-      
-      return {
-        ...orderObj,
-        statusInfo
-      };
-    });
-    
+    let ordersWithStatus = orders;
+    try {
+      const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
+
+      ordersWithStatus = orders.map(order => {
+        const orderObj = order.toObject();
+        const statusInfo = getOrderStatusMessage(order);
+
+        return {
+          ...orderObj,
+          statusInfo
+        };
+      });
+    } catch (helperError) {
+      console.error('Error loading orderStatusHelper:', helperError);
+      // Fallback nếu helper không load được
+      ordersWithStatus = orders.map(order => order.toObject());
+    }
+
     console.log(`📊 Order details:`, ordersWithStatus.map(o => ({
       id: o._id.toString().slice(-6),
       method: o.paymentMethod,
@@ -408,7 +447,7 @@ export const getMyOrders = async (req, res) => {
       statusInfo: o.statusInfo,
       createdAt: o.createdAt
     })));
-    
+
     res.json(ordersWithStatus);
   } catch (error) {
     console.error("❌ Lỗi getMyOrders:", error);
@@ -419,12 +458,14 @@ export const getMyOrders = async (req, res) => {
 export const getOrders = async (req, res) => {
   try {
     console.log(`🔍 Admin getOrders called`);
-    
+
     const pageSize = 10;
     const page = Number(req.query.page) || 1;
 
+
     // ✅ LOGIC CẢI THIỆN: Hiển thị tất cả đơn hàng (bao gồm cả draft, pending, v.v.)
     let filter = {};
+
 
     // Filter theo status nếu có
     if (req.query.status && req.query.status !== "all") {
@@ -456,22 +497,22 @@ export const getOrders = async (req, res) => {
     orders = orders.map((order) => {
       const orderObj = order.toObject();
 
-             // Xử lý hiển thị payment status
-       if (["zalopay", "momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
-         if (order.isPaid && order.paymentStatus === "paid") {
-           orderObj.displayPaymentStatus = `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
-         } else if (order.paymentStatus === "failed") {
-           orderObj.displayPaymentStatus = "Thanh toán thất bại";
-         } else if (order.paymentStatus === "awaiting_payment" || order.paymentStatus === "pending") {
-           orderObj.displayPaymentStatus = "Chưa thanh toán";
-         } else {
-           orderObj.displayPaymentStatus = "Chưa thanh toán";
-         }
-       } else if (order.paymentMethod === "COD") {
-         orderObj.displayPaymentStatus = order.isPaid
-           ? "Đã thanh toán COD"
-           : "Chưa thanh toán COD";
-       }
+      // Xử lý hiển thị payment status
+      if (["momo", "vnpay", "credit-card", "BANKING"].includes(order.paymentMethod)) {
+        if (order.isPaid && order.paymentStatus === "paid") {
+          orderObj.displayPaymentStatus = `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
+        } else if (order.paymentStatus === "failed") {
+          orderObj.displayPaymentStatus = "Thanh toán thất bại";
+        } else if (order.paymentStatus === "awaiting_payment" || order.paymentStatus === "pending") {
+          orderObj.displayPaymentStatus = "Chưa thanh toán";
+        } else {
+          orderObj.displayPaymentStatus = "Chưa thanh toán";
+        }
+      } else if (order.paymentMethod === "COD") {
+        orderObj.displayPaymentStatus = order.isPaid
+          ? "Đã thanh toán COD"
+          : "Chưa thanh toán COD";
+      }
 
       return orderObj;
     });
@@ -523,7 +564,7 @@ export const getValidOrderStatusOptions = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    
+
     // ✅ CẬP NHẬT: Logic transitions nhất quán và hoàn thiện
     // 📋 QUY TẮC: Admin chỉ có thể chuyển trạng thái theo luồng chính
     // ❌ KHÔNG CHO PHÉP: Admin thay đổi trạng thái từ shipped trở đi (phụ thuộc vào user)
@@ -548,24 +589,24 @@ export const getValidOrderStatusOptions = async (req, res) => {
       refunded: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
       payment_failed: ["cancelled"], // Chỉ có thể hủy
     };
-    
+
     let options = validTransitions[order.status] || [];
     console.log(`Đơn hàng ${order._id} có trạng thái ${order.status}, options ban đầu:`, options);
-    
+
     // ✅ THÊM: Business rules validation đơn giản hóa
     // ❌ TỪ SHIPPED TRỞ ĐI: Admin KHÔNG THỂ thay đổi trạng thái thủ công
     if (["shipped", "delivered_success"].includes(order.status)) {
       options = []; // Không có options nào cho admin
       console.log(`Đơn hàng ${order._id} có trạng thái ${order.status} - Admin không thể thay đổi (phụ thuộc vào user)`);
     }
-    
+
     // ❌ CHẶN: Admin không thể thay đổi trạng thái từ shipped trở đi
     // Các trạng thái này phụ thuộc vào hành động của người dùng
     if (["completed", "cancelled", "refunded"].includes(order.status)) {
       console.log(`Đơn hàng ${order._id} có trạng thái ${order.status} - Admin không thể thay đổi trạng thái cuối`);
       options = []; // Không có options nào cho admin
     }
-    
+
     // Kiểm tra điều kiện giao lại (chỉ khi cần thiết)
     if (order.status === "delivered_failed") {
       const retryCount = order.retryDeliveryCount || 0;
@@ -574,7 +615,7 @@ export const getValidOrderStatusOptions = async (req, res) => {
         console.log(`Đơn hàng ${order._id} đã vượt quá số lần giao lại (${retryCount}/3)`);
       }
     }
-    
+
     // Kiểm tra thông tin delivery person (chỉ khi cần thiết)
     if (order.status === "processing") {
       const hasDeliveryPerson = order.deliveryPerson && order.deliveryPerson.name && order.deliveryPerson.name.trim() !== "";
@@ -584,7 +625,7 @@ export const getValidOrderStatusOptions = async (req, res) => {
         // options = options.filter(opt => opt !== "shipped"); // Bỏ dòng này
       }
     }
-    
+
     console.log(`Đơn hàng ${order._id} - options cuối cùng:`, options);
     res.json({ validStatus: options });
   } catch (error) {
@@ -599,7 +640,7 @@ export const updateOrderStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order)
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    
+
     // ✅ CẬP NHẬT: Sử dụng logic transitions nhất quán
     // 📋 QUY TẮC: Admin chỉ có thể chuyển trạng thái theo luồng chính
     // ❌ KHÔNG CHO PHÉP: Admin thay đổi trạng thái từ shipped trở đi (phụ thuộc vào user)
@@ -624,14 +665,14 @@ export const updateOrderStatus = async (req, res) => {
       refunded: [], // Trạng thái cuối - KHÔNG THỂ THAY ĐỔI
       payment_failed: ["cancelled"], // Chỉ có thể hủy
     };
-    
+
     const currentStatus = order.status;
     if (!validTransitions.hasOwnProperty(currentStatus)) {
       return res
         .status(400)
         .json({ message: `Không thể chuyển trạng thái từ ${currentStatus}` });
     }
-    
+
     if (!validTransitions[currentStatus].includes(status)) {
       // ✅ CẬP NHẬT: Xử lý các trường hợp đặc biệt
       if (status === "return_requested") {
@@ -698,13 +739,13 @@ export const updateOrderStatus = async (req, res) => {
       order.isDelivered = true;
       order.deliveredAt = Date.now();
     }
-    
+
     if (status === "shipped") {
       // Tự động ước tính thời gian giao hàng (3-5 ngày)
       const estimatedDate = new Date();
       estimatedDate.setDate(estimatedDate.getDate() + 3 + Math.floor(Math.random() * 3));
       order.estimatedDeliveryDate = estimatedDate;
-      
+
       // Nếu chưa có thông tin delivery person, tạo thông tin mặc định
       if (!order.deliveryPerson || !order.deliveryPerson.name) {
         order.deliveryPerson = {
@@ -717,26 +758,60 @@ export const updateOrderStatus = async (req, res) => {
     }
 
     // Đếm số lượt yêu cầu hoàn tiền
-    const refundCount = order.statusHistory && order.statusHistory.length > 0 
-      ? order.statusHistory.filter((s) => s.status === "refund_requested").length 
+    const refundCount = order.statusHistory && order.statusHistory.length > 0
+      ? order.statusHistory.filter((s) => s.status === "refund_requested").length
       : 0;
     const maxRefund = 3;
     const remain = Math.max(0, maxRefund - refundCount);
+
+    // ✅ XỬ LÝ HOÀN TRẢ KHO KHI ADMIN HỦY ĐƠN HÀNG
+    if (status === "cancelled") {
+      console.log(`🔄 Admin hủy đơn hàng ${order._id} - Bắt đầu hoàn trả kho`);
+
+      // Kiểm tra xem đã hoàn trả chưa để tránh trùng lặp
+      if (order.inventoryStatus && order.inventoryStatus.restored) {
+        console.log(`⚠️ Đơn hàng ${order._id} đã được hoàn trả kho trước đó, bỏ qua việc hoàn trả`);
+      } else {
+        const restoreResult = await InventoryService.restoreInventory(
+          order.orderItems,
+          order._id,
+          order.inventoryStatus?.restored || false
+        );
+
+        if (!restoreResult.success && !restoreResult.skipped) {
+          console.error("❌ Lỗi khi hoàn trả kho:", restoreResult.errors);
+          // Vẫn cho phép hủy đơn hàng nhưng ghi log lỗi
+        } else if (restoreResult.success) {
+          console.log("✅ Hoàn trả kho thành công cho đơn hàng bị hủy bởi admin");
+        }
+      }
+    }
 
     order.status = status;
     // Đảm bảo statusHistory là array
     if (!order.statusHistory) {
       order.statusHistory = [];
     }
-    
+
     order.statusHistory.push({
       status,
       note,
       date: Date.now(),
     });
 
+    // Cập nhật trạng thái đã hoàn trả kho nếu hủy đơn hàng
+    if (status === "cancelled") {
+      if (!order.inventoryStatus) {
+        order.inventoryStatus = {};
+      }
+      if (!order.inventoryStatus.restored) {
+        order.inventoryStatus.restored = true;
+        order.inventoryStatus.restoredAt = new Date();
+      }
+    }
+
     const updatedOrder = await order.save();
-    
+
     // ✅ CẬP NHẬT: Gửi thông báo chi tiết hơn
     if (status === "returned") {
       await createNotificationForUser(
@@ -775,21 +850,112 @@ export const updateOrderStatus = async (req, res) => {
         { orderId: order._id, estimatedDate: order.estimatedDeliveryDate }
       );
     }
-    
+
     res.json(updatedOrder);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Thống kê doanh thu theo ngày và tháng
+// Thống kê doanh thu theo ngày, tuần và tháng
 export const getRevenueStats = async (req, res) => {
   try {
-    // Tạm thời vô hiệu hóa logic thống kê
-    res.json({ daily: [], monthly: [] });
-    return;
+    // Kiểm tra quyền admin
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có quyền xem thống kê doanh thu'
+      });
+    }
+
+    // Thống kê doanh thu theo ngày (30 ngày gần nhất)
+    const dailyStats = await Order.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: {
+            $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 30 ngày gần nhất
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            day: { $dayOfMonth: '$createdAt' },
+            month: { $month: '$createdAt' },
+            year: { $year: '$createdAt' }
+          },
+          totalRevenue: { $sum: '$totalPrice' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 }
+      }
+    ]);
+
+    // Thống kê doanh thu theo tuần (12 tuần gần nhất)
+    const weeklyStats = await Order.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: {
+            $gte: new Date(Date.now() - 12 * 7 * 24 * 60 * 60 * 1000) // 12 tuần gần nhất
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            week: { $week: '$createdAt' },
+            year: { $year: '$createdAt' }
+          },
+          totalRevenue: { $sum: '$totalPrice' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.week': 1 }
+      }
+    ]);
+
+    // Thống kê doanh thu theo tháng (12 tháng gần nhất)
+    const monthlyStats = await Order.aggregate([
+      {
+        $match: {
+          status: 'completed',
+          createdAt: {
+            $gte: new Date(Date.now() - 12 * 30 * 24 * 60 * 60 * 1000) // 12 tháng gần nhất
+          }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            month: { $month: '$createdAt' },
+            year: { $year: '$createdAt' }
+          },
+          totalRevenue: { $sum: '$totalPrice' },
+          orderCount: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      daily: dailyStats,
+      weekly: weeklyStats,
+      monthly: monthlyStats
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error getting revenue stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi lấy thống kê doanh thu'
+    });
   }
 };
 
@@ -811,26 +977,26 @@ export const requestRefund = async (req, res) => {
           "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã được thanh toán.",
       });
     }
-    const refundCount = order.statusHistory && order.statusHistory.length > 0 
-      ? order.statusHistory.filter((s) => s.status === "refund_requested").length 
+    const refundCount = order.statusHistory && order.statusHistory.length > 0
+      ? order.statusHistory.filter((s) => s.status === "refund_requested").length
       : 0;
     const maxRefund = 3;
     const remain = Math.max(0, maxRefund - refundCount);
     if (refundCount > maxRefund) {
       // Tự động từ chối hoàn tiền
       order.status = "delivered_success";
-      
+
       // Đảm bảo statusHistory là array
       if (!order.statusHistory) {
         order.statusHistory = [];
       }
-      
+
       order.statusHistory.push({
         status: "delivered_success",
         note: "Tự động từ chối hoàn tiền do vượt quá số lần cho phép",
         date: Date.now(),
       });
-      
+
       await order.save();
       await createNotificationForUser(
         order.user,
@@ -852,12 +1018,12 @@ export const requestRefund = async (req, res) => {
         .json({ message: "Đơn hàng đã có yêu cầu hoàn tiền." });
     }
     order.status = "refund_requested";
-    
+
     // Đảm bảo statusHistory là array
     if (!order.statusHistory) {
       order.statusHistory = [];
     }
-    
+
     order.statusHistory.push({
       status: "refund_requested",
       note: req.body.reason || "",
@@ -883,18 +1049,18 @@ export const requestReturn = async (req, res) => {
   try {
     const { reason } = req.body;
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
-    
+
     // Kiểm tra điều kiện yêu cầu hoàn hàng
     if (order.status !== "shipped") {
-      return res.status(400).json({ 
-        message: "Chỉ có thể yêu cầu hoàn hàng khi đơn hàng đang giao" 
+      return res.status(400).json({
+        message: "Chỉ có thể yêu cầu hoàn hàng khi đơn hàng đang giao"
       });
     }
-    
+
     // Cập nhật trạng thái
     order.status = "return_requested";
     order.statusHistory.push({
@@ -902,9 +1068,9 @@ export const requestReturn = async (req, res) => {
       note: reason || "Khách hàng yêu cầu hoàn hàng",
       date: Date.now(),
     });
-    
+
     await order.save();
-    
+
     // Gửi thông báo
     await createNotificationForUser(
       order.user,
@@ -914,18 +1080,18 @@ export const requestReturn = async (req, res) => {
       `/profile?tab=orders`,
       { orderId: order._id, reason }
     );
-    
+
     res.json({
       success: true,
       message: "Yêu cầu hoàn hàng đã được gửi thành công",
       order: order
     });
-    
+
   } catch (error) {
     console.error("Lỗi khi yêu cầu hoàn hàng:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Có lỗi xảy ra khi yêu cầu hoàn hàng" 
+      message: "Có lỗi xảy ra khi yêu cầu hoàn hàng"
     });
   }
 };
@@ -934,18 +1100,18 @@ export const requestReturn = async (req, res) => {
 export const confirmSatisfaction = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
-    
+
     // Kiểm tra điều kiện
     if (order.status !== "delivered_success") {
-      return res.status(400).json({ 
-        message: "Chỉ có thể xác nhận hài lòng khi đơn hàng đã giao thành công" 
+      return res.status(400).json({
+        message: "Chỉ có thể xác nhận hài lòng khi đơn hàng đã giao thành công"
       });
     }
-    
+
     // Cập nhật trạng thái
     order.status = "completed";
     order.statusHistory.push({
@@ -953,9 +1119,9 @@ export const confirmSatisfaction = async (req, res) => {
       note: "Khách hàng xác nhận hài lòng với đơn hàng",
       date: Date.now(),
     });
-    
+
     await order.save();
-    
+
     // Gửi thông báo
     await createNotificationForUser(
       order.user,
@@ -965,18 +1131,18 @@ export const confirmSatisfaction = async (req, res) => {
       `/profile?tab=orders`,
       { orderId: order._id }
     );
-    
+
     res.json({
       success: true,
       message: "Xác nhận hài lòng thành công",
       order: order
     });
-    
+
   } catch (error) {
     console.error("Lỗi khi xác nhận hài lòng:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Có lỗi xảy ra khi xác nhận hài lòng" 
+      message: "Có lỗi xảy ra khi xác nhận hài lòng"
     });
   }
 };
@@ -985,18 +1151,18 @@ export const confirmSatisfaction = async (req, res) => {
 export const confirmDelivery = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
-    
+
     // Kiểm tra điều kiện
     if (order.status !== "shipped") {
-      return res.status(400).json({ 
-        message: "Chỉ có thể xác nhận đã nhận hàng khi đơn hàng đang giao" 
+      return res.status(400).json({
+        message: "Chỉ có thể xác nhận đã nhận hàng khi đơn hàng đang giao"
       });
     }
-    
+
     // Cập nhật trạng thái
     order.status = "delivered_success";
     order.deliveredAt = new Date();
@@ -1005,9 +1171,9 @@ export const confirmDelivery = async (req, res) => {
       note: "Khách hàng xác nhận đã nhận được hàng",
       date: Date.now(),
     });
-    
+
     await order.save();
-    
+
     // Gửi thông báo
     await createNotificationForUser(
       order.user,
@@ -1017,18 +1183,18 @@ export const confirmDelivery = async (req, res) => {
       `/profile?tab=orders`,
       { orderId: order._id }
     );
-    
+
     res.json({
       success: true,
       message: "Xác nhận đã nhận hàng thành công",
       order: order
     });
-    
+
   } catch (error) {
     console.error("Lỗi khi xác nhận đã nhận hàng:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Có lỗi xảy ra khi xác nhận đã nhận hàng" 
+      message: "Có lỗi xảy ra khi xác nhận đã nhận hàng"
     });
   }
 };
@@ -1037,18 +1203,39 @@ export const confirmDelivery = async (req, res) => {
 export const cancelOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
-    
+
     // Kiểm tra điều kiện - chỉ cho phép hủy khi đơn hàng còn ở trạng thái có thể hủy
     if (!['pending', 'confirmed', 'processing'].includes(order.status)) {
-      return res.status(400).json({ 
-        message: "Chỉ có thể hủy đơn hàng khi đơn hàng chưa được giao" 
+      return res.status(400).json({
+        message: "Chỉ có thể hủy đơn hàng khi đơn hàng chưa được giao"
       });
     }
-    
+
+    // ✅ HOÀN TRẢ SỐ LƯỢNG KHO KHI HỦY ĐƠN HÀNG
+    console.log(`🔄 Bắt đầu hoàn trả kho cho đơn hàng bị hủy ${order._id}`);
+
+    // Kiểm tra xem đã hoàn trả chưa để tránh trùng lặp
+    if (order.inventoryStatus && order.inventoryStatus.restored) {
+      console.log(`⚠️ Đơn hàng ${order._id} đã được hoàn trả kho trước đó, bỏ qua việc hoàn trả`);
+    } else {
+      const restoreResult = await InventoryService.restoreInventory(
+        order.orderItems,
+        order._id,
+        order.inventoryStatus?.restored || false
+      );
+
+      if (!restoreResult.success && !restoreResult.skipped) {
+        console.error("❌ Lỗi khi hoàn trả kho:", restoreResult.errors);
+        // Vẫn cho phép hủy đơn hàng nhưng ghi log lỗi
+      } else if (restoreResult.success) {
+        console.log("✅ Hoàn trả kho thành công cho đơn hàng bị hủy");
+      }
+    }
+
     // Cập nhật trạng thái
     order.status = "cancelled";
     order.statusHistory.push({
@@ -1056,30 +1243,39 @@ export const cancelOrder = async (req, res) => {
       note: "Khách hàng hủy đơn hàng",
       date: Date.now(),
     });
-    
+
+    // Cập nhật trạng thái đã hoàn trả kho (nếu chưa)
+    if (!order.inventoryStatus) {
+      order.inventoryStatus = {};
+    }
+    if (!order.inventoryStatus.restored) {
+      order.inventoryStatus.restored = true;
+      order.inventoryStatus.restoredAt = new Date();
+    }
+
     await order.save();
-    
+
     // Gửi thông báo
     await createNotificationForUser(
       order.user,
       "Đơn hàng đã được hủy",
-      `Đơn hàng #${order._id} đã được hủy thành công.`,
+      `Đơn hàng #${order._id} đã được hủy thành công. Số lượng sản phẩm đã được hoàn trả vào kho.`,
       "order",
       `/profile?tab=orders`,
       { orderId: order._id }
     );
-    
+
     res.json({
       success: true,
       message: "Hủy đơn hàng thành công",
       order: order
     });
-    
+
   } catch (error) {
     console.error("Lỗi khi hủy đơn hàng:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: "Có lỗi xảy ra khi hủy đơn hàng" 
+      message: "Có lỗi xảy ra khi hủy đơn hàng"
     });
   }
 };

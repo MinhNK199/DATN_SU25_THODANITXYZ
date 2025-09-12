@@ -19,14 +19,8 @@ import {
   confirmOrderAfterPayment,
   confirmOrder
 } from "../controllers/order.js";
-import { 
-  createZaloPayOrder, 
-  checkZaloPayStatus, 
-  checkZaloPayStatusByOrderId,
-  cancelZaloPayPayment, 
-  zalopayCallback
-} from "../controllers/paymentZalopay.js";
 import { protect } from "../middlewares/authMiddleware.js";
+import Order from "../models/Order.js";
 
 const routerOrder = express.Router();
 
@@ -36,12 +30,6 @@ routerOrder.get("/myorders", protect, getMyOrders);
 routerOrder.get("/admin/revenue-stats", protect, getRevenueStats);
 routerOrder.get("/", protect, getOrders);
 
-// ========== ZALOPAY PAYMENT ROUTES ==========
-routerOrder.post("/zalo-pay", protect, createZaloPayOrder);
-routerOrder.post("/zalo-pay/callback", zalopayCallback);
-routerOrder.get("/zalo-pay/status/:app_trans_id", checkZaloPayStatus);
-routerOrder.get("/zalo-pay/status-by-order/:orderId", protect, checkZaloPayStatusByOrderId);
-routerOrder.post("/zalo-pay/cancel", protect, cancelZaloPayPayment);
 
 // ========== ORDER DETAIL & ACTIONS ==========
 routerOrder.get("/:id", protect, getOrderById);
@@ -56,9 +44,57 @@ routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
 routerOrder.put("/:id/cancel", protect, cancelOrder);
 routerOrder.put("/:id/confirm", protect, confirmOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
-routerOrder.put("/:id/payment-failed", protect, handlePaymentFailed);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
+// Route để cập nhật thanh toán thành công
+routerOrder.put("/:id/payment-success", protect, async (req, res) => {
+  try {
+    const { paymentMethod, resultCode, message } = req.body;
+    const orderId = req.params.id;
+    
+    console.log(`🔄 Updating order ${orderId} to payment success via API`);
+    
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    
+    // Cập nhật trạng thái thanh toán thành công
+    order.status = 'pending';
+    order.isPaid = true;
+    order.paidAt = Date.now();
+    order.paymentStatus = 'paid';
+    order.paymentResult = {
+      method: paymentMethod,
+      resultCode: resultCode,
+      message: message,
+      timestamp: Date.now()
+    };
+    
+    // Thêm vào lịch sử trạng thái
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
+      status: 'pending',
+      note: `Thanh toán ${paymentMethod} thành công - Đơn hàng chờ xác nhận từ admin`,
+      date: Date.now()
+    });
+    order.statusHistory.push({
+      status: 'payment_success',
+      note: `Thanh toán ${paymentMethod} thành công - Số tiền: ${order.totalPrice}đ - Result Code: ${resultCode}`,
+      date: Date.now()
+    });
+    
+    await order.save();
+    
+    console.log(`✅ Order ${orderId} updated to payment success successfully`);
+    res.json({ message: "Order payment status updated to success", order });
+    
+  } catch (error) {
+    console.error("❌ Error updating order payment success:", error);
+    res.status(500).json({ message: "Error updating order payment status", error: error.message });
+  }
+});
+
 // Route để cập nhật thanh toán thất bại
 routerOrder.put("/:id/payment-failed", protect, async (req, res) => {
   try {

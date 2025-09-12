@@ -6,10 +6,7 @@ import { Button, Card, Tag, Tooltip, Table, Input, Select, Row, Col, Modal, mess
 import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
 import AssignShipperModal from "./AssignShipperModal";
-
-const getToken = () => {
-    return localStorage.getItem('token') || '';
-}
+import axiosInstance from "../../../api/axiosInstance";
 
 const API_URL = '/api/order';
 
@@ -36,18 +33,14 @@ const OrderList: React.FC = () => {
   const fetchOrders = async (pageNumber = 1) => {
     setLoading(true);
     try {
-      const token = getToken();
       const params = new URLSearchParams();
-      if (customerName) params.append("customerName", customerName);
-      if (orderId) params.append("orderId", orderId);
+      if (customerName) params.append("search", customerName);
+      if (orderId) params.append("search", orderId);
       if (status) params.append("status", status);
       params.append("page", pageNumber.toString());
-      const res = await fetch(`${API_URL}?${params.toString()}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
+      
+      const response = await axiosInstance.get(`/order?${params.toString()}`);
+      const data = response.data;
       console.log('📊 Admin Orders API Response:', data);
       
       // Backend trả về data.data.orders
@@ -63,6 +56,7 @@ const OrderList: React.FC = () => {
       setTotal(data.data?.total || 0);
 
     } catch (error) {
+      console.error("Error fetching orders:", error);
       setMessage("Lỗi khi tải danh sách đơn hàng!");
       setMessageType("error");
     }
@@ -105,7 +99,7 @@ const OrderList: React.FC = () => {
 
   const getStatusText = (status: string): string => {
     switch (status) {
-      case "draft": return "Đơn hàng tạm";
+      case "draft": return "Đang tạo";
       case "pending": return "Chờ xác nhận";
       case "confirmed": return "Đã xác nhận";
       case "processing": return "Đang xử lý";
@@ -119,7 +113,7 @@ const OrderList: React.FC = () => {
       case "refund_requested": return "Yêu cầu hoàn tiền";
       case "refunded": return "Hoàn tiền thành công";
       case "payment_failed": return "Thanh toán thất bại";
-      default: return status || "Không xác định";
+      default: return "Không xác định";
     }
   };
 
@@ -208,6 +202,7 @@ const OrderList: React.FC = () => {
             <Link to={`/admin/orders/${record._id}`}>
                 <Button
                 type="primary"
+                className="admin-primary-button"
                 icon={<FaEye />}
                 />
             </Link>
@@ -289,7 +284,7 @@ const OrderList: React.FC = () => {
           </Select>
         </Col>
         <Col span={6}>
-          <Button type="primary" onClick={() => {
+          <Button type="primary" className="admin-primary-button" onClick={() => {
             setCustomerName(filterCustomerName);
             setOrderId(filterOrderId);
             setStatus(filterStatus);
@@ -301,7 +296,7 @@ const OrderList: React.FC = () => {
             setCustomerName("");
             setOrderId("");
             setStatus("");
-          }}>Xóa bộ lọc</Button>
+          }} className="admin-bg-blue-light hover:admin-bg-blue text-white">Xóa bộ lọc</Button>
         </Col>
       </Row>
 
@@ -375,19 +370,13 @@ const handleAssignShipper = (orderId: string, setAssigningOrderId: (id: string) 
 
 const handleConfirmOrder = async (orderId: string) => {
   try {
-    const response = await fetch(`/api/order/${orderId}/confirm`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    });
+    const response = await axiosInstance.put(`/order/${orderId}/confirm`);
 
-    if (response.ok) {
+    if (response.status === 200) {
       antdMessage.success('Xác nhận đơn hàng thành công!');
       window.location.reload(); // Refresh để cập nhật danh sách
     } else {
-      const errorData = await response.json();
+      const errorData = response.data;
       antdMessage.error(errorData.message || 'Có lỗi xảy ra khi xác nhận đơn hàng');
     }
   } catch (error) {
@@ -398,23 +387,16 @@ const handleConfirmOrder = async (orderId: string) => {
 
 const handleAssignConfirm = async (shipperId: string, assigningOrderId: string, page: number, fetchOrders: (page: number) => void) => {
   try {
-    const response = await fetch('/api/admin/shipper/assign-order', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      },
-      body: JSON.stringify({
-        orderId: assigningOrderId,
-        shipperId: shipperId
-      })
+    const response = await axiosInstance.post('/admin/shipper/assign-order', {
+      orderId: assigningOrderId,
+      shipperId: shipperId
     });
 
-    if (response.ok) {
+    if (response.status === 200) {
       antdMessage.success('Phân công shipper thành công!');
       fetchOrders(page);
     } else {
-      const errorData = await response.json();
+      const errorData = response.data;
       antdMessage.error(errorData.message || 'Có lỗi xảy ra khi phân công shipper');
     }
   } catch (error) {

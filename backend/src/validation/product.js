@@ -65,9 +65,20 @@ export const createProductValidation = [
 
     body('variants.*.color')
     .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('Màu sắc không được quá 50 ký tự'),
+    .custom((value) => {
+        if (typeof value === 'string') {
+            // Kiểm tra hex color hoặc rgba
+            return /^#[0-9A-F]{6}$/i.test(value) || /^rgba?\([^)]+\)$/i.test(value) || value.length <= 50;
+        } else if (typeof value === 'object' && value !== null) {
+            // Nếu là object, kiểm tra có code và name
+            if (value.code && typeof value.code === 'string') {
+                return /^#[0-9A-F]{6}$/i.test(value.code) || /^rgba?\([^)]+\)$/i.test(value.code);
+            }
+            return true; // Allow color objects without code
+        }
+        return false;
+    })
+    .withMessage('Màu sắc phải là chuỗi hợp lệ hoặc object có code và name'),
 
     body('variants.*.size')
     .optional()
@@ -87,8 +98,8 @@ export const createProductValidation = [
 
     body('variants.*.images.*')
     .optional()
-    .isURL()
-    .withMessage('URL hình ảnh biến thể không hợp lệ'),
+    .isString()
+    .withMessage('URL hình ảnh biến thể phải là chuỗi'),
 
     body('specifications')
     .optional()
@@ -105,6 +116,44 @@ export const createProductValidation = [
     .trim()
     .isLength({ min: 1, max: 200 })
     .withMessage('Tính năng phải có từ 1 đến 200 ký tự'),
+
+    body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('Trạng thái kích hoạt phải là boolean'),
+
+    body('isFeatured')
+    .optional()
+    .isBoolean()
+    .withMessage('Trạng thái nổi bật phải là boolean'),
+];
+
+export const updateAdditionalImagesValidation = [
+    body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 200 })
+    .withMessage('Tên sản phẩm phải có từ 2 đến 200 ký tự'),
+
+    body('price')
+    .optional()
+    .isFloat({ min: 0 })
+    .withMessage('Giá sản phẩm phải là số dương'),
+
+    body('category')
+    .optional()
+    .isMongoId()
+    .withMessage('Danh mục không hợp lệ'),
+
+    body('brand')
+    .optional()
+    .isMongoId()
+    .withMessage('Thương hiệu không hợp lệ'),
+
+    body('variants')
+    .optional()
+    .isArray()
+    .withMessage('Biến thể phải là một mảng'),
 
     body('isActive')
     .optional()
@@ -189,9 +238,20 @@ export const updateProductValidation = [
 
     body('variants.*.color')
     .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('Màu sắc không được quá 50 ký tự'),
+    .custom((value) => {
+        if (typeof value === 'string') {
+            // Kiểm tra hex color hoặc rgba
+            return /^#[0-9A-F]{6}$/i.test(value) || /^rgba?\([^)]+\)$/i.test(value) || value.length <= 50;
+        } else if (typeof value === 'object' && value !== null) {
+            // Nếu là object, kiểm tra có code và name
+            if (value.code && typeof value.code === 'string') {
+                return /^#[0-9A-F]{6}$/i.test(value.code) || /^rgba?\([^)]+\)$/i.test(value.code);
+            }
+            return true; // Allow color objects without code
+        }
+        return false;
+    })
+    .withMessage('Màu sắc phải là chuỗi hợp lệ hoặc object có code và name'),
 
     body('variants.*.size')
     .optional()
@@ -211,8 +271,8 @@ export const updateProductValidation = [
 
     body('variants.*.images.*')
     .optional()
-    .isURL()
-    .withMessage('URL hình ảnh biến thể không hợp lệ'),
+    .isString()
+    .withMessage('URL hình ảnh biến thể phải là chuỗi'),
 
     body('specifications')
     .optional()

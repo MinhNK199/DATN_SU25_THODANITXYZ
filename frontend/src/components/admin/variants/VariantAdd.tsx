@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { SaveOutlined, ArrowLeftOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin, ColorPicker, Image } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message as antdMessage, Spin, ColorPicker, Image } from 'antd';
+import { useNotification } from '../../../hooks/useNotification';
 import type { UploadFile } from 'antd/es/upload/interface';
 import axios from 'axios';
 import SpecificationEditor from '../products/SpecificationEditor';
@@ -30,6 +31,7 @@ const { Option } = Select;
 
 const VariantAdd: React.FC = () => {
   const navigate = useNavigate();
+  const { success, error } = useNotification();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,7 +48,7 @@ const VariantAdd: React.FC = () => {
         setProducts(response.data.products || []);
       } catch (error) {
         console.error('Error fetching products:', error);
-        message.error('Không thể tải danh sách sản phẩm');
+        error('Không thể tải danh sách sản phẩm');
       }
     };
     fetchProducts();
@@ -54,12 +56,12 @@ const VariantAdd: React.FC = () => {
 
   const handleSubmit = async (values: VariantForm) => {
     if (!values.product) {
-      message.error('Vui lòng chọn sản phẩm');
+      error('Vui lòng chọn sản phẩm');
       return;
     }
 
     if (values.salePrice && values.salePrice >= values.price) {
-      message.error('Giá khuyến mãi phải nhỏ hơn giá gốc');
+      error('Giá khuyến mãi phải nhỏ hơn giá gốc');
       return;
     }
 
@@ -124,17 +126,17 @@ const VariantAdd: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      message.success('Thêm biến thể thành công');
+      success('Thêm biến thể thành công');
       navigate('/admin/variants');
     } catch (error: any) {
       console.error('Error creating variant:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error details:', error.response?.data?.details);
-      
+
       if (error.response?.data?.details && Array.isArray(error.response.data.details)) {
-        message.error(`Lỗi validation:\n${error.response.data.details.join('\n')}`);
+        error(`Lỗi validation:\n${error.response.data.details.join('\n')}`);
       } else {
-        message.error(error.response?.data?.message || 'Không thể thêm biến thể');
+        error(error.response?.data?.message || 'Không thể thêm biến thể');
       }
     } finally {
       setLoading(false);
@@ -209,9 +211,9 @@ const VariantAdd: React.FC = () => {
                     { required: true, message: 'Vui lòng nhập SKU' },
                     { min: 2, message: 'SKU phải từ 2 ký tự trở lên' },
                     { max: 50, message: 'SKU không được quá 50 ký tự' },
-                    { 
-                      pattern: /^[A-Za-z0-9\-_!@#$%^&*()]+$/, 
-                      message: 'SKU chỉ được chứa chữ cái, số và các ký tự: -_!@#$%^&*()' 
+                    {
+                      pattern: /^[A-Za-z0-9\-_!@#$%^&*()]+$/,
+                      message: 'SKU chỉ được chứa chữ cái, số và các ký tự: -_!@#$%^&*()'
                     }
                   ]}
                 >
@@ -284,11 +286,11 @@ const VariantAdd: React.FC = () => {
               <Col span={12}>
                 <Form.Item label="Màu sắc">
                   <div className="space-y-2">
-                    <ColorPicker 
+                    <ColorPicker
                       value={colorValue}
                       onChange={(color, hex) => {
                         setColorValue(hex || '#000000');
-                        form.setFieldsValue({ 
+                        form.setFieldsValue({
                           color: { code: hex || '#000000', name: colorName || '' },
                           colorName: colorName || ''
                         });
@@ -297,11 +299,11 @@ const VariantAdd: React.FC = () => {
                       size="middle"
                     />
                     <Form.Item name="colorName" noStyle>
-                      <Input 
-                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)" 
+                      <Input
+                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
                         onChange={(e) => {
                           setColorName(e.target.value);
-                          form.setFieldsValue({ 
+                          form.setFieldsValue({
                             color: { code: colorValue || '#000000', name: e.target.value }
                           });
                         }}
@@ -311,8 +313,13 @@ const VariantAdd: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label="Kích thước" name="size">
-                  <Input placeholder="VD: M" />
+                <Form.Item label="Kích thước (cm)" name="size">
+                  <InputNumber
+                    placeholder="Kích thước (cm)"
+                    min={1}
+                    addonAfter="cm"
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -369,6 +376,7 @@ const VariantAdd: React.FC = () => {
               </Button>
               <Button
                 type="primary"
+                className="admin-primary-button"
                 htmlType="submit"
                 loading={loading}
                 icon={<SaveOutlined />}

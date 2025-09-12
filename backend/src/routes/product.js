@@ -28,6 +28,7 @@ import {
     answerProductQuestion,
     deleteProductQuestion,
     addRelatedProduct,
+    updateVariantStock,
     removeRelatedProduct,
     getRelatedProducts,
     createFlashSale,
@@ -55,12 +56,13 @@ import {
     searchProducts,
     createVoucher,
     checkVoucher,
-    updateVoucherUsage
+    updateVoucherUsage,
+    checkSkuExists
 } from "../controllers/product.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
-import { createProductValidation, updateProductValidation } from "../validation/product.js";
-import { uploadImage } from "../controllers/upload.js";
+import { createProductValidation, updateProductValidation, updateAdditionalImagesValidation } from "../validation/product.js";
+import { uploadImage, uploadMultipleImages, uploadAdditionalImages, uploadFlexible, handleMulterError } from "../controllers/upload.js";
 import { normalizeProductBody } from "../middlewares/normalizeProductBody.js";
 
 const routerProduct = express.Router();
@@ -79,12 +81,19 @@ routerProduct.get("/:id/favorite", protect, checkFavorite);
 routerProduct.post("/:id/favorite", protect, addToFavorites);
 routerProduct.delete("/:id/favorite", protect, removeFromFavorites);
 
-routerProduct.get("/:id", getProductById);
 routerProduct.get("/:id/variant-stats", protect, getVariantStats);
 
 routerProduct.get("/", getProducts);
-routerProduct.post("/", protect, uploadImage, normalizeProductBody, createProductValidation, validateRequest, createProduct);
-routerProduct.put("/:id", protect, updateProductValidation, validateRequest, updateProduct);
+routerProduct.post("/", protect, uploadMultipleImages, handleMulterError, normalizeProductBody, createProductValidation, validateRequest, createProduct);
+
+// ✅ CẬP NHẬT ẢNH PHỤ SẢN PHẨM (phải đặt trước PUT /:id để tránh conflict)
+routerProduct.put('/:id/additional-images', (req, res, next) => {
+    console.log('🔍 Additional images route hit:', req.method, req.path);
+    console.log('🔍 Product ID:', req.params.id);
+    next();
+}, protect, uploadFlexible, handleMulterError, normalizeProductBody, updateAdditionalImagesValidation, validateRequest, updateProduct);
+
+routerProduct.put("/:id", protect, uploadMultipleImages, handleMulterError, normalizeProductBody, updateProductValidation, validateRequest, updateProduct);
 routerProduct.delete("/:id", protect, deleteProduct);
 routerProduct.put("/:id/soft-delete", protect, softDeleteProduct);
 routerProduct.put("/:id/restore", protect, restoreProduct);
@@ -146,5 +155,14 @@ routerProduct.post('/voucher', createVoucher);
 routerProduct.post('/check-voucher', checkVoucher);
 // Cập nhật lượt dùng voucher
 routerProduct.post('/voucher/update-usage', updateVoucherUsage);
+
+// Kiểm tra SKU trùng lặp
+routerProduct.get('/check-sku', checkSkuExists);
+
+// ✅ CẬP NHẬT STOCK CỦA VARIANT
+routerProduct.put('/:productId/variant/:variantId/stock', updateVariantStock);
+
+// Route này phải đặt cuối cùng để tránh conflict với các route cụ thể
+routerProduct.get("/:id", getProductById);
 
 export default routerProduct;

@@ -81,18 +81,21 @@ export const validateCoupon = async (req, res) => {
             return res.status(400).json({ message: "Mã giảm giá không còn hiệu lực" });
         }
 
-        if (orderValue < coupon.minOrderValue) {
-            return res.status(400).json({ message: `Giá trị đơn hàng tối thiểu là ${coupon.minOrderValue}` });
+        const minAmount = coupon.minAmountValue || coupon.minOrderValue || 0;
+        if (orderValue < minAmount) {
+            return res.status(400).json({ message: `Giá trị đơn hàng tối thiểu là ${minAmount}` });
         }
 
         let discountAmount = 0;
+        const discountValue = coupon.discountValue || coupon.value;
         if (coupon.type === 'percentage') {
-            discountAmount = (orderValue * coupon.value) / 100;
-            if (coupon.maxDiscountValue) {
-                discountAmount = Math.min(discountAmount, coupon.maxDiscountValue);
+            discountAmount = (orderValue * discountValue) / 100;
+            const maxDiscount = coupon.maxDiscountAmount || coupon.maxDiscountValue;
+            if (maxDiscount) {
+                discountAmount = Math.min(discountAmount, maxDiscount);
             }
         } else {
-            discountAmount = coupon.value;
+            discountAmount = Math.min(discountValue, orderValue);
         }
 
         res.json({
@@ -101,5 +104,154 @@ export const validateCoupon = async (req, res) => {
         });
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+};
+
+// Lấy danh sách mã giảm giá có sẵn
+export const getAvailableCoupons = async (req, res) => {
+    try {
+        const now = new Date();
+        const coupons = await Coupon.find({
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now }
+        }).sort({ createdAt: -1 });
+
+        // Filter coupons that haven't exceeded usage limit
+        const availableCoupons = coupons.filter(coupon => {
+            const usedCount = coupon.usedCount || coupon.usageCount || 0;
+            const usageLimit = coupon.usageLimit || 1;
+            return usedCount < usageLimit;
+        });
+
+        console.log(`Found ${coupons.length} total coupons, ${availableCoupons.length} available coupons`);
+        console.log('Available coupons:', availableCoupons.map(c => ({ code: c.code, name: c.name, usedCount: c.usedCount || c.usageCount, usageLimit: c.usageLimit })));
+
+        res.json({
+            success: true,
+            coupons: availableCoupons
+        });
+    } catch (error) {
+        console.error('Error fetching available coupons:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Lấy danh sách mã giảm giá đã sử dụng
+export const getUsedCoupons = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Tìm các coupon đã được sử dụng bởi user này
+        const coupons = await Coupon.find({
+            'usedBy.user': userId,
+            'usedBy.count': { $gt: 0 }
+        }).sort({ createdAt: -1 });
+
+        res.json({
+            success: true,
+            coupons
+        });
+    } catch (error) {
+        console.error('Error fetching used coupons:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Áp dụng mã giảm giá
+export const applyCoupon = async (req, res) => {
+    try {
+        const { code, orderAmount } = req.body;
+        const userId = req.user._id;
+
+        const coupon = await Coupon.findOne({ code });
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: "Mã giảm giá không tồn tại"
+            });
+        }
+
+        // Kiểm tra coupon còn hiệu lực không
+        if (!coupon.isValid()) {
+            return res.status(400).json({
+                success: false,
+                message: "Mã giảm giá không còn hiệu lực"
+            });
+        }
+
+        // Kiểm tra giá trị đơn hàng tối thiểu
+        const minAmount = coupon.minAmountValue || coupon.minOrderValue || 0;
+        if (orderAmount < minAmount) {
+            return res.status(400).json({
+                success: false,
+                message: `Giá trị đơn hàng tối thiểu là ${minAmount}đ`
+            });
+        }
+
+        // Kiểm tra user đã sử dụng coupon này chưa
+        const userUsage = coupon.usedBy.find(usage =>
+            usage.user.toString() === userId.toString()
+        );
+
+        if (userUsage && userUsage.count >= coupon.userUsageLimit) {
+            return res.status(400).json({
+                success: false,
+                message: "Bạn đã sử dụng hết số lần cho phép của mã giảm giá này"
+            });
+        }
+
+        // Tính toán số tiền giảm
+        let discountAmount = 0;
+        const discountValue = coupon.discountValue || coupon.value;
+        if (coupon.type === 'percentage') {
+            discountAmount = (orderAmount * discountValue) / 100;
+            const maxDiscount = coupon.maxDiscountAmount || coupon.maxDiscountValue;
+            if (maxDiscount) {
+                discountAmount = Math.min(discountAmount, maxDiscount);
+            }
+        } else {
+            discountAmount = Math.min(discountValue, orderAmount);
+        }
+
+        res.json({
+            success: true,
+            coupon: {
+                ...coupon.toObject(),
+                discountAmount
+            },
+            message: "Áp dụng mã giảm giá thành công"
+        });
+    } catch (error) {
+        console.error('Error applying coupon:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// Hủy áp dụng mã giảm giá
+export const removeCoupon = async (req, res) => {
+    try {
+        const { couponId } = req.body;
+
+        // Chỉ cần trả về success, logic xử lý sẽ được thực hiện ở frontend
+        res.json({
+            success: true,
+            message: "Hủy áp dụng mã giảm giá thành công"
+        });
+    } catch (error) {
+        console.error('Error removing coupon:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
     }
 };

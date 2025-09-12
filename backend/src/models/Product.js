@@ -69,6 +69,9 @@ const productVariantSchema = new mongoose.Schema({
     images: [{
         type: String,
     }, ],
+    additionalImages: [{
+        type: String,
+    }, ],
     isActive: {
         type: Boolean,
         default: true,
@@ -110,6 +113,12 @@ const productSchema = new mongoose.Schema({
     images: [{
         type: String,
         required: [true, "Vui lòng thêm ảnh sản phẩm"],
+    }, ],
+    additionalImages: [{
+        type: String,
+    }, ],
+    thumbnails: [{
+        type: String,
     }, ],
     videos: [{
         type: String, // link YouTube, mp4, v.v.
@@ -248,8 +257,6 @@ const productSchema = new mongoose.Schema({
 
 // Pre-save middleware để validate và clean data - CRITICAL FIX
 productSchema.pre("save", function(next) {
-    console.log("🔧 Pre-save middleware running...")
-
     // Tạo slug tự động từ tên sản phẩm
     if (this.name) {
         this.slug = this.name
@@ -261,11 +268,8 @@ productSchema.pre("save", function(next) {
     // Validate và clean variants
     if (this.variants && Array.isArray(this.variants)) {
         this.variants = this.variants.map((variant, index) => {
-            console.log(`🔧 Pre-save processing variant ${index}:`, variant.name)
-
             // Ensure color is always a proper object
             if (!variant.color || typeof variant.color !== "object") {
-                console.log(`⚠️ Fixing invalid color for variant ${index}`)
                 variant.color = { code: "#000000", name: "" }
             } else {
                 // Ensure color object has proper structure
@@ -279,15 +283,8 @@ productSchema.pre("save", function(next) {
 
             // Ensure specifications is always an object
             if (!variant.specifications || typeof variant.specifications !== "object") {
-                console.log(`⚠️ Fixing invalid specifications for variant ${index}`)
                 variant.specifications = {}
             }
-
-            console.log(`✅ Pre-save cleaned variant ${index}:`, {
-                name: variant.name,
-                color: variant.color,
-                specifications: variant.specifications,
-            })
 
             return variant
         })
@@ -295,26 +292,10 @@ productSchema.pre("save", function(next) {
 
     // Ensure main specifications is always an object
     if (!this.specifications || typeof this.specifications !== "object") {
-        console.log("⚠️ Fixing invalid main specifications")
         this.specifications = {}
     }
 
-    console.log("✅ Pre-save middleware completed")
     next()
-})
-
-// Post-save middleware để log kết quả
-productSchema.post("save", (doc) => {
-    console.log("✅ Product saved successfully!")
-    if (doc.variants && doc.variants.length > 0) {
-        doc.variants.forEach((variant, index) => {
-            console.log(`📤 Saved variant ${index}:`, {
-                name: variant.name,
-                color: variant.color,
-                specifications: variant.specifications,
-            })
-        })
-    }
 })
 
 // Tạo compound index cho tìm kiếm nâng cao

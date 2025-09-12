@@ -56,14 +56,16 @@ const BrandList: React.FC = () => {
             method: "DELETE",
             headers: getAuthHeader(),
           });
+
           if (res.ok) {
             messageApi.success("Xóa thành công!");
             fetchBrands();
           } else {
-            throw new Error("Failed to delete brand");
+            const errorData = await res.json();
+            throw new Error(errorData.message || "Xóa thất bại!");
           }
         } catch (error) {
-          messageApi.error("Xóa thất bại!");
+          messageApi.error(error instanceof Error ? error.message : "Xóa thất bại!");
         }
       },
     });
@@ -157,6 +159,7 @@ const BrandList: React.FC = () => {
         <Space>
           <Button
             type="primary"
+            className="admin-primary-button"
             icon={<FaEdit />}
             onClick={() => {
               setEditingBrand(record);
@@ -166,7 +169,6 @@ const BrandList: React.FC = () => {
             
           </Button>
           <Button danger icon={<FaTrash />} onClick={() => handleDelete(record._id!)}>
-            
           </Button>
         </Space>
       ),
@@ -178,7 +180,7 @@ const BrandList: React.FC = () => {
       {contextHolder}
       <div className="flex justify-between items-center mb-4">
         <Typography.Title level={3}>Danh sách Thương hiệu</Typography.Title>
-        <Button type="primary" onClick={() => setIsAdding(true)}>
+        <Button type="primary" className="admin-primary-button" onClick={() => setIsAdding(true)}>
           + Thêm mới
         </Button>
       </div>

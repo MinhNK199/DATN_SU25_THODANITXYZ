@@ -232,6 +232,7 @@ const getImageSrc = (image?: string) => {
           <Tooltip title="Xem chi tiết">
             <Button
               type="primary"
+              className="admin-primary-button"
               icon={<FaEye />}
               onClick={() => showBannerDetail(record)}
             />
@@ -260,6 +261,7 @@ const getImageSrc = (image?: string) => {
           <h1 className="text-2xl font-bold">Quản lý banner</h1>
           <Button
             type="primary"
+            className="admin-primary-button"
             icon={<FaPlus />}
             onClick={() => navigate("/admin/banners/add")}
           >
@@ -324,6 +326,7 @@ const getImageSrc = (image?: string) => {
 </Button>
                     <Button
                       type="primary"
+                      className="admin-primary-button"
                       icon={<FaEdit />}
                       onClick={() =>
                         navigate(`/admin/banners/edit/${selectedBanner._id}`)
@@ -439,7 +442,7 @@ const getImageSrc = (image?: string) => {
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        <Button type="primary">
+                        <Button type="primary" className="admin-primary-button">
                           {selectedBanner.buttonText}
                         </Button>
                       </a>

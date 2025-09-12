@@ -27,47 +27,69 @@ export interface ValidationResult {
 /**
  * Validate a single variant
  */
-export const validateVariant = (variant: ProductVariant, index: number): ValidationResult => {
+export const validateVariant = (variant: ProductVariant, index: number, allVariants: ProductVariant[] = []): ValidationResult => {
   const errors: string[] = []
-  
+
   if (!variant.name?.trim()) {
     errors.push(`Biến thể ${index + 1}: Tên không được để trống`)
   }
-  
+
   if (!variant.sku?.trim()) {
     errors.push(`Biến thể ${index + 1}: SKU không được để trống`)
   }
-  
+
   if (!variant.price || variant.price <= 0) {
     errors.push(`Biến thể ${index + 1}: Giá phải lớn hơn 0`)
   }
-  
+
   if (variant.stock < 0) {
     errors.push(`Biến thể ${index + 1}: Tồn kho không được âm`)
   }
-  
+
   if (!variant.length || variant.length <= 0) {
     errors.push(`Biến thể ${index + 1}: Chiều dài phải lớn hơn 0`)
   }
-  
+
   if (!variant.width || variant.width <= 0) {
     errors.push(`Biến thể ${index + 1}: Chiều rộng phải lớn hơn 0`)
   }
-  
+
   if (!variant.height || variant.height <= 0) {
     errors.push(`Biến thể ${index + 1}: Chiều cao phải lớn hơn 0`)
   }
-  
+
+  // Kiểm tra trùng lặp SKU
+  if (variant.sku?.trim()) {
+    const duplicateSku = allVariants.filter((v, idx) => 
+      idx !== index && 
+      v.sku?.trim().toLowerCase() === variant.sku.trim().toLowerCase()
+    );
+    if (duplicateSku.length > 0) {
+      errors.push(`Biến thể ${index + 1}: SKU "${variant.sku}" đã tồn tại trong biến thể khác`)
+    }
+  }
+
+  // Kiểm tra trùng lặp tên biến thể
+  if (variant.name?.trim()) {
+    const duplicateName = allVariants.filter((v, idx) => 
+      idx !== index && 
+      v.name?.trim().toLowerCase() === variant.name.trim().toLowerCase()
+    );
+    if (duplicateName.length > 0) {
+      errors.push(`Biến thể ${index + 1}: Tên biến thể "${variant.name}" đã tồn tại`)
+    }
+  }
+
   // Chỉ kiểm tra imageFile, không kiểm tra images bằng link
   if (!variant.imageFile) {
-   errors.push("Phải upload ít nhất 1 ảnh biến thể")
- }
-  
+    errors.push("Phải upload ít nhất 1 ảnh biến thể")
+  }
+
   // Kiểm tra trường images (link ảnh đã upload)
-//  if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
-//   errors.push("Phải upload ít nhất 1 ảnh biến thể")
-//  }
-  
+  //  if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
+  //   errors.push("Phải upload ít nhất 1 ảnh biến thể")
+  //  }
+
   return {
     isValid: errors.length === 0,
     errors
@@ -77,17 +99,49 @@ export const validateVariant = (variant: ProductVariant, index: number): Validat
 /**
  * Validate all variants
  */
-export function validateAllVariants(variants: any[]) {
+export function validateAllVariants(variants: any[], isEdit: boolean = false) {
   const errors: string[] = [];
+  
+  // Kiểm tra từng variant
   variants.forEach((variant, idx) => {
     if (!variant.name?.trim()) errors.push(`Biến thể ${idx + 1}: Tên không được để trống`);
     if (!variant.sku?.trim()) errors.push(`Biến thể ${idx + 1}: SKU không được để trống`);
     if (!variant.price || variant.price <= 0) errors.push(`Biến thể ${idx + 1}: Giá phải lớn hơn 0`);
     if (variant.stock < 0) errors.push(`Biến thể ${idx + 1}: Tồn kho không được âm`);
-    if (!variant.images || variant.images.length === 0 || !variant.images[0]) {
+    // Chỉ yêu cầu ảnh khi tạo mới, không yêu cầu khi sửa
+    if (!isEdit && (!variant.images || variant.images.length === 0 || !variant.images[0])) {
       errors.push(`Biến thể ${idx + 1}: Phải upload ít nhất 1 ảnh biến thể`);
     }
   });
+
+  // Kiểm tra trùng lặp SKU
+  const skuMap = new Map<string, number>();
+  variants.forEach((variant, idx) => {
+    if (variant.sku?.trim()) {
+      const sku = variant.sku.trim().toLowerCase();
+      if (skuMap.has(sku)) {
+        const firstIndex = skuMap.get(sku)!;
+        errors.push(`SKU "${variant.sku}" bị trùng lặp ở biến thể ${firstIndex + 1} và ${idx + 1}`);
+      } else {
+        skuMap.set(sku, idx);
+      }
+    }
+  });
+
+  // Kiểm tra trùng lặp tên biến thể
+  const nameMap = new Map<string, number>();
+  variants.forEach((variant, idx) => {
+    if (variant.name?.trim()) {
+      const name = variant.name.trim().toLowerCase();
+      if (nameMap.has(name)) {
+        const firstIndex = nameMap.get(name)!;
+        errors.push(`Tên biến thể "${variant.name}" bị trùng lặp ở biến thể ${firstIndex + 1} và ${idx + 1}`);
+      } else {
+        nameMap.set(name, idx);
+      }
+    }
+  });
+
   return {
     isValid: errors.length === 0,
     errors,

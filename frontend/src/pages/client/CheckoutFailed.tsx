@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 // import { XCircle, RefreshCw, ShoppingCart } from "react-icons/fa";
 // import { AlertTriangle, ArrowLeft, Home } from "lucide-react";
-import { useModernNotification } from "../../components/client/ModernNotification";
+import { useToast } from "../../components/client/ToastContainer";
 import axios from "axios";
 
 const CheckoutFailed: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { showOrderFailed } = useModernNotification();
+  const { showError } = useToast();
   const [loading, setLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState<any>(null);
 
@@ -46,14 +46,20 @@ const CheckoutFailed: React.FC = () => {
         failureReason = "Lỗi kết nối";
       } else if (resultCode === "1005") {
         failureReason = "Lỗi timeout";
+      } else if (errorMessage === "timeout_error") {
+        failureReason = "MoMo server không phản hồi - Vui lòng thử lại sau";
+      } else if (errorMessage === "network_error") {
+        failureReason = "Không thể kết nối đến MoMo server - Vui lòng kiểm tra kết nối mạng";
+      } else if (errorMessage === "payment_error") {
+        failureReason = "Lỗi thanh toán - Vui lòng thử lại";
       }
       
-      showOrderFailed(
-        orderId,
-        `Đơn hàng ${orderId} thất bại: ${failureReason}`
+      showError(
+        `Đơn hàng ${orderId} thất bại`,
+        failureReason
       );
     }
-  }, [orderId, errorMessage, showOrderFailed]);
+  }, [orderId, errorMessage, showError]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -76,9 +82,9 @@ const CheckoutFailed: React.FC = () => {
       if (token && orderId) {
         console.log("🔄 Handling payment failure for order:", orderId);
         
-        // Xóa đơn hàng khỏi danh sách đơn hàng của người dùng
+        // Cập nhật trạng thái đơn hàng thành thất bại
         await axios.put(
-          `http://localhost:8000/api/order/${orderId}/cancel`,
+          `http://localhost:8000/api/order/${orderId}/payment-failed`,
           { 
             reason: resultCode === "1006" ? "Người dùng hủy giao dịch" : "Thanh toán thất bại",
             resultCode: resultCode 
@@ -133,8 +139,6 @@ const CheckoutFailed: React.FC = () => {
     switch (method) {
       case "momo":
         return "MoMo";
-      case "zalopay":
-        return "ZaloPay";
       case "vnpay":
         return "VNPAY";
       case "credit-card":

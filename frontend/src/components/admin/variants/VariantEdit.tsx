@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { SaveOutlined, ArrowLeftOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message, Spin, ColorPicker } from 'antd';
+import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message as antdMessage, Spin, ColorPicker } from 'antd';
+import { useNotification } from '../../../hooks/useNotification';
 import type { UploadFile } from 'antd/es/upload/interface';
 import axios from 'axios';
 import SpecificationEditor from '../products/SpecificationEditor';
@@ -31,6 +32,7 @@ const { Option } = Select;
 const VariantEdit: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { success, error } = useNotification();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -64,10 +66,10 @@ const VariantEdit: React.FC = () => {
         // Set color values
         const colorCode = typeof variant.color === 'object' ? variant.color.code : variant.color || '#000000';
         const colorNameValue = typeof variant.color === 'object' ? variant.color.name : '';
-        
+
         setColorValue(colorCode);
         setColorName(colorNameValue);
-        
+
         form.setFieldsValue({
           name: variant.name || '',
           sku: variant.sku || '',
@@ -84,7 +86,7 @@ const VariantEdit: React.FC = () => {
         setSpecifications(variant.specifications || {});
       } catch (error) {
         console.error('Error fetching variant:', error);
-        message.error('Không thể tải thông tin biến thể');
+        error('Không thể tải thông tin biến thể');
         navigate('/admin/variants');
       } finally {
         setInitialLoading(false);
@@ -103,7 +105,7 @@ const VariantEdit: React.FC = () => {
         setProducts(response.data.products || []);
       } catch (error) {
         console.error('Error fetching products:', error);
-        message.error('Không thể tải danh sách sản phẩm');
+        error('Không thể tải danh sách sản phẩm');
       }
     };
     fetchProducts();
@@ -111,12 +113,12 @@ const VariantEdit: React.FC = () => {
 
   const handleSubmit = async (values: VariantForm) => {
     if (!values.product) {
-      message.error('Vui lòng chọn sản phẩm');
+      error('Vui lòng chọn sản phẩm');
       return;
     }
 
     if (values.salePrice && values.salePrice >= values.price) {
-      message.error('Giá khuyến mãi phải nhỏ hơn giá gốc');
+      error('Giá khuyến mãi phải nhỏ hơn giá gốc');
       return;
     }
 
@@ -167,11 +169,11 @@ const VariantEdit: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      message.success('Cập nhật biến thể thành công');
+      success('Cập nhật biến thể thành công');
       navigate('/admin/variants');
     } catch (error: any) {
       console.error('Error updating variant:', error);
-      message.error(error.response?.data?.message || 'Không thể cập nhật biến thể');
+      error(error.response?.data?.message || 'Không thể cập nhật biến thể');
     } finally {
       setLoading(false);
     }
@@ -317,11 +319,11 @@ const VariantEdit: React.FC = () => {
               <Col span={12}>
                 <Form.Item label="Màu sắc">
                   <div className="space-y-2">
-                    <ColorPicker 
+                    <ColorPicker
                       value={colorValue}
                       onChange={(color, hex) => {
                         setColorValue(hex || '#000000');
-                        form.setFieldsValue({ 
+                        form.setFieldsValue({
                           color: { code: hex || '#000000', name: colorName || '' },
                           colorName: colorName || ''
                         });
@@ -330,11 +332,11 @@ const VariantEdit: React.FC = () => {
                       size="middle"
                     />
                     <Form.Item name="colorName" noStyle>
-                      <Input 
-                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)" 
+                      <Input
+                        placeholder="Tên màu (VD: Đen, Trắng, Đỏ...)"
                         onChange={(e) => {
                           setColorName(e.target.value);
-                          form.setFieldsValue({ 
+                          form.setFieldsValue({
                             color: { code: colorValue || '#000000', name: e.target.value }
                           });
                         }}
@@ -344,8 +346,13 @@ const VariantEdit: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item label="Kích thước" name="size">
-                  <Input placeholder="VD: M" />
+                <Form.Item label="Kích thước (cm)" name="size">
+                  <InputNumber
+                    placeholder="Kích thước (cm)"
+                    min={1}
+                    addonAfter="cm"
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -362,19 +369,7 @@ const VariantEdit: React.FC = () => {
 
             <Divider orientation="left">Ảnh sản phẩm</Divider>
             <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item label="Link ảnh (mỗi dòng 1 link, ưu tiên dùng nếu có)">
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
-                    value={imageLinks}
-                    onChange={e => setImageLinks(e.target.value)}
-                  />
-                  <div style={{ color: '#888', fontSize: 12 }}>
-                    Nếu nhập link ảnh ở đây, hệ thống sẽ dùng các link này làm ảnh cho biến thể. Nếu để trống, sẽ dùng ảnh upload bên dưới.
-                  </div>
-                </Form.Item>
-              </Col>
+             
               <Col span={24}>
                 <Form.Item label="Upload ảnh (không bắt buộc, chỉ dùng nếu không nhập link ảnh)">
                   <Upload
@@ -402,6 +397,7 @@ const VariantEdit: React.FC = () => {
               </Button>
               <Button
                 type="primary"
+                className="admin-primary-button"
                 htmlType="submit"
                 loading={loading}
                 icon={<SaveOutlined />}

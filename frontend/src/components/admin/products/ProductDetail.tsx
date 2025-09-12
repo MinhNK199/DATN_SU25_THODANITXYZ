@@ -5,7 +5,6 @@ import {
   Card,
   Button,
   Modal,
-  message,
   Image,
   Tag,
   Divider,
@@ -16,7 +15,8 @@ import {
   Space,
   Typography,
   Table,
-  List,
+  Input,
+  Upload,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -24,22 +24,33 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  SaveOutlined,
+  PlusOutlined,
+  UploadOutlined,
+  EyeOutlined,
+  FileImageOutlined,
 } from "@ant-design/icons";
-import { getProductById, softDeleteProduct } from "./api";
+import { getProductById, softDeleteProduct, updateVariantStock } from "./api";
+import { useNotification } from "../../../hooks/useNotification";
 import type { ColumnsType } from "antd/es/table";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success, error } = useNotification();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string>("");
+  const [editingStock, setEditingStock] = useState<{ [key: string]: number }>({});
+  const [savingStock, setSavingStock] = useState<string | null>(null);
+  const [showAdditionalImagesModal, setShowAdditionalImagesModal] = useState(false);
+  const [additionalImageFileList, setAdditionalImageFileList] = useState<any[]>([]);
 
   useEffect(() => {
     if (!id) {
-      message.error("ID sản phẩm không hợp lệ.");
+      error("ID sản phẩm không hợp lệ.");
       navigate("/admin/products");
       return;
     }
@@ -48,6 +59,10 @@ const ProductDetail: React.FC = () => {
       setLoading(true);
       try {
         const data = await getProductById(id);
+        console.log("🔍 ProductDetail - Product data:", data);
+        console.log("🔍 ProductDetail - Additional images:", data.additionalImages);
+        console.log("🔍 ProductDetail - Additional images type:", typeof data.additionalImages);
+        console.log("🔍 ProductDetail - Additional images isArray:", Array.isArray(data.additionalImages));
         setProduct(data);
         setMainImage(data.images?.[0] || "/placeholder.svg");
       } catch (error) {
@@ -72,7 +87,7 @@ const ProductDetail: React.FC = () => {
       onOk: async () => {
         try {
           await softDeleteProduct(id);
-          message.success("Sản phẩm đã được chuyển vào thùng rác.");
+          success("Sản phẩm đã được chuyển vào thùng rác.");
           navigate("/admin/products");
         } catch (error) {
           // message handled in api.ts
@@ -87,6 +102,223 @@ const ProductDetail: React.FC = () => {
       style: "currency",
       currency: "VND",
     }).format(price);
+  };
+
+  // ✅ FUNCTION CẬP NHẬT STOCK CỦA VARIANT
+  const handleStockChange = (variantId: string, value: number) => {
+    setEditingStock(prev => ({
+      ...prev,
+      [variantId]: value
+    }));
+  };
+
+  const handleSaveStock = async (variantId: string) => {
+    if (!product) return;
+
+    const newStock = editingStock[variantId];
+    if (newStock === undefined || newStock < 0) {
+      error("Số lượng tồn kho không hợp lệ!");
+      return;
+    }
+
+    setSavingStock(variantId);
+    try {
+      await updateVariantStock(product._id!, variantId, newStock);
+
+      // Cập nhật state local
+      setProduct(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          variants: prev.variants?.map(variant =>
+            variant._id === variantId
+              ? { ...variant, stock: newStock }
+              : variant
+          )
+        };
+      });
+
+      // Xóa khỏi editing state
+      setEditingStock(prev => {
+        const newState = { ...prev };
+        delete newState[variantId];
+        return newState;
+      });
+
+      success("Cập nhật tồn kho thành công!");
+    } catch (err) {
+      error("Có lỗi xảy ra khi cập nhật tồn kho.");
+    } finally {
+      setSavingStock(null);
+    }
+  };
+
+  // Xử lý upload ảnh phụ
+  const handleAdditionalImagesUpload = (info: any) => {
+    const { fileList } = info;
+    setAdditionalImageFileList(fileList);
+  };
+
+  // Xóa ảnh phụ và update database
+  const handleRemoveAdditionalImage = async (indexToRemove: number) => {
+    if (!product || !product.additionalImages || !id) return;
+    
+    try {
+      const updatedImages = product.additionalImages.filter((_, index) => index !== indexToRemove);
+      
+      // Tạo FormData để gửi ảnh phụ còn lại
+      const formData = new FormData();
+      formData.append('existingAdditionalImages', JSON.stringify(updatedImages));
+      
+      // Thêm các field bắt buộc cho validation
+      formData.append('name', product.name);
+      formData.append('price', product.price.toString());
+      formData.append('stock', product.stock.toString());
+      formData.append('description', product.description || 'Mô tả sản phẩm');
+      formData.append('category', typeof product.category === 'object' ? product.category._id : product.category || '');
+      formData.append('brand', typeof product.brand === 'object' ? product.brand?._id || '' : product.brand || '');
+      formData.append('variants', JSON.stringify(product.variants || []));
+      formData.append('isActive', product.isActive.toString());
+      formData.append('isFeatured', (product.isFeatured || false).toString());
+
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`http://localhost:8000/api/product/${id}/additional-images`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Lỗi không xác định" }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const updatedProduct = await response.json();
+      console.log("✅ Removed additional image, updated product:", updatedProduct);
+      
+      setProduct(updatedProduct);
+      success(`Đã xóa ảnh phụ thành công!`);
+      
+    } catch (error) {
+      console.error("❌ Error removing additional image:", error);
+      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi xóa ảnh phụ";
+      error("Xóa ảnh phụ thất bại: " + errorMessage);
+    }
+  };
+
+  // Lưu ảnh phụ mới
+  const handleSaveAdditionalImages = async () => {
+    if (!product || !id) return;
+
+    // Kiểm tra giới hạn tối đa 5 ảnh phụ
+    const currentAdditionalImages = product.additionalImages?.length || 0;
+    const newAdditionalImages = additionalImageFileList.filter(file => file.originFileObj).length;
+    const totalImages = currentAdditionalImages + newAdditionalImages;
+    
+    if (totalImages > 5) {
+      error(`Tối đa chỉ được 5 ảnh phụ. Hiện tại có ${currentAdditionalImages} ảnh, bạn đang thêm ${newAdditionalImages} ảnh mới.`);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      
+      console.log("🔍 Frontend debug:");
+      console.log("additionalImageFileList:", additionalImageFileList);
+      console.log("product.additionalImages:", product.additionalImages);
+      
+      // Thêm ảnh phụ mới
+      additionalImageFileList.forEach((file) => {
+        if (file.originFileObj) {
+          formData.append('additionalImages', file.originFileObj);
+          console.log("📤 Added new image:", file.originFileObj.name);
+        }
+      });
+
+      // Thêm ảnh phụ hiện có từ database (không phải từ state đã bị thay đổi)
+      // Lấy lại dữ liệu fresh từ server để đảm bảo không mất ảnh cũ
+      const currentProduct = await getProductById(id);
+      if (currentProduct.additionalImages && currentProduct.additionalImages.length > 0) {
+        formData.append('existingAdditionalImages', JSON.stringify(currentProduct.additionalImages));
+        console.log("📁 Added existing images from fresh data:", currentProduct.additionalImages);
+      }
+
+      // Chỉ gửi các field cần thiết cho validation (không gửi images để tránh conflict)
+      formData.append('name', product.name);
+      formData.append('price', product.price.toString());
+      formData.append('stock', product.stock.toString());
+      formData.append('description', product.description || 'Mô tả sản phẩm');
+      formData.append('category', typeof product.category === 'object' ? product.category._id : product.category || '');
+      formData.append('brand', typeof product.brand === 'object' ? product.brand?._id || '' : product.brand || '');
+      // KHÔNG gửi images để tránh đè lên ảnh đại diện
+      // formData.append('images', JSON.stringify(product.images || []));
+      formData.append('variants', JSON.stringify(product.variants || []));
+      formData.append('isActive', product.isActive.toString());
+      formData.append('isFeatured', (product.isFeatured || false).toString());
+
+      const token = localStorage.getItem("token");
+      
+      // Retry logic for connection issues
+      let response;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        try {
+          response = await fetch(`http://localhost:8000/api/product/${id}/additional-images`, {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          });
+          break; // Success, exit retry loop
+        } catch (fetchError) {
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            throw fetchError;
+          }
+          console.log(`🔄 Retry ${retryCount}/${maxRetries} for additional images update`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        }
+      }
+
+      if (!response.ok) {
+        let errorMessage = "Cập nhật ảnh phụ thất bại";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+          console.error("❌ Server error:", errorData);
+        } catch (parseError) {
+          console.error("❌ Could not parse error response:", parseError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const updatedProduct = await response.json();
+      console.log("✅ Updated product:", updatedProduct);
+      console.log("✅ Updated additionalImages:", updatedProduct.additionalImages);
+      
+      setProduct(updatedProduct);
+      setShowAdditionalImagesModal(false);
+      setAdditionalImageFileList([]);
+      success("Cập nhật ảnh phụ thành công!");
+    } catch (err) {
+      console.error("Error updating additional images:", err);
+      
+      if (err instanceof Error) {
+        if (err.message.includes('ERR_CONNECTION_REFUSED')) {
+          error("Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và thử lại.");
+        } else {
+          error(err.message);
+        }
+      } else {
+        error("Có lỗi xảy ra khi cập nhật ảnh phụ.");
+      }
+    }
   };
 
   // Hàm gộp thông số kỹ thuật từ product và variants
@@ -158,7 +390,33 @@ const ProductDetail: React.FC = () => {
       key: "salePrice",
       render: formatPrice,
     },
-    { title: "Tồn kho", dataIndex: "stock", key: "stock" },
+    {
+      title: "Tồn kho",
+      dataIndex: "stock",
+      key: "stock",
+      width: 150,
+      render: (stock: number, record: ProductVariant) => (
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={0}
+            value={editingStock[record._id!] !== undefined ? editingStock[record._id!] : stock}
+            onChange={(e) => handleStockChange(record._id!, parseInt(e.target.value) || 0)}
+            className="w-16"
+            size="small"
+          />
+          <Button
+            type="primary"
+            size="small"
+            icon={<SaveOutlined />}
+            loading={savingStock === record._id}
+            onClick={() => handleSaveStock(record._id!)}
+            className="bg-green-500 hover:bg-green-600 border-green-500"
+            disabled={editingStock[record._id!] === undefined || editingStock[record._id!] === stock}
+          />
+        </div>
+      )
+    },
     // {
     //   title: "Màu",
     //   dataIndex: "color",
@@ -245,7 +503,7 @@ const ProductDetail: React.FC = () => {
               {product.name}
             </Title>
             <Text type="secondary">{product.sku || "N/A"}</Text>
-          </Col>
+          </Col>Ảnh phụ sản phẩm (0)
           <Col xs={24} sm={6} className="text-right mt-4 sm:mt-0">
             <Space direction="horizontal" size="middle" className="flex-wrap">
               <Button
@@ -301,38 +559,116 @@ const ProductDetail: React.FC = () => {
         <Col xs={24} lg={8}>
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
             <Card className="shadow-md rounded-lg">
+              {/* Ảnh chính to */}
               <Image
                 width="100%"
-                height={300}
+                height={400}
                 src={mainImage}
                 fallback="/placeholder.svg"
                 alt={product.name}
-                className="rounded-lg border border-gray-200 object-cover"
+                className="rounded-lg border border-gray-200 object-cover mb-4"
               />
-              <div className="mt-4">
+              
+              {/* Tất cả ảnh - ảnh đại diện và ảnh phụ */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-3">
+                  <Title level={5} className="!mb-0 text-gray-700">
+                    Tất cả ảnh sản phẩm ({product.images?.length || 0} ảnh chính + {product.additionalImages?.length || 0} ảnh phụ)
+                  </Title>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setShowAdditionalImagesModal(true)}
+                    size="small"
+                  >
+                    Quản lý ảnh phụ
+                  </Button>
+                </div>
+                
                 <Image.PreviewGroup>
-                  <Space wrap>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {/* Ảnh đại diện */}
                     {product.images?.length ? (
                       product.images.map((image, index) => (
-                        <Image
-                          key={index}
-                          src={image}
-                          width={80}
-                          height={80}
-                          alt={`${product.name} thumbnail ${index}`}
-                          onClick={() => setMainImage(image)}
-                          className={`rounded-md border-2 cursor-pointer object-cover ${
-                            mainImage === image
-                              ? "border-blue-500"
-                              : "border-gray-200"
-                          }`}
-                          preview={{ src: image }}
-                        />
+                        <div key={`main-${index}`} className="relative flex-shrink-0">
+                          <Image
+                            src={image}
+                            width={120}
+                            height={120}
+                            alt={`${product.name} thumbnail ${index}`}
+                            onClick={() => setMainImage(image)}
+                            className={`rounded-lg border-2 cursor-pointer object-cover ${mainImage === image
+                                ? "border-blue-500"
+                                : "border-gray-200"
+                              }`}
+                            preview={{ src: image }}
+                          />
+                          <div className="absolute top-1 left-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                            Chính
+                          </div>
+                        </div>
                       ))
-                    ) : (
-                      <Text type="secondary">Không có hình ảnh</Text>
+                    ) : null}
+                    
+                    {/* Ảnh phụ */}
+                    {product.additionalImages?.length ? (
+                      product.additionalImages.map((image, index) => (
+                        <div key={`additional-${index}`} className="relative group flex-shrink-0">
+                          <Image
+                            src={image}
+                            width={120}
+                            height={120}
+                            alt={`Additional image ${index + 1}`}
+                            className="rounded-lg border border-gray-200 object-cover"
+                            preview={{
+                              src: image,
+                              mask: (
+                                <div className="flex items-center justify-center">
+                                  <EyeOutlined className="text-white text-lg" />
+                                </div>
+                              ),
+                            }}
+                          />
+                          <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          <div className="absolute bottom-1 right-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                            Phụ
+                          </div>
+                          {/* Button xóa ảnh phụ */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveAdditionalImage(index);
+                            }}
+                            className="absolute top-1 left-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            title="Xóa ảnh phụ này"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))
+                    ) : null}
+                    
+                    {/* Nếu không có ảnh nào */}
+                    {(!product.images?.length && !product.additionalImages?.length) && (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileImageOutlined className="text-4xl mb-2" />
+                        <p>Chưa có ảnh nào</p>
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() => setShowAdditionalImagesModal(true)}
+                          className="mt-2"
+                        >
+                          Thêm ảnh phụ
+                        </Button>
+                      </div>
                     )}
-                  </Space>
+                  </div>
                 </Image.PreviewGroup>
               </div>
             </Card>
@@ -436,10 +772,10 @@ const ProductDetail: React.FC = () => {
                       </Row>
                       <Divider />
                       <Title level={5}>Mô tả</Title>
-                      <Paragraph className="text-base">
+                      <div className="text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
                         {product.description ||
                           "Chưa có mô tả cho sản phẩm này."}
-                      </Paragraph>
+                      </div>
                     </div>
                   ),
                 },
@@ -524,6 +860,123 @@ const ProductDetail: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Modal quản lý ảnh phụ */}
+      <Modal
+        title={
+          <div className="flex items-center space-x-2">
+            <span>Quản lý ảnh phụ sản phẩm</span>
+            <span className="text-sm text-gray-500">
+              ({product.additionalImages?.length || 0}/5 ảnh hiện có)
+            </span>
+          </div>
+        }
+        open={showAdditionalImagesModal}
+        onCancel={() => {
+          setShowAdditionalImagesModal(false);
+          setAdditionalImageFileList([]);
+        }}
+        onOk={handleSaveAdditionalImages}
+        okText="Lưu ảnh phụ"
+        cancelText="Hủy"
+        width={700}
+        okButtonProps={{
+          disabled: additionalImageFileList.length === 0,
+        }}
+      >
+        <div className="space-y-6">
+          {/* Ảnh phụ hiện tại */}
+          <div>
+            <Text strong className="text-base">Ảnh phụ hiện tại:</Text>
+            {product.additionalImages && product.additionalImages.length > 0 ? (
+              <div className="mt-3">
+                <div className="grid grid-cols-4 gap-3">
+                  {product.additionalImages.map((image, index) => (
+                    <div key={`current-${index}`} className="relative group">
+                      <Image
+                        src={image}
+                        width={120}
+                        height={120}
+                        alt={`Current additional image ${index + 1}`}
+                        className="rounded-lg border border-gray-200 object-cover"
+                        preview={{
+                          src: image,
+                          mask: (
+                            <div className="flex items-center justify-center">
+                              <EyeOutlined className="text-white text-lg" />
+                            </div>
+                          ),
+                        }}
+                      />
+                      <div className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                        {index + 1}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveAdditionalImage(index);
+                        }}
+                        className="absolute top-1 left-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        title="Xóa ảnh này"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                <FileImageOutlined className="text-4xl text-gray-400 mb-2" />
+                <Text type="secondary">Chưa có ảnh phụ</Text>
+              </div>
+            )}
+          </div>
+
+          <Divider />
+
+          {/* Thêm ảnh phụ mới */}
+          <div>
+            <Text strong className="text-base">Thêm ảnh phụ mới:</Text>
+            <div className="mt-3">
+              <Upload
+                listType="picture-card"
+                fileList={additionalImageFileList}
+                onChange={handleAdditionalImagesUpload}
+                beforeUpload={() => false}
+                maxCount={5}
+                multiple
+                className="w-full"
+                showUploadList={{
+                  showPreviewIcon: true,
+                  showRemoveIcon: true,
+                }}
+              >
+                {(additionalImageFileList.length + (product.additionalImages?.length || 0)) < 5 && (
+                  <div className="flex flex-col items-center justify-center h-24 w-full">
+                    <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                    <div className="text-sm text-gray-500">Thêm ảnh</div>
+                    <div className="text-xs text-gray-400">
+                      {(additionalImageFileList.length + (product.additionalImages?.length || 0))}/5
+                    </div>
+                  </div>
+                )}
+              </Upload>
+            </div>
+            <div className="mt-2 space-y-1">
+              <Text type="secondary" className="text-xs block">
+                • Tối đa 5 ảnh phụ mới mỗi lần upload
+              </Text>
+              <Text type="secondary" className="text-xs block">
+                • Ảnh mới sẽ được thêm vào ảnh hiện có
+              </Text>
+              <Text type="secondary" className="text-xs block">
+                • Định dạng: JPG, PNG, JPEG (tối đa 5MB/ảnh)
+              </Text>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

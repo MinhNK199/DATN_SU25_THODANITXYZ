@@ -51,6 +51,9 @@ export const normalizeProductBody = (req, res, next) => {
         req.body.images = [`/uploads/images/${req.file.filename}`];
     } else if (req.files && Array.isArray(req.files)) {
         req.body.images = req.files.map(f => `/uploads/images/${f.filename}`);
+    } else if (req.files && req.files.image) {
+        // Handle multiple files upload
+        req.body.images = [`/uploads/images/${req.files.image[0].filename}`];
     } else if (req.body.images && typeof req.body.images === "string") {
         try {
             req.body.images = JSON.parse(req.body.images);
@@ -58,5 +61,6 @@ export const normalizeProductBody = (req, res, next) => {
             req.body.images = [req.body.images];
         }
     }
+
     next();
 };
