@@ -25,6 +25,8 @@ interface Props {
   setShowNewCardForm: React.Dispatch<React.SetStateAction<boolean>>;
   showNewWalletForm: boolean;
   setShowNewWalletForm: React.Dispatch<React.SetStateAction<boolean>>;
+  isCODAllowed?: boolean;
+  finalTotal?: number;
 }
 
 const CheckoutPaymentMethod: React.FC<Props> = ({
@@ -40,6 +42,8 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
   setShowNewCardForm,
   showNewWalletForm,
   setShowNewWalletForm,
+  isCODAllowed = true,
+  finalTotal = 0,
 }) => {
   const [isOnlinePaymentOpen, setIsOnlinePaymentOpen] = useState(false);
 
@@ -59,26 +63,59 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
   return (
     <div className="space-y-6">
       {/* COD Option */}
-      <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 hover:border-blue-300 transition-all duration-300 cursor-pointer">
-        <label className="flex items-center space-x-4 cursor-pointer">
+      <div className={`bg-white border-2 rounded-2xl p-6 transition-all duration-300 ${isCODAllowed
+          ? 'border-gray-200 hover:border-blue-300 cursor-pointer'
+          : 'border-red-200 bg-red-50 cursor-not-allowed opacity-60'
+        }`}>
+        <label className={`flex items-center space-x-4 ${isCODAllowed ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
           <input
             type="radio"
             name="paymentMethod"
             value="COD"
             checked={formData.paymentMethod === "COD"}
-            onChange={() => handlePaymentMethodChange("COD")}
-            className="w-5 h-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500"
+            onChange={() => isCODAllowed && handlePaymentMethodChange("COD")}
+            disabled={!isCODAllowed}
+            className="w-5 h-5 text-blue-600 border-2 border-gray-300 focus:ring-blue-500 disabled:cursor-not-allowed"
           />
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-              <FaTruck className="w-6 h-6 text-green-600" />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isCODAllowed ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+              <FaTruck className={`w-6 h-6 ${isCODAllowed ? 'text-green-600' : 'text-red-600'}`} />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900">Thanh toán khi nhận hàng</h3>
-              <p className="text-gray-600 text-sm">Thanh toán bằng tiền mặt khi nhận hàng</p>
+              <h3 className={`text-lg font-bold ${isCODAllowed ? 'text-gray-900' : 'text-red-800'}`}>
+                Thanh toán khi nhận hàng
+                {!isCODAllowed && <span className="text-sm text-red-600 ml-2">(Không khả dụng)</span>}
+              </h3>
+              <p className={`text-sm ${isCODAllowed ? 'text-gray-600' : 'text-red-600'}`}>
+                {isCODAllowed
+                  ? 'Thanh toán bằng tiền mặt khi nhận hàng'
+                  : `Đơn hàng có giá trị ${finalTotal.toLocaleString('vi-VN')}₫ vượt quá giới hạn 100 triệu ₫ cho thanh toán COD`
+                }
+              </p>
             </div>
           </div>
         </label>
+
+        {/* Thông báo giới hạn COD */}
+        {!isCODAllowed && (
+          <div className="mt-4 p-4 bg-red-100 border border-red-200 rounded-xl">
+            <div className="flex items-start space-x-3">
+              <div className="w-6 h-6 bg-red-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span className="text-red-600 text-sm">!</span>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-red-800 mb-1">
+                  Giới hạn thanh toán COD
+                </h4>
+                <p className="text-sm text-red-700">
+                  Đơn hàng có giá trị trên 100 triệu ₫ không được phép thanh toán COD.
+                  Vui lòng chọn phương thức thanh toán trực tuyến để tiếp tục.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Online Payment Option */}
@@ -124,9 +161,8 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
         </label>
 
         {/* Online Payment Dropdown */}
-        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isOnlinePaymentOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-        }`}>
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOnlinePaymentOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          }`}>
           <div className="border-t border-gray-200 bg-gray-50 p-6">
             <div className="space-y-4">
               {/* MoMo */}
@@ -140,14 +176,14 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
                     onChange={() => handleOnlinePaymentSelect("momo")}
                     className="w-4 h-4 text-blue-600"
                   />
-                                     <div className="flex items-center space-x-3">
-                     <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
-                       <img
-                         src="/images/wallets/momo.png"
-                         alt="MoMo"
-                         className="w-10 h-8"
-                       />
-                     </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-pink-100 rounded-lg flex items-center justify-center">
+                      <img
+                        src="/images/wallets/momo.png"
+                        alt="MoMo"
+                        className="w-10 h-8"
+                      />
+                    </div>
                     <div>
                       <h4 className="font-semibold text-gray-900">MoMo</h4>
                       <p className="text-sm text-gray-600">Thanh toán qua ví MoMo</p>
@@ -168,14 +204,14 @@ const CheckoutPaymentMethod: React.FC<Props> = ({
                     onChange={() => handleOnlinePaymentSelect("vnpay")}
                     className="w-4 h-4 text-blue-600"
                   />
-                                     <div className="flex items-center space-x-3">
-                     <div className="w-20 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                       <img
-                         src="/images/wallets/vnpay.png"
-                         alt="VNPAY"
-                         className="w-16 h-8"
-                       />
-                     </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-20 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <img
+                        src="/images/wallets/vnpay.png"
+                        alt="VNPAY"
+                        className="w-16 h-8"
+                      />
+                    </div>
                     <div>
                       <h4 className="font-semibold text-gray-900">VNPAY</h4>
                       <p className="text-sm text-gray-600">Thanh toán qua VNPAY</p>
