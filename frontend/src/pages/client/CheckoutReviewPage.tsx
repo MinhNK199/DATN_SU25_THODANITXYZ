@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
@@ -33,10 +33,22 @@ const CheckoutReviewPage: React.FC = () => {
   const [taxRate, setTaxRate] = useState(0.08);
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const { state: cartState, removeOrderedItemsFromCart } = useCart();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
+
+  // Khởi tạo selectedItems từ cartState
+  useEffect(() => {
+    if (cartState.items && cartState.items.length > 0) {
+      const allItemIds = new Set(cartState.items.map(item => item._id));
+      setSelectedItems(allItemIds);
+    }
+  }, [cartState.items]);
+
+  // Tính toán selectedCartItems
+  const selectedCartItems = cartState.items?.filter(item => selectedItems.has(item._id)) || [];
 
   useEffect(() => {
     getTaxConfig()
@@ -267,7 +279,17 @@ const CheckoutReviewPage: React.FC = () => {
     navigate('/checkout/payment');
   };
 
-  const subtotal = cartState.total || 0;
+  // Tính toán giá từ selectedCartItems
+  const subtotal = selectedCartItems.reduce((sum, item) => {
+    const variant = item.variantInfo;
+    const displayPrice = variant ? 
+      (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+      (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
+    const price = Number(displayPrice) || 0;
+    const quantity = Number(item.quantity) || 0;
+    return sum + (price * quantity);
+  }, 0);
+  
   const shippingFee = subtotal >= 500000 ? 0 : 30000;
   const taxPrice = subtotal * taxRate;
   const finalTotal = subtotal + shippingFee + taxPrice;
@@ -389,7 +411,7 @@ const CheckoutReviewPage: React.FC = () => {
                       <div className="text-left">
                         <h3 className="text-xl font-bold text-white">Tóm tắt đơn hàng</h3>
                         <p className="text-green-100 text-sm mt-1">
-                          {cartState.items?.length || 0} sản phẩm • {formatPrice(finalTotal)}
+                          {selectedCartItems.length} sản phẩm • {formatPrice(finalTotal)}
                         </p>
                       </div>
                     </div>
@@ -415,43 +437,65 @@ const CheckoutReviewPage: React.FC = () => {
                     <div className="mb-6">
                       <h4 className="text-base font-bold text-gray-800 mb-3 flex items-center">
                         <span className="mr-2">🛍️</span>
-                        Sản phẩm ({cartState.items?.length || 0})
+                        Sản phẩm ({selectedCartItems.length})
                       </h4>
                       <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {cartState.items?.slice(0, 4).map((item, index) => (
+                        {selectedCartItems.slice(0, 4).map((item, index) => (
                           <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                             <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
-                              {item.product.images?.[0] ? (
-                                <img 
-                                  src={item.product.images[0]} 
-                                  alt={item.product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                                  <span className="text-gray-500 text-xs">No Image</span>
-                                </div>
-                              )}
+                              {(() => {
+                                const variant = item.variantInfo;
+                                const displayImage = variant?.images?.[0] || item.product.images?.[0];
+                                return displayImage ? (
+                                  <img 
+                                    src={displayImage} 
+                                    alt={item.product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                                    <span className="text-gray-500 text-xs">No Image</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 truncate mb-1">
                                 {item.product.name}
                               </p>
+                              {item.variantInfo && (
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
+                                  {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
+                                </p>
+                              )}
                               <p className="text-xs text-gray-600">
-                                SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {formatPrice(item.product.salePrice || item.product.price)}
+                                SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
+                                  const variant = item.variantInfo;
+                                  const displayPrice = variant ? 
+                                    (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                    (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
+                                  return formatPrice(displayPrice);
+                                })()}
                               </p>
                             </div>
                             <div className="text-right">
                               <div className="text-sm font-bold text-gray-900">
-                                {formatPrice((item.product.salePrice || item.product.price) * item.quantity)}
+                                {(() => {
+                                  const variant = item.variantInfo;
+                                  const displayPrice = variant ? 
+                                    (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                    (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
+                                  return formatPrice(displayPrice * item.quantity);
+                                })()}
                               </div>
                             </div>
                           </div>
                         ))}
-                        {cartState.items && cartState.items.length > 4 && (
+                        {selectedCartItems.length > 4 && (
                           <div className="text-center py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                             <span className="text-blue-700 font-semibold text-sm">
-                              +{cartState.items.length - 4} sản phẩm khác
+                              +{selectedCartItems.length - 4} sản phẩm khác
                             </span>
                           </div>
                         )}

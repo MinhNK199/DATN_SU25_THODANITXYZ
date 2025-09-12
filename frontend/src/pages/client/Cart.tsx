@@ -773,8 +773,13 @@ const Cart: React.FC = () => {
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                   Tóm tắt đơn hàng
                 </h2>
-                <div className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
-                  {selectedItems.size} sản phẩm
+                <div className="text-right">
+                  <div className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded-full">
+                    {selectedCartItems.length} sản phẩm
+                  </div>
+                  <div className="text-sm font-bold text-gray-900 mt-1">
+                    {formatPrice(subtotal + (Number(shipping) || 0) + (Number(tax) || 0) - (Number(couponDiscount) || 0))}
+                  </div>
                 </div>
               </div>
 
@@ -782,20 +787,9 @@ const Cart: React.FC = () => {
               <div className="space-y-4 mb-6 flex-1">
                 {/* Products Section */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center mb-3">
                     <span className="text-sm font-semibold text-gray-700">
-                      SẢN PHẨM
-                    </span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {formatPrice(selectedCartItems.reduce((sum, item) => {
-                        const variant = item.variantInfo;
-                        const displayPrice = variant ? 
-                          (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
-                          calculateDisplayPrice(item);
-                        const price = Number(displayPrice) || 0;
-                        const quantity = Number(item.quantity) || 0;
-                        return sum + (price * quantity);
-                      }, 0))}
+                      SẢN PHẨM ({selectedCartItems.length})
                     </span>
                   </div>
 
@@ -859,14 +853,15 @@ const Cart: React.FC = () => {
                                     })()}
                                   </div>
                                 )}
+                                {/* Hiển thị số lượng và giá đơn vị */}
+                                <div className="text-gray-600 text-xs mt-1">
+                                  SL: {item.quantity} x {formatPrice(safePrice)}
+                                </div>
                               </div>
                             </div>
                             <div className="text-right ml-2">
                               <div className="font-semibold text-gray-900">
                                 {formatPrice(displayTotal)}
-                              </div>
-                              <div className="text-gray-500 text-xs">
-                                {formatPrice(displayPrice)} × {item.quantity}
                               </div>
                               {/* Hiển thị giá gốc nếu có giảm giá */}
                               {variant && variant.salePrice && variant.salePrice < variant.price && (
@@ -1007,9 +1002,9 @@ const Cart: React.FC = () => {
                 {/* Detailed Summary */}
                 <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-lg p-4">
                   <div className="space-y-3 mb-4">
-                    {/* Tổng tiền hàng */}
+                    {/* Tạm tính */}
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Tổng tiền hàng:</span>
+                      <span className="text-sm font-medium text-gray-700">Tạm tính:</span>
                       <span className="text-sm font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                     </div>
 
@@ -1047,15 +1042,7 @@ const Cart: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">TỔNG CỘNG:</span>
                     <span className="text-xl font-bold text-purple-600">
-                      {formatPrice(selectedCartItems.reduce((sum, item) => {
-                        const variant = item.variantInfo;
-                        const displayPrice = variant ? 
-                          (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
-                          calculateDisplayPrice(item);
-                        const price = Number(displayPrice) || 0;
-                        const quantity = Number(item.quantity) || 0;
-                        return sum + (price * quantity);
-                      }, 0) + (Number(shipping) || 0) - (Number(appliedDiscountCoupon?.value) || 0))}
+                      {formatPrice(subtotal + (Number(shipping) || 0) + (Number(tax) || 0) - (Number(couponDiscount) || 0))}
                     </span>
                   </div>
                 </div>
