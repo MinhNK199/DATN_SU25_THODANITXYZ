@@ -150,6 +150,7 @@ const ProductEdit: React.FC = () => {
           }]
           setMainImageFileList(currentMainImage)
         }
+
         
         
         form.setFieldsValue({
@@ -297,6 +298,7 @@ const ProductEdit: React.FC = () => {
       }
 
 
+
       console.log("🧹 Data before validation:", formData)
 
       // Send FormData directly
@@ -413,6 +415,7 @@ const ProductEdit: React.FC = () => {
   };
 
 
+
   if (loading) {
     return (
       <div className="p-6 bg-gray-100 min-h-screen flex justify-center items-center">
@@ -499,6 +502,8 @@ const ProductEdit: React.FC = () => {
                   </div>
                 </div>
               </Form.Item>
+
+
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
               </Form.Item>

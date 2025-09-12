@@ -69,6 +69,9 @@ const productVariantSchema = new mongoose.Schema({
     images: [{
         type: String,
     }, ],
+    additionalImages: [{
+        type: String,
+    }, ],
     isActive: {
         type: Boolean,
         default: true,
@@ -110,6 +113,9 @@ const productSchema = new mongoose.Schema({
     images: [{
         type: String,
         required: [true, "Vui lòng thêm ảnh sản phẩm"],
+    }, ],
+    additionalImages: [{
+        type: String,
     }, ],
     thumbnails: [{
         type: String,
