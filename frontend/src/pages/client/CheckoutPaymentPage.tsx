@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
@@ -37,16 +37,48 @@ const CheckoutPaymentPage: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess } = useToast();
 
-  // Khởi tạo selectedItems từ cartState
+  // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
-    if (cartState.items && cartState.items.length > 0) {
+    const buyNowProductData = localStorage.getItem('buyNowProduct');
+    if (buyNowProductData) {
+      const product = JSON.parse(buyNowProductData);
+      setSelectedItems(new Set([product._id]));
+    } else if (cartState.items && cartState.items.length > 0) {
       const allItemIds = new Set(cartState.items.map(item => item._id));
       setSelectedItems(allItemIds);
     }
   }, [cartState.items]);
 
-  // Tính toán selectedCartItems
-  const selectedCartItems = cartState.items?.filter(item => selectedItems.has(item._id)) || [];
+  // Lấy buyNowProduct để sử dụng trong useEffect
+  const buyNowProduct = useMemo(() => {
+    try {
+      const buyNowData = localStorage.getItem('buyNowProduct');
+      if (buyNowData) {
+        const product = JSON.parse(buyNowData);
+        console.log('🔍 CheckoutPayment - BuyNowProduct từ localStorage:', product);
+        return product;
+      }
+    } catch (error) {
+      console.error('❌ Lỗi parse buyNowProduct trong CheckoutPayment:', error);
+      localStorage.removeItem('buyNowProduct');
+    }
+    return null;
+  }, []);
+
+  // Tính toán selectedCartItems với useMemo để tránh re-render
+  const selectedCartItems = useMemo(() => {
+    const items = buyNowProduct 
+      ? [buyNowProduct]
+      : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
+    
+    console.log('🔍 CheckoutPayment Debug:', {
+      buyNowProduct: buyNowProduct ? 'Có sản phẩm mua ngay' : 'Không có sản phẩm mua ngay',
+      selectedCartItems: items.length,
+      cartStateItems: cartState.items?.length || 0
+    });
+    
+    return items;
+  }, [buyNowProduct, cartState.items, selectedItems]);
 
   useEffect(() => {
     getTaxConfig()
@@ -73,16 +105,16 @@ const CheckoutPaymentPage: React.FC = () => {
       const { selectedAddress: savedAddress, formData: savedFormData } = JSON.parse(shippingData);
       setSelectedAddress(savedAddress);
       setFormData(savedFormData);
-    } else {
-      // Nếu không có thông tin shipping, quay về trang shipping
+    } else if (!buyNowProduct) {
+      // Nếu không có thông tin shipping và không có sản phẩm mua ngay, quay về trang shipping
       navigate('/checkout/shipping');
     }
     
-    // Kiểm tra nếu không có sản phẩm trong giỏ hàng, redirect về Cart
-    if (!cartState.items || cartState.items.length === 0) {
+    // Kiểm tra nếu không có sản phẩm trong giỏ hàng và không có sản phẩm mua ngay, redirect về Cart
+    if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
       navigate('/cart');
     }
-  }, [navigate, cartState.items]);
+  }, [navigate, cartState.items, buyNowProduct]);
 
   const handleRetryPayment = async (orderId: string) => {
     try {

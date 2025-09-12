@@ -1,4 +1,4 @@
-  import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
@@ -39,16 +39,60 @@ const CheckoutReviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { showSuccess } = useToast();
 
-  // Khởi tạo selectedItems từ cartState
+  // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
-    if (cartState.items && cartState.items.length > 0) {
+    const buyNowProductData = localStorage.getItem('buyNowProduct');
+    console.log('🔍 BuyNowProduct from localStorage:', buyNowProductData);
+    
+    if (buyNowProductData) {
+      try {
+        const product = JSON.parse(buyNowProductData);
+        console.log('🔍 Parsed buyNowProduct:', product);
+        setSelectedItems(new Set([product._id]));
+      } catch (error) {
+        console.error('❌ Error parsing buyNowProduct:', error);
+        localStorage.removeItem('buyNowProduct');
+      }
+    } else if (cartState.items && cartState.items.length > 0) {
       const allItemIds = new Set(cartState.items.map(item => item._id));
       setSelectedItems(allItemIds);
     }
   }, [cartState.items]);
 
-  // Tính toán selectedCartItems
-  const selectedCartItems = cartState.items?.filter(item => selectedItems.has(item._id)) || [];
+  // Lấy buyNowProduct để sử dụng trong useEffect
+  const buyNowProduct = useMemo(() => {
+    try {
+      const buyNowData = localStorage.getItem('buyNowProduct');
+      if (buyNowData) {
+        const product = JSON.parse(buyNowData);
+        console.log('🔍 BuyNowProduct từ localStorage:', product);
+        return product;
+      }
+    } catch (error) {
+      console.error('❌ Lỗi parse buyNowProduct:', error);
+      localStorage.removeItem('buyNowProduct');
+    }
+    return null;
+  }, []);
+
+  // Tính toán selectedCartItems với useMemo để tránh re-render
+  const selectedCartItems = useMemo(() => {
+    const items = buyNowProduct 
+      ? [buyNowProduct]
+      : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
+    
+    // Debug: Log thông tin để kiểm tra
+    console.log('🔍 CheckoutReview Debug:', {
+      buyNowProduct: buyNowProduct ? 'Có sản phẩm mua ngay' : 'Không có sản phẩm mua ngay',
+      cartStateItems: cartState.items?.length || 0,
+      selectedItems: selectedItems.size,
+      selectedCartItems: items.length,
+      buyNowProductData: buyNowProduct,
+      localStorageData: localStorage.getItem('buyNowProduct')
+    });
+    
+    return items;
+  }, [buyNowProduct, cartState.items, selectedItems]);
 
   useEffect(() => {
     getTaxConfig()
@@ -68,16 +112,16 @@ const CheckoutReviewPage: React.FC = () => {
       setCardInfo(savedCardInfo);
       setWalletInfo(savedWalletInfo);
       setBankTransferInfo(savedBankTransferInfo);
-    } else {
-      // Nếu không có thông tin đầy đủ, quay về trang shipping
+    } else if (!buyNowProduct) {
+      // Nếu không có thông tin đầy đủ và không có sản phẩm mua ngay, quay về trang shipping
       navigate('/checkout/shipping');
     }
     
-    // Kiểm tra nếu không có sản phẩm trong giỏ hàng, redirect về Cart
-    if (!cartState.items || cartState.items.length === 0) {
+    // Kiểm tra nếu không có sản phẩm trong giỏ hàng và không có sản phẩm mua ngay, redirect về Cart
+    if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
       navigate('/cart');
     }
-  }, [navigate, cartState.items]);
+  }, [navigate, cartState.items, buyNowProduct]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -107,12 +151,16 @@ const CheckoutReviewPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const orderData = {
-        orderItems: cartState.items.map((item) => ({
+        orderItems: selectedCartItems.map((item) => ({
           name: item.product.name,
           quantity: item.quantity,
           image: item.product.images?.[0] || "",
-          price: item.product.salePrice || item.product.price,
+          price: item.variantInfo ? 
+            (item.variantInfo.salePrice && item.variantInfo.salePrice < item.variantInfo.price ? item.variantInfo.salePrice : item.variantInfo.price) :
+            (item.product.salePrice || item.product.price),
           product: item.product._id,
+          variantId: item.variantId,
+          variantInfo: item.variantInfo,
         })),
         shippingAddress: {
           fullName: formData.lastName,
@@ -123,10 +171,10 @@ const CheckoutReviewPage: React.FC = () => {
           phone: formData.phone,
         },
         paymentMethod: formData.paymentMethod,
-        itemsPrice: cartState.total,
-        taxPrice: cartState.total * taxRate,
+        itemsPrice: subtotal,
+        taxPrice: subtotal * taxRate,
         shippingPrice: shippingFee,
-        totalPrice: cartState.total + shippingFee + cartState.total * taxRate,
+        totalPrice: subtotal + shippingFee + subtotal * taxRate,
       };
 
       const res = await createOrder(orderData);
@@ -137,7 +185,13 @@ const CheckoutReviewPage: React.FC = () => {
 
       // ✅ CHỈ xóa giỏ hàng cho COD, online payment sẽ xóa sau khi thanh toán thành công
       if (formData.paymentMethod === "COD") {
-        await removeOrderedItemsFromCart(orderData.orderItems);
+        if (buyNowProduct) {
+          // Nếu là mua ngay, xóa sản phẩm tạm thời
+          localStorage.removeItem('buyNowProduct');
+        } else {
+          // Nếu là từ giỏ hàng, xóa sản phẩm khỏi giỏ hàng
+          await removeOrderedItemsFromCart(orderData.orderItems);
+        }
       }
       // ⚠️ Online payment: KHÔNG xóa giỏ hàng ngay, chỉ xóa khi thanh toán thành công
       // Nếu thanh toán thất bại, sản phẩm vẫn còn trong giỏ hàng để người dùng thử lại
@@ -440,63 +494,90 @@ const CheckoutReviewPage: React.FC = () => {
                         Sản phẩm ({selectedCartItems.length})
                       </h4>
                       <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {selectedCartItems.slice(0, 4).map((item, index) => (
-                          <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                            <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
-                              {(() => {
-                                const variant = item.variantInfo;
-                                const displayImage = variant?.images?.[0] || item.product.images?.[0];
-                                return displayImage ? (
-                                  <img 
-                                    src={displayImage} 
-                                    alt={item.product.name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                                    <span className="text-gray-500 text-xs">No Image</span>
+                        {(() => {
+                          console.log('🔍 Render check - selectedCartItems:', selectedCartItems);
+                          console.log('🔍 Render check - selectedCartItems.length:', selectedCartItems.length);
+                          console.log('🔍 Render check - selectedCartItems[0]:', selectedCartItems[0]);
+                          return selectedCartItems.length > 0;
+                        })() ? (
+                          <>
+                            {selectedCartItems.slice(0, 4).map((item, index) => (
+                              <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                                <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
+                                  {(() => {
+                                    const variant = item.variantInfo;
+                                    // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
+                                    const displayImage = variant?.images?.[0] || item.product.images?.[0];
+                                    console.log('🔍 Left side image debug:', {
+                                      itemName: item.product.name,
+                                      variantInfo: variant,
+                                      variantImages: variant?.images,
+                                      productImages: item.product.images,
+                                      displayImage: displayImage,
+                                      usingVariantImage: !!variant?.images?.[0],
+                                      variantId: item.variantId,
+                                      hasVariant: !!variant
+                                    });
+                                    return displayImage ? (
+                                      <img 
+                                        src={displayImage} 
+                                        alt={item.product.name}
+                                        className="w-full h-full object-cover"
+                                        title={variant?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                                        <span className="text-gray-500 text-xs">No Image</span>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 truncate mb-1">
+                                    {item.product.name}
+                                  </p>
+                                  {item.variantInfo && (
+                                    <p className="text-xs text-gray-500 mb-1">
+                                      {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
+                                      {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-600">
+                                    SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
+                                      const variant = item.variantInfo;
+                                      const displayPrice = variant ? 
+                                        (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                        (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
+                                      return formatPrice(displayPrice);
+                                    })()}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-sm font-bold text-gray-900">
+                                    {(() => {
+                                      const variant = item.variantInfo;
+                                      const displayPrice = variant ? 
+                                        (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                        (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
+                                      return formatPrice(displayPrice * item.quantity);
+                                    })()}
                                   </div>
-                                );
-                              })()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate mb-1">
-                                {item.product.name}
-                              </p>
-                              {item.variantInfo && (
-                                <p className="text-xs text-gray-500 mb-1">
-                                  {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
-                                  {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
-                                </p>
-                              )}
-                              <p className="text-xs text-gray-600">
-                                SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
-                                  const variant = item.variantInfo;
-                                  const displayPrice = variant ? 
-                                    (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
-                                    (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
-                                  return formatPrice(displayPrice);
-                                })()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-bold text-gray-900">
-                                {(() => {
-                                  const variant = item.variantInfo;
-                                  const displayPrice = variant ? 
-                                    (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
-                                    (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
-                                  return formatPrice(displayPrice * item.quantity);
-                                })()}
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        ))}
-                        {selectedCartItems.length > 4 && (
-                          <div className="text-center py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                            <span className="text-blue-700 font-semibold text-sm">
-                              +{selectedCartItems.length - 4} sản phẩm khác
-                            </span>
+                            ))}
+                            {selectedCartItems.length > 4 && (
+                              <div className="text-center py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                                <span className="text-blue-700 font-semibold text-sm">
+                                  +{selectedCartItems.length - 4} sản phẩm khác
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="text-gray-400 text-6xl mb-4">✓</div>
+                            <p className="text-gray-600 text-lg">Không có sản phẩm nào trong đơn hàng.</p>
+                            <p className="text-gray-500 text-sm mt-2">Vui lòng quay lại để chọn sản phẩm.</p>
                           </div>
                         )}
                       </div>

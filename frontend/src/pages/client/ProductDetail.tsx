@@ -229,6 +229,77 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const handleBuyNow = async () => {
+    if (!product) return;
+    
+    try {
+      const finalQuantity = selectedVariantId
+        ? getVariantQuantity(selectedVariantId)
+        : quantity;
+      
+      // Tạo sản phẩm tạm thời cho checkout
+      const selectedVariant = selectedVariantId ? product.variants?.find((v: any) => v._id === selectedVariantId) : null;
+      const displayPrice = selectedVariant ? 
+        (selectedVariant.salePrice && selectedVariant.salePrice < selectedVariant.price ? selectedVariant.salePrice : selectedVariant.price) :
+        (product.salePrice || product.price);
+      
+      console.log('🔍 ProductDetail - Selected variant debug:', {
+        selectedVariantId,
+        selectedVariant,
+        variantImages: selectedVariant?.images,
+        productImages: product.images,
+        hasVariantImages: !!selectedVariant?.images?.length,
+        variantColor: selectedVariant?.color,
+        variantSize: selectedVariant?.size,
+        allVariants: product.variants
+      });
+      
+      const tempProduct = {
+        _id: `temp_${Date.now()}`,
+        product: {
+          _id: product._id,
+          name: product.name,
+          images: product.images,
+          price: product.price,
+          salePrice: product.salePrice,
+          stock: product.stock,
+          availableStock: product.availableStock
+        },
+        variantId: selectedVariantId,
+        variantInfo: selectedVariant ? {
+          _id: selectedVariant._id,
+          name: selectedVariant.name,
+          color: selectedVariant.color,
+          size: selectedVariant.size,
+          sku: selectedVariant.sku,
+          images: selectedVariant.images,
+          price: selectedVariant.price,
+          salePrice: selectedVariant.salePrice,
+          stock: selectedVariant.stock
+        } : null,
+        quantity: finalQuantity,
+        price: displayPrice
+      };
+      
+      // Lưu sản phẩm tạm thời vào localStorage
+      localStorage.setItem('buyNowProduct', JSON.stringify(tempProduct));
+      console.log('🔍 ProductDetail - Lưu buyNowProduct:', tempProduct);
+      console.log('🔍 ProductDetail - localStorage buyNowProduct:', localStorage.getItem('buyNowProduct'));
+      
+      // Chuyển đến trang checkout
+      navigate('/checkout/shipping', { 
+        state: { 
+          buyNow: true,
+          product: tempProduct 
+        } 
+      });
+      
+    } catch (error) {
+      console.error("Error processing buy now:", error);
+      toast.error("Không thể xử lý mua ngay");
+    }
+  };
+
   const getVariantQuantity = (variantId: string) => {
     return variantQuantities[variantId] || 1;
   };
@@ -854,7 +925,11 @@ const ProductDetail: React.FC = () => {
                     <FaShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="text-sm md:text-base">Thêm Vào Giỏ Hàng</span>
                   </button>
-                  <button className="flex-1 bg-red-600 text-white py-3 md:py-4 px-6 rounded-lg font-semibold hover:bg-red-700 transition-colors text-sm md:text-base">
+                  <button 
+                    onClick={handleBuyNow}
+                    disabled={product.stock <= 0}
+                    className="flex-1 bg-red-600 text-white py-3 md:py-4 px-6 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
+                  >
                     Mua Ngay
                   </button>
                 </div>
