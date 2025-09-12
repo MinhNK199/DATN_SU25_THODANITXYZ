@@ -16,17 +16,17 @@ type CartAction =
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'LOAD_CART'; payload: Cart }
   | { type: 'ADD_ITEM'; payload: CartItem }
-  | { type: 'REMOVE_ITEM'; payload: string }
-  | { type: 'UPDATE_QUANTITY'; payload: { productId: string; quantity: number } }
+  | { type: 'REMOVE_ITEM'; payload: { productId: string; variantId?: string } }
+  | { type: 'UPDATE_QUANTITY'; payload: { productId: string; quantity: number; variantId?: string } }
   | { type: 'CLEAR_CART' };
 
 const CartContext = createContext<{
   state: CartState;
   addToCart: (productId: string, quantity?: number, variantId?: string) => Promise<void>;
-  removeFromCart: (productId: string) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  removeFromCart: (productId: string, variantId?: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, variantId?: string) => Promise<void>;
   clearCart: () => Promise<void>;
-  isInCart: (productId: string) => boolean;
+  isInCart: (productId: string, variantId?: string) => boolean;
   loadCart: (forceRefresh?: boolean) => Promise<void>;
   removeOrderedItemsFromCart: (orderItems: any[]) => Promise<void>; // ✅ Thêm vào interface
 } | null>(null);
@@ -47,7 +47,11 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         error: null
       };
     case 'ADD_ITEM': {
-      const existingItemIndex = state.items.findIndex(item => item.product._id === action.payload.product._id);
+      // Kiểm tra cả productId và variantId để xác định item có trùng không
+      const existingItemIndex = state.items.findIndex(item => 
+        item.product._id === action.payload.product._id && 
+        String(item.variantId || '') === String(action.payload.variantId || '')
+      );
       let updatedItems;
 
       if (existingItemIndex > -1) {
@@ -68,7 +72,10 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
       };
     }
     case 'REMOVE_ITEM': {
-      const updatedItems = state.items.filter(item => item.product._id !== action.payload);
+      const updatedItems = state.items.filter(item => 
+        !(item.product._id === action.payload.productId && 
+          String(item.variantId || '') === String(action.payload.variantId || ''))
+      );
       return {
         ...state,
         items: updatedItems,
@@ -78,7 +85,8 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     }
     case 'UPDATE_QUANTITY': {
       const updatedItems = state.items.map(item =>
-        item.product._id === action.payload.productId
+        item.product._id === action.payload.productId && 
+        String(item.variantId || '') === String(action.payload.variantId || '')
           ? { ...item, quantity: Math.max(1, action.payload.quantity) }
           : item
       );
@@ -216,7 +224,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const removeFromCart = useCallback(async (itemId: string) => {
+  const removeFromCart = useCallback(async (productId: string, variantId?: string) => {
     const token = localStorage.getItem('token');
 
     if (!token) {
@@ -224,24 +232,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Tìm item trong cart để lấy productId
-    const item = state.items.find(item => item._id === itemId);
-    if (!item) {
-      toast.error('Không tìm thấy sản phẩm trong giỏ hàng');
-      return;
-    }
-
     try {
-      const cart = await cartApi.removeFromCart(item.product._id);
+      const cart = await cartApi.removeFromCart(productId);
       dispatch({ type: 'LOAD_CART', payload: cart });
       toast.success('Đã xóa sản phẩm khỏi giỏ hàng');
     } catch (error: any) {
       // Silently handle error - show user-friendly message
       toast.error(error.response?.data?.message || 'Không thể xóa sản phẩm');
     }
-  }, [state.items]);
+  }, []);
 
-  const updateQuantity = useCallback(async (itemId: string, quantity: number) => {
+  const updateQuantity = useCallback(async (productId: string, quantity: number, variantId?: string) => {
     const token = localStorage.getItem('token');
 
     if (!token) {
@@ -249,8 +250,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Tìm item trong cart để lấy productId và variantId
-    const item = state.items.find(item => item._id === itemId);
+    // Tìm item trong cart để validate stock
+    const item = state.items.find(item => 
+      item.product._id === productId && 
+      String(item.variantId || '') === String(variantId || '')
+    );
     if (!item) {
       toast.error('Không tìm thấy sản phẩm trong giỏ hàng');
       return;
@@ -275,7 +279,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       // Truyền variantId nếu có để backend có thể xử lý đúng
-      const cart = await cartApi.updateCartItem(item.product._id, quantity, item.variantId);
+      const cart = await cartApi.updateCartItem(productId, quantity, variantId);
       dispatch({ type: 'LOAD_CART', payload: cart });
 
       // ✅ HIỂN THỊ THÔNG BÁO THÀNH CÔNG
@@ -313,8 +317,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const isInCart = useCallback((productId: string) => {
-    return state.items.some(item => item.product._id === productId);
+  const isInCart = useCallback((productId: string, variantId?: string) => {
+    return state.items.some(item => 
+      item.product._id === productId && 
+      String(item.variantId || '') === String(variantId || '')
+    );
   }, [state.items]);
 
   // ✅ DI CHUYỂN FUNCTION VÀO TRONG COMPONENT

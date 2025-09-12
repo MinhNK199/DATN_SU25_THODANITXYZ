@@ -252,6 +252,49 @@ const ProductDetail: React.FC = () => {
     variants: product.variants || [],
   });
 
+  // Helper function to switch to variant image
+  const switchToVariantImage = (variant: any) => {
+    if (variant.images && variant.images.length > 0) {
+      const allImages = [...(product.images || [])];
+      
+      // Thêm ảnh từ các variant khác
+      if (product.variants && product.variants.length > 0) {
+        product.variants.forEach((v: any) => {
+          if (v.images && v.images.length > 0) {
+            v.images.forEach((img: string) => {
+              if (!allImages.includes(img)) {
+                allImages.push(img);
+              }
+            });
+          }
+        });
+      }
+      
+      // Thêm ảnh phụ
+      if (product.additionalImages && product.additionalImages.length > 0) {
+        product.additionalImages.forEach((img: string) => {
+          if (!allImages.includes(img)) {
+            allImages.push(img);
+          }
+        });
+      }
+      
+      // Tìm ảnh đầu tiên của variant này
+      const variantFirstImage = variant.images[0];
+      const variantImageIndex = allImages.findIndex(img => img === variantFirstImage);
+      
+      if (variantImageIndex !== -1) {
+        setSelectedImage(variantImageIndex);
+      } else {
+        // Nếu không tìm thấy trong allImages, thử tìm trong ảnh gốc
+        const originalIndex = (product.images || []).findIndex(img => img === variantFirstImage);
+        if (originalIndex !== -1) {
+          setSelectedImage(originalIndex);
+        }
+      }
+    }
+  };
+
 
   if (loading) {
     return (
@@ -728,36 +771,14 @@ const ProductDetail: React.FC = () => {
                       {product.variants.map((variant: any, index: number) => (
                         <button
                           key={variant._id || index}
-                          onClick={() => setSelectedVariantId(variant._id)}
+                          onClick={() => {
+                            setSelectedVariantId(variant._id);
+                            // Khi click vào variant, chuyển sang ảnh của variant đó
+                            switchToVariantImage(variant);
+                          }}
                             onMouseEnter={() => {
                               // Khi hover vào variant, chuyển sang ảnh của variant đó
-                              if (variant.images && variant.images.length > 0) {
-                                const allImages = [...(product.images || [])];
-                                if (product.variants && product.variants.length > 0) {
-                                  product.variants.forEach((v: any) => {
-                                    if (v.images && v.images.length > 0) {
-                                      v.images.forEach((img: string) => {
-                                        if (!allImages.includes(img)) {
-                                          allImages.push(img);
-                                        }
-                                      });
-                                    }
-                                  });
-                                }
-                                if (product.additionalImages && product.additionalImages.length > 0) {
-                                  product.additionalImages.forEach((img: string) => {
-                                    if (!allImages.includes(img)) {
-                                      allImages.push(img);
-                                    }
-                                  });
-                                }
-                                const variantImageIndex = allImages.findIndex(img => 
-                                  variant.images && variant.images.includes(img)
-                                );
-                                if (variantImageIndex !== -1) {
-                                  setSelectedImage(variantImageIndex);
-                                }
-                              }
+                              switchToVariantImage(variant);
                             }}
                           className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all flex items-center space-x-2 ${
                             selectedVariantId === variant._id
@@ -765,12 +786,21 @@ const ProductDetail: React.FC = () => {
                               : "border-gray-200 hover:border-gray-300 text-gray-700"
                           }`}
                         >
-                          <div 
-                            className="w-4 h-4 rounded-full border border-gray-300"
-                            style={{
-                              backgroundColor: variant.color?.hex || variant.color?.name || '#e5e7eb'
-                            }}
-                          ></div>
+                          {/* Preview ảnh variant nếu có, nếu không thì hiển thị màu */}
+                          {variant.images && variant.images.length > 0 ? (
+                            <img
+                              src={variant.images[0]}
+                              alt={variant.color?.name || variant.name || `Màu ${index + 1}`}
+                              className="w-4 h-4 rounded-full object-cover border border-gray-300"
+                            />
+                          ) : (
+                            <div
+                              className="w-4 h-4 rounded-full border border-gray-300"
+                              style={{
+                                backgroundColor: variant.color?.hex || variant.color?.name || '#e5e7eb'
+                              }}
+                            ></div>
+                          )}
                           <span>{variant.color?.name || variant.name || `Màu ${index + 1}`}</span>
                         </button>
                       ))}

@@ -418,7 +418,9 @@ const Cart: React.FC = () => {
                     {cartItems.map((item) => {
                       const variant = item.variantInfo;
                       const displayName = item.product.name; // Luôn hiển thị tên sản phẩm cha
+                      // Ưu tiên hiển thị ảnh variant, fallback về ảnh sản phẩm chính
                       const displayImage = variant?.images?.[0] || item.product.images?.[0] || "/placeholder.svg";
+                      
 
                       // Sử dụng calculateDisplayPrice để đảm bảo tính toán đúng
                       const displayPrice = calculateDisplayPrice(item);
@@ -471,22 +473,41 @@ const Cart: React.FC = () => {
 
                                   {/* Variant Info */}
                                   {item.variantInfo && item.variantInfo.name && item.variantInfo.name.trim() && (
-                                    <div className="mt-1">
+                                    <div className="mt-1 flex items-center space-x-2">
                                       <span className="text-xs text-gray-600 font-medium">
                                         {item.variantInfo.name}
                                       </span>
+                                      {/* Hiển thị preview ảnh variant nhỏ */}
+                                      {item.variantInfo.images && item.variantInfo.images.length > 0 && (
+                                        <img
+                                          src={item.variantInfo.images[0]}
+                                          alt={item.variantInfo.name}
+                                          className="w-4 h-4 rounded-full object-cover border border-gray-300"
+                                        />
+                                      )}
                                     </div>
                                   )}
 
                                   {/* Fallback: Hiển thị variant info từ product.variants nếu variantInfo rỗng */}
                                   {(!item.variantInfo || !item.variantInfo.name) && item.variantId && (item.product as any).variants && (
-                                    <div className="mt-1">
+                                    <div className="mt-1 flex items-center space-x-2">
                                       <span className="text-xs text-gray-600 font-medium">
                                         {(() => {
                                           const variant = (item.product as any).variants.find((v: any) => v._id.toString() === item.variantId?.toString());
-                                          return variant ? variant.name : '';
+                                          return variant ? (variant.color?.name || variant.name || `Màu ${variant.color?.code || ''}`) : '';
                                         })()}
                                       </span>
+                                      {/* Hiển thị preview ảnh variant từ product.variants */}
+                                      {(() => {
+                                        const variant = (item.product as any).variants.find((v: any) => v._id.toString() === item.variantId?.toString());
+                                        return variant && variant.images && variant.images.length > 0 ? (
+                                          <img
+                                            src={variant.images[0]}
+                                            alt={variant.name}
+                                            className="w-4 h-4 rounded-full object-cover border border-gray-300"
+                                          />
+                                        ) : null;
+                                      })()}
                                     </div>
                                   )}
 
@@ -769,15 +790,32 @@ const Cart: React.FC = () => {
 
                         return (
                           <div key={index} className="flex justify-between items-center text-xs bg-white rounded p-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-gray-800 truncate">
-                                {item.product.name}
-                              </div>
-                              {variantName && (
-                                <div className="text-gray-500 truncate">
-                                  {variantName}
+                            <div className="flex-1 min-w-0 flex items-center space-x-2">
+                              {/* Preview ảnh variant nhỏ */}
+                              {variant?.images && variant.images.length > 0 ? (
+                                <img
+                                  src={variant.images[0]}
+                                  alt={variantName}
+                                  className="w-6 h-6 rounded-full object-cover border border-gray-300 flex-shrink-0"
+                                />
+                              ) : item.product.images && item.product.images.length > 0 ? (
+                                <img
+                                  src={item.product.images[0]}
+                                  alt={item.product.name}
+                                  className="w-6 h-6 rounded-full object-cover border border-gray-300 flex-shrink-0"
+                                />
+                              ) : null}
+                              
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-gray-800 truncate">
+                                  {item.product.name}
                                 </div>
-                              )}
+                                {variantName && (
+                                  <div className="text-gray-500 truncate">
+                                    {variantName}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div className="text-right ml-2">
                               <div className="font-semibold text-gray-900">
