@@ -159,17 +159,69 @@ const ProductDetail: React.FC = () => {
     setAdditionalImageFileList(fileList);
   };
 
-  // Xóa ảnh phụ
-  const handleRemoveAdditionalImage = (indexToRemove: number) => {
-    if (!product || !product.additionalImages) return;
+  // Xóa ảnh phụ và update database
+  const handleRemoveAdditionalImage = async (indexToRemove: number) => {
+    if (!product || !product.additionalImages || !id) return;
     
-    const updatedImages = product.additionalImages.filter((_, index) => index !== indexToRemove);
-    setProduct({...product, additionalImages: updatedImages});
+    try {
+      const updatedImages = product.additionalImages.filter((_, index) => index !== indexToRemove);
+      
+      // Tạo FormData để gửi ảnh phụ còn lại
+      const formData = new FormData();
+      formData.append('existingAdditionalImages', JSON.stringify(updatedImages));
+      
+      // Thêm các field bắt buộc cho validation
+      formData.append('name', product.name);
+      formData.append('price', product.price.toString());
+      formData.append('stock', product.stock.toString());
+      formData.append('description', product.description || 'Mô tả sản phẩm');
+      formData.append('category', typeof product.category === 'object' ? product.category._id : product.category || '');
+      formData.append('brand', typeof product.brand === 'object' ? product.brand?._id || '' : product.brand || '');
+      formData.append('variants', JSON.stringify(product.variants || []));
+      formData.append('isActive', product.isActive.toString());
+      formData.append('isFeatured', (product.isFeatured || false).toString());
+
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(`http://localhost:8000/api/product/${id}/additional-images`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Lỗi không xác định" }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      const updatedProduct = await response.json();
+      console.log("✅ Removed additional image, updated product:", updatedProduct);
+      
+      setProduct(updatedProduct);
+      success(`Đã xóa ảnh phụ thành công!`);
+      
+    } catch (error) {
+      console.error("❌ Error removing additional image:", error);
+      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi xóa ảnh phụ";
+      error("Xóa ảnh phụ thất bại: " + errorMessage);
+    }
   };
 
   // Lưu ảnh phụ mới
   const handleSaveAdditionalImages = async () => {
     if (!product || !id) return;
+
+    // Kiểm tra giới hạn tối đa 5 ảnh phụ
+    const currentAdditionalImages = product.additionalImages?.length || 0;
+    const newAdditionalImages = additionalImageFileList.filter(file => file.originFileObj).length;
+    const totalImages = currentAdditionalImages + newAdditionalImages;
+    
+    if (totalImages > 5) {
+      error(`Tối đa chỉ được 5 ảnh phụ. Hiện tại có ${currentAdditionalImages} ảnh, bạn đang thêm ${newAdditionalImages} ảnh mới.`);
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -517,39 +569,11 @@ const ProductDetail: React.FC = () => {
                 className="rounded-lg border border-gray-200 object-cover mb-4"
               />
               
-              {/* Thumbnails ảnh chính */}
+              {/* Tất cả ảnh - ảnh đại diện và ảnh phụ */}
               <div className="mb-4">
-                <Text strong className="text-sm text-gray-600 mb-2 block">Ảnh đại diện:</Text>
-                <Image.PreviewGroup>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {product.images?.length ? (
-                      product.images.map((image, index) => (
-                        <Image
-                          key={index}
-                          src={image}
-                          width={80}
-                          height={80}
-                          alt={`${product.name} thumbnail ${index}`}
-                          onClick={() => setMainImage(image)}
-                          className={`rounded-md border-2 cursor-pointer object-cover flex-shrink-0 ${mainImage === image
-                              ? "border-blue-500"
-                              : "border-gray-200"
-                            }`}
-                          preview={{ src: image }}
-                        />
-                      ))
-                    ) : (
-                      <Text type="secondary">Không có hình ảnh</Text>
-                    )}
-                  </div>
-                </Image.PreviewGroup>
-              </div>
-
-              {/* Ảnh phụ có thể scroll ngang */}
-              <div>
                 <div className="flex justify-between items-center mb-3">
                   <Title level={5} className="!mb-0 text-gray-700">
-                    Ảnh phụ sản phẩm {product.additionalImages ? `(${product.additionalImages.length})` : '(0)'}
+                    Tất cả ảnh sản phẩm ({product.images?.length || 0} ảnh chính + {product.additionalImages?.length || 0} ảnh phụ)
                   </Title>
                   <Button
                     type="primary"
@@ -557,50 +581,95 @@ const ProductDetail: React.FC = () => {
                     onClick={() => setShowAdditionalImagesModal(true)}
                     size="small"
                   >
-                    {product.additionalImages && product.additionalImages.length > 0 ? 'Sửa ảnh phụ' : 'Thêm ảnh phụ'}
+                    Quản lý ảnh phụ
                   </Button>
                 </div>
                 
-                {/* Hiển thị ảnh phụ với scroll ngang */}
-                {product.additionalImages && product.additionalImages.length > 0 ? (
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    {product.additionalImages.map((image, index) => (
-                      <div key={`additional-${index}`} className="relative group flex-shrink-0">
-                        <Image
-                          src={image}
-                          width={120}
-                          height={120}
-                          alt={`Additional image ${index + 1}`}
-                          className="rounded-lg border border-gray-200 object-cover"
-                          preview={{
-                            src: image,
-                            mask: (
-                              <div className="flex items-center justify-center">
-                                <EyeOutlined className="text-white text-lg" />
-                              </div>
-                            ),
-                          }}
-                        />
-                        <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                          {index + 1}
+                <Image.PreviewGroup>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {/* Ảnh đại diện */}
+                    {product.images?.length ? (
+                      product.images.map((image, index) => (
+                        <div key={`main-${index}`} className="relative flex-shrink-0">
+                          <Image
+                            src={image}
+                            width={120}
+                            height={120}
+                            alt={`${product.name} thumbnail ${index}`}
+                            onClick={() => setMainImage(image)}
+                            className={`rounded-lg border-2 cursor-pointer object-cover ${mainImage === image
+                                ? "border-blue-500"
+                                : "border-gray-200"
+                              }`}
+                            preview={{ src: image }}
+                          />
+                          <div className="absolute top-1 left-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                            Chính
+                          </div>
                         </div>
+                      ))
+                    ) : null}
+                    
+                    {/* Ảnh phụ */}
+                    {product.additionalImages?.length ? (
+                      product.additionalImages.map((image, index) => (
+                        <div key={`additional-${index}`} className="relative group flex-shrink-0">
+                          <Image
+                            src={image}
+                            width={120}
+                            height={120}
+                            alt={`Additional image ${index + 1}`}
+                            className="rounded-lg border border-gray-200 object-cover"
+                            preview={{
+                              src: image,
+                              mask: (
+                                <div className="flex items-center justify-center">
+                                  <EyeOutlined className="text-white text-lg" />
+                                </div>
+                              ),
+                            }}
+                          />
+                          <div className="absolute top-1 right-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                            {index + 1}
+                          </div>
+                          <div className="absolute bottom-1 right-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                            Phụ
+                          </div>
+                          {/* Button xóa ảnh phụ */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveAdditionalImage(index);
+                            }}
+                            className="absolute top-1 left-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            title="Xóa ảnh phụ này"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))
+                    ) : null}
+                    
+                    {/* Nếu không có ảnh nào */}
+                    {(!product.images?.length && !product.additionalImages?.length) && (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileImageOutlined className="text-4xl mb-2" />
+                        <p>Chưa có ảnh nào</p>
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() => setShowAdditionalImagesModal(true)}
+                          className="mt-2"
+                        >
+                          Thêm ảnh phụ
+                        </Button>
                       </div>
-                    ))}
+                    )}
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <FileImageOutlined className="text-4xl mb-2" />
-                    <p>Chưa có ảnh phụ nào</p>
-                    <Button
-                      type="dashed"
-                      icon={<PlusOutlined />}
-                      onClick={() => setShowAdditionalImagesModal(true)}
-                      className="mt-2"
-                    >
-                      Thêm ảnh phụ
-                    </Button>
-                  </div>
-                )}
+                </Image.PreviewGroup>
               </div>
             </Card>
             <Card className="shadow-md rounded-lg">
@@ -798,7 +867,7 @@ const ProductDetail: React.FC = () => {
           <div className="flex items-center space-x-2">
             <span>Quản lý ảnh phụ sản phẩm</span>
             <span className="text-sm text-gray-500">
-              ({product.additionalImages?.length || 0} ảnh hiện có)
+              ({product.additionalImages?.length || 0}/5 ảnh hiện có)
             </span>
           </div>
         }
@@ -883,12 +952,12 @@ const ProductDetail: React.FC = () => {
                   showRemoveIcon: true,
                 }}
               >
-                {additionalImageFileList.length < 5 && (
+                {(additionalImageFileList.length + (product.additionalImages?.length || 0)) < 5 && (
                   <div className="flex flex-col items-center justify-center h-24 w-full">
                     <PlusOutlined className="text-2xl text-gray-400 mb-2" />
                     <div className="text-sm text-gray-500">Thêm ảnh</div>
                     <div className="text-xs text-gray-400">
-                      {additionalImageFileList.length}/5
+                      {(additionalImageFileList.length + (product.additionalImages?.length || 0))}/5
                     </div>
                   </div>
                 )}
