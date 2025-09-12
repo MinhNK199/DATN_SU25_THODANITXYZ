@@ -78,6 +78,7 @@ const ProductDetail: React.FC = () => {
       .then((response) => {
         const data = response.data;
         console.log("Product data received:", data);
+        console.log("🔍 Client Debug - Additional Images from API:", data.additionalImages);
         setProduct(data);
         setLoading(false);
       })
@@ -382,7 +383,7 @@ const ProductDetail: React.FC = () => {
                 {/* Main Image/Video with Navigation */}
                 <div className="relative bg-white rounded-lg border border-gray-200 overflow-hidden">
                   {(() => {
-                    // Tạo danh sách ảnh bao gồm cả ảnh chính và ảnh biến thể
+                    // Tạo danh sách ảnh bao gồm cả ảnh chính, ảnh biến thể và ảnh phụ
                     const allImages = [...(product.images || [])];
                     
                     // Thêm ảnh từ các biến thể
@@ -394,6 +395,15 @@ const ProductDetail: React.FC = () => {
                               allImages.push(img);
                             }
                           });
+                        }
+                      });
+                    }
+                    
+                    // Thêm tất cả ảnh phụ vào gallery
+                    if (product.additionalImages && product.additionalImages.length > 0) {
+                      product.additionalImages.forEach((img: string) => {
+                        if (!allImages.includes(img)) {
+                          allImages.push(img);
                         }
                       });
                     }
@@ -437,7 +447,7 @@ const ProductDetail: React.FC = () => {
                         </div>
                       </div>
                     ) : (() => {
-                      // Tạo danh sách ảnh bao gồm cả ảnh chính và ảnh biến thể
+                      // Tạo danh sách ảnh bao gồm cả ảnh chính, ảnh biến thể và ảnh phụ
                       const allImages = [...(product.images || [])];
                       
                       // Thêm ảnh từ các biến thể
@@ -452,13 +462,29 @@ const ProductDetail: React.FC = () => {
                           }
                         });
                       }
+                      
+                      // Thêm tất cả ảnh phụ vào gallery
+                      if (product.additionalImages && product.additionalImages.length > 0) {
+                        product.additionalImages.forEach((img: string) => {
+                          if (!allImages.includes(img)) {
+                            allImages.push(img);
+                          }
+                        });
+                      }
 
-                      return (
+                      return allImages.length > 0 ? (
                         <img
                           src={allImages[selectedImage]}
-                    alt={product.name}
+                          alt={product.name}
                           className="max-w-full max-h-full object-contain"
                         />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
+                          <div className="text-center">
+                            <div className="text-4xl mb-2">📷</div>
+                            <div>Không có ảnh</div>
+                          </div>
+                        </div>
                       );
                     })()}
                   </div>
@@ -496,25 +522,22 @@ const ProductDetail: React.FC = () => {
                     });
                   }
 
-                  // Thêm ảnh phụ nếu có ít biến thể (tối đa 5 ảnh)
+                  // Thêm tất cả ảnh phụ vào gallery
                   if (product.additionalImages && product.additionalImages.length > 0) {
-                    const variantImageCount = product.variants?.reduce((count: number, variant: any) => {
-                      return count + (variant.images?.length || 0);
-                    }, 0) || 0;
-                    
-                    // Chỉ thêm ảnh phụ nếu tổng số ảnh biến thể < 5
-                    if (variantImageCount < 5) {
-                      const remainingSlots = 5 - variantImageCount;
-                      const additionalImagesToShow = product.additionalImages.slice(0, remainingSlots);
-                      additionalImagesToShow.forEach((img: string) => {
-                        if (!allImages.includes(img)) {
-                          allImages.push(img);
-                        }
-                      });
-                    }
+                    console.log("🔍 Client Debug - Additional Images:", product.additionalImages);
+                    product.additionalImages.forEach((img: string) => {
+                      if (!allImages.includes(img)) {
+                        allImages.push(img);
+                        console.log("🔍 Added additional image to gallery:", img);
+                      }
+                    });
+                  } else {
+                    console.log("🔍 Client Debug - No additional images found");
                   }
+                  
+                  console.log("🔍 Client Debug - Final allImages:", allImages);
 
-                  return allImages.length > 1 && (
+                  return (
                     <div className="relative">
                       <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
                         {/* Video Thumbnail First */}
@@ -539,27 +562,36 @@ const ProductDetail: React.FC = () => {
                           </div>
                         </button>
                         
-                        {/* All Images (Product + Variants) */}
-                        {allImages.map((image: string, index: number) => (
-                      <button
-                        key={index}
-                            onClick={() => {
-                              setSelectedImage(index);
-                              setIsVideoMode(false);
-                            }}
-                            className={`flex-shrink-0 w-20 h-20 rounded border-2 transition-all duration-200 ${
-                              selectedImage === index && !isVideoMode
-                                ? "border-red-500"
-                                : "border-gray-200 hover:border-gray-300"
-                            }`}
-                      >
-                        <img
-                          src={image}
-                          alt={`${product.name} ${index + 1}`}
-                              className="w-full h-full object-cover rounded"
-                        />
-                      </button>
-                    ))}
+                        {/* All Images (Product + Variants + Additional) */}
+                        {allImages.length > 0 ? (
+                          allImages.map((image: string, index: number) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                setSelectedImage(index);
+                                setIsVideoMode(false);
+                              }}
+                              className={`flex-shrink-0 w-20 h-20 rounded border-2 transition-all duration-200 ${
+                                selectedImage === index && !isVideoMode
+                                  ? "border-red-500"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                            >
+                              <img
+                                src={image}
+                                alt={`${product.name} ${index + 1}`}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            </button>
+                          ))
+                        ) : (
+                          <div className="flex-shrink-0 w-20 h-20 rounded border-2 border-gray-200 flex items-center justify-center bg-gray-100">
+                            <div className="text-center text-gray-500">
+                              <div className="text-xs">📷</div>
+                              <div className="text-xs">No images</div>
+                            </div>
+                          </div>
+                        )}
                   </div>
                       
                       {/* Right Navigation Arrow for Thumbnails */}
@@ -1158,69 +1190,6 @@ const ProductDetail: React.FC = () => {
         )}
       </div>
 
-      {/* Section Ảnh phụ sản phẩm */}
-      {product.additionalImages && product.additionalImages.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-              <span className="w-1 h-6 bg-red-500 rounded-full mr-3"></span>
-              Ảnh phụ sản phẩm
-              <span className="ml-2 text-sm text-gray-500 font-normal">
-                ({product.additionalImages.length} ảnh)
-              </span>
-            </h3>
-            <div className="text-sm text-gray-500">
-              💡 Click để xem trong gallery
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-            {product.additionalImages.map((image: string, index: number) => (
-              <div
-                key={index}
-                className="relative group cursor-pointer transform hover:scale-105 transition-all duration-200"
-                onClick={() => {
-                  // Thêm ảnh phụ vào danh sách ảnh chính để xem
-                  if (!product.images?.includes(image)) {
-                    const newImages = [...(product.images || []), image];
-                    setProduct({...product, images: newImages});
-                    setSelectedImage(newImages.length - 1);
-                  } else {
-                    const mainImageIndex = product.images?.findIndex((mainImg: string) => mainImg === image);
-                    if (mainImageIndex !== -1) {
-                      setSelectedImage(mainImageIndex);
-                    }
-                  }
-                  setIsVideoMode(false);
-                }}
-              >
-                <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 group-hover:border-red-500 transition-all duration-200">
-                  <img
-                    src={image}
-                    alt={`Ảnh phụ ${index + 1}`}
-                    className="w-full h-28 object-cover group-hover:scale-110 transition-transform duration-200"
-                    loading="lazy"
-                  />
-                  
-                  {/* Overlay với icon */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      <svg className="w-8 h-8 text-white drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                      </svg>
-                    </div>
-                  </div>
-                  
-                  {/* Số thứ tự */}
-                  <div className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">
-                    {index + 1}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <Modal
         open={showVariantModal}
