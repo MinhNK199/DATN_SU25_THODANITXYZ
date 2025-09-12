@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 /* Custom Scrollbar Styles */
+
 .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: #d1d5db #f3f4f6;
@@ -27,11 +28,25 @@
     background: #9ca3af;
 }
 
+
+/* Hide scrollbar for thumbnail gallery */
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
 .scrollbar-thin::-webkit-scrollbar-thumb:active {
     background: #6b7280;
 }
 
+
 /* Chat messages scrollbar */
+
 .chat-messages-container {
     scrollbar-width: thin;
     scrollbar-color: #d1d5db #f3f4f6;
@@ -60,7 +75,9 @@
     background: #6b7280;
 }
 
+
 /* Cart specific scrollbar */
+
 .cart-scrollable {
     scrollbar-width: thin;
     scrollbar-color: #3b82f6 #e5e7eb;
@@ -89,7 +106,9 @@
     background: #1d4ed8;
 }
 
+
 /* Cart Layout Balance */
+
 .cart-layout {
     min-height: 600px;
 }
@@ -119,7 +138,9 @@
     flex-direction: column;
 }
 
+
 /* Product Detail Modal Scrollbar */
+
 .product-detail-modal .ant-modal-body {
     scrollbar-width: thin;
     scrollbar-color: #3b82f6 #f1f5f9;

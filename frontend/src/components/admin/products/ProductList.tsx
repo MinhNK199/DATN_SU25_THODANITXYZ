@@ -213,12 +213,33 @@ const ProductListPage: React.FC = () => {
       width: "30%",
       render: (_, record) => (
         <Space>
-          <Avatar shape="square" size={64} src={record.images[0]} />
+          <div style={{ position: "relative" }}>
+            <Avatar shape="square" size={64} src={record.images[0]} />
+            {/* Hiển thị số lượng ảnh phụ */}
+            {record.additionalImages && record.additionalImages.length > 0 && (
+              <Badge 
+                count={record.additionalImages.length} 
+                style={{ 
+                  position: "absolute", 
+                  top: -8, 
+                  right: -8,
+                  backgroundColor: "#52c41a",
+                  fontSize: "10px"
+                }} 
+              />
+            )}
+          </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <Text strong>{record.name}</Text>
             <Text type="secondary">
               SKU: {record.sku || record.variants?.[0]?.sku || "N/A"}
             </Text>
+            {/* Hiển thị thông tin ảnh phụ */}
+            {record.additionalImages && record.additionalImages.length > 0 && (
+              <Text type="secondary" style={{ fontSize: "11px" }}>
+                +{record.additionalImages.length} ảnh phụ
+              </Text>
+            )}
           </div>
         </Space>
       ),

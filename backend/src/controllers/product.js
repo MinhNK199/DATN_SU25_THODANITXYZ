@@ -59,7 +59,7 @@ const processSpecifications = (specsData) => {
 
     // Nếu đã là object hợp lệ
     if (typeof specsData === "object" && specsData !== null) {
-        const result = { ...specsData }
+        const result = {...specsData }
         return result
     }
 
@@ -102,25 +102,25 @@ const processVariantData = (variant, index = 0) => {
 
     // Only set _id if it is a valid ObjectId (24-char hex string)
     let processedVariant = {
-        name: variant.name || "",
-        sku: variant.sku || "",
-        price: typeof variant.price === "number" ? variant.price : Number.parseFloat(variant.price) || 0,
-        salePrice: variant.salePrice ?
-            typeof variant.salePrice === "number" ?
+            name: variant.name || "",
+            sku: variant.sku || "",
+            price: typeof variant.price === "number" ? variant.price : Number.parseFloat(variant.price) || 0,
+            salePrice: variant.salePrice ?
+                typeof variant.salePrice === "number" ?
                 variant.salePrice :
                 Number.parseFloat(variant.salePrice) : undefined,
-        stock: typeof variant.stock === "number" ? variant.stock : Number.parseInt(variant.stock) || 0,
-        color: processedColor,
-        size: typeof variant.size === "number" ? variant.size : Number.parseFloat(variant.size) || 0,
-        length: typeof variant.length === "number" ? variant.length : Number.parseFloat(variant.length) || 0,
-        width: typeof variant.width === "number" ? variant.width : Number.parseFloat(variant.width) || 0,
-        height: typeof variant.height === "number" ? variant.height : Number.parseFloat(variant.height) || 0,
-        weight: typeof variant.weight === "number" ? variant.weight : Number.parseFloat(variant.weight) || 0,
-        images: Array.isArray(variant.images) ? variant.images.filter((img) => img && typeof img === "string") : [],
-        isActive: Boolean(variant.isActive),
-        specifications: processedSpecs,
-    }
-    // Check if _id or id is a valid ObjectId
+            stock: typeof variant.stock === "number" ? variant.stock : Number.parseInt(variant.stock) || 0,
+            color: processedColor,
+            size: typeof variant.size === "number" ? variant.size : Number.parseFloat(variant.size) || 0,
+            length: typeof variant.length === "number" ? variant.length : Number.parseFloat(variant.length) || 0,
+            width: typeof variant.width === "number" ? variant.width : Number.parseFloat(variant.width) || 0,
+            height: typeof variant.height === "number" ? variant.height : Number.parseFloat(variant.height) || 0,
+            weight: typeof variant.weight === "number" ? variant.weight : Number.parseFloat(variant.weight) || 0,
+            images: Array.isArray(variant.images) ? variant.images.filter((img) => img && typeof img === "string") : [],
+            isActive: Boolean(variant.isActive),
+            specifications: processedSpecs,
+        }
+        // Check if _id or id is a valid ObjectId
     const idCandidate = variant._id || variant.id;
     if (typeof idCandidate === "string" && /^[a-fA-F0-9]{24}$/.test(idCandidate)) {
         processedVariant._id = idCandidate;
@@ -135,7 +135,7 @@ const processVariantData = (variant, index = 0) => {
     return processedVariant
 }
 
-export const getProducts = async (req, res) => {
+export const getProducts = async(req, res) => {
     try {
         // ⚙️ Thiết lập phân trang mặc định
         const pageSize = Number(req.query.pageSize) || 10
@@ -160,7 +160,7 @@ export const getProducts = async (req, res) => {
                 filter.category = req.query.category
             } else {
                 // Nếu không phải ObjectId, tìm theo slug
-                const category = await Category.findOne({ slug: req.query.category })
+                const category = await Category.findOne({ slug: req.query.category });
                 if (category) {
                     filter.category = category._id
                 }
@@ -223,20 +223,20 @@ export const getProducts = async (req, res) => {
 
         // 🧮 Đếm tổng số sản phẩm phù hợp với bộ lọc
         console.log("Filter used for product search:", filter)
-        const count = await Product.countDocuments(filter)
+        const count = await Product.countDocuments(filter);
 
         // 📦 Lấy danh sách sản phẩm đã lọc và sắp xếp theo sortField + sortOrder
         const products = await Product.find(filter)
             .populate("category", "name")
             .populate("brand", "name")
             .select(
-                "name slug description price salePrice images category brand stock sku weight dimensions warranty specifications variants isActive isFeatured tags averageRating numReviews createdAt updatedAt vouchers",
+                "name slug description price salePrice images additionalImages category brand stock sku weight dimensions warranty specifications variants isActive isFeatured tags averageRating numReviews createdAt updatedAt vouchers",
             )
             .sort({
                 [sortField]: sortOrder,
             })
             .limit(pageSize)
-            .skip(pageSize * (page - 1))
+            .skip(pageSize * (page - 1));
 
         // 🧩 Đảm bảo luôn có mảng biến thể và các trường quan trọng không null
         const productsWithVariants = products.map((product) => {
@@ -260,7 +260,7 @@ export const getProducts = async (req, res) => {
                 { $match: filter },
                 { $group: { _id: null, avgRating: { $avg: "$averageRating" } } },
             ]),
-        }
+        };
 
         // 📤 Trả kết quả về client
         res.json({
@@ -283,13 +283,13 @@ export const getProducts = async (req, res) => {
 }
 
 // Lấy sản phẩm theo id
-export const getProductById = async (req, res) => {
+export const getProductById = async(req, res) => {
     try {
         const product = await Product.findById(req.params.id)
             .populate("category", "name")
             .populate("brand", "name")
-            .populate("questions.user", "name email avatar")
-        if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" })
+            .populate("questions.user", "name email avatar");
+        if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
 
         // Thêm thống kê Q&A
         const qaStats = {
@@ -303,13 +303,17 @@ export const getProductById = async (req, res) => {
             qaStats,
         }
 
+        console.log("🔍 getProductById - Product additionalImages:", product.additionalImages);
+        console.log("🔍 getProductById - Product additionalImages type:", typeof product.additionalImages);
+        console.log("🔍 getProductById - Product additionalImages isArray:", Array.isArray(product.additionalImages));
+
         res.json(productWithStats)
     } catch (error) {
         res.status(500).json({ message: error.message })
     }
 }
 
-export const createProduct = async (req, res) => {
+export const createProduct = async(req, res) => {
     try {
 
         // Parse và ép kiểu các trường khi nhận từ FormData
@@ -354,40 +358,55 @@ export const createProduct = async (req, res) => {
             return res.status(400).json({ message: "Thương hiệu không hợp lệ" });
         }
 
-        // Xử lý ảnh upload
-        let imageUrls = [];
-        if (req.file) {
-            imageUrls.push(`/uploads/images/${req.file.filename}`);
-        } else if (req.files && Array.isArray(req.files)) {
-            imageUrls = req.files.map(f => `/uploads/images/${f.filename}`);
-        } else if (req.body.images) {
-            if (typeof req.body.images === "string") {
-                try {
-                    imageUrls = JSON.parse(req.body.images);
-                } catch (e) {
-                    imageUrls = [req.body.images];
+        // Chỉ xử lý ảnh đại diện khi KHÔNG phải route additional-images
+        const isAdditionalImagesRoute = req.path.includes('/additional-images');
+        let imageUrls = []; // Khởi tạo biến imageUrls để tránh lỗi undefined
+
+        if (!isAdditionalImagesRoute) {
+            // Xử lý ảnh upload (ảnh đại diện)
+            if (req.file) {
+                imageUrls.push(`/uploads/images/${req.file.filename}`);
+            } else if (req.files && Array.isArray(req.files)) {
+                imageUrls = req.files.map(f => `/uploads/images/${f.filename}`);
+            } else if (req.body.images) {
+                if (typeof req.body.images === "string") {
+                    try {
+                        imageUrls = JSON.parse(req.body.images);
+                    } catch (e) {
+                        imageUrls = [req.body.images];
+                    }
+                } else if (Array.isArray(req.body.images)) {
+                    imageUrls = req.body.images;
                 }
-            } else if (Array.isArray(req.body.images)) {
-                imageUrls = req.body.images;
             }
-        }
-        if (!imageUrls || imageUrls.length < 1) {
-            return res.status(400).json({ message: "Phải có ít nhất 1 hình ảnh" });
+            if (!imageUrls || imageUrls.length < 1) {
+                return res.status(400).json({ message: "Phải có ít nhất 1 hình ảnh" });
+            }
+        } else {
+            console.log("🔍 Additional images route - skipping main image processing");
+            // Khởi tạo imageUrls rỗng để tránh lỗi undefined
+            imageUrls = [];
         }
 
-        // Xử lý ảnh thumbnail upload
-        let thumbnailUrls = [];
-        if (req.body.thumbnails) {
-            if (typeof req.body.thumbnails === "string") {
-                try {
-                    thumbnailUrls = JSON.parse(req.body.thumbnails);
-                } catch (e) {
-                    thumbnailUrls = [req.body.thumbnails];
-                }
-            } else if (Array.isArray(req.body.thumbnails)) {
-                thumbnailUrls = req.body.thumbnails;
+        // Xử lý ảnh phụ (chỉ khi KHÔNG phải route additional-images)
+        let additionalImageUrls = []; // Khởi tạo biến additionalImageUrls để tránh lỗi undefined
+        if (!isAdditionalImagesRoute) {
+            if (req.files && req.files.additionalImages) {
+                // req.files.additionalImages là array khi sử dụng upload.fields()
+                const additionalImages = Array.isArray(req.files.additionalImages) ?
+                    req.files.additionalImages : [req.files.additionalImages];
+                additionalImageUrls = additionalImages.map(f => `/uploads/images/${f.filename}`);
+                console.log("📸 Additional images from uploadMultipleImages:", additionalImageUrls);
+            } else if (req.files && Array.isArray(req.files)) {
+                // Fallback: nếu sử dụng upload.any()
+                const additionalImages = req.files.filter(f => f.fieldname === 'additionalImages');
+                additionalImageUrls = additionalImages.map(f => `/uploads/images/${f.filename}`);
+                console.log("📸 Additional images from upload.any():", additionalImageUrls);
             }
+        } else {
+            console.log("🔍 Additional images route - skipping initial additional images processing");
         }
+
 
         // Parse variants robustly
         let processedVariants = [];
@@ -419,7 +438,7 @@ export const createProduct = async (req, res) => {
             salePrice,
             user: req.user && req.user._id,
             images: imageUrls,
-            thumbnails: thumbnailUrls,
+            additionalImages: additionalImageUrls || [],
 
             videos: req.body.videos || [],
             brand,
@@ -453,15 +472,20 @@ export const createProduct = async (req, res) => {
 }
 
 // Cập nhật sản phẩm - ENHANCED LOGGING
-export const updateProduct = async (req, res) => {
+export const updateProduct = async(req, res) => {
     try {
+        console.log('🔍 UpdateProduct called with path:', req.path);
+        console.log('🔍 UpdateProduct called with method:', req.method);
+        console.log('🔍 UpdateProduct called with params:', req.params);
+        console.log('🔍 UpdateProduct called with body keys:', Object.keys(req.body || {}));
+        console.log('🔍 UpdateProduct called with files:', req.files);
+
         let {
             name,
             price,
             salePrice,
             description,
             images,
-            thumbnails,
             brand,
             category,
             stock,
@@ -476,112 +500,208 @@ export const updateProduct = async (req, res) => {
             warranty,
             dimensions,
             videos,
-        } = req.body
+        } = req.body;
 
-        const product = await Product.findById(req.params.id)
+        const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ message: "Không tìm thấy sản phẩm" })
+            return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+        }
+
+        console.log("🔍 Product found:", product.name);
+        console.log("🔍 Product additionalImages:", product.additionalImages);
+        console.log("🔍 Product additionalImages type:", typeof product.additionalImages);
+
+        // Khởi tạo additionalImages nếu chưa có
+        if (!product.additionalImages) {
+            product.additionalImages = [];
+            console.log("🔧 Initialized additionalImages as empty array");
         }
 
         // Ép brand và category về ID nếu là object
-        if (typeof brand === "object") brand = brand._id
-        if (typeof category === "object") category = category._id
+        if (typeof brand === "object") brand = brand._id;
+        if (typeof category === "object") category = category._id;
 
         // Validate required fields
         if (!name || !price || !category || !brand) {
             return res.status(400).json({
                 message: "Thiếu thông tin bắt buộc: tên, giá, danh mục, thương hiệu",
-            })
+            });
         }
 
         // Validate giá
         if (price <= 0) {
-            return res.status(400).json({ message: "Giá phải lớn hơn 0" })
+            return res.status(400).json({ message: "Giá phải lớn hơn 0" });
         }
 
         if (salePrice && salePrice >= price) {
-            return res.status(400).json({ message: "Giá khuyến mãi phải nhỏ hơn giá gốc" })
+            return res.status(400).json({ message: "Giá khuyến mãi phải nhỏ hơn giá gốc" });
         }
 
         if (stock < 0) {
-            return res.status(400).json({ message: "Số lượng tồn kho không được âm" })
+            return res.status(400).json({ message: "Số lượng tồn kho không được âm" });
         }
 
         // Process variants
-        let processedVariants = []
+        let processedVariants = [];
         if (variants && Array.isArray(variants)) {
             try {
                 processedVariants = variants.map((variant, index) => {
-                    const processed = processVariantData(variant, index)
-                    return processed
-                })
+                    const processed = processVariantData(variant, index);
+                    return processed;
+                });
             } catch (error) {
-                console.error("❌ Error processing variants:", error)
-                return res.status(400).json({ message: error.message })
+                console.error("❌ Error processing variants:", error);
+                return res.status(400).json({ message: error.message });
             }
         }
 
         // Process main specifications
-        const processedSpecifications = processSpecifications(specifications)
+        const processedSpecifications = processSpecifications(specifications);
 
         // Gán lại dữ liệu
-        product.name = name
-        product.price = price
-        product.salePrice = salePrice
+        product.name = name;
+        product.price = price;
+        product.salePrice = salePrice;
         if (description !== undefined) {
-            product.description = description
+            product.description = description;
         }
-        product.images = images || product.images
-        product.thumbnails = thumbnails || product.thumbnails
-        product.videos = videos || product.videos
-        product.brand = brand
-        product.category = category
-        product.stock = stock
-        product.sku = sku || product.sku
-        product.tags = tags || product.tags
-        product.weight = weight || product.weight
-        product.warranty = warranty || product.warranty
-        product.dimensions = dimensions || product.dimensions
+        // Chỉ cập nhật images khi có imageUrls (không phải route additional-images)
+        if (typeof imageUrls !== 'undefined' && imageUrls && imageUrls.length > 0) {
+            product.images = imageUrls;
+        } else {
+            console.log("🔍 imageUrls is undefined or empty, skipping images update");
+        }
+        product.videos = videos || product.videos;
+        product.brand = brand;
+        product.category = category;
+        product.stock = stock;
+        product.sku = sku || product.sku;
+        product.tags = tags || product.tags;
+        product.weight = weight || product.weight;
+        product.warranty = warranty || product.warranty;
+        product.dimensions = dimensions || product.dimensions;
 
         // Cập nhật specifications chính của sản phẩm
         if (processedSpecifications !== undefined) {
-            product.specifications = processedSpecifications
-            console.log("✅ Updated main product specifications")
+            product.specifications = processedSpecifications;
+            console.log("✅ Updated main product specifications");
         }
-        if (features !== undefined) product.features = features
+        if (features !== undefined) product.features = features;
 
         // Cập nhật variants
         if (processedVariants.length > 0) {
-            console.log("🔄 Updating product variants...")
-            product.variants = processedVariants
-            product.markModified("variants")
-            console.log("✅ Product variants updated and marked as modified")
+            console.log("🔄 Updating product variants...");
+            product.variants = processedVariants;
+            product.markModified("variants");
+            console.log("✅ Product variants updated and marked as modified");
         }
 
-        if (isActive !== undefined) product.isActive = isActive
-        if (isFeatured !== undefined) product.isFeatured = isFeatured
+        // Chỉ xử lý ảnh phụ khi request từ route additional-images
+        // (sử dụng biến isAdditionalImagesRoute đã khai báo ở trên)
+        const isAdditionalImagesRoute = req.path.includes('/additional-images');
 
-        const updatedProduct = await product.save()
-        res.json(updatedProduct)
+        if (isAdditionalImagesRoute) {
+            // Xử lý ảnh phụ
+            console.log("🔍 Debug additional images:");
+            console.log("req.files:", req.files);
+            console.log("req.body.existingAdditionalImages:", req.body.existingAdditionalImages);
+
+            // Khai báo lại biến additionalImageUrls để tránh lỗi undefined
+            let additionalImageUrls = [];
+            if (req.files && req.files.length > 0) {
+                // req.files là array khi sử dụng upload.any()
+                const additionalImages = req.files.filter(f => f.fieldname === 'additionalImages');
+                additionalImageUrls = additionalImages.map(f => `/uploads/images/${f.filename}`);
+                console.log("📸 New additional images:", additionalImageUrls);
+            } else {
+                // Đảm bảo additionalImageUrls luôn là array
+                additionalImageUrls = [];
+                console.log("📸 No new additional images to add");
+            }
+
+            // Xử lý ảnh phụ hiện có
+            let existingAdditionalImages = [];
+            if (req.body.existingAdditionalImages) {
+                try {
+                    existingAdditionalImages = JSON.parse(req.body.existingAdditionalImages);
+                    console.log("📁 Existing additional images from request:", existingAdditionalImages);
+                } catch (e) {
+                    console.error("Error parsing existing additional images:", e);
+                    existingAdditionalImages = [];
+                }
+            } else {
+                // Nếu không có existingAdditionalImages trong request, sử dụng ảnh hiện có trong database
+                existingAdditionalImages = product.additionalImages || [];
+                console.log("📁 Using existing additional images from database:", existingAdditionalImages);
+            }
+
+            // Merge ảnh phụ mới và cũ, loại bỏ trùng lặp
+            if (additionalImageUrls.length > 0 || existingAdditionalImages.length > 0) {
+                const allImages = [...existingAdditionalImages, ...additionalImageUrls];
+                product.additionalImages = [...new Set(allImages)]; // Loại bỏ trùng lặp
+                console.log("🔄 Final merged additional images:", product.additionalImages);
+            } else {
+                console.log("⚠️ No additional images to process");
+            }
+
+            // Đảm bảo additionalImages là array
+            if (!Array.isArray(product.additionalImages)) {
+                product.additionalImages = [];
+            }
+
+            console.log("🔍 Final additionalImages before save:", product.additionalImages);
+            console.log("🔍 Product.additionalImages type:", typeof product.additionalImages);
+            console.log("🔍 Product.additionalImages isArray:", Array.isArray(product.additionalImages));
+
+            // Mark additionalImages as modified để đảm bảo nó được lưu
+            product.markModified('additionalImages');
+        } else {
+            console.log("🔍 Not additional images route, skipping additional images processing");
+        }
+
+        // Chỉ cập nhật các trường khác nếu không phải là route additional-images
+
+        if (!isAdditionalImagesRoute) {
+            // Cập nhật các trường khác chỉ khi không phải route additional-images
+            if (isActive !== undefined) product.isActive = isActive;
+            if (isFeatured !== undefined) product.isFeatured = isFeatured;
+
+            // Cập nhật các trường khác...
+            if (name) product.name = name;
+            if (price) product.price = price;
+            if (description) product.description = description;
+            if (brand) product.brand = brand;
+            if (category) product.category = category;
+            if (stock !== undefined) product.stock = stock;
+            if (sku) product.sku = sku;
+            if (tags) product.tags = tags;
+            if (warranty !== undefined) product.warranty = warranty;
+            if (dimensions) product.dimensions = dimensions;
+            if (videos) product.videos = videos;
+        }
+
+        const updatedProduct = await product.save();
+        console.log("✅ Product updated with additionalImages:", updatedProduct.additionalImages);
+        res.json(updatedProduct);
     } catch (error) {
-        console.error("❌ Error updating product:", error)
-        res.status(400).json({ message: error.message || "Cập nhật thất bại." })
+        console.error("❌ Error updating product:", error);
+        res.status(400).json({ message: error.message || "Cập nhật thất bại." });
     }
 }
 
 // Xóa sản phẩm
-export const deleteProduct = async (req, res) => {
+export const deleteProduct = async(req, res) => {
     try {
-        const product = await Product.findByIdAndDelete(req.params.id)
-        if (!product) return res.status(404).json({ error: "Không tìm thấy sản phẩm" })
-        res.json({ success: true })
+        const product = await Product.findByIdAndDelete(req.params.id);
+        if (!product) return res.status(404).json({ error: "Không tìm thấy sản phẩm" });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ message: error.message })
+        res.status(500).json({ message: error.message });
     }
 }
 
 // Hard delete sản phẩm (xóa vĩnh viễn)
-export const hardDeleteProduct = async (req, res) => {
+export const hardDeleteProduct = async(req, res) => {
     try {
         const product = await Product.findByIdAndDelete(req.params.id)
         if (!product) return res.status(404).json({ error: "Không tìm thấy sản phẩm" })
@@ -592,7 +712,7 @@ export const hardDeleteProduct = async (req, res) => {
 }
 
 // Thêm đánh giá sản phẩm
-export const createProductReview = async (req, res) => {
+export const createProductReview = async(req, res) => {
     try {
         const { rating, comment } = req.body
         const product = await Product.findById(req.params.id)
@@ -622,7 +742,7 @@ export const createProductReview = async (req, res) => {
 }
 
 // Lấy top sản phẩm đánh giá cao
-export const getTopProducts = async (req, res) => {
+export const getTopProducts = async(req, res) => {
     try {
         const products = await Product.find({}).sort({ averageRating: -1 }).limit(3)
         res.json(products)
@@ -632,7 +752,7 @@ export const getTopProducts = async (req, res) => {
 }
 
 // Soft delete sản phẩm
-export const softDeleteProduct = async (req, res) => {
+export const softDeleteProduct = async(req, res) => {
     try {
         const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" })
@@ -646,7 +766,7 @@ export const softDeleteProduct = async (req, res) => {
 }
 
 // Khôi phục sản phẩm đã xóa
-export const restoreProduct = async (req, res) => {
+export const restoreProduct = async(req, res) => {
     try {
         const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" })
@@ -660,7 +780,7 @@ export const restoreProduct = async (req, res) => {
 }
 
 // Lấy thống kê sản phẩm
-export const getProductStats = async (req, res) => {
+export const getProductStats = async(req, res) => {
     try {
         const totalProducts = await Product.countDocuments()
         const outOfStockProducts = await Product.countDocuments({ stock: 0 })
@@ -681,7 +801,7 @@ export const getProductStats = async (req, res) => {
 }
 
 // Thêm biến thể cho sản phẩm
-export const addProductVariant = async (req, res) => {
+export const addProductVariant = async(req, res) => {
     try {
         const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" })
@@ -720,7 +840,7 @@ export const addProductVariant = async (req, res) => {
 }
 
 // Cập nhật biến thể sản phẩm
-export const updateProductVariant = async (req, res) => {
+export const updateProductVariant = async(req, res) => {
     try {
         const { productId, variantId } = req.params
         const product = await Product.findById(productId)
@@ -750,7 +870,7 @@ export const updateProductVariant = async (req, res) => {
 }
 
 // Xóa biến thể sản phẩm
-export const deleteProductVariant = async (req, res) => {
+export const deleteProductVariant = async(req, res) => {
     try {
         const { productId, variantId } = req.params
         const product = await Product.findById(productId)
@@ -766,7 +886,7 @@ export const deleteProductVariant = async (req, res) => {
 }
 
 // Lấy thống kê biến thể
-export const getVariantStats = async (req, res) => {
+export const getVariantStats = async(req, res) => {
     try {
         const product = await Product.findById(req.params.id)
         if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" })
@@ -788,7 +908,7 @@ export const getVariantStats = async (req, res) => {
 }
 
 // Import sản phẩm từ Excel
-export const importProductsFromExcel = async (req, res) => {
+export const importProductsFromExcel = async(req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: "Vui lòng upload file Excel" })
@@ -902,11 +1022,11 @@ export const importProductsFromExcel = async (req, res) => {
                 results.success++
             } catch (error) {
                 results.failed++
-                results.errors.push({
-                    row: index + 2, // +2 vì Excel bắt đầu từ 1 và có header
-                    data: row,
-                    error: error.message,
-                })
+                    results.errors.push({
+                        row: index + 2, // +2 vì Excel bắt đầu từ 1 và có header
+                        data: row,
+                        error: error.message,
+                    })
             }
         }
 
@@ -949,7 +1069,7 @@ export const importProductsFromExcel = async (req, res) => {
 }
 
 // Lấy danh sách sản phẩm đã xóa mềm
-export const getDeletedProducts = async (req, res) => {
+export const getDeletedProducts = async(req, res) => {
     try {
         const products = await Product.find({ isActive: false }).populate("category", "name").populate("brand", "name")
         res.json(products)
@@ -959,7 +1079,7 @@ export const getDeletedProducts = async (req, res) => {
 }
 
 // Đếm số lượng sản phẩm đã xóa mềm
-export const getDeletedProductsCount = async (req, res) => {
+export const getDeletedProductsCount = async(req, res) => {
     try {
         const count = await Product.countDocuments({ isActive: false })
         res.json({ count })
@@ -968,7 +1088,7 @@ export const getDeletedProductsCount = async (req, res) => {
     }
 }
 
-export const suggestProducts = async (req, res) => {
+export const suggestProducts = async(req, res) => {
     try {
         const { query } = req.query
         if (!query || query.length < 1) {
@@ -976,8 +1096,8 @@ export const suggestProducts = async (req, res) => {
         }
         // Tìm tên sản phẩm chứa từ khóa, không phân biệt hoa thường
         const suggestions = await Product.find({
-            name: { $regex: query, $options: "i" },
-        })
+                name: { $regex: query, $options: "i" },
+            })
             .limit(10)
             .select("name")
         res.json({ suggestions: suggestions.map((p) => p.name) })
@@ -987,7 +1107,7 @@ export const suggestProducts = async (req, res) => {
 }
 
 // Thêm video cho sản phẩm
-export const addProductVideo = async (req, res) => {
+export const addProductVideo = async(req, res) => {
     try {
         const { id } = req.params
         const { videoUrl } = req.body
@@ -1003,7 +1123,7 @@ export const addProductVideo = async (req, res) => {
 }
 
 // Xóa video khỏi sản phẩm
-export const deleteProductVideo = async (req, res) => {
+export const deleteProductVideo = async(req, res) => {
     try {
         const { id, videoIndex } = req.params
         const product = await Product.findById(id)
@@ -1019,7 +1139,7 @@ export const deleteProductVideo = async (req, res) => {
 }
 
 // Cập nhật video cho sản phẩm (theo index)
-export const updateProductVideo = async (req, res) => {
+export const updateProductVideo = async(req, res) => {
     try {
         const { id, videoIndex } = req.params
         const { videoUrl } = req.body
@@ -1036,7 +1156,7 @@ export const updateProductVideo = async (req, res) => {
 }
 
 // Cập nhật meta SEO cho sản phẩm
-export const updateProductMeta = async (req, res) => {
+export const updateProductMeta = async(req, res) => {
     try {
         const { id } = req.params
         const { metaTitle, metaDescription, metaImage } = req.body
@@ -1045,13 +1165,13 @@ export const updateProductMeta = async (req, res) => {
         product.meta = {
             metaTitle: typeof metaTitle !== "undefined" ?
                 metaTitle : product.meta && product.meta.metaTitle ?
-                    product.meta.metaTitle : "",
+                product.meta.metaTitle : "",
             metaDescription: typeof metaDescription !== "undefined" ?
                 metaDescription : product.meta && product.meta.metaDescription ?
-                    product.meta.metaDescription : "",
+                product.meta.metaDescription : "",
             metaImage: typeof metaImage !== "undefined" ?
                 metaImage : product.meta && product.meta.metaImage ?
-                    product.meta.metaImage : "",
+                product.meta.metaImage : "",
         }
         await product.save()
         res.status(200).json({ message: "Đã cập nhật meta SEO", meta: product.meta })
@@ -1061,7 +1181,7 @@ export const updateProductMeta = async (req, res) => {
 }
 
 // Thêm câu hỏi cho sản phẩm
-export const addProductQuestion = async (req, res) => {
+export const addProductQuestion = async(req, res) => {
     try {
         const { id } = req.params
         const { question } = req.body
@@ -1117,7 +1237,7 @@ export const addProductQuestion = async (req, res) => {
 }
 
 // Lấy danh sách câu hỏi của sản phẩm
-export const getProductQuestions = async (req, res) => {
+export const getProductQuestions = async(req, res) => {
     try {
         const { id } = req.params
         const { page = 1, limit = 10, sort = "createdAt", order = "desc" } = req.query
@@ -1175,7 +1295,7 @@ export const getProductQuestions = async (req, res) => {
 }
 
 // Trả lời câu hỏi (chỉ admin và superadmin)
-export const answerProductQuestion = async (req, res) => {
+export const answerProductQuestion = async(req, res) => {
     try {
         const { id, questionId } = req.params
         const { answer } = req.body
@@ -1239,7 +1359,7 @@ export const answerProductQuestion = async (req, res) => {
 }
 
 // Xóa câu hỏi
-export const deleteProductQuestion = async (req, res) => {
+export const deleteProductQuestion = async(req, res) => {
     try {
         const { id, questionId } = req.params
 
@@ -1284,7 +1404,7 @@ export const deleteProductQuestion = async (req, res) => {
 }
 
 // Thêm sản phẩm liên quan
-export const addRelatedProduct = async (req, res) => {
+export const addRelatedProduct = async(req, res) => {
     try {
         const { id } = req.params
         const { relatedProductId } = req.body
@@ -1350,7 +1470,7 @@ export const addRelatedProduct = async (req, res) => {
 }
 
 // Xóa sản phẩm liên quan
-export const removeRelatedProduct = async (req, res) => {
+export const removeRelatedProduct = async(req, res) => {
     try {
         const { id, relatedProductId } = req.params
 
@@ -1389,7 +1509,7 @@ export const removeRelatedProduct = async (req, res) => {
 }
 
 // Lấy danh sách sản phẩm liên quan
-export const getRelatedProducts = async (req, res) => {
+export const getRelatedProducts = async(req, res) => {
     try {
         const { id } = req.params
         const { limit = 10 } = req.query
@@ -1421,7 +1541,7 @@ export const getRelatedProducts = async (req, res) => {
 }
 
 // Tạo flash sale cho sản phẩm
-export const createFlashSale = async (req, res) => {
+export const createFlashSale = async(req, res) => {
     try {
         const { id } = req.params
         const { price, start, end } = req.body
@@ -1502,7 +1622,7 @@ export const createFlashSale = async (req, res) => {
 }
 
 // Cập nhật flash sale
-export const updateFlashSale = async (req, res) => {
+export const updateFlashSale = async(req, res) => {
     try {
         const { id } = req.params
         const { price, start, end } = req.body
@@ -1576,7 +1696,7 @@ export const updateFlashSale = async (req, res) => {
 }
 
 // Xóa flash sale
-export const deleteFlashSale = async (req, res) => {
+export const deleteFlashSale = async(req, res) => {
     try {
         const { id } = req.params
 
@@ -1614,7 +1734,7 @@ export const deleteFlashSale = async (req, res) => {
 }
 
 // Lấy thông tin flash sale
-export const getFlashSale = async (req, res) => {
+export const getFlashSale = async(req, res) => {
     try {
         const { id } = req.params
 
@@ -1646,7 +1766,7 @@ export const getFlashSale = async (req, res) => {
 }
 
 // Thêm khuyến mãi cho sản phẩm
-export const addProductDiscount = async (req, res) => {
+export const addProductDiscount = async(req, res) => {
     try {
         const { id } = req.params
         const { type, value, description, start, end } = req.body
@@ -1736,7 +1856,7 @@ export const addProductDiscount = async (req, res) => {
 }
 
 // Cập nhật khuyến mãi
-export const updateProductDiscount = async (req, res) => {
+export const updateProductDiscount = async(req, res) => {
     try {
         const { id, discountId } = req.params
         const { type, value, description, start, end } = req.body
@@ -1824,7 +1944,7 @@ export const updateProductDiscount = async (req, res) => {
 }
 
 // Xóa khuyến mãi
-export const deleteProductDiscount = async (req, res) => {
+export const deleteProductDiscount = async(req, res) => {
     try {
         const { id, discountId } = req.params
 
@@ -1861,7 +1981,7 @@ export const deleteProductDiscount = async (req, res) => {
 }
 
 // Lấy danh sách khuyến mãi
-export const getProductDiscounts = async (req, res) => {
+export const getProductDiscounts = async(req, res) => {
     try {
         const { id } = req.params
 
@@ -1907,7 +2027,7 @@ export const getProductDiscounts = async (req, res) => {
 }
 
 // Thêm sản phẩm vào danh sách yêu thích
-export const addToFavorites = async (req, res) => {
+export const addToFavorites = async(req, res) => {
     try {
         const { id } = req.params
 
@@ -1947,7 +2067,7 @@ export const addToFavorites = async (req, res) => {
 }
 
 // Xóa sản phẩm khỏi danh sách yêu thích
-export const removeFromFavorites = async (req, res) => {
+export const removeFromFavorites = async(req, res) => {
     try {
         const { id } = req.params
 
@@ -1978,7 +2098,7 @@ export const removeFromFavorites = async (req, res) => {
 }
 
 // Lấy danh sách sản phẩm yêu thích
-export const getFavorites = async (req, res) => {
+export const getFavorites = async(req, res) => {
     try {
         const { page = 1, limit = 10, sort = "createdAt", order = "desc" } = req.query
 
@@ -2031,7 +2151,7 @@ export const getFavorites = async (req, res) => {
 }
 
 // Kiểm tra sản phẩm có trong danh sách yêu thích không
-export const checkFavorite = async (req, res) => {
+export const checkFavorite = async(req, res) => {
     try {
         const { id } = req.params
 
@@ -2054,7 +2174,7 @@ export const checkFavorite = async (req, res) => {
 }
 
 // Lấy số lượng sản phẩm yêu thích
-export const getFavoritesCount = async (req, res) => {
+export const getFavoritesCount = async(req, res) => {
     try {
         // Tìm user
         const user = await User.findById(req.user._id)
@@ -2072,7 +2192,7 @@ export const getFavoritesCount = async (req, res) => {
 }
 
 // Kiểm tra SKU trùng lặp
-export const checkSkuExists = async (req, res) => {
+export const checkSkuExists = async(req, res) => {
     try {
         console.log("🔍 checkSkuExists called with query:", req.query);
         const { sku, productId } = req.query;
@@ -2136,7 +2256,7 @@ export const checkSkuExists = async (req, res) => {
 }
 
 // Gợi ý sản phẩm dựa trên sản phẩm hiện tại (collaborative filtering)
-export const getProductRecommendations = async (req, res) => {
+export const getProductRecommendations = async(req, res) => {
     try {
         const { id } = req.params
         const { limit = 10 } = req.query
@@ -2154,20 +2274,20 @@ export const getProductRecommendations = async (req, res) => {
         // 3. Cùng khoảng giá
         // 4. Cùng rating cao
         const similarProducts = await Product.find({
-            _id: { $ne: id }, // Không phải chính sản phẩm này
-            isActive: true,
-            $or: [
-                { category: currentProduct.category },
-                { brand: currentProduct.brand },
-                {
-                    price: {
-                        $gte: currentProduct.price * 0.7,
-                        $lte: currentProduct.price * 1.3,
+                _id: { $ne: id }, // Không phải chính sản phẩm này
+                isActive: true,
+                $or: [
+                    { category: currentProduct.category },
+                    { brand: currentProduct.brand },
+                    {
+                        price: {
+                            $gte: currentProduct.price * 0.7,
+                            $lte: currentProduct.price * 1.3,
+                        },
                     },
-                },
-                { averageRating: { $gte: currentProduct.averageRating - 0.5 } },
-            ],
-        })
+                    { averageRating: { $gte: currentProduct.averageRating - 0.5 } },
+                ],
+            })
             .populate("category", "name")
             .populate("brand", "name")
             .limit(Number.parseInt(limit) * 2) // Lấy nhiều hơn để lọc
@@ -2222,7 +2342,7 @@ export const getProductRecommendations = async (req, res) => {
 }
 
 // Gợi ý sản phẩm dựa trên lịch sử mua hàng của user
-export const getUserRecommendations = async (req, res) => {
+export const getUserRecommendations = async(req, res) => {
     try {
         const { limit = 10 } = req.query
 
@@ -2241,9 +2361,9 @@ export const getUserRecommendations = async (req, res) => {
         if (userOrders.length === 0) {
             // Nếu chưa có đơn hàng, trả về sản phẩm phổ biến
             const popularProducts = await Product.find({
-                isActive: true,
-                averageRating: { $gte: 4 },
-            })
+                    isActive: true,
+                    averageRating: { $gte: 4 },
+                })
                 .populate("category", "name")
                 .populate("brand", "name")
                 .sort({ averageRating: -1, numReviews: -1 })
@@ -2291,10 +2411,10 @@ export const getUserRecommendations = async (req, res) => {
 
         // Tìm sản phẩm gợi ý dựa trên sở thích
         const recommendedProducts = await Product.find({
-            _id: { $nin: Object.keys(purchaseHistory) }, // Chưa mua
-            isActive: true,
-            $or: [{ category: { $in: topCategories } }, { brand: { $in: topBrands } }],
-        })
+                _id: { $nin: Object.keys(purchaseHistory) }, // Chưa mua
+                isActive: true,
+                $or: [{ category: { $in: topCategories } }, { brand: { $in: topBrands } }],
+            })
             .populate("category", "name")
             .populate("brand", "name")
             .sort({ averageRating: -1 })
@@ -2317,7 +2437,7 @@ export const getUserRecommendations = async (req, res) => {
 }
 
 // Gợi ý sản phẩm dựa trên sản phẩm yêu thích
-export const getFavoritesRecommendations = async (req, res) => {
+export const getFavoritesRecommendations = async(req, res) => {
     try {
         const { limit = 10 } = req.query
 
@@ -2365,19 +2485,19 @@ export const getFavoritesRecommendations = async (req, res) => {
 
         // Tìm sản phẩm gợi ý
         const recommendedProducts = await Product.find({
-            _id: { $nin: user.favorites.map((p) => p._id) }, // Không phải sản phẩm đã yêu thích
-            isActive: true,
-            $or: [
-                { category: { $in: topFavoriteCategories } },
-                { brand: { $in: topFavoriteBrands } },
-                {
-                    price: {
-                        $gte: favoritePriceRange.min * 0.8,
-                        $lte: favoritePriceRange.max * 1.2,
+                _id: { $nin: user.favorites.map((p) => p._id) }, // Không phải sản phẩm đã yêu thích
+                isActive: true,
+                $or: [
+                    { category: { $in: topFavoriteCategories } },
+                    { brand: { $in: topFavoriteBrands } },
+                    {
+                        price: {
+                            $gte: favoritePriceRange.min * 0.8,
+                            $lte: favoritePriceRange.max * 1.2,
+                        },
                     },
-                },
-            ],
-        })
+                ],
+            })
             .populate("category", "name")
             .populate("brand", "name")
             .sort({ averageRating: -1 })
@@ -2401,7 +2521,7 @@ export const getFavoritesRecommendations = async (req, res) => {
 }
 
 // Lấy thông tin điểm thưởng của user
-export const getRewardPoints = async (req, res) => {
+export const getRewardPoints = async(req, res) => {
     try {
         // Tìm user với populate lịch sử điểm thưởng
         const user = await User.findById(req.user._id).populate("rewardPoints.history.orderId", "orderNumber totalAmount")
@@ -2422,7 +2542,7 @@ export const getRewardPoints = async (req, res) => {
 }
 
 // Lấy lịch sử điểm thưởng với phân trang
-export const getRewardPointsHistory = async (req, res) => {
+export const getRewardPointsHistory = async(req, res) => {
     try {
         const { page = 1, limit = 10, type } = req.query
 
@@ -2478,7 +2598,7 @@ export const getRewardPointsHistory = async (req, res) => {
 }
 
 // Thêm điểm thưởng (cho admin và superadmin)
-export const addRewardPoints = async (req, res) => {
+export const addRewardPoints = async(req, res) => {
     try {
         const { userId } = req.params
         const { amount, type, description } = req.body
@@ -2536,7 +2656,7 @@ export const addRewardPoints = async (req, res) => {
 }
 
 // Sử dụng điểm thưởng
-export const useRewardPoints = async (req, res) => {
+export const useRewardPoints = async(req, res) => {
     try {
         const { amount, orderId } = req.body
 
@@ -2586,7 +2706,7 @@ export const useRewardPoints = async (req, res) => {
 }
 
 // Tính điểm thưởng từ đơn hàng
-export const calculateOrderRewardPoints = async (orderId) => {
+export const calculateOrderRewardPoints = async(orderId) => {
     try {
         const order = await Order.findById(orderId).populate("user", "rewardPoints")
 
@@ -2629,7 +2749,7 @@ export const calculateOrderRewardPoints = async (orderId) => {
 }
 
 // Tổng sản phẩm gồm sản phẩm gốc (mỗi tên chỉ tính 1 lần) + tổng biến thể của tất cả sản phẩm trùng tên
-export const getTotalProductWithVariantsByName = async (req, res) => {
+export const getTotalProductWithVariantsByName = async(req, res) => {
     try {
         // Lấy tất cả tên sản phẩm duy nhất
         const uniqueNames = await Product.distinct("name")
@@ -2637,7 +2757,7 @@ export const getTotalProductWithVariantsByName = async (req, res) => {
         for (const name of uniqueNames) {
             // Lấy tất cả sản phẩm trùng tên này
             const products = await Product.find({ name })
-            // Tính tổng biến thể của tất cả sản phẩm trùng tên
+                // Tính tổng biến thể của tất cả sản phẩm trùng tên
             let variantCount = 0
             for (const p of products) {
                 variantCount += p.variants ? p.variants.length : 0
@@ -2652,7 +2772,7 @@ export const getTotalProductWithVariantsByName = async (req, res) => {
 }
 
 // Tổng số lượng sản phẩm (gộp theo tên, gồm stock sản phẩm gốc và biến thể, mỗi tên chỉ tính 1 lần)
-export const getTotalProductQuantityByName = async (req, res) => {
+export const getTotalProductQuantityByName = async(req, res) => {
     try {
         const result = await Product.aggregate([
             { $match: { isActive: true } },
@@ -2690,7 +2810,7 @@ export const getTotalProductQuantityByName = async (req, res) => {
     }
 }
 
-export const searchProducts = async (req, res) => {
+export const searchProducts = async(req, res) => {
     try {
         const { query } = req.query
         if (!query) return res.status(400).json({ message: "Missing search query" })
@@ -2714,7 +2834,7 @@ export const searchProducts = async (req, res) => {
 }
 
 // Tạo voucher cho sản phẩm (admin)
-export const createVoucher = async (req, res) => {
+export const createVoucher = async(req, res) => {
     try {
         const { productId, code, discountType, value, startDate, endDate, usageLimit, minOrderValue } = req.body
         const product = await Product.findById(productId)
@@ -2731,7 +2851,7 @@ export const createVoucher = async (req, res) => {
 }
 
 // Kiểm tra và áp dụng voucher (người dùng nhập lúc checkout)
-export const checkVoucher = async (req, res) => {
+export const checkVoucher = async(req, res) => {
     try {
         const { productId, code, orderValue } = req.body
         const product = await Product.findById(productId)
@@ -2747,7 +2867,7 @@ export const checkVoucher = async (req, res) => {
             return res.status(400).json({ valid: false, message: "Voucher đã hết lượt sử dụng" })
         if (voucher.minOrderValue > 0 && orderValue < voucher.minOrderValue)
             return res.status(400).json({ valid: false, message: `Đơn hàng tối thiểu phải từ ${voucher.minOrderValue}đ` })
-        // Tính giảm giá
+                // Tính giảm giá
         let discount = 0
         if (voucher.discountType === "percentage") {
             discount = Math.round(orderValue * (voucher.value / 100))
@@ -2761,7 +2881,7 @@ export const checkVoucher = async (req, res) => {
 }
 
 // Cập nhật lượt dùng voucher (tăng usedCount khi đã sử dụng thành công)
-export const updateVoucherUsage = async (req, res) => {
+export const updateVoucherUsage = async(req, res) => {
     try {
         const { productId, code } = req.body
         const product = await Product.findById(productId)
@@ -2780,7 +2900,7 @@ export const updateVoucherUsage = async (req, res) => {
 }
 
 // ✅ CẬP NHẬT STOCK CỦA VARIANT
-export const updateVariantStock = async (req, res) => {
+export const updateVariantStock = async(req, res) => {
     try {
         const { productId, variantId } = req.params;
         const { stock } = req.body;

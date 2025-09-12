@@ -12,7 +12,7 @@ export const useProductUpdate = () => {
         console.log("Validated variants before sending:", productData.variants)
       }
 
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await fetch(`/api/product/${productId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

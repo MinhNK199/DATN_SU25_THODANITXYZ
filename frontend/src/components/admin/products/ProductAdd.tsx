@@ -9,7 +9,6 @@ import {
   InputNumber,
   Select,
   Button,
-  message as antdMessage,
   Space,
   Card,
   Row,
@@ -58,9 +57,8 @@ const ProductAddPage: React.FC = () => {
   // Thêm state cho file ảnh đại diện
   const [mainImageFile, setMainImageFile] = useState<File | null>(null)
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
-  // Thêm state cho file ảnh thumbnail
-  const [thumbnailFiles, setThumbnailFiles] = useState<File[]>([])
-  const [thumbnailFileList, setThumbnailFileList] = useState<UploadFile[]>([])
+  const [additionalImages, setAdditionalImages] = useState<File[]>([])
+  const [additionalImageFileList, setAdditionalImageFileList] = useState<UploadFile[]>([])
 
   useEffect(() => {
     const currentSpecs = form.getFieldValue("specifications")
@@ -81,7 +79,7 @@ const ProductAddPage: React.FC = () => {
         const [cats, brs] = await Promise.all([getCategories(), getBrands()])
         setCategories(cats)
         setBrands(brs)
-      } catch (error) {
+      } catch (err: unknown) {
         error("Không thể tải dữ liệu cho danh mục và thương hiệu.")
       }
     }
@@ -183,18 +181,18 @@ const ProductAddPage: React.FC = () => {
         formData.append("image", mainImageFile)
       }
 
-      // Ảnh thumbnail
-      if (thumbnailFiles.length > 0) {
-        thumbnailFiles.forEach((file, index) => {
-          formData.append(`thumbnail_${index}`, file)
-        })
-      }
-
+      // Ảnh phụ
       // Biến thể
       formData.append("variants", JSON.stringify(variants.map((v) => {
         const { imageFile, ...rest } = v; // eslint-disable-line @typescript-eslint/no-unused-vars
         return rest;
       })))
+
+      // Thêm ảnh phụ
+      additionalImages.forEach((file, index) => {
+        formData.append('additionalImages', file);
+        console.log(`📤 Added additional image ${index + 1}:`, file.name);
+      });
 
       // Debug: Log form data
       console.log("📤 Sending product data:");
@@ -207,6 +205,7 @@ const ProductAddPage: React.FC = () => {
       console.log("SKU:", values.sku);
       console.log("Variants:", variants);
       console.log("Main image file:", mainImageFile);
+      console.log("Additional images:", additionalImages);
 
       // Gửi request
       const token = localStorage.getItem("token")
@@ -228,7 +227,7 @@ const ProductAddPage: React.FC = () => {
       }
       success("Thêm sản phẩm thành công!")
       navigate("/admin/products")
-    } catch (error) {
+    } catch (err: unknown) {
       error("Đã xảy ra lỗi. Vui lòng thử lại.")
     } finally {
       setLoading(false)
@@ -254,17 +253,16 @@ const ProductAddPage: React.FC = () => {
     }
   };
 
-  // Xử lý upload ảnh thumbnail
-  const handleThumbnailUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  // Xử lý upload ảnh phụ
+  const handleAdditionalImagesUpload = (info: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const { fileList } = info;
-    setThumbnailFileList(fileList);
+    setAdditionalImageFileList(fileList);
 
     // Lấy tất cả files
-    const files = fileList
-      .filter((file: any) => file.originFileObj) // eslint-disable-line @typescript-eslint/no-explicit-any
-      .map((file: any) => file.originFileObj); // eslint-disable-line @typescript-eslint/no-explicit-any
-    setThumbnailFiles(files);
+    const files = fileList.map((file: any) => file.originFileObj).filter(Boolean); // eslint-disable-line @typescript-eslint/no-explicit-any
+    setAdditionalImages(files);
   };
+
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -349,77 +347,52 @@ const ProductAddPage: React.FC = () => {
                   )}
                 </div>
               </Form.Item>
+
+              <Form.Item label="Ảnh phụ (tối đa 5 ảnh)">
+                <div className="space-y-4">
+                  <Upload
+                    listType="picture-card"
+                    fileList={additionalImageFileList}
+                    onChange={handleAdditionalImagesUpload}
+                    beforeUpload={() => false}
+                    maxCount={5}
+                    multiple
+                    className="w-full"
+                    showUploadList={{
+                      showPreviewIcon: true,
+                      showRemoveIcon: true,
+                    }}
+                  >
+                    {additionalImageFileList.length < 5 && (
+                      <div className="flex flex-col items-center justify-center h-24 w-full">
+                        <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                        <div className="text-sm text-gray-500">Thêm ảnh phụ</div>
+                        <div className="text-xs text-gray-400">
+                          {additionalImageFileList.length}/5
+                        </div>
+                      </div>
+                    )}
+                  </Upload>
+                  
+                  <div className="space-y-1">
+                    <Text type="secondary" className="text-xs block">
+                      • Ảnh phụ sẽ hiển thị trong trang chi tiết sản phẩm
+                    </Text>
+                    <Text type="secondary" className="text-xs block">
+                      • Tối đa 5 ảnh phụ mỗi lần upload
+                    </Text>
+                    <Text type="secondary" className="text-xs block">
+                      • Định dạng: JPG, PNG, JPEG (tối đa 5MB/ảnh)
+                    </Text>
+                  </div>
+                </div>
+              </Form.Item>
+
               <Form.Item name="description" label="Mô tả chi tiết">
                 <Input.TextArea rows={6} placeholder="Nhập mô tả chi tiết cho sản phẩm..." />
               </Form.Item>
             </Card>
 
-            <Card className="shadow-lg rounded-xl mb-6">
-              <Title level={4}>Ảnh thumbnail</Title>
-              <Form.Item label="Ảnh thumbnail sản phẩm">
-                <div className="space-y-4">
-                  <Upload
-                    listType="picture-card"
-                    fileList={thumbnailFileList}
-                    onChange={handleThumbnailUpload}
-                    beforeUpload={() => false}
-                    multiple
-                    showUploadList={true}
-                    className="w-full"
-                  >
-                    {thumbnailFileList.length < 5 && (
-                      <div className="flex flex-col items-center justify-center h-24 w-full">
-                        <UploadOutlined className="text-2xl text-gray-400 mb-1" />
-                        <div className="text-xs text-gray-500">Upload</div>
-                        <div className="text-xs text-gray-400">Tối đa 5 ảnh</div>
-                      </div>
-                    )}
-                  </Upload>
-                  
-                  {/* Hiển thị preview ảnh thumbnail đã chọn */}
-                  {thumbnailFiles.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                      {thumbnailFiles.map((file, index) => (
-                        <div key={index} className="relative group">
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={`Thumbnail ${index + 1}`}
-                            className="w-full h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
-                            onError={(e) => {
-                              console.error("Thumbnail load error:", file.name);
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                          <Button
-                            size="small"
-                            danger
-                            className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            style={{
-                              padding: 0,
-                              borderRadius: "50%",
-                              width: 20,
-                              height: 20,
-                              minWidth: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                            onClick={() => {
-                              const newFiles = thumbnailFiles.filter((_, i) => i !== index);
-                              const newFileList = thumbnailFileList.filter((_, i) => i !== index);
-                              setThumbnailFiles(newFiles);
-                              setThumbnailFileList(newFileList);
-                            }}
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Form.Item>
-            </Card>
 
             <Card className="shadow-lg rounded-xl mb-6">
               <Title level={4}>Thông tin bổ sung</Title>

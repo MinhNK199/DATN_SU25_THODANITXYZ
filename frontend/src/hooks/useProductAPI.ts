@@ -21,7 +21,7 @@ export const useProductAPI = () => {
 
       console.log("📤 Sending to API:", cleanedData)
 
-      const response = await fetch(`/api/products/${productId}`, {
+      const response = await fetch(`/api/product/${productId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
