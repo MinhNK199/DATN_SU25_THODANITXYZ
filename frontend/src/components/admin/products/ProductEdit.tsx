@@ -32,6 +32,7 @@ import type { Category } from "../../../interfaces/Category"
 import type { Brand } from "../../../interfaces/Brand"
 import { validateAllVariants, cleanColorData } from "./utils/validation"
 import { useNotification } from "../../../hooks/useNotification"
+import { useErrorNotification } from "../../../hooks/useErrorNotification"
 
 const { Title, Text } = Typography
 
@@ -60,6 +61,7 @@ const ProductEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { success, error } = useNotification()
+  const { handleError } = useErrorNotification()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -185,7 +187,7 @@ const ProductEdit: React.FC = () => {
           },
         })
       } catch (error) {
-        error("Không thể tải dữ liệu sản phẩm.")
+        handleError(error, "Không thể tải dữ liệu sản phẩm.")
       } finally {
         setLoading(false)
       }
@@ -410,7 +412,7 @@ const ProductEdit: React.FC = () => {
         }
       } catch (error) {
         console.error("Upload error:", error);
-        antdMessage.error("Lỗi khi upload ảnh!");
+        handleError(error, "Lỗi khi upload ảnh!");
       }
     } else if (latestFile && latestFile.url) {
       // Nếu là ảnh hiện tại (không phải file mới)

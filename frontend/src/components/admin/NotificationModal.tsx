@@ -8,7 +8,8 @@ import {
   X, 
   MoreVertical,
   Trash2,
-  Eye
+  Eye,
+  AlertTriangle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -69,7 +70,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
       case 'warning':
         return <AlertCircle className="w-4 h-4 text-yellow-500" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
       default:
         return <Bell className="w-4 h-4 text-gray-500" />;
     }

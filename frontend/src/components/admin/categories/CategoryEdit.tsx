@@ -20,6 +20,7 @@ import {
     Upload
 } from 'antd';
 import { useNotification } from "../../../hooks/useNotification";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
 import { FaTrash } from 'react-icons/fa';
 import { getCategoryById, updateCategory, fetchCategories } from './api';
@@ -49,6 +50,7 @@ const CategoryEdit: React.FC = () => {
     const [pageLoading, setPageLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { success, error: showError } = useNotification();
+    const { handleError } = useErrorNotification();
     const [categories, setCategories] = useState<Category[]>([]);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -140,7 +142,7 @@ const CategoryEdit: React.FC = () => {
             success('Cập nhật danh mục thành công!');
             navigate('/admin/categories');
         } catch (error: any) {
-            showError(error.message || 'Cập nhật danh mục thất bại!');
+            handleError(error, 'Cập nhật danh mục thất bại!');
         } finally {
             setSubmitting(false);
         }
@@ -196,7 +198,7 @@ const CategoryEdit: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                message.error("Lỗi khi upload ảnh!");
+                handleError(error, "Lỗi khi upload ảnh!");
             }
         } else if (latestFile && latestFile.url) {
             // Nếu là ảnh hiện tại (không phải file mới)

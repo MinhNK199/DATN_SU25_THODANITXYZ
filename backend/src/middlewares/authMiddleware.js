@@ -76,19 +76,10 @@ export const checkAdmin = (requiredCheck = []) => {
   return (req, res, next) => {
     const user = req.user;
 
-
-        // Phân quyền theo vai trò
-        const roleCheck = {
-            superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy", "manage_shipper"],
-            admin: ["view_user", "CheckTaiKhoan", "manage_shipper"], 
-            customer: [],
-        };
-
-
     // Phân quyền theo vai trò
     const roleCheck = {
-      superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
-      admin: ["view_user", "CheckTaiKhoan"],
+      superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy", "manage_shipper"],
+      admin: ["view_user", "CheckTaiKhoan", "manage_shipper"],
       customer: [],
     };
 

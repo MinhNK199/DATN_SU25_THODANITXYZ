@@ -5,8 +5,6 @@ import { useCart } from "../../contexts/CartContext";
 import { useCheckout } from "../../contexts/CheckoutContext";
 import { useToast } from "../../components/client/ToastContainer";
 import { getTaxConfig } from "../../services/cartApi";
-import { useVoucher } from "../../hooks/useVoucher";
-import VoucherDisplay from "../../components/client/VoucherDisplay";
 import ScrollToTop from "../../components/ScrollToTop";
 import CheckoutPaymentMethod from "./CheckoutPaymentMethod";
 
@@ -35,11 +33,9 @@ const CheckoutPaymentPage: React.FC = () => {
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [voucherCode, setVoucherCode] = useState("");
 
   const { state: cartState } = useCart();
   const { voucher, revalidateVoucher } = useCheckout();
-  const { applyVoucher, removeVoucher, isValidating, isVoucherValid, validationMessage } = useVoucher();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
 
@@ -118,7 +114,6 @@ const CheckoutPaymentPage: React.FC = () => {
 
     // Load voucher từ localStorage và revalidate
     if (voucher) {
-      setVoucherCode(voucher.code);
       // Revalidate voucher với giá trị đơn hàng hiện tại
       revalidateVoucher(subtotal);
     }
@@ -238,32 +233,7 @@ const CheckoutPaymentPage: React.FC = () => {
     navigate('/checkout/shipping');
   };
 
-  // Xử lý voucher
-  const handleValidateVoucher = async () => {
-    if (!voucherCode.trim()) {
-      showError("Vui lòng nhập mã voucher");
-      return;
-    }
-
-    try {
-      const result = await applyVoucher(voucherCode);
-
-      if (result.valid) {
-        showSuccess("Voucher đã được áp dụng thành công!");
-      } else {
-        showError(result.message || "Voucher không hợp lệ");
-      }
-    } catch (error) {
-      console.error("Lỗi validate voucher:", error);
-      showError("Có lỗi xảy ra khi kiểm tra voucher");
-    }
-  };
-
-  const handleRemoveVoucher = () => {
-    removeVoucher();
-    setVoucherCode("");
-    showSuccess("Đã xóa voucher");
-  };
+  // Voucher handling is done in Cart page, no need for separate functions here
 
   // Tính toán giá từ selectedCartItems
   const subtotal = selectedCartItems.reduce((sum, item) => {
@@ -276,10 +246,11 @@ const CheckoutPaymentPage: React.FC = () => {
     return sum + (price * quantity);
   }, 0);
 
-  const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
-  const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const taxPrice = (subtotal - voucherDiscount) * taxRate;
-  const finalTotal = subtotal - voucherDiscount + shippingFee + taxPrice;
+  const voucherDiscount = voucher && voucher.isValid ? (voucher.discountAmount || 0) : 0;
+  const subtotalAfterDiscount = subtotal - voucherDiscount;
+  const shippingFee = subtotalAfterDiscount >= 500000 ? 0 : 30000;
+  const taxPrice = subtotalAfterDiscount * taxRate;
+  const finalTotal = subtotalAfterDiscount + shippingFee + taxPrice;
 
   // Kiểm tra giới hạn COD (100 triệu)
   const COD_LIMIT = 100000000; // 100 triệu VND
@@ -376,44 +347,7 @@ const CheckoutPaymentPage: React.FC = () => {
               </div>
 
               <div className="p-8">
-                {/* Voucher Section */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <span className="mr-2">🎫</span>
-                    Mã giảm giá
-                  </h3>
-
-                  {voucher ? (
-                    // Display applied voucher
-                    <VoucherDisplay
-                      voucher={voucher}
-                      onRemove={handleRemoveVoucher}
-                      showRemoveButton={true}
-                      className="mb-4"
-                    />
-                  ) : (
-                    // Voucher input form
-                    <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
-                      <div className="flex space-x-3">
-                        <input
-                          type="text"
-                          placeholder="Nhập mã giảm giá"
-                          value={voucherCode}
-                          onChange={(e) => setVoucherCode(e.target.value)}
-                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          disabled={isValidating}
-                        />
-                        <button
-                          onClick={handleValidateVoucher}
-                          disabled={!voucherCode.trim() || isValidating}
-                          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold"
-                        >
-                          {isValidating ? 'Đang kiểm tra...' : 'Áp dụng'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* Voucher Section - Removed because coupon handling is done in Cart page */}
 
                 <CheckoutPaymentMethod
                   formData={formData}
@@ -557,9 +491,14 @@ const CheckoutPaymentPage: React.FC = () => {
                             {shippingFee === 0 ? "Miễn phí" : formatPrice(shippingFee)}
                           </span>
                         </div>
-                        {voucherDiscount > 0 && (
+                        {shippingFee > 0 && (
+                          <div className="text-xs text-gray-500 ml-4">
+                            Miễn phí ship cho đơn hàng từ {formatPrice(500000)}
+                          </div>
+                        )}
+                        {voucher && voucher.isValid && voucherDiscount > 0 && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                            <span className="text-green-700 text-sm">Giảm giá voucher:</span>
+                            <span className="text-green-700 text-sm">Giảm giá voucher ({voucher.code}):</span>
                             <span className="font-semibold text-green-600">-{formatPrice(voucherDiscount)}</span>
                           </div>
                         )}
@@ -588,16 +527,16 @@ const CheckoutPaymentPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(500000 - subtotalAfterDiscount)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                               <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotalAfterDiscount / 500000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotalAfterDiscount)} / {formatPrice(500000)}
                             </p>
                           </div>
                         </div>

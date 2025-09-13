@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Table, Typography, Button, Space, Input, Select, Avatar, Tag, Modal, Tooltip, message as antdMessage, Row, Col, Switch } from 'antd';
 import { useNotification } from '../../../hooks/useNotification';
+import { useErrorNotification } from '../../../hooks/useErrorNotification';
 import { PlusOutlined, DeleteOutlined, EyeOutlined, EditOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import { ColumnsType } from 'antd/es/table';
 import { debounce } from 'lodash';
@@ -40,6 +41,7 @@ interface Product {
 const VariantList: React.FC = () => {
   const navigate = useNavigate();
   const { success, error } = useNotification();
+  const { handleError } = useErrorNotification();
   const [variants, setVariants] = useState<Variant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,7 +75,7 @@ const VariantList: React.FC = () => {
       setTotalPages(response.pages || 1);
     } catch (error) {
       console.error('Error fetching variants:', error);
-      error('Không thể tải danh sách biến thể');
+      handleError(error, 'Không thể tải danh sách biến thể');
     } finally {
       setLoading(false);
     }
@@ -105,7 +107,7 @@ const VariantList: React.FC = () => {
       fetchVariants();
     } catch (error) {
       console.error('Error deleting variant:', error);
-      error('Không thể xóa biến thể');
+      handleError(error, 'Không thể xóa biến thể');
     }
   };
 
@@ -117,7 +119,7 @@ const VariantList: React.FC = () => {
       fetchVariants();
     } catch (error) {
       console.error('Error toggling variant status:', error);
-      error('Không thể cập nhật trạng thái');
+      handleError(error, 'Không thể cập nhật trạng thái');
     }
   };
 
@@ -148,7 +150,7 @@ const VariantList: React.FC = () => {
           fetchVariants();
         } catch (error) {
           console.error('Error bulk deleting variants:', error);
-          error('Không thể xóa biến thể');
+          handleError(error, 'Không thể xóa biến thể');
         }
       },
     });

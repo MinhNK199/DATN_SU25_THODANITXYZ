@@ -25,4 +25,4 @@ const connectDB = async() => {
         }
     }
 };
-export default connec tDB;
+export default connectDB;

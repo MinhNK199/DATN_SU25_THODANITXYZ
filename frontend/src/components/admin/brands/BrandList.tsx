@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Input, Checkbox, message, Tag, Space, Typography, Spin } from "antd";
 import type { Brand } from "../../../interfaces/Brand";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 
 const API_URL = "http://localhost:8000/api/brand";
 
 const BrandList: React.FC = () => {
+  const { handleError } = useErrorNotification();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
@@ -36,7 +38,7 @@ const BrandList: React.FC = () => {
       const data = await res.json();
       setBrands(Array.isArray(data) ? data : []);
     } catch (error) {
-      messageApi.error("Lỗi khi tải thương hiệu!");
+      handleError(error, "Lỗi khi tải thương hiệu!");
       setBrands([]);
     } finally {
       setLoading(false);
@@ -65,7 +67,7 @@ const BrandList: React.FC = () => {
             throw new Error(errorData.message || "Xóa thất bại!");
           }
         } catch (error) {
-          messageApi.error(error instanceof Error ? error.message : "Xóa thất bại!");
+          handleError(error, "Xóa thất bại!");
         }
       },
     });
@@ -89,7 +91,7 @@ const BrandList: React.FC = () => {
         throw new Error(errorData.message || "Failed to add brand");
       }
     } catch (error) {
-      messageApi.error(error instanceof Error ? error.message : "Thêm thất bại!");
+      handleError(error, "Thêm thất bại!");
     }
   };
 
@@ -111,7 +113,7 @@ const BrandList: React.FC = () => {
         throw new Error("Failed to update brand");
       }
     } catch (error) {
-      messageApi.error("Cập nhật thương hiệu thất bại!");
+      handleError(error, "Cập nhật thương hiệu thất bại!");
     }
   };
 

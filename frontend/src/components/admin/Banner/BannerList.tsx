@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Banner } from "../../../interfaces/Banner";
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaEye } from "react-icons/fa";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 import {
   Input,
   Card,
@@ -43,6 +44,7 @@ const InfoItem: React.FC<{ label: string; children: React.ReactNode }> = ({
 );
 
 const BannerList: React.FC = () => {
+  const { handleError } = useErrorNotification();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useState<SearchParams>({
@@ -67,7 +69,7 @@ const BannerList: React.FC = () => {
         message.error("Dữ liệu banner không đúng định dạng!");
       }
     } catch (error) {
-      message.error("Lỗi khi tải danh sách banner!");
+      handleError(error, "Lỗi khi tải danh sách banner!");
     }
     setLoading(false);
   };
@@ -79,7 +81,7 @@ const BannerList: React.FC = () => {
   const handleHardDelete = async (id: string) => {
     const token = localStorage.getItem("token");
     if (!token) {
-      message.error("Bạn cần đăng nhập!");
+      handleError(new Error("Bạn cần đăng nhập!"), "Bạn cần đăng nhập!");
       navigate("/login");
       return;
     }
@@ -104,10 +106,10 @@ const BannerList: React.FC = () => {
             fetchBanners();
           } else {
             const err = await res.json();
-            message.error(err.message || "Xóa thất bại!");
+            handleError(new Error(err.message || "Xóa thất bại!"), "Xóa thất bại!");
           }
         } catch (err) {
-          message.error("Lỗi kết nối máy chủ!");
+          handleError(err, "Lỗi kết nối máy chủ!");
         }
       },
     });

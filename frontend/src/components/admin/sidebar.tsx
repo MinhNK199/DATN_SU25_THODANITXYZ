@@ -14,7 +14,8 @@ import {
   FaCog,
   FaTicketAlt,
   FaTruck,
-  FaComments
+  FaComments,
+  FaExclamationTriangle
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -235,6 +236,20 @@ const AdminSidebar = () => {
         >
           <FaTicketAlt className={iconClass} />
           <span className="truncate">Voucher</span>
+        </button>
+
+        {/* Error Notification Test */}
+        <button
+          onClick={() => navigate("/admin/error-test")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/error-test")
+              ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-red-500 hover:to-orange-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaExclamationTriangle className={iconClass} />
+          <span className="truncate">Test Thông Báo Lỗi</span>
         </button>
 
         {/* Activities - Superadmin only */}

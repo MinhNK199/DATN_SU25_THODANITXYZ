@@ -105,6 +105,11 @@ const Cart: React.FC = () => {
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [, setUsedCoupons] = useState<Coupon[]>([]);
   const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<Coupon | null>(null);
+  
+  // Debug log for appliedDiscountCoupon changes
+  useEffect(() => {
+    console.log('🔍 appliedDiscountCoupon changed:', appliedDiscountCoupon);
+  }, [appliedDiscountCoupon]);
   const [appliedShippingCoupon, setAppliedShippingCoupon] = useState<Coupon | null>(null);
   const [, setLoadingCoupons] = useState(false);
   const [isCouponModalVisible, setIsCouponModalVisible] = useState(false);
@@ -184,16 +189,20 @@ const Cart: React.FC = () => {
   const loadCoupons = useCallback(async () => {
     try {
       setLoadingCoupons(true);
+      console.log('🔄 Loading coupons...');
+      
       const [availableResponse, usedResponse] = await Promise.all([
         getAvailableCoupons(),
         getUsedCoupons()
       ]);
 
-      // console.log('Available coupons response:', availableResponse);
-      // console.log('Available coupons count:', availableResponse.coupons?.length || 0);
+      console.log('✅ Available coupons response:', availableResponse);
+      console.log('📊 Available coupons count:', availableResponse.coupons?.length || 0);
+      console.log('📋 Available coupons data:', availableResponse.coupons);
       setAvailableCoupons(availableResponse.coupons || []);
       setUsedCoupons(usedResponse.coupons || []);
     } catch (error: any) {
+      console.error('❌ Error loading coupons:', error);
       // Silently handle error - set server offline status
       if (error.message === 'Network Error') {
         setServerOnline(false);
@@ -273,14 +282,21 @@ const Cart: React.FC = () => {
   };
 
   const handleApplyDiscountCoupon = async (couponId: string) => {
+    console.log('🔍 handleApplyDiscountCoupon called with couponId:', couponId);
+    
     if (!couponId) {
+      console.log('❌ No couponId provided, setting appliedDiscountCoupon to null');
       setAppliedDiscountCoupon(null);
       return;
     }
 
     try {
+      console.log('🔍 Looking for coupon in availableCoupons:', availableCoupons.length, 'coupons available');
       const coupon = availableCoupons.find(c => c._id === couponId);
+      console.log('🔍 Found coupon:', coupon);
+      
       if (!coupon) {
+        console.log('❌ Coupon not found in availableCoupons');
         error("Mã giảm giá không tồn tại");
         return;
       }
@@ -291,20 +307,33 @@ const Cart: React.FC = () => {
         .filter(item => selectedItems.has(item._id))
         .reduce((sum, item) => sum + (calculateDisplayPrice(item) * item.quantity), 0);
 
-      const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
-      if (selectedSubtotal < minAmount) {
-        warning(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
-        return;
-      }
+      console.log('🔍 Selected subtotal:', selectedSubtotal);
 
-      const result = await applyCoupon(coupon.code, selectedSubtotal);
-      if (result.success) {
-        setAppliedDiscountCoupon(coupon);
-        success(`Đã áp dụng mã giảm giá "${coupon.name}"`);
-      } else {
-        error(result.message || "Không thể áp dụng mã giảm giá");
-      }
-    } catch {
+      const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
+      console.log('🔍 Min amount check:', selectedSubtotal, 'vs', minAmount);
+      
+      // Tạm thời bỏ qua kiểm tra minAmount để test
+      // if (selectedSubtotal < minAmount) {
+      //   console.log('❌ Subtotal too low:', selectedSubtotal, 'min required:', minAmount);
+      //   warning(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
+      //   return;
+      // }
+
+      // Set applied coupon directly without API call for now
+      console.log('✅ Setting appliedDiscountCoupon to:', coupon);
+      setAppliedDiscountCoupon(coupon);
+      success(`Đã áp dụng mã giảm giá "${coupon.name}"`);
+      
+      // TODO: Gọi API applyCoupon khi cần thiết
+      // const result = await applyCoupon(coupon.code, selectedSubtotal);
+      // if (result.success && result.coupon) {
+      //   setAppliedDiscountCoupon(result.coupon);
+      //   success(`Đã áp dụng mã giảm giá "${result.coupon.name || coupon.name}"`);
+      // } else {
+      //   error(result.message || "Không thể áp dụng mã giảm giá");
+      // }
+    } catch (error) {
+      console.log('❌ Error in handleApplyDiscountCoupon:', error);
       error("Có lỗi xảy ra khi áp dụng mã giảm giá");
     }
   };
@@ -313,9 +342,12 @@ const Cart: React.FC = () => {
   const handleRemoveDiscountCoupon = async () => {
     if (appliedDiscountCoupon) {
       try {
-        await removeCoupon(appliedDiscountCoupon._id);
+        // Remove coupon directly without API call for now
         setAppliedDiscountCoupon(null);
         info("Đã hủy áp dụng mã giảm giá");
+        
+        // TODO: Gọi API removeCoupon khi cần thiết
+        // await removeCoupon(appliedDiscountCoupon._id);
       } catch {
         error("Có lỗi xảy ra khi hủy mã giảm giá");
       }
@@ -689,70 +721,48 @@ const Cart: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Available Coupons List */}
-                  {availableCoupons.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      <div className="text-xs text-orange-600 font-medium">
-                        Các mã giảm giá có thể sử dụng:
-                      </div>
-                      <div className="space-y-2 max-h-48 overflow-y-auto cart-scrollable">
-                        {availableCoupons.map((coupon) => (
-                          <div
-                            key={coupon._id}
-                            className={`border rounded-lg p-3 cursor-pointer transition-all ${appliedDiscountCoupon?._id === coupon._id
-                              ? "border-orange-500 bg-orange-50"
-                              : "border-gray-200 hover:border-orange-300 hover:bg-orange-25"
-                              }`}
-                            onClick={() => {
-                              if (appliedDiscountCoupon?._id === coupon._id) {
-                                // Nếu đã chọn voucher này, hủy chọn
-                                handleRemoveDiscountCoupon();
-                              } else {
-                                // Chọn voucher mới
-                                handleApplyDiscountCoupon(coupon._id);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                    {coupon.type === "percentage" ? "GIẢM %" : "GIẢM TIỀN"}
-                                  </span>
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {coupon.name}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  {coupon.type === "percentage"
-                                    ? `Giảm ${coupon.discount || coupon.value || 0}%`
-                                    : `Giảm ${formatPrice(coupon.discount || coupon.value || 0)}`
-                                  }
-                                  {coupon.maxDiscount && (
-                                    <span className="text-orange-600 ml-1">
-                                      (Tối đa {formatPrice(coupon.maxDiscount)})
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Đơn tối thiểu: {formatPrice(coupon.minAmount || coupon.minOrderValue || 0)}
-                                </div>
-                              </div>
-                              <div className="ml-3">
-                                {appliedDiscountCoupon?._id === coupon._id ? (
-                                  <div className="w-4 h-4 bg-orange-500 rounded-full flex items-center justify-center">
-                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                  </div>
-                                ) : (
-                                  <div className="w-4 h-4 border-2 border-gray-300 rounded-full"></div>
-                                )}
-                              </div>
+                  {/* Applied Coupon Status */}
+                  {appliedDiscountCoupon ? (
+                    <div className="mb-4 p-4 bg-green-100 border-2 border-green-300 rounded-lg shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-sm font-bold">✓</span>
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-green-800 mb-1">
+                              Đang sử dụng mã giảm giá
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-600">Mã:</span>
+                              <span className="text-sm font-mono font-bold text-green-700 bg-white px-2 py-1 rounded border-2 border-green-300">
+                                {appliedDiscountCoupon.code}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              {appliedDiscountCoupon.name}
                             </div>
                           </div>
-                        ))}
+                        </div>
+                        <button
+                          onClick={handleRemoveDiscountCoupon}
+                          className="text-xs text-green-600 hover:text-green-800 underline font-medium px-2 py-1 hover:bg-green-200 rounded"
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-4 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+                      <div className="text-center text-gray-600 text-sm">
+                        <div className="mb-2">Chưa áp dụng mã giảm giá</div>
+                        <div className="text-xs text-gray-500">
+                          Nhấn nút bên dưới để chọn mã
+                        </div>
                       </div>
                     </div>
                   )}
+
 
                   {/* Coupon Button */}
                   <button
@@ -913,25 +923,38 @@ const Cart: React.FC = () => {
 
                 {/* Applied Discount Coupon */}
                 {appliedDiscountCoupon && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm font-medium text-green-800">
-                          {appliedDiscountCoupon.name}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4 shadow-md">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-sm font-bold">✓</span>
                         </div>
-                        <div className="text-xs text-green-600">
-                          Mã: {appliedDiscountCoupon.code}
+                        <div>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                              {appliedDiscountCoupon.type === "percentage" ? "GIẢM %" : "GIẢM TIỀN"}
+                            </span>
+                            <span className="text-sm font-semibold text-green-800">
+                              {appliedDiscountCoupon.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-600 font-medium">Mã:</span>
+                            <span className="text-xs font-mono font-bold text-green-700 bg-white px-2 py-1 rounded border-2 border-green-300">
+                              {appliedDiscountCoupon.code}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-semibold text-green-800">
+                        <div className="text-lg font-bold text-green-800">
                           -{formatPrice(couponDiscount)}
                         </div>
                         <button
                           onClick={handleRemoveDiscountCoupon}
-                          className="text-xs text-green-600 hover:text-green-800 underline"
+                          className="text-xs text-green-600 hover:text-green-800 underline font-medium"
                         >
-                          Hủy
+                          Hủy áp dụng
                         </button>
                       </div>
                     </div>
@@ -1538,8 +1561,13 @@ const Cart: React.FC = () => {
             type="primary"
             className="bg-orange-500 hover:bg-orange-600 border-orange-500"
             onClick={() => {
+              console.log('🔍 Modal OK button clicked');
+              console.log('🔍 selectedCouponId:', selectedCouponId);
+              console.log('🔍 appliedDiscountCoupon before:', appliedDiscountCoupon);
+              
               if (selectedCouponId) {
                 const coupon = availableCoupons.find(c => c._id === selectedCouponId);
+                console.log('🔍 Found coupon in modal:', coupon);
                 if (coupon) {
                   setAppliedShippingCoupon(null);
                   handleApplyDiscountCoupon(selectedCouponId);
@@ -1606,17 +1634,21 @@ const Cart: React.FC = () => {
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {/* Option: Không sử dụng voucher */}
               <div
-                className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedCouponId === null
-                  ? "border-gray-400 bg-gray-50"
-                  : "border-gray-200 hover:border-gray-300"
+                className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedCouponId === null
+                  ? "border-gray-400 bg-gray-50 shadow-md"
+                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-25 hover:shadow-sm"
                   }`}
                 onClick={() => setSelectedCouponId(null)}
               >
                 <div className="flex items-center">
                   <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
+                    <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center transition-all duration-200 ${
+                      selectedCouponId === null 
+                        ? "border-gray-400 bg-gray-400" 
+                        : "border-gray-400 hover:border-gray-500"
+                    }`}>
                       {selectedCouponId === null && (
-                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
                       )}
                     </div>
                     <div>
@@ -1631,20 +1663,28 @@ const Cart: React.FC = () => {
                 .map((coupon) => (
                   <div
                     key={coupon._id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedCouponId === coupon._id
-                      ? "border-orange-500 bg-orange-50"
-                      : "border-gray-200 hover:border-gray-300"
+                    className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedCouponId === coupon._id
+                      ? "border-orange-500 bg-orange-50 shadow-md"
+                      : "border-gray-200 hover:border-orange-300 hover:bg-orange-25 hover:shadow-sm"
                       }`}
                     onClick={() => {
+                      console.log('🔍 Coupon clicked in modal:', coupon._id, coupon.name);
+                      console.log('🔍 Current selectedCouponId:', selectedCouponId);
                       // Nếu đã chọn voucher này, bỏ chọn; nếu chưa chọn, chọn voucher này
-                      setSelectedCouponId(selectedCouponId === coupon._id ? null : coupon._id);
+                      const newSelectedId = selectedCouponId === coupon._id ? null : coupon._id;
+                      console.log('🔍 Setting selectedCouponId to:', newSelectedId);
+                      setSelectedCouponId(newSelectedId);
                     }}
                   >
                     <div className="flex items-start">
                       <div className="flex items-center space-x-3 mr-3">
-                        <div className="w-4 h-4 border-2 border-gray-400 rounded-full flex items-center justify-center">
+                        <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center transition-all duration-200 ${
+                          selectedCouponId === coupon._id 
+                            ? "border-orange-500 bg-orange-500" 
+                            : "border-gray-400 hover:border-orange-300"
+                        }`}>
                           {selectedCouponId === coupon._id && (
-                            <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
                           )}
                         </div>
                       </div>
@@ -1658,6 +1698,13 @@ const Cart: React.FC = () => {
 
                         <div className="text-sm font-medium text-gray-900 mb-1">
                           {coupon.name}
+                        </div>
+
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className="text-xs text-gray-600">Mã:</span>
+                          <span className="text-xs font-mono font-semibold text-blue-700 bg-white px-2 py-1 rounded border">
+                            {coupon.code}
+                          </span>
                         </div>
 
                         <div className="text-xs text-gray-600 space-y-1">

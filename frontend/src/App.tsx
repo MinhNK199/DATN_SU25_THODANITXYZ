@@ -51,6 +51,7 @@ import { ChatProvider } from './contexts/ChatContext';
 import { CheckoutProvider } from './contexts/CheckoutContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { InventoryProvider } from './contexts/InventoryContext';
+import ErrorTestPage from './pages/admin/ErrorTestPage';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
@@ -223,6 +224,7 @@ function App() {
                         <Route path="chat" element={<ChatPage />} />
                         <Route path="detailed-stats" element={<DetailedStats />} />
                         <Route path="shipper" element={<ShipperManagement />} />
+                        <Route path="error-test" element={<ErrorTestPage />} />
                       </Route>
                     </Routes>
 

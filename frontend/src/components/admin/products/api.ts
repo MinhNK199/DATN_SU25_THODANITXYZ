@@ -2,20 +2,14 @@ import { message } from "antd";
 import { Product } from "../../../interfaces/Product";
 import { Brand } from "../../../interfaces/Brand";
 import { Category } from "../../../interfaces/Category";
+import { handleApiResponse, handleApiError } from "../../../utils/errorHandler";
 
 
 
 
 const API_URL = "http://localhost:8000/api";
 
-const handleResponse = async (response: Response) => {
-    if (response.ok) {
-        return response.json();
-    }
-    const errorData = await response.json().catch(() => ({ message: "An unknown error occurred" }));
-    message.error(errorData.message || "Something went wrong");
-    return Promise.reject(errorData);
-};
+const handleResponse = handleApiResponse;
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
