@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaGoogle, FaFacebook, FaApple, FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import axios from 'axios';
 import { useToast } from '../../components/client/ToastNotification';
+import LoginModeToggle from '../../components/LoginModeToggle';
 
 const Login: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +11,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [loginMode, setLoginMode] = useState<'user' | 'shipper'>('user');
   const navigate = useNavigate();
   const { showToast } = useToast();
   
@@ -36,39 +38,59 @@ const Login: React.FC = () => {
     if (isLogin) {
       // Logic đăng nhập
       try {
-        console.log("Đang gửi request đăng nhập:", { email: formData.email, password: formData.password });
+        console.log("Đang gửi request đăng nhập:", { email: formData.email, password: formData.password, mode: loginMode });
         
-        const res = await axios.post(
-          "http://localhost:8000/api/auth/login",
-          { email: formData.email, password: formData.password }
-        );
-        
-        console.log("Response từ server:", res.data);
-        
-        // Hiển thị toast thành công
-        showToast("Đăng nhập thành công! Chào mừng bạn trở lại!", "success");
-        
-        setSuccess(res.data.message || "Đăng nhập thành công!");
-        localStorage.setItem("token", res.data.token);
+        if (loginMode === 'shipper') {
+          // Đăng nhập shipper
+          const res = await axios.post(
+            "http://localhost:8000/api/shipper/login",
+            { email: formData.email, password: formData.password }
+          );
+          
+          console.log("Response từ server:", res.data);
+          
+          showToast("Đăng nhập shipper thành công! Chào mừng bạn!", "success");
+          setSuccess("Đăng nhập shipper thành công!");
+          
+          localStorage.setItem("shipperToken", res.data.data.token);
+          localStorage.setItem("shipper", JSON.stringify(res.data.data.shipper));
+          
+          setTimeout(() => {
+            // Force reload để ShipperContext nhận token mới
+            window.location.href = "/shipper/dashboard";
+          }, 1500);
+          
+        } else {
+          // Đăng nhập user/admin
+          const res = await axios.post(
+            "http://localhost:8000/api/auth/login",
+            { email: formData.email, password: formData.password }
+          );
+          
+          console.log("Response từ server:", res.data);
+          
+          showToast("Đăng nhập thành công! Chào mừng bạn trở lại!", "success");
+          setSuccess(res.data.message || "Đăng nhập thành công!");
+          
+          localStorage.setItem("token", res.data.token);
+          const user = res.data.user;
+          localStorage.setItem("user", JSON.stringify(res.data.user));
 
-        const user = res.data.user;
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+          console.log("User data:", user);
+          console.log("User role:", user?.role);
 
-        console.log("User data:", user);
-        console.log("User role:", user?.role);
-
-        const role = user?.role;
-        
-        // Đợi một chút để user thấy thông báo thành công
-        setTimeout(() => {
-          if (role === "admin" || role === "superadmin") {
-            console.log("Chuyển hướng đến admin dashboard");
-            navigate("/admin");
-          } else {
-            console.log("Chuyển hướng đến trang chủ");
-            navigate("/");
-          }
-        }, 1500);
+          const role = user?.role;
+          
+          setTimeout(() => {
+            if (role === "admin" || role === "superadmin") {
+              console.log("Chuyển hướng đến admin dashboard");
+              navigate("/admin");
+            } else {
+              console.log("Chuyển hướng đến trang chủ");
+              navigate("/");
+            }
+          }, 1500);
+        }
         
       } catch (err: any) {
         console.error("Lỗi đăng nhập:", err);
@@ -145,10 +167,15 @@ const Login: React.FC = () => {
           </h2>
           <p className="text-gray-600">
             {isLogin 
-              ? 'Đăng nhập vào tài khoản để tiếp tục' 
+              ? (loginMode === 'shipper' ? 'Đăng nhập với tài khoản shipper' : 'Đăng nhập vào tài khoản để tiếp tục')
               : 'Tham gia cùng chúng tôi và bắt đầu mua sắm ngay hôm nay'
             }
           </p>
+          
+          {/* Login Mode Toggle */}
+          {isLogin && (
+            <LoginModeToggle loginMode={loginMode} setLoginMode={setLoginMode} />
+          )}
         </div>
 
         {/* Error/Success Messages */}
@@ -299,12 +326,14 @@ const Login: React.FC = () => {
               className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl ${
                 isLoading 
                   ? "bg-gray-400 cursor-not-allowed text-white" 
-                  : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  : loginMode === 'shipper'
+                    ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+                    : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
               }`}
             >
               {isLoading 
-                ? (isLogin ? "Đang đăng nhập..." : "Đang đăng ký...") 
-                : (isLogin ? 'Đăng nhập' : 'Tạo tài khoản')
+                ? (isLogin ? (loginMode === 'shipper' ? "Đang đăng nhập shipper..." : "Đang đăng nhập...") : "Đang đăng ký...") 
+                : (isLogin ? (loginMode === 'shipper' ? '🚚 Đăng nhập Shipper' : 'Đăng nhập') : 'Tạo tài khoản')
               }
             </button>
           </form>
@@ -365,6 +394,7 @@ const Login: React.FC = () => {
               }
             </button>
           </div>
+
         </div>
       </div>
     </div>

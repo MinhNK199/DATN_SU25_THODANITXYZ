@@ -5,7 +5,10 @@ import { FaEye } from "react-icons/fa";
 import { Button, Card, Tag, Tooltip, Table, Input, Select, Row, Col, Modal, message as antdMessage } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
+import AssignShipperModal from "./AssignShipperModal";
 import axiosInstance from "../../../api/axiosInstance";
+
+const API_URL = '/api/order';
 
 const { Option } = Select;
 
@@ -24,6 +27,8 @@ const OrderList: React.FC = () => {
   const [modalOrderId, setModalOrderId] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assigningOrderId, setAssigningOrderId] = useState("");
   
   const fetchOrders = async (pageNumber = 1) => {
     setLoading(true);
@@ -36,10 +41,19 @@ const OrderList: React.FC = () => {
       
       const response = await axiosInstance.get(`/order?${params.toString()}`);
       const data = response.data;
+      console.log('📊 Admin Orders API Response:', data);
       
-      const ordersData = Array.isArray(data.orders) ? data.orders : [];
+      // Backend trả về data.data.orders
+      const ordersData = Array.isArray(data.data?.orders) ? data.data.orders : [];
+      console.log('📋 Orders details:', ordersData.map(o => ({
+        id: o._id?.slice(-6),
+        status: o.status,
+        hasShipper: !!o.shipper,
+        shipperName: o.shipper?.fullName
+      })));
+      
       setOrders(ordersData);
-      setTotal(data.total || 0);
+      setTotal(data.data?.total || 0);
 
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -67,12 +81,13 @@ const OrderList: React.FC = () => {
     switch (status) {
       case "draft": return "gray";
       case "pending": return "orange";
-      case "processing": return "blue";
-      case "shipped": return "purple";
+      case "confirmed": return "blue";
+      case "processing": return "purple";
+      case "shipped": return "cyan";
       case "delivered": return "green";
       case "delivered_success": return "green";
       case "delivered_failed": return "red";
-      case "completed": return "cyan";
+      case "completed": return "green";
       case "cancelled": return "red";
       case "returned": return "volcano";
       case "refund_requested": return "gold";
@@ -86,6 +101,7 @@ const OrderList: React.FC = () => {
     switch (status) {
       case "draft": return "Đang tạo";
       case "pending": return "Chờ xác nhận";
+      case "confirmed": return "Đã xác nhận";
       case "processing": return "Đang xử lý";
       case "shipped": return "Đang giao";
       case "delivered": return "Đã giao";
@@ -142,11 +158,11 @@ const OrderList: React.FC = () => {
     },
     {
       title: "Tổng tiền",
-      dataIndex: "totalPrice",
-      key: "totalPrice",
+      dataIndex: "totalAmount",
+      key: "totalAmount",
       render: (amount: number) => (
         <span className="text-green-600 font-semibold">
-          {amount.toLocaleString()}₫
+          {amount?.toLocaleString() || 0}₫
         </span>
       ),
     },
@@ -191,6 +207,39 @@ const OrderList: React.FC = () => {
                 />
             </Link>
           </Tooltip>
+          {record.status === 'pending' && (
+            <Tooltip title="Xác nhận đơn hàng">
+              <Button
+                type="default"
+                onClick={() => handleConfirmOrder(record._id)}
+                style={{ backgroundColor: '#1890ff', borderColor: '#1890ff', color: 'white' }}
+              >
+                ✅ Xác nhận
+              </Button>
+            </Tooltip>
+          )}
+          {(record.status === 'confirmed' || record.status === 'processing') && !record.shipper && (
+            <Tooltip title="Phân công Shipper">
+              <Button
+                type="default"
+                onClick={() => handleAssignShipper(record._id, setAssigningOrderId, setShowAssignModal)}
+                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
+              >
+                🚚 Phân công
+              </Button>
+            </Tooltip>
+          )}
+          {record.shipper && (
+            <Tooltip title={`Đã phân công cho: ${record.shipper.fullName || 'Shipper'}`}>
+              <Button
+                type="default"
+                disabled
+                style={{ backgroundColor: '#f0f0f0', borderColor: '#d9d9d9', color: '#00b96b' }}
+              >
+                ✅ Đã phân công
+              </Button>
+            </Tooltip>
+          )}
         </div>
       ),
     },
@@ -299,8 +348,61 @@ const OrderList: React.FC = () => {
           </Button>
         </div>
       </Modal>
+
+      <AssignShipperModal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        onAssign={(shipperId) => {
+          handleAssignConfirm(shipperId, assigningOrderId, page, fetchOrders);
+          setShowAssignModal(false);
+        }}
+        orderId={assigningOrderId}
+      />
     </Card>
   );
+};
+
+// Add functions before the component
+const handleAssignShipper = (orderId: string, setAssigningOrderId: (id: string) => void, setShowAssignModal: (show: boolean) => void) => {
+  setAssigningOrderId(orderId);
+  setShowAssignModal(true);
+};
+
+const handleConfirmOrder = async (orderId: string) => {
+  try {
+    const response = await axiosInstance.put(`/order/${orderId}/confirm`);
+
+    if (response.status === 200) {
+      antdMessage.success('Xác nhận đơn hàng thành công!');
+      window.location.reload(); // Refresh để cập nhật danh sách
+    } else {
+      const errorData = response.data;
+      antdMessage.error(errorData.message || 'Có lỗi xảy ra khi xác nhận đơn hàng');
+    }
+  } catch (error) {
+    console.error('Error confirming order:', error);
+    antdMessage.error('Có lỗi xảy ra khi xác nhận đơn hàng');
+  }
+};
+
+const handleAssignConfirm = async (shipperId: string, assigningOrderId: string, page: number, fetchOrders: (page: number) => void) => {
+  try {
+    const response = await axiosInstance.post('/admin/shipper/assign-order', {
+      orderId: assigningOrderId,
+      shipperId: shipperId
+    });
+
+    if (response.status === 200) {
+      antdMessage.success('Phân công shipper thành công!');
+      fetchOrders(page);
+    } else {
+      const errorData = response.data;
+      antdMessage.error(errorData.message || 'Có lỗi xảy ra khi phân công shipper');
+    }
+  } catch (error) {
+    console.error('Error assigning shipper:', error);
+    antdMessage.error('Có lỗi xảy ra khi phân công shipper');
+  }
 };
 
 export default OrderList;
