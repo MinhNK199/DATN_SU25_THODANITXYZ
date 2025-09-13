@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import axiosInstance from "../../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { EyeOutlined } from "@ant-design/icons";
+import AdminPagination from "../common/AdminPagination";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -59,6 +60,11 @@ const RatingList: React.FC = () => {
     sortDate: "desc" as "asc" | "desc",
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRatings, setTotalRatings] = useState(0);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -66,11 +72,38 @@ const RatingList: React.FC = () => {
     fetchProducts();
   }, []);
 
-  const fetchRatings = async () => {
+  useEffect(() => {
+    fetchRatings();
+  }, [filters, currentPage, pageSize]);
+
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+    }
+  };
+
+  const handlePageSizeChange = (current: number, size: number) => {
+    setCurrentPage(1);
+    setPageSize(size);
+  };
+
+  const fetchRatings = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get("/rating");
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", size.toString());
+
+      if (filters.search) params.append("search", filters.search);
+      if (filters.rating) params.append("rating", filters.rating.toString());
+      if (filters.hasImage) params.append("hasImage", "true");
+      if (filters.replied !== "all") params.append("replied", filters.replied);
+      params.append("sortDate", filters.sortDate);
+
+      const res = await axiosInstance.get(`/rating?${params.toString()}`);
       setData(res.data.data || res.data || []);
+      setTotalRatings(res.data.total || res.data.data?.length || 0);
     } catch (err) {
       message.error("Không thể tải danh sách đánh giá");
     } finally {
@@ -262,7 +295,15 @@ const RatingList: React.FC = () => {
             columns={columns}
             dataSource={filteredData}
             rowKey="_id"
-            pagination={{ pageSize: 10 }}
+            pagination={false}
+          />
+          <AdminPagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalRatings}
+            onChange={handlePageChange}
+            onShowSizeChange={handlePageSizeChange}
+            itemText="đánh giá"
           />
         </Spin>
       </div>

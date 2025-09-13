@@ -15,6 +15,7 @@ import {
 } from "antd";
 import { EyeOutlined } from "@ant-design/icons";
 import { FaEye } from "react-icons/fa";
+import AdminPagination from "../common/AdminPagination";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -30,6 +31,12 @@ const UserList: React.FC = () => {
   const [searchType, setSearchType] = useState<"name" | "email" | "role">("name");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalUsers, setTotalUsers] = useState(0);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,7 +55,7 @@ const UserList: React.FC = () => {
     fetchCurrentUser();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = currentPage, size = pageSize) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -59,17 +66,17 @@ const UserList: React.FC = () => {
         return;
       }
 
-      const res = await fetch(API_URL, {
+      const res = await fetch(`${API_URL}?page=${page}&limit=${size}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      
+
       if (res.status === 403) {
         setMessage("Bạn không có quyền truy cập trang này!");
         setMessageType("error");
         setLoading(false);
         return;
       }
-      
+
       if (res.status === 401) {
         setMessage("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
         setMessageType("error");
@@ -78,13 +85,14 @@ const UserList: React.FC = () => {
         setLoading(false);
         return;
       }
-      
+
       if (!res.ok) {
         throw new Error(`HTTP error! status: ${res.status}`);
       }
-      
+
       const data = await res.json();
       setUsers(data.users || []);
+      setTotalUsers(data.total || data.users?.length || 0);
     } catch (error) {
       console.error("Error fetching users:", error);
       setMessage("Lỗi khi tải người dùng!");
@@ -96,6 +104,20 @@ const UserList: React.FC = () => {
   useEffect(() => {
     if (currentUser) fetchUsers();
   }, [currentUser]);
+
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+    }
+    fetchUsers(page, size || pageSize);
+  };
+
+  const handlePageSizeChange = (current: number, size: number) => {
+    setCurrentPage(1);
+    setPageSize(size);
+    fetchUsers(1, size);
+  };
 
   useEffect(() => {
     if (users.length > 0) {
@@ -186,79 +208,89 @@ const UserList: React.FC = () => {
         ),
     },
     {
-  title: "Thao tác",
-  key: "actions",
-  render: (_: any, record: User) => (
-    <Button
-      type="primary" // Nền xanh, chữ/icon trắng
-      className="admin-primary-button"
-      icon={<FaEye style={{ color: "#fff" }} />} // Đảm bảo icon trắng
-      onClick={() => navigate(`/admin/users/${record._id}`)}
-    />
-  ),
-}
+      title: "Thao tác",
+      key: "actions",
+      render: (_: any, record: User) => (
+        <Button
+          type="primary" // Nền xanh, chữ/icon trắng
+          className="admin-primary-button"
+          icon={<FaEye style={{ color: "#fff" }} />} // Đảm bảo icon trắng
+          onClick={() => navigate(`/admin/users/${record._id}`)}
+        />
+      ),
+    }
 
   ];
 
   return (
-   <div className="p-6 bg-white rounded-lg shadow">
-    <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
-      Danh sách Người dùng
-    </Title>
-     <div className="flex items-center justify-between mb-6">
-      <Space direction="horizontal">
-        <Select
-          value={searchType}
-          onChange={(value) =>
-            setSearchType(value as "name" | "email" | "role")
-          }
-          style={{ width: 160 }}
-        >
-          <Option value="name">Tìm theo tên</Option>
-          <Option value="email">Tìm theo email</Option>
-          <Option value="role">Tìm theo vai trò</Option>
-        </Select>
-        <Input
-          placeholder="Nhập từ khóa tìm kiếm..."
-          value={searchKeyword}
-          onChange={(e) => setSearchKeyword(e.target.value)}
-          style={{ width: 300 }}
+    <div className="p-6 bg-white rounded-lg shadow">
+      <Title level={3} style={{ textAlign: "center", marginBottom: 24 }}>
+        Danh sách Người dùng
+      </Title>
+      <div className="flex items-center justify-between mb-6">
+        <Space direction="horizontal">
+          <Select
+            value={searchType}
+            onChange={(value) =>
+              setSearchType(value as "name" | "email" | "role")
+            }
+            style={{ width: 160 }}
+          >
+            <Option value="name">Tìm theo tên</Option>
+            <Option value="email">Tìm theo email</Option>
+            <Option value="role">Tìm theo vai trò</Option>
+          </Select>
+          <Input
+            placeholder="Nhập từ khóa tìm kiếm..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            style={{ width: 300 }}
+          />
+        </Space>
+        {/* Chỉ superadmin mới thấy nút này */}
+        {currentUser?.role === "superadmin" && (
+          <Button
+            type="primary"
+            className="admin-primary-button"
+            onClick={() => navigate("admin-list")}
+            style={{ background: "blue-400", borderColor: "gray", marginLeft: 16 }}
+          >
+            Danh sách đăng ký admin
+          </Button>
+        )}
+      </div>
+
+      {message && (
+        <Alert
+          message={message}
+          type={messageType as "success" | "error" | "info" | "warning"}
+          showIcon
         />
-      </Space>
-      {/* Chỉ superadmin mới thấy nút này */}
-      {currentUser?.role === "superadmin" && (
-        <Button
-          type="primary"
-          className="admin-primary-button"
-          onClick={() => navigate("admin-list")}
-          style={{ background: "blue-400", borderColor: "gray", marginLeft: 16 }}
-        >
-          Danh sách đăng ký admin
-        </Button>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center items-center h-40">
+          <Spin size="large" />
+        </div>
+      ) : (
+        <>
+          <Table
+            dataSource={filteredUsers}
+            columns={columns}
+            rowKey="_id"
+            pagination={false}
+          />
+          <AdminPagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalUsers}
+            onChange={handlePageChange}
+            onShowSizeChange={handlePageSizeChange}
+            itemText="người dùng"
+          />
+        </>
       )}
     </div>
-
-    {message && (
-      <Alert
-        message={message}
-        type={messageType as "success" | "error" | "info" | "warning"}
-        showIcon
-      />
-    )}
-
-    {loading ? (
-      <div className="flex justify-center items-center h-40">
-        <Spin size="large" />
-      </div>
-    ) : (
-      <Table
-        dataSource={filteredUsers}
-        columns={columns}
-        rowKey="_id"
-        pagination={{ pageSize: 8 }}
-      />
-    )}
-  </div>
   );
 };
 
