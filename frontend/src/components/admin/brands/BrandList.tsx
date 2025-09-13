@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Checkbox, message, Tag, Space, Typography, Spin } from "antd";
+import { Table, Button, Modal, Form, Input, Checkbox, message, Tag, Space, Typography, Spin, Upload, Image } from "antd";
 import type { Brand } from "../../../interfaces/Brand";
 import { FaEdit, FaTrash } from "react-icons/fa";
+import { PlusOutlined } from "@ant-design/icons";
+import type { UploadFile } from "antd/es/upload/interface";
 import { useErrorNotification } from "../../../hooks/useErrorNotification";
 
 const API_URL = "http://localhost:8000/api/brand";
@@ -21,6 +23,8 @@ const BrandList: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [logoFileList, setLogoFileList] = useState<UploadFile[]>([]);
+  const [editLogoFileList, setEditLogoFileList] = useState<UploadFile[]>([]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem("token");
@@ -28,6 +32,102 @@ const BrandList: React.FC = () => {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     };
+  };
+
+  const handleLogoUpload = async (fileList: UploadFile[]) => {
+    setLogoFileList(fileList);
+    
+    if (fileList.length > 0) {
+      const latestFile = fileList[fileList.length - 1];
+      
+      if (latestFile.originFileObj) {
+        try {
+          const token = localStorage.getItem("token");
+          const formData = new FormData();
+          formData.append("image", latestFile.originFileObj);
+          
+          const response = await fetch("http://localhost:8000/api/upload/", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data?.url) {
+              const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
+              const updatedFileList = fileList.map((file: any, index: number) => {
+                if (index === fileList.length - 1) {
+                  return {
+                    ...file,
+                    url: fullUrl,
+                    thumbUrl: fullUrl,
+                    status: 'done'
+                  };
+                }
+                return file;
+              });
+              setLogoFileList(updatedFileList);
+              form.setFieldsValue({ logo: fullUrl });
+              messageApi.success("Upload logo thành công!");
+            }
+          } else {
+            messageApi.error("Upload logo thất bại!");
+          }
+        } catch (error) {
+          console.error("Upload error:", error);
+          handleError(error, "Lỗi khi upload logo!");
+        }
+      }
+    }
+  };
+
+  const handleEditLogoUpload = async (fileList: UploadFile[]) => {
+    setEditLogoFileList(fileList);
+    
+    if (fileList.length > 0) {
+      const latestFile = fileList[fileList.length - 1];
+      
+      if (latestFile.originFileObj) {
+        try {
+          const token = localStorage.getItem("token");
+          const formData = new FormData();
+          formData.append("image", latestFile.originFileObj);
+          
+          const response = await fetch("http://localhost:8000/api/upload/", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data?.url) {
+              const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
+              const updatedFileList = fileList.map((file: any, index: number) => {
+                if (index === fileList.length - 1) {
+                  return {
+                    ...file,
+                    url: fullUrl,
+                    thumbUrl: fullUrl,
+                    status: 'done'
+                  };
+                }
+                return file;
+              });
+              setEditLogoFileList(updatedFileList);
+              editForm.setFieldsValue({ logo: fullUrl });
+              messageApi.success("Upload logo thành công!");
+            }
+          } else {
+            messageApi.error("Upload logo thất bại!");
+          }
+        } catch (error) {
+          console.error("Upload error:", error);
+          handleError(error, "Lỗi khi upload logo!");
+        }
+      }
+    }
   };
 
   const fetchBrands = async () => {
@@ -85,6 +185,7 @@ const BrandList: React.FC = () => {
         messageApi.success("Thêm thương hiệu thành công!");
         setIsAdding(false);
         form.resetFields();
+        setLogoFileList([]);
         fetchBrands();
       } else {
         const errorData = await res.json();
@@ -108,6 +209,7 @@ const BrandList: React.FC = () => {
       if (res.ok) {
         messageApi.success("Cập nhật thương hiệu thành công!");
         setEditingBrand(null);
+        setEditLogoFileList([]);
         fetchBrands();
       } else {
         throw new Error("Failed to update brand");
@@ -166,6 +268,18 @@ const BrandList: React.FC = () => {
             onClick={() => {
               setEditingBrand(record);
               editForm.setFieldsValue(record);
+              // Load ảnh hiện tại vào edit form
+              if (record.logo) {
+                setEditLogoFileList([{
+                  uid: '1',
+                  name: 'logo',
+                  status: 'done',
+                  url: record.logo,
+                  thumbUrl: record.logo,
+                }]);
+              } else {
+                setEditLogoFileList([]);
+              }
             }}
           >
             
@@ -202,7 +316,10 @@ const BrandList: React.FC = () => {
       <Modal
         open={isAdding}
         title="Thêm thương hiệu mới"
-        onCancel={() => setIsAdding(false)}
+        onCancel={() => {
+          setIsAdding(false);
+          setLogoFileList([]);
+        }}
         footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleAdd} initialValues={newBrand}>
@@ -217,11 +334,55 @@ const BrandList: React.FC = () => {
             <Input.TextArea />
           </Form.Item>
           <Form.Item
-            label="Link logo"
+            label="Logo thương hiệu"
             name="logo"
-            rules={[{ required: true, message: "Vui lòng nhập URL logo!" }]}
+            rules={[{ required: true, message: "Vui lòng upload logo!" }]}
           >
-            <Input type="url" />
+            <div className="space-y-2">
+              <Upload
+                listType="picture-card"
+                fileList={logoFileList}
+                onChange={handleLogoUpload}
+                beforeUpload={() => false}
+                multiple={false}
+                showUploadList={false}
+              >
+                {logoFileList.length < 1 && (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                    <div className="text-sm text-gray-500">Upload Logo</div>
+                  </div>
+                )}
+              </Upload>
+              
+              {/* Hiển thị preview logo đã upload */}
+              <div className="flex gap-3 flex-wrap mt-3">
+                {logoFileList.length > 0 && logoFileList.map((file, idx) => (
+                  <div key={idx} className="relative group">
+                    <Image
+                      src={file.url || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : "")}
+                      alt={`Logo ${idx + 1}`}
+                      width={100}
+                      height={100}
+                      className="rounded-lg object-cover"
+                    />
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        const newFileList = logoFileList.filter((_, index) => index !== idx);
+                        setLogoFileList(newFileList);
+                        form.setFieldsValue({ logo: "" });
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </Form.Item>
           <Form.Item name="isActive" valuePropName="checked">
             <Checkbox>Hiển thị thương hiệu</Checkbox>
@@ -241,7 +402,10 @@ const BrandList: React.FC = () => {
       <Modal
         open={!!editingBrand}
         title="Cập nhật thương hiệu"
-        onCancel={() => setEditingBrand(null)}
+        onCancel={() => {
+          setEditingBrand(null);
+          setEditLogoFileList([]);
+        }}
         footer={null}
       >
         <Form form={editForm} layout="vertical" onFinish={handleEdit}>
@@ -256,11 +420,55 @@ const BrandList: React.FC = () => {
             <Input.TextArea />
           </Form.Item>
           <Form.Item
-            label="Link logo"
+            label="Logo thương hiệu"
             name="logo"
-            rules={[{ required: true, message: "Vui lòng nhập URL logo!" }]}
+            rules={[{ required: true, message: "Vui lòng upload logo!" }]}
           >
-            <Input type="url" />
+            <div className="space-y-2">
+              <Upload
+                listType="picture-card"
+                fileList={editLogoFileList}
+                onChange={handleEditLogoUpload}
+                beforeUpload={() => false}
+                multiple={false}
+                showUploadList={false}
+              >
+                {editLogoFileList.length < 1 && (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                    <div className="text-sm text-gray-500">Upload Logo</div>
+                  </div>
+                )}
+              </Upload>
+              
+              {/* Hiển thị preview logo đã upload */}
+              <div className="flex gap-3 flex-wrap mt-3">
+                {editLogoFileList.length > 0 && editLogoFileList.map((file, idx) => (
+                  <div key={idx} className="relative group">
+                    <Image
+                      src={file.url || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : "")}
+                      alt={`Logo ${idx + 1}`}
+                      width={100}
+                      height={100}
+                      className="rounded-lg object-cover"
+                    />
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        const newFileList = editLogoFileList.filter((_, index) => index !== idx);
+                        setEditLogoFileList(newFileList);
+                        editForm.setFieldsValue({ logo: "" });
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </Form.Item>
           <Form.Item name="isActive" valuePropName="checked">
             <Checkbox>Hiển thị thương hiệu</Checkbox>
