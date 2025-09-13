@@ -5,7 +5,7 @@ import { useCart } from '../contexts/CartContext';
 export interface UseVoucherReturn {
     voucher: VoucherInfo | null;
     isValidating: boolean;
-    applyVoucher: (code: string) => Promise<VoucherValidationResult>;
+    applyVoucher: (code: string, productId?: string) => Promise<VoucherValidationResult>;
     removeVoucher: () => void;
     revalidateVoucher: () => Promise<void>;
     isVoucherValid: boolean;
@@ -32,14 +32,17 @@ export const useVoucher = (): UseVoucherReturn => {
         }
     }, [cartState.total, cartState.items]);
 
-    const applyVoucher = useCallback(async (code: string): Promise<VoucherValidationResult> => {
+    const applyVoucher = useCallback(async (code: string, productId?: string): Promise<VoucherValidationResult> => {
         if (!code.trim()) {
             return { valid: false, message: 'Vui lòng nhập mã voucher' };
         }
 
         setIsValidating(true);
         try {
-            const result = await voucherService.validateAndUpdateVoucher(code, cartState.total);
+            let result: VoucherValidationResult;
+
+            // Sử dụng validateAndUpdateVoucher với productId parameter
+            result = await voucherService.validateAndUpdateVoucher(code, cartState.total, productId);
 
             if (result.valid && result.voucher) {
                 const voucherInfo: VoucherInfo = {
@@ -52,6 +55,7 @@ export const useVoucher = (): UseVoucherReturn => {
                     maxDiscountValue: result.voucher.maxDiscountValue,
                     startDate: result.voucher.startDate,
                     endDate: result.voucher.endDate,
+                    productId: result.voucher.productId, // Lưu productId nếu có
                     isValid: true
                 };
 

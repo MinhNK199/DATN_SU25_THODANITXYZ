@@ -33,7 +33,7 @@ const orderSchema = new mongoose.Schema({
             size: { type: Number },
             specifications: { type: mongoose.Schema.Types.Mixed }
         }
-    }, ],
+    },],
     shippingAddress: {
         fullName: {
             type: String,
@@ -115,6 +115,35 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0.0,
     },
+    // Thông tin coupon discount
+    couponDiscount: {
+        type: Number,
+        default: 0.0,
+    },
+    couponCode: {
+        type: String,
+    },
+    // Thông tin voucher sản phẩm
+    voucher: {
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Product",
+        },
+        code: {
+            type: String,
+        },
+        discountType: {
+            type: String,
+            enum: ["percentage", "fixed"],
+        },
+        value: {
+            type: Number,
+        },
+        discountAmount: {
+            type: Number,
+            default: 0.0,
+        },
+    },
     isPaid: {
         type: Boolean,
         required: true,
@@ -194,19 +223,19 @@ const orderSchema = new mongoose.Schema({
 
     // Thông tin shipper
     shipper: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Shipper",
-      default: null,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Shipper",
+        default: null,
     },
     orderTracking: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "OrderTracking",
-      default: null,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "OrderTracking",
+        default: null,
     },
     // Thời gian tự động xác nhận đơn hàng
     autoConfirmAt: {
-      type: Date,
-      default: null,
+        type: Date,
+        default: null,
     },
     zalopayTransId: { type: String },
 
@@ -221,7 +250,7 @@ const orderSchema = new mongoose.Schema({
             type: Date,
             default: Date.now,
         },
-    }, ],
+    },],
     // Thêm fields để quản lý trạng thái kho hàng
     inventoryStatus: {
         deducted: {

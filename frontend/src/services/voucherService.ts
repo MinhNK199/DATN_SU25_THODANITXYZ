@@ -32,6 +32,7 @@ export interface VoucherInfo {
     endDate?: string;
     isValid: boolean;
     validationMessage?: string;
+    productId?: string; // Thêm productId để lưu thông tin sản phẩm
 }
 
 export interface VoucherValidationOptions {
@@ -212,8 +213,19 @@ class VoucherService {
     /**
      * Validate và cập nhật voucher cho checkout
      */
-    async validateAndUpdateVoucher(code: string, orderValue: number): Promise<VoucherValidationResult> {
-        const result = await this.validateVoucher(code, orderValue);
+    async validateAndUpdateVoucher(code: string, orderValue: number, productId?: string): Promise<VoucherValidationResult> {
+        let result: VoucherValidationResult;
+
+        // Nếu có productId, thử validate product voucher trước
+        if (productId) {
+            result = await this.validateProductVoucher(productId, code, orderValue);
+            if (result.valid && result.voucher) {
+                result.voucher.productId = productId;
+            }
+        } else {
+            // Nếu không có productId, thử validate coupon
+            result = await this.validateVoucher(code, orderValue);
+        }
 
         if (result.valid && result.voucher) {
             const voucherInfo: VoucherInfo = {
@@ -226,6 +238,7 @@ class VoucherService {
                 maxDiscountValue: result.voucher.maxDiscountValue,
                 startDate: result.voucher.startDate,
                 endDate: result.voucher.endDate,
+                productId: result.voucher.productId, // Lưu productId nếu có
                 isValid: true
             };
 

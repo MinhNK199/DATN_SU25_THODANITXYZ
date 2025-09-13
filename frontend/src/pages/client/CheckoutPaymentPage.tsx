@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useCheckout } from "../../contexts/CheckoutContext";
@@ -33,11 +33,13 @@ const CheckoutPaymentPage: React.FC = () => {
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<any>(null);
 
   const { state: cartState } = useCart();
   const { voucher, revalidateVoucher } = useCheckout();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const location = useLocation();
 
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
@@ -50,6 +52,13 @@ const CheckoutPaymentPage: React.FC = () => {
       setSelectedItems(allItemIds);
     }
   }, [cartState.items]);
+
+  // Nhận appliedDiscountCoupon từ state
+  useEffect(() => {
+    if (location.state?.appliedDiscountCoupon) {
+      setAppliedDiscountCoupon(location.state.appliedDiscountCoupon);
+    }
+  }, [location.state]);
 
   // Lấy buyNowProduct để sử dụng trong useEffect
   const buyNowProduct = useMemo(() => {
@@ -69,16 +78,16 @@ const CheckoutPaymentPage: React.FC = () => {
 
   // Tính toán selectedCartItems với useMemo để tránh re-render
   const selectedCartItems = useMemo(() => {
-    const items = buyNowProduct 
+    const items = buyNowProduct
       ? [buyNowProduct]
       : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
-    
+
     console.log('🔍 CheckoutPayment Debug:', {
       buyNowProduct: buyNowProduct ? 'Có sản phẩm mua ngay' : 'Không có sản phẩm mua ngay',
       selectedCartItems: items.length,
       cartStateItems: cartState.items?.length || 0
     });
-    
+
     return items;
   }, [buyNowProduct, cartState.items, selectedItems]);
 
@@ -223,7 +232,18 @@ const CheckoutPaymentPage: React.FC = () => {
         walletInfo,
         bankTransferInfo
       }));
-      navigate('/checkout/review');
+      navigate('/checkout/review', {
+        state: {
+          appliedDiscountCoupon,
+          subtotal,
+          couponDiscount,
+          voucherDiscount,
+          totalDiscount,
+          shippingFee,
+          taxPrice,
+          finalTotal
+        }
+      });
     } else {
       alert("Vui lòng chọn phương thức thanh toán!");
     }
@@ -238,7 +258,7 @@ const CheckoutPaymentPage: React.FC = () => {
   // Tính toán giá từ selectedCartItems
   const subtotal = selectedCartItems.reduce((sum, item) => {
     const variant = item.variantInfo;
-    const displayPrice = variant ? 
+    const displayPrice = variant ?
       (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
       (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
     const price = Number(displayPrice) || 0;
@@ -246,9 +266,29 @@ const CheckoutPaymentPage: React.FC = () => {
     return sum + (price * quantity);
   }, 0);
 
+  // Tính toán coupon discount
+  const couponDiscount = useMemo(() => {
+    if (!appliedDiscountCoupon) return 0;
+
+    const discountValue = appliedDiscountCoupon.discount || appliedDiscountCoupon.value || 0;
+    if (appliedDiscountCoupon.type === "percentage") {
+      const discount = (subtotal * discountValue) / 100;
+      // Áp dụng giới hạn tối đa nếu có
+      const maxDiscount = appliedDiscountCoupon.maxDiscount || appliedDiscountCoupon.maxDiscountValue;
+      if (maxDiscount && discount > maxDiscount) {
+        return maxDiscount;
+      }
+      return discount;
+    } else if (appliedDiscountCoupon.type === "fixed") {
+      return Math.min(discountValue, subtotal);
+    }
+    return 0;
+  }, [appliedDiscountCoupon, subtotal]);
+
   const voucherDiscount = voucher && voucher.isValid ? (voucher.discountAmount || 0) : 0;
-  const subtotalAfterDiscount = subtotal - voucherDiscount;
-  const shippingFee = subtotalAfterDiscount >= 500000 ? 0 : 30000;
+  const totalDiscount = couponDiscount + voucherDiscount;
+  const subtotalAfterDiscount = subtotal - totalDiscount;
+  const shippingFee = subtotalAfterDiscount >= 10000000 ? 0 : 30000; // Đồng bộ với giỏ hàng: freeship từ 10tr
   const taxPrice = subtotalAfterDiscount * taxRate;
   const finalTotal = subtotalAfterDiscount + shippingFee + taxPrice;
 
@@ -419,8 +459,8 @@ const CheckoutPaymentPage: React.FC = () => {
                                 const variant = item.variantInfo;
                                 const displayImage = variant?.images?.[0] || item.product.images?.[0];
                                 return displayImage ? (
-                                  <img 
-                                    src={displayImage} 
+                                  <img
+                                    src={displayImage}
                                     alt={item.product.name}
                                     className="w-full h-full object-cover"
                                   />
@@ -444,7 +484,7 @@ const CheckoutPaymentPage: React.FC = () => {
                               <p className="text-xs text-gray-600">
                                 SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
                                   const variant = item.variantInfo;
-                                  const displayPrice = variant ? 
+                                  const displayPrice = variant ?
                                     (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                                     (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
                                   return formatPrice(displayPrice);
@@ -455,7 +495,7 @@ const CheckoutPaymentPage: React.FC = () => {
                               <div className="text-sm font-bold text-gray-900">
                                 {(() => {
                                   const variant = item.variantInfo;
-                                  const displayPrice = variant ? 
+                                  const displayPrice = variant ?
                                     (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                                     (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
                                   return formatPrice(displayPrice * item.quantity);
@@ -493,7 +533,7 @@ const CheckoutPaymentPage: React.FC = () => {
                         </div>
                         {shippingFee > 0 && (
                           <div className="text-xs text-gray-500 ml-4">
-                            Miễn phí ship cho đơn hàng từ {formatPrice(500000)}
+                            Miễn phí ship cho đơn hàng từ {formatPrice(10000000)}
                           </div>
                         )}
                         {voucher && voucher.isValid && voucherDiscount > 0 && (
@@ -527,16 +567,16 @@ const CheckoutPaymentPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - subtotalAfterDiscount)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(10000000 - subtotalAfterDiscount)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                               <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((subtotalAfterDiscount / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotalAfterDiscount / 10000000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(subtotalAfterDiscount)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotalAfterDiscount)} / {formatPrice(10000000)}
                             </p>
                           </div>
                         </div>

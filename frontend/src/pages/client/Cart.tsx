@@ -20,8 +20,7 @@ import { useNotification } from "../../hooks/useNotification";
 import voucherService from "../../services/voucherService";
 import {
   calculateDisplayPrice,
-  calculateSubtotal,
-  calculateTotalSavings
+  calculateSubtotal
 } from "../../utils/priceUtils";
 
 const Cart: React.FC = () => {
@@ -51,7 +50,7 @@ const Cart: React.FC = () => {
   // Removed debug useEffects to prevent infinite re-renders
 
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
-  
+
   const fetchRecommended = useCallback(async () => {
     try {
       const res = await fetch("http://localhost:8000/api/product");
@@ -85,7 +84,7 @@ const Cart: React.FC = () => {
       setRecommendedProducts([]);
     }
   }, []);
-  
+
   useEffect(() => {
     fetchRecommended();
   }, [fetchRecommended]);
@@ -105,7 +104,7 @@ const Cart: React.FC = () => {
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [, setUsedCoupons] = useState<Coupon[]>([]);
   const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<Coupon | null>(null);
-  
+
   // Debug log for appliedDiscountCoupon changes
   useEffect(() => {
     console.log('🔍 appliedDiscountCoupon changed:', appliedDiscountCoupon);
@@ -126,26 +125,21 @@ const Cart: React.FC = () => {
       });
   }, []);
 
-  // Tính toán subtotal và savings chỉ cho các sản phẩm được chọn
-  const selectedCartItems = useMemo(() => 
-    cartItems.filter(item => selectedItems.has(item._id)), 
+  // Tính toán subtotal cho các sản phẩm được chọn
+  const selectedCartItems = useMemo(() =>
+    cartItems.filter(item => selectedItems.has(item._id)),
     [cartItems, selectedItems]
   );
-  
-  const subtotal = useMemo(() => 
-    calculateSubtotal(selectedCartItems), 
-    [selectedCartItems]
-  );
 
-  const savings = useMemo(() => 
-    calculateTotalSavings(selectedCartItems), 
+  const subtotal = useMemo(() =>
+    calculateSubtotal(selectedCartItems),
     [selectedCartItems]
   );
 
   // Tính toán giảm giá từ coupon
   const couponDiscount = useMemo(() => {
     if (!appliedDiscountCoupon) return 0;
-    
+
     const discountValue = appliedDiscountCoupon.discount || appliedDiscountCoupon.value || 0;
     if (appliedDiscountCoupon.type === "percentage") {
       const discount = (subtotal * discountValue) / 100;
@@ -161,18 +155,18 @@ const Cart: React.FC = () => {
     return 0;
   }, [appliedDiscountCoupon, subtotal]);
 
-  const shipping = useMemo(() => 
-    subtotal > 10000000 || appliedShippingCoupon ? 0 : 30000, 
+  const shipping = useMemo(() =>
+    subtotal > 10000000 || appliedShippingCoupon ? 0 : 30000,
     [subtotal, appliedShippingCoupon]
   );
-  
-  const tax = useMemo(() => 
-    (subtotal - couponDiscount) * taxRate, 
+
+  const tax = useMemo(() =>
+    (subtotal - couponDiscount) * taxRate,
     [subtotal, couponDiscount, taxRate]
   );
-  
-  const total = useMemo(() => 
-    subtotal - couponDiscount + shipping + tax, 
+
+  const total = useMemo(() =>
+    subtotal - couponDiscount + shipping + tax,
     [subtotal, couponDiscount, shipping, tax]
   );
 
@@ -190,7 +184,7 @@ const Cart: React.FC = () => {
     try {
       setLoadingCoupons(true);
       console.log('🔄 Loading coupons...');
-      
+
       const [availableResponse, usedResponse] = await Promise.all([
         getAvailableCoupons(),
         getUsedCoupons()
@@ -283,7 +277,7 @@ const Cart: React.FC = () => {
 
   const handleApplyDiscountCoupon = async (couponId: string) => {
     console.log('🔍 handleApplyDiscountCoupon called with couponId:', couponId);
-    
+
     if (!couponId) {
       console.log('❌ No couponId provided, setting appliedDiscountCoupon to null');
       setAppliedDiscountCoupon(null);
@@ -294,7 +288,7 @@ const Cart: React.FC = () => {
       console.log('🔍 Looking for coupon in availableCoupons:', availableCoupons.length, 'coupons available');
       const coupon = availableCoupons.find(c => c._id === couponId);
       console.log('🔍 Found coupon:', coupon);
-      
+
       if (!coupon) {
         console.log('❌ Coupon not found in availableCoupons');
         error("Mã giảm giá không tồn tại");
@@ -311,7 +305,7 @@ const Cart: React.FC = () => {
 
       const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
       console.log('🔍 Min amount check:', selectedSubtotal, 'vs', minAmount);
-      
+
       // Tạm thời bỏ qua kiểm tra minAmount để test
       // if (selectedSubtotal < minAmount) {
       //   console.log('❌ Subtotal too low:', selectedSubtotal, 'min required:', minAmount);
@@ -323,7 +317,7 @@ const Cart: React.FC = () => {
       console.log('✅ Setting appliedDiscountCoupon to:', coupon);
       setAppliedDiscountCoupon(coupon);
       success(`Đã áp dụng mã giảm giá "${coupon.name}"`);
-      
+
       // TODO: Gọi API applyCoupon khi cần thiết
       // const result = await applyCoupon(coupon.code, selectedSubtotal);
       // if (result.success && result.coupon) {
@@ -345,7 +339,7 @@ const Cart: React.FC = () => {
         // Remove coupon directly without API call for now
         setAppliedDiscountCoupon(null);
         info("Đã hủy áp dụng mã giảm giá");
-        
+
         // TODO: Gọi API removeCoupon khi cần thiết
         // await removeCoupon(appliedDiscountCoupon._id);
       } catch {
@@ -463,7 +457,7 @@ const Cart: React.FC = () => {
                       const displayName = item.product.name; // Luôn hiển thị tên sản phẩm cha
                       // Ưu tiên hiển thị ảnh variant, fallback về ảnh sản phẩm chính
                       const displayImage = variant?.images?.[0] || item.product.images?.[0] || "/placeholder.svg";
-                      
+
 
                       // Sử dụng calculateDisplayPrice để đảm bảo tính toán đúng
                       const displayPrice = calculateDisplayPrice(item);
@@ -811,12 +805,12 @@ const Cart: React.FC = () => {
                         const variant = item.variantInfo;
                         const price = calculateDisplayPrice(item);
                         const variantName = variant?.name || '';
-                        
+
                         // Tính toán giá hiển thị chi tiết
-                        const displayPrice = variant ? 
+                        const displayPrice = variant ?
                           (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                           price;
-                        
+
                         // Tính tổng tiền dựa trên giá hiển thị với validation
                         const safePrice = Number(displayPrice) || 0;
                         const safeQuantity = Number(item.quantity) || 0;
@@ -830,7 +824,7 @@ const Cart: React.FC = () => {
                                 // Ưu tiên ảnh variant, fallback về ảnh sản phẩm chính
                                 const displayImage = variant?.images?.[0] || item.product.images?.[0] || "/placeholder.svg";
                                 const displayAlt = variantName || item.product.name;
-                                
+
                                 return (
                                   <img
                                     src={displayImage}
@@ -843,7 +837,7 @@ const Cart: React.FC = () => {
                                   />
                                 );
                               })()}
-                              
+
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-gray-800 truncate">
                                   {item.product.name}
@@ -893,33 +887,6 @@ const Cart: React.FC = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Savings Section */}
-                {(() => {
-                  // Tính tổng tiết kiệm từ variant
-                  const variantSavings = selectedCartItems.reduce((sum, item) => {
-                    const variant = item.variantInfo;
-                    if (variant && variant.salePrice && variant.salePrice < variant.price) {
-                      return sum + ((variant.price - variant.salePrice) * item.quantity);
-                    }
-                    return sum;
-                  }, 0);
-                  
-                  const totalSavings = savings + variantSavings;
-                  
-                  return totalSavings > 0 ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-semibold text-green-800">Tiết kiệm sản phẩm</span>
-                        </div>
-                        <span className="text-sm font-bold text-green-600">-{formatPrice(totalSavings)}</span>
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-
 
                 {/* Applied Discount Coupon */}
                 {appliedDiscountCoupon && (
@@ -1096,7 +1063,6 @@ const Cart: React.FC = () => {
                     navigate("/checkout/shipping", {
                       state: {
                         subtotal,
-                        savings,
                         shipping,
                         tax,
                         total,
@@ -1281,7 +1247,7 @@ const Cart: React.FC = () => {
                     <span className="text-xl font-bold text-green-900">
                       {formatPrice((() => {
                         const variant = detailItem.variantInfo;
-                        const displayPrice = variant ? 
+                        const displayPrice = variant ?
                           (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                           calculateDisplayPrice(detailItem);
                         return displayPrice;
@@ -1290,11 +1256,11 @@ const Cart: React.FC = () => {
                   </div>
                   {(() => {
                     const variant = detailItem.variantInfo;
-                    const displayPrice = variant ? 
+                    const displayPrice = variant ?
                       (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                       calculateDisplayPrice(detailItem);
                     const originalPrice = variant ? variant.price : calculateDisplayPrice(detailItem);
-                    
+
                     return originalPrice > displayPrice ? (
                       <div className="flex justify-between items-center">
                         <span className="text-green-700 font-medium">Giá gốc:</span>
@@ -1307,12 +1273,12 @@ const Cart: React.FC = () => {
                   {/* Hiển thị tiết kiệm nếu có giảm giá */}
                   {(() => {
                     const variant = detailItem.variantInfo;
-                    const displayPrice = variant ? 
+                    const displayPrice = variant ?
                       (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                       calculateDisplayPrice(detailItem);
                     const originalPrice = variant ? variant.price : calculateDisplayPrice(detailItem);
                     const savings = (originalPrice - displayPrice) * detailItem.quantity;
-                    
+
                     return savings > 0 ? (
                       <div className="flex justify-between items-center">
                         <span className="text-green-700 font-medium">Tiết kiệm:</span>
@@ -1433,7 +1399,7 @@ const Cart: React.FC = () => {
                       <span className="text-2xl font-bold text-green-900">
                         {formatPrice((() => {
                           const variant = detailItem.variantInfo;
-                          const displayPrice = variant ? 
+                          const displayPrice = variant ?
                             (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                             calculateDisplayPrice(detailItem);
                           return displayPrice * detailItem.quantity;
@@ -1443,7 +1409,7 @@ const Cart: React.FC = () => {
                     <div className="text-sm text-green-600 text-right">
                       {formatPrice((() => {
                         const variant = detailItem.variantInfo;
-                        const displayPrice = variant ? 
+                        const displayPrice = variant ?
                           (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                           calculateDisplayPrice(detailItem);
                         return displayPrice;
@@ -1564,7 +1530,7 @@ const Cart: React.FC = () => {
               console.log('🔍 Modal OK button clicked');
               console.log('🔍 selectedCouponId:', selectedCouponId);
               console.log('🔍 appliedDiscountCoupon before:', appliedDiscountCoupon);
-              
+
               if (selectedCouponId) {
                 const coupon = availableCoupons.find(c => c._id === selectedCouponId);
                 console.log('🔍 Found coupon in modal:', coupon);
@@ -1642,11 +1608,10 @@ const Cart: React.FC = () => {
               >
                 <div className="flex items-center">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center transition-all duration-200 ${
-                      selectedCouponId === null 
-                        ? "border-gray-400 bg-gray-400" 
+                    <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center transition-all duration-200 ${selectedCouponId === null
+                        ? "border-gray-400 bg-gray-400"
                         : "border-gray-400 hover:border-gray-500"
-                    }`}>
+                      }`}>
                       {selectedCouponId === null && (
                         <div className="w-2 h-2 bg-white rounded-full"></div>
                       )}
@@ -1678,11 +1643,10 @@ const Cart: React.FC = () => {
                   >
                     <div className="flex items-start">
                       <div className="flex items-center space-x-3 mr-3">
-                        <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center transition-all duration-200 ${
-                          selectedCouponId === coupon._id 
-                            ? "border-orange-500 bg-orange-500" 
+                        <div className={`w-4 h-4 border-2 rounded-full flex items-center justify-center transition-all duration-200 ${selectedCouponId === coupon._id
+                            ? "border-orange-500 bg-orange-500"
                             : "border-gray-400 hover:border-orange-300"
-                        }`}>
+                          }`}>
                           {selectedCouponId === coupon._id && (
                             <div className="w-2 h-2 bg-white rounded-full"></div>
                           )}

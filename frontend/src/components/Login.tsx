@@ -10,7 +10,7 @@ import {
   FaCrown,
   FaUserTie,
 } from "react-icons/fa";
-import LoginModeToggle from './LoginModeToggle';
+// import LoginModeToggle from './LoginModeToggle'; // Removed - using checkbox instead
 import axios from "axios";
 
 export default function Login() {
@@ -55,15 +55,15 @@ export default function Login() {
           });
 
           setSuccess("Đăng nhập shipper thành công!");
-          
+
           // Lưu vào localStorage
           localStorage.setItem("shipperToken", res.data.data.token);
           localStorage.setItem("shipper", JSON.stringify(res.data.data.shipper));
-          
+
           console.log('🚚 Shipper login success!');
           console.log('📦 Token saved:', res.data.data.token);
           console.log('📦 Shipper data saved:', res.data.data.shipper);
-          
+
           // Đợi một chút để localStorage được lưu
           setTimeout(() => {
             console.log('🔄 Redirecting to /shipper/dashboard...');
@@ -207,14 +207,9 @@ export default function Login() {
           </h2>
           <p className="text-gray-600">
             {isLogin
-              ? (loginMode === 'shipper' ? 'Đăng nhập với tài khoản shipper' : 'Đăng nhập vào tài khoản để tiếp tục')
+              ? 'Đăng nhập vào tài khoản để tiếp tục'
               : "Tham gia cùng chúng tôi và bắt đầu mua sắm ngay hôm nay"}
           </p>
-          
-          {/* Login Mode Toggle */}
-          {isLogin && (
-            <LoginModeToggle loginMode={loginMode} setLoginMode={setLoginMode} />
-          )}
         </div>
 
         {/* Error/Success Messages */}
@@ -321,6 +316,38 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Shipper Login Checkbox - Only show during login */}
+            {isLogin && (
+              <div className="flex items-center justify-center py-4">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 w-full">
+                  <div className="flex items-center justify-center space-x-3">
+                    <input
+                      id="shipper-login"
+                      name="shipper-login"
+                      type="checkbox"
+                      checked={loginMode === 'shipper'}
+                      onChange={(e) => setLoginMode(e.target.checked ? 'shipper' : 'user')}
+                      className="h-5 w-5 text-orange-600 focus:ring-orange-500 border-orange-300 rounded"
+                      disabled={isLoading}
+                    />
+                    <label
+                      htmlFor="shipper-login"
+                      className="text-orange-800 font-medium text-lg cursor-pointer flex items-center space-x-2"
+                    >
+                      <span>🚚</span>
+                      <span>Đăng nhập bằng tài khoản Shipper</span>
+                    </label>
+                  </div>
+                  <p className="text-orange-600 text-sm text-center mt-2">
+                    {loginMode === 'shipper'
+                      ? 'Bạn đang đăng nhập với tài khoản Shipper'
+                      : 'Tích vào ô này để đăng nhập với tài khoản Shipper'
+                    }
+                  </p>
+                </div>
+              </div>
+            )}
+
             {!isLogin && (
               <div>
                 <label
@@ -377,21 +404,20 @@ export default function Login() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl ${
-                isLoading
+              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl ${isLoading
                   ? "bg-gray-400 cursor-not-allowed text-white"
                   : loginMode === 'shipper'
                     ? "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
                     : "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-              }`}
+                }`}
             >
               {isLoading
                 ? isLogin
-                  ? (loginMode === 'shipper' ? "Đang đăng nhập shipper..." : "Đang đăng nhập...")
+                  ? (loginMode === 'shipper' ? "🚚 Đang đăng nhập Shipper..." : "Đang đăng nhập...")
                   : "Đang đăng ký..."
                 : isLogin
-                ? (loginMode === 'shipper' ? "🚚 Đăng nhập Shipper" : "Đăng nhập")
-                : "Tạo tài khoản"}
+                  ? (loginMode === 'shipper' ? "🚚 Đăng nhập Shipper" : "Đăng nhập")
+                  : "Tạo tài khoản"}
             </button>
           </form>
 
