@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
+import { useCheckout } from "../../contexts/CheckoutContext";
+import { useVoucher } from "../../hooks/useVoucher";
 import { useToast } from "../../components/client/ToastContainer";
 import axios from "axios";
 import userApi, { Address } from "../../services/userApi";
@@ -36,20 +38,30 @@ const CheckoutShippingPage: React.FC = () => {
   const [buyNowProduct, setBuyNowProduct] = useState<any>(null);
 
   const { state: cartState } = useCart();
+  const { voucher } = useCheckout();
+  const { revalidateVoucher } = useVoucher();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
-  
+
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
     const buyNowProductData = localStorage.getItem('buyNowProduct');
     if (buyNowProductData) {
-      const product = JSON.parse(buyNowProductData);
-      setBuyNowProduct(product);
-      setSelectedItems(new Set([product._id]));
+      try {
+        const product = JSON.parse(buyNowProductData);
+        setBuyNowProduct(product);
+        setSelectedItems(new Set([product._id]));
+      } catch (error) {
+        console.error('❌ Error parsing buyNowProduct:', error);
+        localStorage.removeItem('buyNowProduct');
+        navigate('/cart');
+        return;
+      }
     } else if (cartState.items && cartState.items.length > 0) {
       const allItemIds = new Set(cartState.items.map(item => item._id));
       setSelectedItems(allItemIds);
     } else {
+      // Kiểm tra nếu không có sản phẩm trong giỏ hàng, redirect về Cart
       navigate('/cart');
     }
   }, [cartState.items, navigate]);
@@ -63,11 +75,18 @@ const CheckoutShippingPage: React.FC = () => {
     axios
       .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
       .then((r) => setProvinces(r.data))
-      .catch(() => {});
+      .catch(() => { });
     getTaxConfig()
       .then((cfg) => setTaxRate(cfg.rate))
       .catch(() => setTaxRate(0.08));
   }, []);
+
+  // Revalidate voucher khi component mount
+  useEffect(() => {
+    if (voucher && cartState.total > 0) {
+      revalidateVoucher();
+    }
+  }, [voucher, cartState.total, revalidateVoucher]);
 
   // Fetch addresses and set default
   useEffect(() => {
@@ -77,10 +96,10 @@ const CheckoutShippingPage: React.FC = () => {
         const response = await axios.get('http://localhost:8000/api/address', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         const addressesData = response.data;
         setAddresses(addressesData);
-        
+
         // Tự động chọn địa chỉ mặc định
         const defaultAddress = addressesData.find((a: Address) => a.isDefault) || addressesData[0];
         if (defaultAddress) {
@@ -157,10 +176,11 @@ const CheckoutShippingPage: React.FC = () => {
     const quantity = Number(item.quantity) || 0;
     return sum + (price * quantity);
   }, 0);
-  
+
+  const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
   const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const taxPrice = subtotal * taxRate;
-  const finalTotal = subtotal + shippingFee + taxPrice;
+  const taxPrice = (subtotal - voucherDiscount) * taxRate;
+  const finalTotal = subtotal - voucherDiscount + shippingFee + taxPrice;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -207,7 +227,7 @@ const CheckoutShippingPage: React.FC = () => {
                   <div className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg"></div>
                 </div>
               </div>
-              
+
               <div className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 bg-white border-gray-300 text-gray-400 shadow-md">
@@ -222,7 +242,7 @@ const CheckoutShippingPage: React.FC = () => {
                   <div className="h-2 rounded-full bg-gray-200"></div>
                 </div>
               </div>
-              
+
               <div className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 bg-white border-gray-300 text-gray-400 shadow-md">
@@ -251,7 +271,7 @@ const CheckoutShippingPage: React.FC = () => {
                 </h2>
                 <p className="text-blue-100">Nhập thông tin địa chỉ giao hàng chính xác</p>
               </div>
-              
+
               <div className="p-8">
                 <CheckoutShippingInfo
                   selectedAddress={selectedAddress}
@@ -298,11 +318,10 @@ const CheckoutShippingPage: React.FC = () => {
                     </div>
                   </div>
                 </button>
-                
+
                 {/* Collapsible Content */}
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                  isOrderSummaryOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
-                }`}>
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isOrderSummaryOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
                   <div className="p-6">
                     {/* Order Items Preview - Compact */}
                     <div className="mb-6">
@@ -373,6 +392,39 @@ const CheckoutShippingPage: React.FC = () => {
                       </div>
                     </div>
 
+                    {/* Voucher Display */}
+                    {voucher && (
+                      <div className="mb-6">
+                        <h4 className="text-base font-bold text-gray-800 mb-3 flex items-center">
+                          <span className="mr-2">🎫</span>
+                          Mã giảm giá đã áp dụng
+                        </h4>
+                        <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <span className="text-green-800 font-semibold">{voucher.name}</span>
+                                <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full">
+                                  {voucher.code}
+                                </span>
+                              </div>
+                              <div className="text-sm text-green-700">
+                                {voucher.type === 'percentage'
+                                  ? `Giảm ${voucher.value}%${voucher.maxDiscountValue ? ` (tối đa ${formatPrice(voucher.maxDiscountValue)})` : ''}`
+                                  : `Giảm ${formatPrice(voucher.value)}`
+                                }
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-green-800">
+                                -{formatPrice(voucher.discountAmount)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Price Breakdown - Compact */}
                     <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 mb-6">
                       <h4 className="text-base font-bold text-gray-800 mb-3 flex items-center">
@@ -384,6 +436,12 @@ const CheckoutShippingPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Tạm tính:</span>
                           <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                         </div>
+                        {voucherDiscount > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span className="text-green-700 text-sm">Giảm giá voucher:</span>
+                            <span className="font-semibold text-green-600">-{formatPrice(voucherDiscount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center py-2 border-b border-gray-200">
                           <span className="text-gray-700 text-sm">Phí vận chuyển:</span>
                           <span className={`font-semibold ${shippingFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
@@ -394,7 +452,7 @@ const CheckoutShippingPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Thuế VAT (8%):</span>
                           <span className="font-semibold text-gray-900">{formatPrice(taxPrice)}</span>
                         </div>
-                        
+
                         <div className="pt-3">
                           <div className="flex justify-between items-center">
                             <span className="text-lg font-bold text-gray-900">Tổng cộng:</span>
@@ -415,16 +473,16 @@ const CheckoutShippingPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - cartState.total)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
-                              <div 
+                              <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((cartState.total / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(cartState.total)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
                             </p>
                           </div>
                         </div>

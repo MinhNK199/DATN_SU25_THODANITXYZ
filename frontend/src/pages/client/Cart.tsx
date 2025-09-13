@@ -17,6 +17,7 @@ import { getVariantStockMessage, validateQuantityUpdate, formatStockDisplay } fr
 import { Product } from "../../interfaces/Product";
 import { Modal, Button, Image, Input } from "antd";
 import { useNotification } from "../../hooks/useNotification";
+import voucherService from "../../services/voucherService";
 import {
   calculateDisplayPrice,
   calculateSubtotal,
@@ -1059,6 +1060,16 @@ const Cart: React.FC = () => {
                       warning("Vui lòng chọn ít nhất một sản phẩm để thanh toán");
                       return;
                     }
+
+                    // Lưu voucher vào localStorage nếu có
+                    if (appliedDiscountCoupon) {
+                      const voucherInfo = voucherService.convertCouponToVoucherInfo(appliedDiscountCoupon, subtotal);
+                      voucherService.saveVoucherToStorage(voucherInfo);
+                    } else {
+                      // Xóa voucher cũ nếu không có voucher mới
+                      voucherService.clearVoucherFromStorage();
+                    }
+
                     navigate("/checkout/shipping", {
                       state: {
                         subtotal,

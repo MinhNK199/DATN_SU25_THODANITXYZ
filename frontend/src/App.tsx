@@ -48,6 +48,7 @@ import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { CheckoutProvider } from './contexts/CheckoutContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { InventoryProvider } from './contexts/InventoryContext';
 import ProductComparison from './components/client/ProductComparison';
@@ -75,6 +76,15 @@ import BlogDetail from './pages/client/BlogDetail';
 import CheckoutFailed from './pages/client/CheckoutFailed';
 import CheckoutStatus from './pages/client/CheckoutStatus';
 
+// Import Shipper components
+import ShipperLogin from './components/shipper/ShipperLoginSimple';
+import ShipperRegister from './components/shipper/ShipperRegister';
+import ShipperDashboard from './components/shipper/ShipperDashboard';
+import ShipperOrderDetail from './components/shipper/OrderDetail';
+import ShipperManagement from './components/admin/shipper/ShipperManagement';
+import { ShipperProvider } from './contexts/ShipperContext';
+import PrivateRouteShipper from './components/PrivateRouteShipper';
+
 // Import Profile components
 import ProfileLayout from './pages/client/profile/components/ProfileLayout';
 import PersonalInfo from './pages/client/profile/personal-info';
@@ -95,102 +105,131 @@ function App() {
             <CartProvider>
               <WishlistProvider>
                 <ChatProvider>
-                <ScrollToTop />
-                <Routes>
-                  {/* Test routes */}
-                  <Route path="/test-api" element={<TestAPI />} />
-                  <Route path="/test-login" element={<TestLogin />} />
-                  <Route path="/test-product-api" element={<TestProductAPI />} />
-                  <Route path="/test-realtime-inventory" element={<RealtimeInventoryDemo productId="test-product-1" productName="Test Product" initialStock={10} />} />
-                  <Route path="/test-simple-inventory" element={<SimpleInventoryTest />} />
+                  <CheckoutProvider>
+                    <ScrollToTop />
+                    <Routes>
+                      {/* Test routes */}
+                      <Route path="/test-api" element={<TestAPI />} />
+                      <Route path="/test-login" element={<TestLogin />} />
+                      <Route path="/test-product-api" element={<TestProductAPI />} />
+                      <Route path="/test-realtime-inventory" element={<RealtimeInventoryDemo productId="test-product-1" productName="Test Product" initialStock={10} />} />
+                      <Route path="/test-simple-inventory" element={<SimpleInventoryTest />} />
 
-                  {/* Auth routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/login-success" element={<LoginSuccess />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/admin-dky" element={<RegisterAdmin />} />
-                  <Route path="/admin-list" element={<Listadmin />} />
+                      {/* Auth routes */}
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/login-success" element={<LoginSuccess />} />
+                      <Route path="/register" element={<Register />} />
+                      <Route path="/admin-dky" element={<RegisterAdmin />} />
+                      <Route path="/admin-list" element={<Listadmin />} />
 
-                  {/* Client Routes */}
-                  <Route path="/" element={<ClientLayout />}>
-                    <Route index element={<Home />} />
-                    <Route path="products" element={<ProductListClient />} />
-                    <Route path="product/:id" element={<ProductDetailClient />} />
-                    <Route path="cart" element={<Cart />} />
-                    <Route path="checkout" element={<Checkout />} />
-                    <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
-                    <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
-                    <Route path="checkout/review" element={<CheckoutReviewPage />} />
-                    <Route path="checkout/status" element={<CheckoutStatus />} />
-                    <Route path="checkout/success" element={<CheckoutSuccess />} />
-                    <Route path="checkout/failed" element={<CheckoutFailed />} />
-                    <Route path="about" element={<About />} />
-                    <Route path="contact" element={<Contact />} />
-                    <Route path="faq" element={<FAQ />} />
-                    <Route path="compare" element={<ProductComparison />} />
-                    <Route path="reviews" element={<ProductReviews />} />
-                    <Route path="blogs" element={<BlogList />} />
-                    <Route path="blog/:slug" element={<BlogDetail />} />
+                      {/* Shipper routes */}
+                      <Route path="/shipper/login" element={
+                        <ShipperProvider>
+                          <ShipperLogin />
+                        </ShipperProvider>
+                      } />
+                      <Route path="/shipper/register" element={
+                        <ShipperProvider>
+                          <ShipperRegister />
+                        </ShipperProvider>
+                      } />
+                      <Route path="/shipper/dashboard" element={
+                        <ShipperProvider>
+                          <PrivateRouteShipper>
+                            <ShipperDashboard />
+                          </PrivateRouteShipper>
+                        </ShipperProvider>
+                      } />
+                      <Route path="/shipper/order/:orderId" element={
+                        <ShipperProvider>
+                          <PrivateRouteShipper>
+                            <ShipperOrderDetail />
+                          </PrivateRouteShipper>
+                        </ShipperProvider>
+                      } />
 
-                    {/* Profile nested routes */}
-                    <Route path="profile" element={<ProfileLayout />}>
-                      <Route index element={<PersonalInfo />} />
-                      <Route path="personal-info" element={<PersonalInfo />} />
-                      <Route path="change-password" element={<ChangePassword />} />
-                      <Route path="addresses" element={<Addresses />} />
-                      <Route path="orders" element={<Orders />} />
-                      <Route path="orders/:id" element={<OrderDetailProfile />} />
-                      <Route path="wishlist" element={<Wishlist />} />
-                      <Route path="notifications" element={<Notifications />} />
-                    </Route>
-                  </Route>
+                      {/* Client Routes */}
+                      <Route path="/" element={<ClientLayout />}>
+                        <Route index element={<Home />} />
+                        <Route path="products" element={<ProductListClient />} />
+                        <Route path="product/:id" element={<ProductDetailClient />} />
+                        <Route path="cart" element={<Cart />} />
+                        <Route path="checkout" element={<Checkout />} />
+                        <Route path="checkout/shipping" element={<CheckoutShippingPage />} />
+                        <Route path="checkout/payment" element={<CheckoutPaymentPage />} />
+                        <Route path="checkout/review" element={<CheckoutReviewPage />} />
+                        <Route path="checkout/status" element={<CheckoutStatus />} />
+                        <Route path="checkout/success" element={<CheckoutSuccess />} />
+                        <Route path="checkout/failed" element={<CheckoutFailed />} />
+                        <Route path="about" element={<About />} />
+                        <Route path="contact" element={<Contact />} />
+                        <Route path="faq" element={<FAQ />} />
+                        <Route path="compare" element={<ProductComparison />} />
+                        <Route path="reviews" element={<ProductReviews />} />
+                        <Route path="blogs" element={<BlogList />} />
+                        <Route path="blog/:slug" element={<BlogDetail />} />
 
-                  {/* Admin Routes */}
-                  <Route
-                    path="/admin"
-                    element={<PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>}
-                  >
-                    <Route index element={<Dashboard />} />
-                    <Route path="users" element={<UserList />} />
-                    <Route path="users/edit/:id" element={<UserEdit />} />
-                    <Route path="users/:id" element={<UserDetail />} />
-                    <Route path="users/admin-list" element={<Listadmin />} />
-                    <Route path="products" element={<ProductList />} />
-                    <Route path="products/add" element={<ProductAdd />} />
-                    <Route path="products/detail/:id" element={<ProductDetail />} />
-                    <Route path="products/edit/:id" element={<ProductEdit />} />
-                    <Route path="variants" element={<VariantList />} />
-                    <Route path="variants/add" element={<VariantAdd />} />
-                    <Route path="variants/edit/:id" element={<VariantEdit />} />
-                    <Route path="variants/detail/:id" element={<VariantDetail />} />
-                    <Route path="categories" element={<CategoryList />} />
-                    <Route path="categories/add" element={<CategoryAdd />} />
-                    <Route path="categories/edit/:id" element={<CategoryEdit />} />
-                    <Route path="categories/:id" element={<CategoryDetail />} />
-                    <Route path="orders" element={<OrderList />} />
-                    <Route path="orders/:id" element={<OrderDetail />} />
-                    <Route path="brands" element={<BrandList />} />
-                    <Route path="banners" element={<BannerList />} />
-                    <Route path="banners/add" element={<BannerAdd />} />
-                    <Route path="banners/edit/:id" element={<BannerEdit />} />
-                    <Route path="activities" element={<Activity />} />
-                    <Route path="ratings" element={<RatingList />} />
-                    <Route path="ratings/:id" element={<RatingDetail />} />
-                    <Route path="vouchers" element={<VoucherList />} />
-                    <Route path="vouchers/add" element={<VoucherAdd />} />
-                    <Route path="vouchers/edit/:id" element={<VoucherEdit />} />
-                    <Route path="coupons" element={<CouponList />} />
-                    <Route path="coupons/add" element={<CouponAdd />} />
-                    <Route path="coupons/edit/:id" element={<CouponEdit />} />
-                    <Route path="blogs" element={<BlogPage />} />
-                    <Route path="chat" element={<ChatPage />} />
-                    <Route path="detailed-stats" element={<DetailedStats />} />
-                  </Route>
-                </Routes>
+                        {/* Profile nested routes */}
+                        <Route path="profile" element={<ProfileLayout />}>
+                          <Route index element={<PersonalInfo />} />
+                          <Route path="personal-info" element={<PersonalInfo />} />
+                          <Route path="change-password" element={<ChangePassword />} />
+                          <Route path="addresses" element={<Addresses />} />
+                          <Route path="orders" element={<Orders />} />
+                          <Route path="orders/:id" element={<OrderDetailProfile />} />
+                          <Route path="wishlist" element={<Wishlist />} />
+                          <Route path="notifications" element={<Notifications />} />
+                        </Route>
+                      </Route>
 
-                {/* Global Components */}
-                <PromotionBanner />
-                <Toaster />
+                      {/* Admin Routes */}
+                      <Route
+                        path="/admin"
+                        element={<PrivateRouteAdmin><AdminLayout /></PrivateRouteAdmin>}
+                      >
+                        <Route index element={<Dashboard />} />
+                        <Route path="users" element={<UserList />} />
+                        <Route path="users/edit/:id" element={<UserEdit />} />
+                        <Route path="users/:id" element={<UserDetail />} />
+                        <Route path="users/admin-list" element={<Listadmin />} />
+                        <Route path="products" element={<ProductList />} />
+                        <Route path="products/add" element={<ProductAdd />} />
+                        <Route path="products/detail/:id" element={<ProductDetail />} />
+                        <Route path="products/edit/:id" element={<ProductEdit />} />
+                        <Route path="variants" element={<VariantList />} />
+                        <Route path="variants/add" element={<VariantAdd />} />
+                        <Route path="variants/edit/:id" element={<VariantEdit />} />
+                        <Route path="variants/detail/:id" element={<VariantDetail />} />
+                        <Route path="categories" element={<CategoryList />} />
+                        <Route path="categories/add" element={<CategoryAdd />} />
+                        <Route path="categories/edit/:id" element={<CategoryEdit />} />
+                        <Route path="categories/:id" element={<CategoryDetail />} />
+                        <Route path="orders" element={<OrderList />} />
+                        <Route path="orders/:id" element={<OrderDetail />} />
+                        <Route path="brands" element={<BrandList />} />
+                        <Route path="banners" element={<BannerList />} />
+                        <Route path="banners/add" element={<BannerAdd />} />
+                        <Route path="banners/edit/:id" element={<BannerEdit />} />
+                        <Route path="activities" element={<Activity />} />
+                        <Route path="ratings" element={<RatingList />} />
+                        <Route path="ratings/:id" element={<RatingDetail />} />
+                        <Route path="vouchers" element={<VoucherList />} />
+                        <Route path="vouchers/add" element={<VoucherAdd />} />
+                        <Route path="vouchers/edit/:id" element={<VoucherEdit />} />
+                        <Route path="coupons" element={<CouponList />} />
+                        <Route path="coupons/add" element={<CouponAdd />} />
+                        <Route path="coupons/edit/:id" element={<CouponEdit />} />
+                        <Route path="blogs" element={<BlogPage />} />
+                        <Route path="chat" element={<ChatPage />} />
+                        <Route path="detailed-stats" element={<DetailedStats />} />
+                        <Route path="shipper" element={<ShipperManagement />} />
+                      </Route>
+                    </Routes>
+
+                    {/* Global Components */}
+                    <PromotionBanner />
+                    <Toaster />
+                  </CheckoutProvider>
                 </ChatProvider>
               </WishlistProvider>
             </CartProvider>

@@ -2,8 +2,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
+import { useCheckout } from "../../contexts/CheckoutContext";
 import { useToast } from "../../components/client/ToastContainer";
 import { getTaxConfig } from "../../services/cartApi";
+import { useVoucher } from "../../hooks/useVoucher";
+import VoucherDisplay from "../../components/client/VoucherDisplay";
 import ScrollToTop from "../../components/ScrollToTop";
 import CheckoutPaymentMethod from "./CheckoutPaymentMethod";
 
@@ -32,10 +35,13 @@ const CheckoutPaymentPage: React.FC = () => {
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [voucherCode, setVoucherCode] = useState("");
 
   const { state: cartState } = useCart();
+  const { voucher, revalidateVoucher } = useCheckout();
+  const { applyVoucher, removeVoucher, isValidating, isVoucherValid, validationMessage } = useVoucher();
   const navigate = useNavigate();
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
 
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
@@ -89,9 +95,9 @@ const CheckoutPaymentPage: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('orderId');
     const retry = urlParams.get('retry');
-    
+
     console.log("🔍 CheckoutPaymentPage URL params:", { orderId, retry });
-    
+
     if (retry === 'true' && orderId) {
       console.log("🔄 Retry payment detected, calling handleRetryPayment");
       // Xử lý retry payment cho MoMo
@@ -109,7 +115,14 @@ const CheckoutPaymentPage: React.FC = () => {
       // Nếu không có thông tin shipping và không có sản phẩm mua ngay, quay về trang shipping
       navigate('/checkout/shipping');
     }
-    
+
+    // Load voucher từ localStorage và revalidate
+    if (voucher) {
+      setVoucherCode(voucher.code);
+      // Revalidate voucher với giá trị đơn hàng hiện tại
+      revalidateVoucher(subtotal);
+    }
+
     // Kiểm tra nếu không có sản phẩm trong giỏ hàng và không có sản phẩm mua ngay, redirect về Cart
     if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
       navigate('/cart');
@@ -119,17 +132,17 @@ const CheckoutPaymentPage: React.FC = () => {
   const handleRetryPayment = async (orderId: string) => {
     try {
       console.log('🔄 Retrying MoMo payment for order:', orderId);
-      
+
       // Lấy thông tin đơn hàng từ backend
       const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:8000/api/order/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch order details');
       }
-      
+
       const order = await response.json();
       console.log('📋 Order details for retry:', {
         orderId: order._id,
@@ -139,25 +152,25 @@ const CheckoutPaymentPage: React.FC = () => {
         isPaid: order.isPaid,
         totalPrice: order.totalPrice
       });
-      
+
       // Kiểm tra nếu đơn hàng đã thanh toán thành công
       if (order.isPaid && order.paymentStatus === 'paid') {
         console.log('✅ Order already paid, redirecting to success page');
         navigate(`/checkout/success?orderId=${orderId}&paymentMethod=${order.paymentMethod}`);
         return;
       }
-      
+
       // Kiểm tra nếu đơn hàng đã thất bại
       if (order.paymentStatus === 'failed') {
         console.log('❌ Order payment failed, redirecting to failed page');
         navigate(`/checkout/failed?orderId=${orderId}&paymentMethod=${order.paymentMethod}&error=payment_failed`);
         return;
       }
-      
+
       // Nếu đơn hàng đang chờ thanh toán, tạo lại payment MoMo
       if (order.status === 'draft' && order.paymentStatus === 'awaiting_payment' && order.paymentMethod === 'momo') {
         console.log('🔄 Creating new MoMo payment for retry');
-        
+
         const { createMomoPayment } = await import('../../services/orderApi');
         const momoRes = await createMomoPayment({
           amount: order.totalPrice,
@@ -185,7 +198,7 @@ const CheckoutPaymentPage: React.FC = () => {
           paymentMethod: order.paymentMethod
         });
       }
-      
+
     } catch (error) {
       console.error('❌ Error retrying payment:', error);
       navigate(`/checkout/failed?orderId=${orderId}&error=retry_failed`);
@@ -225,6 +238,33 @@ const CheckoutPaymentPage: React.FC = () => {
     navigate('/checkout/shipping');
   };
 
+  // Xử lý voucher
+  const handleValidateVoucher = async () => {
+    if (!voucherCode.trim()) {
+      showError("Vui lòng nhập mã voucher");
+      return;
+    }
+
+    try {
+      const result = await applyVoucher(voucherCode);
+
+      if (result.valid) {
+        showSuccess("Voucher đã được áp dụng thành công!");
+      } else {
+        showError(result.message || "Voucher không hợp lệ");
+      }
+    } catch (error) {
+      console.error("Lỗi validate voucher:", error);
+      showError("Có lỗi xảy ra khi kiểm tra voucher");
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    removeVoucher();
+    setVoucherCode("");
+    showSuccess("Đã xóa voucher");
+  };
+
   // Tính toán giá từ selectedCartItems
   const subtotal = selectedCartItems.reduce((sum, item) => {
     const variant = item.variantInfo;
@@ -235,10 +275,15 @@ const CheckoutPaymentPage: React.FC = () => {
     const quantity = Number(item.quantity) || 0;
     return sum + (price * quantity);
   }, 0);
-  
+
+  const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
   const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const taxPrice = subtotal * taxRate;
-  const finalTotal = subtotal + shippingFee + taxPrice;
+  const taxPrice = (subtotal - voucherDiscount) * taxRate;
+  const finalTotal = subtotal - voucherDiscount + shippingFee + taxPrice;
+
+  // Kiểm tra giới hạn COD (100 triệu)
+  const COD_LIMIT = 100000000; // 100 triệu VND
+  const isCODAllowed = finalTotal <= COD_LIMIT;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -285,7 +330,7 @@ const CheckoutPaymentPage: React.FC = () => {
                   <div className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg"></div>
                 </div>
               </div>
-              
+
               <div className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-600 text-white shadow-xl scale-110">
@@ -300,7 +345,7 @@ const CheckoutPaymentPage: React.FC = () => {
                   <div className="h-2 rounded-full bg-gray-200"></div>
                 </div>
               </div>
-              
+
               <div className="flex items-center flex-1">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center w-16 h-16 rounded-full border-4 bg-white border-gray-300 text-gray-400 shadow-md">
@@ -329,8 +374,47 @@ const CheckoutPaymentPage: React.FC = () => {
                 </h2>
                 <p className="text-blue-100">Chọn cách thanh toán phù hợp và an toàn</p>
               </div>
-              
+
               <div className="p-8">
+                {/* Voucher Section */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                    <span className="mr-2">🎫</span>
+                    Mã giảm giá
+                  </h3>
+
+                  {voucher ? (
+                    // Display applied voucher
+                    <VoucherDisplay
+                      voucher={voucher}
+                      onRemove={handleRemoveVoucher}
+                      showRemoveButton={true}
+                      className="mb-4"
+                    />
+                  ) : (
+                    // Voucher input form
+                    <div className="bg-gray-50 border-2 border-gray-200 rounded-xl p-4">
+                      <div className="flex space-x-3">
+                        <input
+                          type="text"
+                          placeholder="Nhập mã giảm giá"
+                          value={voucherCode}
+                          onChange={(e) => setVoucherCode(e.target.value)}
+                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={isValidating}
+                        />
+                        <button
+                          onClick={handleValidateVoucher}
+                          disabled={!voucherCode.trim() || isValidating}
+                          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-semibold"
+                        >
+                          {isValidating ? 'Đang kiểm tra...' : 'Áp dụng'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <CheckoutPaymentMethod
                   formData={formData}
                   setFormData={setFormData}
@@ -344,6 +428,8 @@ const CheckoutPaymentPage: React.FC = () => {
                   setShowNewCardForm={setShowNewCardForm}
                   showNewWalletForm={showNewWalletForm}
                   setShowNewWalletForm={setShowNewWalletForm}
+                  isCODAllowed={isCODAllowed}
+                  finalTotal={finalTotal}
                 />
               </div>
             </div>
@@ -380,11 +466,10 @@ const CheckoutPaymentPage: React.FC = () => {
                     </div>
                   </div>
                 </button>
-                
+
                 {/* Collapsible Content */}
-                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                  isOrderSummaryOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
-                }`}>
+                <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isOrderSummaryOpen ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
                   <div className="p-6">
                     {/* Order Items Preview - Compact */}
                     <div className="mb-6">
@@ -472,11 +557,17 @@ const CheckoutPaymentPage: React.FC = () => {
                             {shippingFee === 0 ? "Miễn phí" : formatPrice(shippingFee)}
                           </span>
                         </div>
+                        {voucherDiscount > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span className="text-green-700 text-sm">Giảm giá voucher:</span>
+                            <span className="font-semibold text-green-600">-{formatPrice(voucherDiscount)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center py-2 border-b border-gray-200">
                           <span className="text-gray-700 text-sm">Thuế VAT (8%):</span>
                           <span className="font-semibold text-gray-900">{formatPrice(taxPrice)}</span>
                         </div>
-                        
+
                         <div className="pt-3">
                           <div className="flex justify-between items-center">
                             <span className="text-lg font-bold text-gray-900">Tổng cộng:</span>
@@ -497,16 +588,16 @@ const CheckoutPaymentPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - cartState.total)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
-                              <div 
+                              <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((cartState.total / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(cartState.total)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
                             </p>
                           </div>
                         </div>
