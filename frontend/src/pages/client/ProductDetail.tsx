@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   FaStar,
@@ -57,7 +57,6 @@ const ProductDetail: React.FC = () => {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
-  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [filter, setFilter] = useState({
@@ -174,38 +173,6 @@ const ProductDetail: React.FC = () => {
     fetchTrendingProducts();
   }, [relatedProducts]);
 
-  // Fetch recommended products (AI recommendations)
-  useEffect(() => {
-    const fetchRecommendedProducts = async () => {
-      try {
-        // Try to get user-specific recommendations first
-        const res = await axios.get("http://localhost:8000/api/recommendation", {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        setRecommendedProducts(res.data.slice(0, 4));
-      } catch (err) {
-        console.error("Error fetching recommended products:", err);
-        // Fallback: try favorites recommendations
-        try {
-          const favoritesRes = await axios.get("http://localhost:8000/api/product/recommendations/favorites", {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          });
-          setRecommendedProducts(favoritesRes.data.slice(0, 4));
-        } catch (favoritesErr) {
-          console.error("Error fetching favorites recommendations:", favoritesErr);
-          // Final fallback: use related products as recommended
-          if (relatedProducts.length > 0) {
-            setRecommendedProducts(relatedProducts.slice(0, 4));
-          }
-        }
-      }
-    };
-    fetchRecommendedProducts();
-  }, [relatedProducts]);
 
 
   const formatPrice = (price: number) => {
@@ -602,7 +569,7 @@ const ProductDetail: React.FC = () => {
                               // Khi hover vào thumbnail, chuyển sang ảnh đó
                               setSelectedImage(index);
                             }}
-                            className={`flex-shrink-0 w-20 h-20 rounded-lg border-2 transition-all duration-200 overflow-hidden ${
+                            className={`flex-shrink-0 w-28 h-28 rounded-lg border-2 transition-all duration-200 overflow-hidden ${
                               selectedImage === index
                                 ? "border-red-500"
                                 : "border-gray-200 hover:border-gray-300"
@@ -616,7 +583,7 @@ const ProductDetail: React.FC = () => {
                           </button>
                         ))
                       ) : (
-                        <div className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-gray-100">
+                        <div className="flex-shrink-0 w-28 h-28 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-gray-100">
                           <div className="text-center text-gray-500">
                             <div className="text-sm">📷</div>
                             <div className="text-xs">No images</div>
@@ -627,7 +594,7 @@ const ProductDetail: React.FC = () => {
                         
                     {/* Right Navigation Arrow for Thumbnails */}
                     {allImages.length > 4 && (
-                      <button className="absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-16 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-lg rounded-l transition-all duration-200">
+                      <button className="absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-24 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-lg rounded-l transition-all duration-200">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
@@ -1011,194 +978,338 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Featured Products Section */}
-        {featuredProducts && featuredProducts.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Sản phẩm nổi bật
-              </h2>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Hot</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProducts.map((featuredProduct) => (
-                <ProductCard
-                  key={featuredProduct._id || featuredProduct.id}
-                  product={mapProductData(featuredProduct)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+         {/* Main Content Grid */}
+         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-8">
+           {/* Left Column - Reviews, Details, FAQ, Description */}
+           <div className="lg:col-span-2 space-y-10">
+             {/* Đánh giá */}
+             <div>
+               <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                 Đánh giá sản phẩm
+                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
+               </h2>
+               <div className="flex flex-wrap gap-3 mb-6">
+                 <select
+                   value={filter.sort}
+                   onChange={(e) =>
+                     setFilter((f) => ({ ...f, sort: e.target.value }))
+                   }
+                   className="border p-2 rounded"
+                 >
+                   <option value="newest">Mới nhất</option>
+                   <option value="oldest">Cũ nhất</option>
+                 </select>
+                 <button
+                   onClick={() =>
+                     setFilter((f) => ({ ...f, hasImage: !f.hasImage }))
+                   }
+                   className={`flex items-center gap-1 border p-2 rounded ${
+                     filter.hasImage ? "bg-blue-500 text-white" : ""
+                   }`}
+                 >
+                   <ImageIcon size={16} /> Có ảnh
+                 </button>
+                 <select
+                   value={filter.star}
+                   onChange={(e) =>
+                     setFilter((f) => ({ ...f, star: Number(e.target.value) }))
+                   }
+                   className="border p-2 rounded"
+                 >
+                   <option value={0}>Tất cả sao</option>
+                   {[5, 4, 3, 2, 1].map((s) => (
+                     <option key={s} value={s}>
+                       {s} sao
+                     </option>
+                   ))}
+                 </select>
+               </div>
 
-        {/* Related Products Section */}
-        {relatedProducts && relatedProducts.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Sản phẩm liên quan
-              </h2>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Cùng danh mục</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => (
-                <ProductCard
-                  key={relatedProduct._id || relatedProduct.id}
-                  product={mapProductData(relatedProduct)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+               <div className="space-y-6">
+                 {ratings.length === 0 && <p>Chưa có đánh giá nào.</p>}
+                 {ratings.map((r) => (
+                   <div key={r._id} className="border-b pb-4">
+                     <div className="flex items-center gap-2">
+                       <span className="font-semibold">{r.userId?.name}</span>
+                       <span className="text-sm text-gray-500">
+                         {new Date(r.createdAt).toLocaleDateString()}
+                       </span>
+                     </div>
+                     <div className="flex items-center text-yellow-500">
+                       {Array.from({ length: 5 }).map((_, i) => (
+                         <Star
+                           key={i}
+                           size={16}
+                           fill={i < r.rating ? "currentColor" : "none"}
+                         />
+                       ))}
+                     </div>
+                     <p className="mt-2">{r.comment}</p>
+                     {r.images?.length > 0 && (
+                       <div className="flex gap-2 mt-2">
+                         {r.images.map((img, idx) => (
+                           <img
+                             key={idx}
+                             src={img}
+                             alt="review"
+                             className="w-20 h-20 object-cover rounded"
+                           />
+                         ))}
+                       </div>
+                     )}
+                     {r.reply && (
+                       <div className="mt-3 p-3 bg-gray-100 rounded">
+                         <span className="font-semibold text-sm text-gray-600">
+                           Phản hồi từ Admin:
+                         </span>
+                         <p className="text-sm">{r.reply}</p>
+                       </div>
+                     )}
+                   </div>
+                 ))}
+               </div>
+             </div>
 
-        {/* Trending Products Section */}
-        {trendingProducts && trendingProducts.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Sản phẩm đang hot
-              </h2>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-600">Trending</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trendingProducts.map((trendingProduct) => (
-                <ProductCard
-                  key={trendingProduct._id || trendingProduct.id}
-                  product={mapProductData(trendingProduct)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+             {/* Thông tin chi tiết sản phẩm */}
+             <div>
+               <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                 Thông tin chi tiết
+                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
+               </h2>
+               <div className="bg-white rounded-2xl shadow-lg p-6">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div className="space-y-4">
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Thương hiệu:</span>
+                       <span className="text-gray-900">{typeof product.brand === "object" ? product.brand.name : product.brand}</span>
+                     </div>
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Danh mục:</span>
+                       <span className="text-gray-900">{typeof product.category === "object" ? product.category.name : product.category}</span>
+                     </div>
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">SKU:</span>
+                       <span className="text-gray-900">{product.sku || 'N/A'}</span>
+                     </div>
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Trọng lượng:</span>
+                       <span className="text-gray-900">{product.weight ? `${product.weight}g` : 'N/A'}</span>
+                     </div>
+                   </div>
+                   <div className="space-y-4">
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Tình trạng:</span>
+                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                         {product.stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                       </span>
+                     </div>
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Đánh giá:</span>
+                       <div className="flex items-center space-x-1">
+                         <span className="text-yellow-500">★</span>
+                         <span className="text-gray-900">{product.rating || 0}/5</span>
+                         <span className="text-gray-500">({product.reviewCount || 0} đánh giá)</span>
+                       </div>
+                     </div>
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Đã bán:</span>
+                       <span className="text-gray-900">{product.soldCount || 0}+ sản phẩm</span>
+                     </div>
+                     <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Ngày tạo:</span>
+                       <span className="text-gray-900">{new Date(product.createdAt).toLocaleDateString('vi-VN')}</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
 
-        {/* Recommended Products Section */}
-        {recommendedProducts && recommendedProducts.length > 0 && (
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Có thể bạn cũng thích
-              </h2>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Gợi ý</span>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {recommendedProducts.map((recommendedProduct) => (
-                <ProductCard
-                  key={recommendedProduct._id || recommendedProduct.id}
-                  product={mapProductData(recommendedProduct)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+             {/* FAQ Section */}
+             <div>
+               <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                 Câu hỏi thường gặp
+                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
+               </h2>
+               <div className="bg-white rounded-2xl shadow-lg p-6">
+                 <div className="space-y-4">
+                   <div className="border border-gray-200 rounded-lg p-4">
+                     <h3 className="font-semibold text-gray-900 mb-2">Sản phẩm có chính hãng không?</h3>
+                     <p className="text-gray-600 text-sm">Tất cả sản phẩm đều được nhập khẩu chính hãng với đầy đủ giấy tờ chứng nhận chất lượng.</p>
+                   </div>
+                   <div className="border border-gray-200 rounded-lg p-4">
+                     <h3 className="font-semibold text-gray-900 mb-2">Thời gian giao hàng bao lâu?</h3>
+                     <p className="text-gray-600 text-sm">Chúng tôi cam kết giao hàng trong vòng 2-4 ngày làm việc tại Hà Nội và TP.HCM, 3-7 ngày tại các tỉnh thành khác.</p>
+                   </div>
+                   <div className="border border-gray-200 rounded-lg p-4">
+                     <h3 className="font-semibold text-gray-900 mb-2">Có được đổi trả không?</h3>
+                     <p className="text-gray-600 text-sm">Khách hàng có thể đổi trả sản phẩm trong vòng 15 ngày kể từ ngày nhận hàng nếu sản phẩm còn nguyên vẹn.</p>
+                   </div>
+                   <div className="border border-gray-200 rounded-lg p-4">
+                     <h3 className="font-semibold text-gray-900 mb-2">Có bảo hành không?</h3>
+                     <p className="text-gray-600 text-sm">Tất cả sản phẩm đều có bảo hành chính hãng theo tiêu chuẩn của nhà sản xuất.</p>
+                   </div>
+                 </div>
+               </div>
+             </div>
 
-        {/* Đánh giá */}
-        <div className="mt-10">
-          <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
-            Đánh giá sản phẩm
-            <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
-          </h2>
-          <div className="flex flex-wrap gap-3 mb-6">
-            <select
-              value={filter.sort}
-              onChange={(e) =>
-                setFilter((f) => ({ ...f, sort: e.target.value }))
-              }
-              className="border p-2 rounded"
-            >
-              <option value="newest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-            </select>
-            <button
-              onClick={() =>
-                setFilter((f) => ({ ...f, hasImage: !f.hasImage }))
-              }
-              className={`flex items-center gap-1 border p-2 rounded ${
-                filter.hasImage ? "bg-blue-500 text-white" : ""
-              }`}
-            >
-              <ImageIcon size={16} /> Có ảnh
-            </button>
-            <select
-              value={filter.star}
-              onChange={(e) =>
-                setFilter((f) => ({ ...f, star: Number(e.target.value) }))
-              }
-              className="border p-2 rounded"
-            >
-              <option value={0}>Tất cả sao</option>
-              {[5, 4, 3, 2, 1].map((s) => (
-                <option key={s} value={s}>
-                  {s} sao
-                </option>
-              ))}
-            </select>
-          </div>
+             {/* Mô tả */}
+             <div>
+               <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                 Mô tả sản phẩm
+                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
+               </h2>
+               <div className="bg-white rounded-2xl shadow-lg p-6">
+                 <div className="prose max-w-none text-gray-700 leading-relaxed">
+                   {product.description || (
+                     <div className="text-center py-8 text-gray-500">
+                       <div className="text-4xl mb-4">📝</div>
+                       <p>Chưa có mô tả chi tiết cho sản phẩm này.</p>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             </div>
+           </div>
 
-          <div className="space-y-6">
-            {ratings.length === 0 && <p>Chưa có đánh giá nào.</p>}
-            {ratings.map((r) => (
-              <div key={r._id} className="border-b pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{r.userId?.name}</span>
-                  <span className="text-sm text-gray-500">
-                    {new Date(r.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex items-center text-yellow-500">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      size={16}
-                      fill={i < r.rating ? "currentColor" : "none"}
-                    />
-                  ))}
-                </div>
-                <p className="mt-2">{r.comment}</p>
-                {r.images?.length > 0 && (
-                  <div className="flex gap-2 mt-2">
-                    {r.images.map((img, idx) => (
-                      <img
-                        key={idx}
-                        src={img}
-                        alt="review"
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                    ))}
-                  </div>
-                )}
-                {r.reply && (
-                  <div className="mt-3 p-3 bg-gray-100 rounded">
-                    <span className="font-semibold text-sm text-gray-600">
-                      Phản hồi từ Admin:
-                    </span>
-                    <p className="text-sm">{r.reply}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+           {/* Right Column - Featured Products */}
+           <div className="lg:col-span-1">
+             {featuredProducts && featuredProducts.length > 0 && (
+               <div className="sticky top-8">
+                 <div className="flex items-center justify-between mb-4">
+                   <h2 className="text-lg font-bold text-gray-900">
+                     Sản phẩm nổi bật
+                   </h2>
+                   <div className="flex items-center space-x-2">
+                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                     <span className="text-xs text-gray-600">Hot</span>
+                   </div>
+                 </div>
+                 <div className="space-y-3">
+                   {featuredProducts.slice(0, 4).map((featuredProduct) => (
+                     <div 
+                       key={featuredProduct._id || featuredProduct.id} 
+                       className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md hover:border-red-300 transition-all cursor-pointer group"
+                       onClick={() => navigate(`/product/${featuredProduct._id || featuredProduct.id}`)}
+                     >
+                       <div className="flex space-x-3">
+                         {/* Product Image */}
+                         <div className="flex-shrink-0">
+                           <img
+                             src={mapProductData(featuredProduct).image}
+                             alt={mapProductData(featuredProduct).name}
+                             className="w-16 h-16 object-cover rounded-lg group-hover:scale-105 transition-transform duration-200"
+                           />
+                         </div>
+                         
+                         {/* Product Info */}
+                         <div className="flex-1 min-w-0">
+                           <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1 group-hover:text-red-600 transition-colors">
+                             {mapProductData(featuredProduct).name}
+                           </h3>
+                           
+                           {/* Rating */}
+                           <div className="flex items-center space-x-1 mb-2">
+                             <div className="flex items-center">
+                               {[...Array(5)].map((_, index) => (
+                                 <FaStar
+                                   key={index}
+                                   className={`w-3 h-3 ${
+                                     index < Math.floor(mapProductData(featuredProduct).rating || 0)
+                                       ? "text-yellow-400"
+                                       : "text-gray-300"
+                                   }`}
+                                 />
+                               ))}
+                             </div>
+                             <span className="text-xs text-gray-500">
+                               ({mapProductData(featuredProduct).reviewCount || 0})
+                             </span>
+                           </div>
+                           
+                           {/* Price */}
+                           <div className="flex items-center space-x-2">
+                             <span className="text-sm font-bold text-red-600">
+                               {formatPrice(mapProductData(featuredProduct).price)}
+                             </span>
+                             {mapProductData(featuredProduct).originalPrice && (
+                               <span className="text-xs text-gray-500 line-through">
+                                 {formatPrice(mapProductData(featuredProduct).originalPrice)}
+                               </span>
+                             )}
+                           </div>
+                           
+                           {/* Stock Status */}
+                           <div className="mt-1">
+                             <span className={`text-xs px-2 py-1 rounded-full ${
+                               mapProductData(featuredProduct).stock > 0 
+                                 ? 'bg-green-100 text-green-800' 
+                                 : 'bg-red-100 text-red-800'
+                             }`}>
+                               {mapProductData(featuredProduct).stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                             </span>
+                           </div>
+                           
+                           {/* Hover indicator */}
+                           <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <span className="text-xs text-red-600 font-medium">
+                               Xem chi tiết →
+                             </span>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </div>
+         </div>
 
-        {/* Mô tả */}
-        <div className="mt-10">
-          <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
-            Mô tả sản phẩm
-            <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
-          </h2>
-          <div className="prose max-w-none">{product.description}</div>
-        </div>
+         {/* Related Products Section */}
+         {relatedProducts && relatedProducts.length > 0 && (
+           <div className="mt-12">
+             <div className="flex items-center justify-between mb-8">
+               <h2 className="text-2xl font-bold text-gray-900">
+                 Sản phẩm liên quan
+               </h2>
+               <div className="flex items-center space-x-2">
+                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                 <span className="text-sm text-gray-600">Cùng danh mục</span>
+               </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+               {relatedProducts.map((relatedProduct) => (
+                 <ProductCard
+                   key={relatedProduct._id || relatedProduct.id}
+                   product={mapProductData(relatedProduct)}
+                 />
+               ))}
+             </div>
+           </div>
+         )}
+
+         {/* Trending Products Section */}
+         {trendingProducts && trendingProducts.length > 0 && (
+           <div className="mt-12">
+             <div className="flex items-center justify-between mb-8">
+               <h2 className="text-2xl font-bold text-gray-900">
+                 Sản phẩm đang hot
+               </h2>
+               <div className="flex items-center space-x-2">
+                 <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                 <span className="text-sm text-gray-600">Trending</span>
+               </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+               {trendingProducts.map((trendingProduct) => (
+                 <ProductCard
+                   key={trendingProduct._id || trendingProduct.id}
+                   product={mapProductData(trendingProduct)}
+                 />
+               ))}
+             </div>
+           </div>
+         )}
       </div>
 
     </div>
