@@ -13,7 +13,7 @@ const BrandList: React.FC = () => {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [messageApi, contextHolder] = message.useMessage();
-  const [newBrand, setNewBrand] = useState<Partial<Brand>>({
+  const [newBrand] = useState<Partial<Brand>>({
     name: "",
     description: "",
     logo: "",
@@ -34,7 +34,8 @@ const BrandList: React.FC = () => {
     };
   };
 
-  const handleLogoUpload = async (fileList: UploadFile[]) => {
+  const handleLogoUpload = async (info: any) => {
+    const fileList = info.fileList || [];
     setLogoFileList(fileList);
     
     if (fileList.length > 0) {
@@ -56,7 +57,7 @@ const BrandList: React.FC = () => {
             const data = await response.json();
             if (data?.url) {
               const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
-              const updatedFileList = fileList.map((file: any, index: number) => {
+              const updatedFileList = (fileList || []).map((file: any, index: number) => {
                 if (index === fileList.length - 1) {
                   return {
                     ...file,
@@ -82,7 +83,8 @@ const BrandList: React.FC = () => {
     }
   };
 
-  const handleEditLogoUpload = async (fileList: UploadFile[]) => {
+  const handleEditLogoUpload = async (info: any) => {
+    const fileList = info.fileList || [];
     setEditLogoFileList(fileList);
     
     if (fileList.length > 0) {
@@ -104,7 +106,7 @@ const BrandList: React.FC = () => {
             const data = await response.json();
             if (data?.url) {
               const fullUrl = data.url.startsWith('http') ? data.url : `http://localhost:8000${data.url}`;
-              const updatedFileList = fileList.map((file: any, index: number) => {
+              const updatedFileList = (fileList || []).map((file: any, index: number) => {
                 if (index === fileList.length - 1) {
                   return {
                     ...file,
@@ -347,7 +349,7 @@ const BrandList: React.FC = () => {
                 multiple={false}
                 showUploadList={false}
               >
-                {logoFileList.length < 1 && (
+                {(logoFileList || []).length < 1 && (
                   <div className="flex flex-col items-center justify-center h-full">
                     <PlusOutlined className="text-2xl text-gray-400 mb-2" />
                     <div className="text-sm text-gray-500">Upload Logo</div>
@@ -357,7 +359,7 @@ const BrandList: React.FC = () => {
               
               {/* Hiển thị preview logo đã upload */}
               <div className="flex gap-3 flex-wrap mt-3">
-                {logoFileList.length > 0 && logoFileList.map((file, idx) => (
+                {(logoFileList || []).length > 0 && (logoFileList || []).map((file, idx) => (
                   <div key={idx} className="relative group">
                     <Image
                       src={file.url || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : "")}
@@ -372,7 +374,7 @@ const BrandList: React.FC = () => {
                       size="small"
                       className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => {
-                        const newFileList = logoFileList.filter((_, index) => index !== idx);
+                        const newFileList = (logoFileList || []).filter((_, index) => index !== idx);
                         setLogoFileList(newFileList);
                         form.setFieldsValue({ logo: "" });
                       }}
@@ -433,7 +435,7 @@ const BrandList: React.FC = () => {
                 multiple={false}
                 showUploadList={false}
               >
-                {editLogoFileList.length < 1 && (
+                {(editLogoFileList || []).length < 1 && (
                   <div className="flex flex-col items-center justify-center h-full">
                     <PlusOutlined className="text-2xl text-gray-400 mb-2" />
                     <div className="text-sm text-gray-500">Upload Logo</div>
@@ -443,7 +445,7 @@ const BrandList: React.FC = () => {
               
               {/* Hiển thị preview logo đã upload */}
               <div className="flex gap-3 flex-wrap mt-3">
-                {editLogoFileList.length > 0 && editLogoFileList.map((file, idx) => (
+                {(editLogoFileList || []).length > 0 && (editLogoFileList || []).map((file, idx) => (
                   <div key={idx} className="relative group">
                     <Image
                       src={file.url || (file.originFileObj ? URL.createObjectURL(file.originFileObj) : "")}
@@ -458,7 +460,7 @@ const BrandList: React.FC = () => {
                       size="small"
                       className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => {
-                        const newFileList = editLogoFileList.filter((_, index) => index !== idx);
+                        const newFileList = (editLogoFileList || []).filter((_, index) => index !== idx);
                         setEditLogoFileList(newFileList);
                         editForm.setFieldsValue({ logo: "" });
                       }}
