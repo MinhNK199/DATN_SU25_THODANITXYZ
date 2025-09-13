@@ -525,7 +525,7 @@ const Orders = () => {
                         </h4>
                         {(item.variantInfo && item.variantInfo.name) || (item.variant && item.variant.name) ? (
                           <p className="text-sm text-blue-600 font-medium">
-                            Phân loại: {item.variantInfo?.name || item.variant?.name}
+                            Chi tiết sản phẩm: {item.variantInfo?.name || item.variant?.name}
                           </p>
                         ) : null}
                         <p className="text-sm text-gray-600">

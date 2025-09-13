@@ -498,7 +498,7 @@ const CheckoutReviewPage: React.FC = () => {
                                             src={displayImage} 
                                             alt={item.product?.name || 'Sản phẩm'}
                                             className="w-full h-full object-cover"
-                                            title={variant?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
+                                            title={variant?.images?.[0] ? 'Ảnh sản phẩm' : 'Ảnh sản phẩm'}
                                           />
                                         ) : (
                                           <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
@@ -513,7 +513,7 @@ const CheckoutReviewPage: React.FC = () => {
                                       </p>
                                       {item.variantInfo && (
                                         <p className="text-xs text-gray-500 mb-1">
-                                          {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
+                                          {item.variantInfo.color?.name || item.variantInfo.name || 'Chi tiết sản phẩm'}
                                           {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
                                         </p>
                                       )}

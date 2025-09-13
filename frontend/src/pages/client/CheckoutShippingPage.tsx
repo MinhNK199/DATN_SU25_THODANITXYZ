@@ -336,7 +336,7 @@ const CheckoutShippingPage: React.FC = () => {
                               </p>
                               {item.variantInfo && (
                                 <p className="text-xs text-gray-500 mb-1">
-                                  {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
+                                  {item.variantInfo.color?.name || item.variantInfo.name || 'Chi tiết sản phẩm'}
                                   {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
                                 </p>
                               )}

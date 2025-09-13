@@ -268,7 +268,7 @@ const OrderDetail: React.FC = () => {
           </Link>
           {(record.variantInfo && record.variantInfo.name) || (record.variant && record.variant.name) ? (
             <div className="text-sm text-gray-500 mt-1">
-              Phân loại: {record.variantInfo?.name || record.variant?.name}
+              Chi tiết sản phẩm: {record.variantInfo?.name || record.variant?.name}
             </div>
           ) : null}
         </div>

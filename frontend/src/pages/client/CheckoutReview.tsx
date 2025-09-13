@@ -94,14 +94,14 @@ const CheckoutReview: React.FC<Props> = ({
                         src={image} 
                         alt={p.name} 
                         className="w-full h-full object-cover"
-                        title={variant?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
+                        title={variant?.images?.[0] ? 'Ảnh sản phẩm' : 'Ảnh đại diện'}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-bold text-gray-900 mb-1 truncate">{p.name}</h4>
                       {variant && (
                         <p className="text-xs text-blue-600 font-medium mb-1">
-                          {variant.color?.name || variant.name || 'Màu sắc'}
+                          {variant.color?.name || variant.name || ' sản phẩm'}
                           {variant.size && ` - Size ${variant.size}`}
                         </p>
                       )}

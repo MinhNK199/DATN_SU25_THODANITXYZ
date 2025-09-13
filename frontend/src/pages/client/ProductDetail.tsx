@@ -187,7 +187,7 @@ const ProductDetail: React.FC = () => {
     
     // Bắt buộc chọn variant nếu sản phẩm có variants
     if (product.variants && product.variants.length > 0 && !selectedVariantId) {
-      toast.error("Vui lòng chọn màu sắc trước khi thêm vào giỏ hàng");
+       toast.error("Vui lòng chọn sản phẩm trước khi thêm vào giỏ hàng");
       return;
     }
     
@@ -208,7 +208,7 @@ const ProductDetail: React.FC = () => {
     
     // Bắt buộc chọn variant nếu sản phẩm có variants
     if (product.variants && product.variants.length > 0 && !selectedVariantId) {
-      toast.error("Vui lòng chọn màu sắc trước khi mua ngay");
+       toast.error("Vui lòng chọn sản phẩm trước khi mua ngay");
       return;
     }
     
@@ -292,6 +292,7 @@ const ProductDetail: React.FC = () => {
     originalPrice: product.salePrice ? product.price : undefined,
     image: product.images && product.images.length > 0 ? product.images[0] : "",
     brand: typeof product.brand === "object" ? product.brand?.name : product.brand,
+    category: typeof product.category === "object" ? product.category?.name : product.category,
     rating: product.averageRating || 0,
     reviewCount: product.numReviews || 0,
     discount: product.salePrice
@@ -817,7 +818,7 @@ const ProductDetail: React.FC = () => {
               {product?.variants && product.variants.length > 0 && (
                 <div className="space-y-3">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">MÀU SẮC</h3>
+                     <h3 className="text-sm font-medium text-gray-700 mb-3">CHI TIẾT SẢN PHẨM</h3>
                     <div className="flex flex-wrap gap-2">
                       {product.variants.map((variant: any, index: number) => (
                         <button
@@ -861,7 +862,7 @@ const ProductDetail: React.FC = () => {
                       <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <p className="text-sm text-yellow-700 flex items-center">
                           <span className="mr-1">⚠️</span>
-                          Vui lòng chọn màu sắc trước khi thêm vào giỏ hàng
+                           Vui lòng chọn sản phẩm trước khi thêm vào giỏ hàng
                         </p>
                       </div>
                     )}

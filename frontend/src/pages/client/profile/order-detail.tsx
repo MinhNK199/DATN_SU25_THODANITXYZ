@@ -435,7 +435,7 @@ const OrderDetail = () => {
                       <h3 className="font-medium text-gray-900">{item.name || 'Tên sản phẩm'}</h3>
                       {(item.variantInfo && item.variantInfo.name) || (item.variant && item.variant.name) ? (
                         <p className="text-sm text-blue-600 font-medium">
-                          Phân loại: {item.variantInfo?.name || item.variant?.name}
+                          Chi tiết sản phẩm: {item.variantInfo?.name || item.variant?.name}
                         </p>
                       ) : null}
                       <p className="text-sm text-gray-500">Số lượng: {item.quantity || 0}</p>

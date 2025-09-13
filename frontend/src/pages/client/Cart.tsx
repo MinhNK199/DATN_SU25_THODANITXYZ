@@ -485,7 +485,7 @@ const Cart: React.FC = () => {
                                   {item.variantInfo && item.variantInfo.name && item.variantInfo.name.trim() && (
                                     <div className="mt-1 flex items-center space-x-2">
                                       <span className="text-xs text-gray-600 font-medium">
-                                        {item.variantInfo.name}
+                                        Chi tiết: {item.variantInfo.name}
                                       </span>
                                       {/* Hiển thị preview ảnh variant nhỏ */}
                                       {item.variantInfo.images && item.variantInfo.images.length > 0 && (
@@ -504,7 +504,7 @@ const Cart: React.FC = () => {
                                       <span className="text-xs text-gray-600 font-medium">
                                         {(() => {
                                           const variant = (item.product as any).variants.find((v: any) => v._id.toString() === item.variantId?.toString());
-                                          return variant ? (variant.color?.name || variant.name || `Màu ${variant.color?.code || ''}`) : '';
+                                          return variant ? (variant.color?.name || variant.name || `Chi tiết ${variant.color?.code || ''}`) : '';
                                         })()}
                                       </span>
                                       {/* Hiển thị preview ảnh variant từ product.variants */}

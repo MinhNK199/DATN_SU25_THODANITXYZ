@@ -358,12 +358,12 @@ const CheckoutSuccess: React.FC = () => {
                       src={displayImage}
                       alt={item.name}
                       className="w-16 h-16 object-cover rounded-lg"
-                      title={item.variantInfo?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
+                      title={item.variantInfo?.images?.[0] ? 'Ảnh sản phẩm' : 'Ảnh sản phẩm'}
                     />
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{item.name}</h3>
                       {item.variantInfo && item.variantInfo.name && (
-                        <p className="text-sm text-blue-600 font-medium">Phân loại: {item.variantInfo.name}</p>
+                        <p className="text-sm text-blue-600 font-medium"> sản phẩm: {item.variantInfo.name}</p>
                       )}
                       <p className="text-sm text-gray-600">Số lượng: {item.quantity}</p>
                     </div>
