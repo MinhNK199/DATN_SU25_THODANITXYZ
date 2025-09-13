@@ -42,12 +42,9 @@ const CheckoutReviewPage: React.FC = () => {
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
     const buyNowProductData = localStorage.getItem('buyNowProduct');
-    console.log('🔍 BuyNowProduct from localStorage:', buyNowProductData);
-    
     if (buyNowProductData) {
       try {
         const product = JSON.parse(buyNowProductData);
-        console.log('🔍 Parsed buyNowProduct:', product);
         setSelectedItems(new Set([product._id]));
       } catch (error) {
         console.error('❌ Error parsing buyNowProduct:', error);
@@ -65,7 +62,6 @@ const CheckoutReviewPage: React.FC = () => {
       const buyNowData = localStorage.getItem('buyNowProduct');
       if (buyNowData) {
         const product = JSON.parse(buyNowData);
-        console.log('🔍 BuyNowProduct từ localStorage:', product);
         return product;
       }
     } catch (error) {
@@ -81,15 +77,6 @@ const CheckoutReviewPage: React.FC = () => {
       ? [buyNowProduct]
       : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
     
-    // Debug: Log thông tin để kiểm tra
-    console.log('🔍 CheckoutReview Debug:', {
-      buyNowProduct: buyNowProduct ? 'Có sản phẩm mua ngay' : 'Không có sản phẩm mua ngay',
-      cartStateItems: cartState.items?.length || 0,
-      selectedItems: selectedItems.size,
-      selectedCartItems: items.length,
-      buyNowProductData: buyNowProduct,
-      localStorageData: localStorage.getItem('buyNowProduct')
-    });
     
     return items;
   }, [buyNowProduct, cartState.items, selectedItems]);
@@ -445,6 +432,7 @@ const CheckoutReviewPage: React.FC = () => {
                   cardInfo={cardInfo}
                   walletInfo={walletInfo}
                   bankTransferInfo={bankTransferInfo}
+                  selectedCartItems={selectedCartItems}
                 />
               </div>
             </div>
@@ -494,77 +482,75 @@ const CheckoutReviewPage: React.FC = () => {
                         Sản phẩm ({selectedCartItems.length})
                       </h4>
                       <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {(() => {
-                          console.log('🔍 Render check - selectedCartItems:', selectedCartItems);
-                          console.log('🔍 Render check - selectedCartItems.length:', selectedCartItems.length);
-                          console.log('🔍 Render check - selectedCartItems[0]:', selectedCartItems[0]);
-                          return selectedCartItems.length > 0;
-                        })() ? (
+                        {selectedCartItems.length > 0 ? (
                           <>
-                            {selectedCartItems.slice(0, 4).map((item, index) => (
-                              <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                                <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
-                                  {(() => {
-                                    const variant = item.variantInfo;
-                                    // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
-                                    const displayImage = variant?.images?.[0] || item.product.images?.[0];
-                                    console.log('🔍 Left side image debug:', {
-                                      itemName: item.product.name,
-                                      variantInfo: variant,
-                                      variantImages: variant?.images,
-                                      productImages: item.product.images,
-                                      displayImage: displayImage,
-                                      usingVariantImage: !!variant?.images?.[0],
-                                      variantId: item.variantId,
-                                      hasVariant: !!variant
-                                    });
-                                    return displayImage ? (
-                                      <img 
-                                        src={displayImage} 
-                                        alt={item.product.name}
-                                        className="w-full h-full object-cover"
-                                        title={variant?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                                        <span className="text-gray-500 text-xs">No Image</span>
+                            {selectedCartItems.slice(0, 4).map((item, index) => {
+                              try {
+                                return (
+                                  <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                                    <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
+                                      {(() => {
+                                        const variant = item.variantInfo;
+                                        // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
+                                        const displayImage = variant?.images?.[0] || item.product?.images?.[0];
+                                        return displayImage ? (
+                                          <img 
+                                            src={displayImage} 
+                                            alt={item.product?.name || 'Sản phẩm'}
+                                            className="w-full h-full object-cover"
+                                            title={variant?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                                            <span className="text-gray-500 text-xs">No Image</span>
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 truncate mb-1">
+                                        {item.product?.name || 'Tên sản phẩm'}
+                                      </p>
+                                      {item.variantInfo && (
+                                        <p className="text-xs text-gray-500 mb-1">
+                                          {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
+                                          {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-gray-600">
+                                        SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
+                                          const variant = item.variantInfo;
+                                          const displayPrice = variant ? 
+                                            (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                            (item.product?.salePrice && item.product?.salePrice < item.product?.price ? item.product?.salePrice : item.product?.price);
+                                          return formatPrice(displayPrice || 0);
+                                        })()}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm font-bold text-gray-900">
+                                        {(() => {
+                                          const variant = item.variantInfo;
+                                          const displayPrice = variant ? 
+                                            (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                            (item.product?.salePrice && item.product?.salePrice < item.product?.price ? item.product?.salePrice : item.product?.price);
+                                          return formatPrice((displayPrice || 0) * (item.quantity || 0));
+                                        })()}
                                       </div>
-                                    );
-                                  })()}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 truncate mb-1">
-                                    {item.product.name}
-                                  </p>
-                                  {item.variantInfo && (
-                                    <p className="text-xs text-gray-500 mb-1">
-                                      {item.variantInfo.color?.name || item.variantInfo.name || 'Màu sắc'}
-                                      {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
-                                    </p>
-                                  )}
-                                  <p className="text-xs text-gray-600">
-                                    SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
-                                      const variant = item.variantInfo;
-                                      const displayPrice = variant ? 
-                                        (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
-                                        (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
-                                      return formatPrice(displayPrice);
-                                    })()}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-sm font-bold text-gray-900">
-                                    {(() => {
-                                      const variant = item.variantInfo;
-                                      const displayPrice = variant ? 
-                                        (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
-                                        (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
-                                      return formatPrice(displayPrice * item.quantity);
-                                    })()}
+                                    </div>
                                   </div>
-                                </div>
-                              </div>
-                            ))}
+                                );
+                              } catch (error) {
+                                console.error('❌ Error rendering item:', error, item);
+                                return (
+                                  <div key={index} className="flex items-center space-x-3 p-3 bg-red-50 rounded-xl border border-red-200">
+                                    <div className="text-red-600 text-sm">
+                                      Lỗi hiển thị sản phẩm: {error.message}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            })}
                             {selectedCartItems.length > 4 && (
                               <div className="text-center py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                                 <span className="text-blue-700 font-semibold text-sm">

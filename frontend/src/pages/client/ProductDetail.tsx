@@ -217,6 +217,13 @@ const ProductDetail: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    
+    // Bắt buộc chọn variant nếu sản phẩm có variants
+    if (product.variants && product.variants.length > 0 && !selectedVariantId) {
+      toast.error("Vui lòng chọn màu sắc trước khi thêm vào giỏ hàng");
+      return;
+    }
+    
     try {
       const finalQuantity = selectedVariantId
         ? getVariantQuantity(selectedVariantId)
@@ -231,6 +238,12 @@ const ProductDetail: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!product) return;
+    
+    // Bắt buộc chọn variant nếu sản phẩm có variants
+    if (product.variants && product.variants.length > 0 && !selectedVariantId) {
+      toast.error("Vui lòng chọn màu sắc trước khi mua ngay");
+      return;
+    }
     
     try {
       const finalQuantity = selectedVariantId
@@ -876,6 +889,15 @@ const ProductDetail: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                    {/* Thông báo yêu cầu chọn variant */}
+                    {!selectedVariantId && (
+                      <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-700 flex items-center">
+                          <span className="mr-1">⚠️</span>
+                          Vui lòng chọn màu sắc trước khi thêm vào giỏ hàng
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -919,7 +941,7 @@ const ProductDetail: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleAddToCart}
-                    disabled={product.stock <= 0}
+                    disabled={product.stock <= 0 || (product.variants && product.variants.length > 0 && !selectedVariantId)}
                     className="flex-1 bg-white border-2 border-red-500 text-red-500 py-3 md:py-4 px-6 rounded-lg font-semibold hover:bg-red-50 disabled:bg-gray-100 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <FaShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
@@ -927,7 +949,7 @@ const ProductDetail: React.FC = () => {
                   </button>
                   <button 
                     onClick={handleBuyNow}
-                    disabled={product.stock <= 0}
+                    disabled={product.stock <= 0 || (product.variants && product.variants.length > 0 && !selectedVariantId)}
                     className="flex-1 bg-red-600 text-white py-3 md:py-4 px-6 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
                   >
                     Mua Ngay

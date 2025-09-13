@@ -8,6 +8,7 @@ interface Props {
   cardInfo: { number: string; name: string; expiry: string; cvv: string };
   walletInfo: { type: string; phone: string };
   bankTransferInfo: { transactionId: string };
+  selectedCartItems?: any[];
 }
 
 const CheckoutReview: React.FC<Props> = ({
@@ -16,6 +17,7 @@ const CheckoutReview: React.FC<Props> = ({
   cardInfo,
   walletInfo,
   bankTransferInfo,
+  selectedCartItems,
 }) => {
   const { state: cartState } = useCart();
 
@@ -65,19 +67,26 @@ const CheckoutReview: React.FC<Props> = ({
         </div>
         
         <div className="p-6">
-          {cartState.items.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <FaCheck className="w-6 h-6 text-gray-400" />
-              </div>
-              <p className="text-gray-500">Không có sản phẩm nào trong đơn hàng.</p>
+        {(selectedCartItems || cartState.items).length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FaCheck className="w-6 h-6 text-gray-400" />
             </div>
-          ) : (
-            <div className="space-y-4 max-h-64 overflow-y-auto">
-              {cartState.items.slice(0, 3).map((item: any, index: number) => {
+            <p className="text-gray-500">Không có sản phẩm nào trong đơn hàng.</p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-64 overflow-y-auto">
+            {(selectedCartItems || cartState.items).slice(0, 3).map((item: any, index: number) => {
                 const p = item.product;
-                const image = p.images && p.images.length > 0 ? p.images[0] : '/images/no-image.png';
-                const hasDiscount = p.salePrice && p.salePrice < p.price;
+                const variant = item.variantInfo;
+                // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
+                const image = variant?.images?.[0] || (p.images && p.images.length > 0 ? p.images[0] : '/images/no-image.png');
+                const displayPrice = variant ? 
+                  (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                  (p.salePrice && p.salePrice < p.price ? p.salePrice : p.price);
+                const hasDiscount = variant ? 
+                  (variant.salePrice && variant.salePrice < variant.price) :
+                  (p.salePrice && p.salePrice < p.price);
                 return (
                   <div key={item._id} className="flex items-center space-x-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                     <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
@@ -85,20 +94,27 @@ const CheckoutReview: React.FC<Props> = ({
                         src={image} 
                         alt={p.name} 
                         className="w-full h-full object-cover"
+                        title={variant?.images?.[0] ? 'Ảnh biến thể' : 'Ảnh sản phẩm đại diện'}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-bold text-gray-900 mb-1 truncate">{p.name}</h4>
+                      {variant && (
+                        <p className="text-xs text-blue-600 font-medium mb-1">
+                          {variant.color?.name || variant.name || 'Màu sắc'}
+                          {variant.size && ` - Size ${variant.size}`}
+                        </p>
+                      )}
                       {hasDiscount ? (
                         <div className="flex items-center gap-2">
-                          <span className="text-gray-400 line-through text-xs">{formatPrice(p.price)}</span>
-                          <span className="text-red-600 font-bold text-sm">{formatPrice(p.salePrice!)}</span>
+                          <span className="text-gray-400 line-through text-xs">{formatPrice(variant?.price || p.price)}</span>
+                          <span className="text-red-600 font-bold text-sm">{formatPrice(displayPrice)}</span>
                           <span className="bg-red-100 text-red-700 px-1 py-0.5 rounded text-xs font-semibold">
-                            -{Math.round(100 - (p.salePrice! / p.price) * 100)}%
+                            -{Math.round(100 - (displayPrice / (variant?.price || p.price)) * 100)}%
                           </span>
                         </div>
                       ) : (
-                        <span className="text-gray-900 font-bold text-sm">{formatPrice(p.price)}</span>
+                        <span className="text-gray-900 font-bold text-sm">{formatPrice(displayPrice)}</span>
                       )}
                     </div>
                     <div className="text-right">
@@ -106,16 +122,16 @@ const CheckoutReview: React.FC<Props> = ({
                         SL: {item.quantity}
                       </div>
                       <div className="text-sm font-bold text-gray-900">
-                        {formatPrice((p.salePrice || p.price) * item.quantity)}
+                        {formatPrice(displayPrice * item.quantity)}
                       </div>
                     </div>
                   </div>
                 );
               })}
-              {cartState.items.length > 3 && (
+              {(selectedCartItems || cartState.items).length > 3 && (
                 <div className="text-center py-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                   <span className="text-blue-700 font-semibold text-sm">
-                    +{cartState.items.length - 3} sản phẩm khác
+                    +{(selectedCartItems || cartState.items).length - 3} sản phẩm khác
                   </span>
                 </div>
               )}
