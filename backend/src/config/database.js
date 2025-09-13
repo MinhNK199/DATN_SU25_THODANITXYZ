@@ -9,7 +9,7 @@ const connectDB = async() => {
     } catch (error) {
         console.log("Lỗi kết nối ❌", error.message);
         console.log("Đang thử kết nối với MongoDB Atlas...");
-        
+
         // Fallback to MongoDB Atlas
         try {
             const atlasURI = "mongodb+srv://admin:admin123@cluster0.mongodb.net/DATN?retryWrites=true&w=majority";
@@ -25,4 +25,6 @@ const connectDB = async() => {
         }
     }
 };
+
 export default connectDB;
+
