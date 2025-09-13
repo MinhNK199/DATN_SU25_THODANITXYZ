@@ -77,23 +77,23 @@ export const checkAdmin = (requiredCheck = []) => {
         const user = req.user;
 
 
-        // Phân quyền theo vai trò
-        // Phân quyền theo vai trò
-        const roleCheck = {
-            superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy"],
-            admin: ["view_user", "CheckTaiKhoan"],
-            customer: [],
-        };
+    // Phân quyền theo vai trò
+    const roleCheck = {
+      superadmin: ["capQuyen", "CheckTaiKhoan", "view_user", "view_nhatKy", "manage_shipper"],
+      admin: ["view_user", "CheckTaiKhoan", "manage_shipper"],
+      customer: [],
+    };
 
-        const userCheck = roleCheck[user.role] || [];
-        const okCheck = requiredCheck.every((p) => userCheck.includes(p));
+    const userCheck = roleCheck[user.role] || [];
+    const okCheck = requiredCheck.every((p) => userCheck.includes(p));
 
-        if (!okCheck) {
-            console.log("Không đủ quyền:", user.role, user.email);
-            return res
-                .status(403)
-                .json({ message: "Không đủ quyền để thực hiện hành động này" });
-        }
+    if (!okCheck) {
+      console.log("Không đủ quyền:", user.role, user.email);
+      return res
+        .status(403)
+        .json({ message: "Không đủ quyền để thực hiện hành động này" });
+    }
+
 
         console.log("Qua checkAdmin:", user.email, user.role);
         next();

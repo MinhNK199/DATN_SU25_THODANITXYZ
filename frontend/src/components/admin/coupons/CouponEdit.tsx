@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { Form, Input, InputNumber, Select, DatePicker, Switch, Button, Card, message, Row, Col, Spin, Checkbox } from "antd";
+import React, { useState, useEffect } from "react";
+import { Form, Input, InputNumber, Select, DatePicker, Switch, Button, Card, message as antdMessage, Row, Col, Checkbox, Spin } from "antd";
+import { useNotification } from "../../../hooks/useNotification";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCouponById, updateCoupon } from "./api";
 import dayjs from "dayjs";
@@ -18,6 +19,7 @@ const CouponEdit: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const navigate = useNavigate();
+  const { success, error } = useNotification();
   const { id } = useParams<{ id: string }>();
 
   useEffect(() => {
@@ -31,9 +33,11 @@ const CouponEdit: React.FC = () => {
           ...coupon,
           startDate: dayjs(coupon.startDate),
           endDate: dayjs(coupon.endDate),
+          applyToAllProducts: coupon.applyToAllProducts || false,
+          applicableProducts: coupon.applicableProducts || [],
         });
       } catch (error: any) {
-        message.error(error.message || "Lỗi khi tải thông tin mã giảm giá");
+        error(error.message || "Lỗi khi tải thông tin mã giảm giá");
         navigate("/admin/coupons");
       } finally {
         setInitialLoading(false);
@@ -61,10 +65,10 @@ const CouponEdit: React.FC = () => {
       };
 
       await updateCoupon(id, couponData);
-      message.success("Cập nhật mã giảm giá thành công");
+      success("Cập nhật mã giảm giá thành công");
       navigate("/admin/coupons");
     } catch (error: any) {
-      message.error(error.message || "Lỗi khi cập nhật mã giảm giá");
+      error(error.message || "Lỗi khi cập nhật mã giảm giá");
     } finally {
       setLoading(false);
     }
@@ -225,6 +229,7 @@ const CouponEdit: React.FC = () => {
                     { required: true, message: "Vui lòng nhập số lượt sử dụng per user" },
                     { type: "number", min: 1, message: "Số lượt sử dụng per user phải lớn hơn 0" },
                   ]}
+                  initialValue={1}
                 >
                   <InputNumber
                     min={1}

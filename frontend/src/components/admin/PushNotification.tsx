@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, MessageCircle, Bell, AlertCircle, CheckCircle, Volume2 } from 'lucide-react';
+import { X, MessageCircle, Bell, AlertCircle, CheckCircle, Volume2, AlertTriangle } from 'lucide-react';
 
 interface NotificationData {
   id: string;
   title: string;
   message: string;
-  type: 'message' | 'info' | 'success' | 'warning';
+  type: 'message' | 'info' | 'success' | 'warning' | 'error';
   timestamp: Date;
   icon?: React.ReactNode;
 }
@@ -60,6 +60,8 @@ const PushNotification: React.FC<PushNotificationProps> = ({ notification, onClo
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'warning':
         return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+      case 'error':
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
     }
@@ -73,6 +75,8 @@ const PushNotification: React.FC<PushNotificationProps> = ({ notification, onClo
         return 'border-l-green-500 bg-green-50';
       case 'warning':
         return 'border-l-yellow-500 bg-yellow-50';
+      case 'error':
+        return 'border-l-red-500 bg-red-50';
       default:
         return 'border-l-gray-500 bg-gray-50';
     }
@@ -107,7 +111,9 @@ const PushNotification: React.FC<PushNotificationProps> = ({ notification, onClo
             {getIcon()}
             {/* Sound indicator */}
             <div className="absolute -top-1 -right-1">
-              <Volume2 className="w-3 h-3 admin-text-blue sound-animation" />
+              <Volume2 className={`w-3 h-3 sound-animation ${
+                notification.type === 'error' ? 'text-red-500' : 'admin-text-blue'
+              }`} />
             </div>
           </div>
 
@@ -131,7 +137,9 @@ const PushNotification: React.FC<PushNotificationProps> = ({ notification, onClo
         {/* Progress bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-200 rounded-b-lg overflow-hidden">
           <div
-            className="h-full admin-bg-blue animate-pulse"
+            className={`h-full animate-pulse ${
+              notification.type === 'error' ? 'bg-red-500' : 'admin-bg-blue'
+            }`}
             style={{
               animation: 'progress 5s linear forwards'
             }}

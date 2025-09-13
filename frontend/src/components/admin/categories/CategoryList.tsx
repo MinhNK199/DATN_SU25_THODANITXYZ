@@ -19,6 +19,7 @@ import {
   Badge
 } from "antd";
 import { useNotification } from "../../../hooks/useNotification";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 import type { ColumnsType } from "antd/es/table";
 import {
   PlusOutlined,
@@ -56,6 +57,7 @@ const CategoryList: React.FC = () => {
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { success, error } = useNotification();
+  const { handleError } = useErrorNotification();
   const [searchName, setSearchName] = useState("");
   const [deletedCategories, setDeletedCategories] = useState<Category[]>([]);
   const [isTrashVisible, setTrashVisible] = useState(false);
@@ -95,7 +97,7 @@ const CategoryList: React.FC = () => {
           success("Đã chuyển danh mục vào thùng rác!");
           fetchData();
         } catch (error: any) {
-          error(error.message || "Xóa danh mục thất bại!");
+          handleError(error, "Xóa danh mục thất bại!");
         }
       },
     });
@@ -115,7 +117,7 @@ const CategoryList: React.FC = () => {
           success("Đã xóa vĩnh viễn danh mục!");
           fetchData(); // Refreshes both active and deleted lists
         } catch (error: any) {
-          error(error.message || "Xóa vĩnh viễn thất bại!");
+          handleError(error, "Xóa vĩnh viễn thất bại!");
         }
       },
     });
@@ -127,7 +129,7 @@ const CategoryList: React.FC = () => {
       success("Khôi phục danh mục thành công!");
       fetchData(); // Refreshes both active and deleted lists
     } catch (error: any) {
-      error(error.message || "Khôi phục danh mục thất bại!");
+      handleError(error, "Khôi phục danh mục thất bại!");
     }
   };
 

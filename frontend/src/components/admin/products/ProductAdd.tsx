@@ -28,6 +28,7 @@ import type { Brand } from "../../../interfaces/Brand"
 import VariantManager from "./VariantManager"
 import { validateAllVariants, cleanColorData } from "./utils/validation"
 import { useNotification } from "../../../hooks/useNotification"
+import { useErrorNotification } from "../../../hooks/useErrorNotification"
 import type { UploadFile } from "antd/es/upload/interface"
 
 const { Title, Text } = Typography
@@ -50,6 +51,7 @@ const ProductAddPage: React.FC = () => {
   const [form] = Form.useForm()
   const navigate = useNavigate()
   const { success, error } = useNotification()
+  const { handleError } = useErrorNotification()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
@@ -228,7 +230,7 @@ const ProductAddPage: React.FC = () => {
       success("Thêm sản phẩm thành công!")
       navigate("/admin/products")
     } catch (err: unknown) {
-      error("Đã xảy ra lỗi. Vui lòng thử lại.")
+      handleError(err, "Đã xảy ra lỗi khi thêm sản phẩm. Vui lòng thử lại.")
     } finally {
       setLoading(false)
     }

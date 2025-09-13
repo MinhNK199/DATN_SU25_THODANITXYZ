@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Table, Button, Modal, message as antdMessage, Popconfirm, Space, Tag, Card, Row, Col, Statistic, Divider, Badge } from "antd";
 import { useNotification } from "../../../hooks/useNotification";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 import { useNavigate } from "react-router-dom";
 import { getCoupons, deleteCoupon } from "../coupons/api";
 import { Coupon } from "../../../interfaces/Coupon";
@@ -26,6 +27,7 @@ const VoucherList: React.FC = () => {
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const navigate = useNavigate();
   const { success, error } = useNotification();
+  const { handleError } = useErrorNotification();
 
   useEffect(() => {
     fetchCoupons();
@@ -38,6 +40,7 @@ const VoucherList: React.FC = () => {
       setCoupons(response.coupons);
     } catch (error) {
       console.error('Error fetching coupons:', error);
+      handleError(error, 'Lỗi khi tải danh sách voucher');
     } finally {
       setLoading(false);
     }
@@ -58,7 +61,7 @@ const VoucherList: React.FC = () => {
       success("Đã tạm dừng voucher thành công");
       fetchCoupons();
     } catch (error) {
-      error("Có lỗi xảy ra khi tạm dừng voucher");
+      handleError(error, "Có lỗi xảy ra khi tạm dừng voucher");
     }
   };
 
@@ -68,7 +71,7 @@ const VoucherList: React.FC = () => {
       success("Đã xóa voucher thành công");
       fetchCoupons();
     } catch (error) {
-      error("Có lỗi xảy ra khi xóa voucher");
+      handleError(error, "Có lỗi xảy ra khi xóa voucher");
     }
   };
 

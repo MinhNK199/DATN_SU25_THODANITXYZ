@@ -18,6 +18,7 @@ import {
     Upload
 } from 'antd';
 import { useNotification } from "../../../hooks/useNotification";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 import { ArrowLeftOutlined, UploadOutlined, PlusOutlined } from '@ant-design/icons';
 import { FaTrash } from 'react-icons/fa';
 import type { UploadFile } from 'antd/es/upload/interface';
@@ -48,6 +49,7 @@ const CategoryAdd: React.FC = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const navigate = useNavigate();
     const { success, error } = useNotification();
+    const { handleError } = useErrorNotification();
     const [previewImage, setPreviewImage] = useState<string>('');
     // Thêm state cho file ảnh upload
     const [imageFileList, setImageFileList] = useState<UploadFile[]>([]);
@@ -170,7 +172,7 @@ const CategoryAdd: React.FC = () => {
             navigate('/admin/categories');
         } catch (error: any) { 
             console.error("❌ Error creating category:", error);
-            error(error.message || 'Thêm danh mục thất bại!');
+            handleError(error, 'Thêm danh mục thất bại!');
         } finally {
             setLoading(false);
         }
@@ -230,7 +232,7 @@ const CategoryAdd: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Upload error:", error);
-                antdMessage.error("Lỗi khi upload ảnh!");
+                handleError(error, "Lỗi khi upload ảnh!");
             }
         } else if (latestFile && latestFile.url) {
             // Nếu là ảnh hiện tại (không phải file mới)

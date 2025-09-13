@@ -30,6 +30,7 @@ interface NotificationContextType {
   audioEnabled: boolean;
   setAudioEnabled: (enabled: boolean) => void;
   playNotificationSound: () => void;
+  playErrorSound: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -115,6 +116,20 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         });
       } catch (error) {
         console.log('Error creating audio:', error);
+      }
+    }
+  }, [audioEnabled]);
+
+  const playErrorSound = useCallback(() => {
+    if (audioEnabled) {
+      try {
+        const audio = new Audio('/sounds/wrong_5.mp3');
+        audio.volume = 0.6; // 60% volume for error sound
+        audio.play().catch(error => {
+          console.log('Could not play error sound:', error);
+        });
+      } catch (error) {
+        console.log('Error creating error audio:', error);
       }
     }
   }, [audioEnabled]);
@@ -215,9 +230,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     // Add to notifications list
     setNotifications(prev => [savedNotification!, ...prev]);
     
-    // Play notification sound
-    playNotificationSound();
-  }, [playNotificationSound]);
+    // Play appropriate sound based on notification type
+    if (notification.type === 'error') {
+      playErrorSound();
+    } else {
+      playNotificationSound();
+    }
+  }, [playNotificationSound, playErrorSound]);
 
   const hideNotification = useCallback(() => {
     setCurrentNotification(null);
@@ -328,7 +347,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     unreadCount,
     audioEnabled,
     setAudioEnabled,
-    playNotificationSound
+    playNotificationSound,
+    playErrorSound
   };
 
   return (

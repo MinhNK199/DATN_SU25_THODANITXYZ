@@ -38,6 +38,7 @@ import {
 } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import { debounce } from "lodash";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 
 const { Title, Text } = Typography;
 const { confirm } = Modal;
@@ -60,6 +61,7 @@ const getTotalStock = (product: Product) => {
 };
 
 const ProductListPage: React.FC = () => {
+  const { handleError } = useErrorNotification();
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [deletedProducts, setDeletedProducts] = useState<Product[]>([]);
@@ -131,7 +133,7 @@ const ProductListPage: React.FC = () => {
           message.success("Đã chuyển vào thùng rác!");
           fetchData();
         } catch (error) {
-          message.error("Thao tác thất bại!");
+          handleError(error, "Thao tác thất bại!");
         }
       },
     });
@@ -143,7 +145,7 @@ const ProductListPage: React.FC = () => {
       message.success("Khôi phục sản phẩm thành công!");
       fetchData();
     } catch (error) {
-      message.error("Khôi phục thất bại!");
+      handleError(error, "Khôi phục thất bại!");
     }
   };
 
@@ -162,7 +164,7 @@ const ProductListPage: React.FC = () => {
           message.success("Đã xóa sản phẩm vĩnh viễn!");
           fetchData(); // Refetch để cập nhật lại danh sách thùng rác
         } catch (error) {
-          message.error("Xóa vĩnh viễn thất bại!");
+          handleError(error, "Xóa vĩnh viễn thất bại!");
         }
       },
     });

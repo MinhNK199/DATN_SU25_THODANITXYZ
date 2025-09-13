@@ -7,12 +7,14 @@ import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
 import AssignShipperModal from "./AssignShipperModal";
 import axiosInstance from "../../../api/axiosInstance";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 
 const API_URL = '/api/order';
 
 const { Option } = Select;
 
 const OrderList: React.FC = () => {
+  const { handleError } = useErrorNotification();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -57,6 +59,7 @@ const OrderList: React.FC = () => {
 
     } catch (error) {
       console.error("Error fetching orders:", error);
+      handleError(error, "Lỗi khi tải danh sách đơn hàng!");
       setMessage("Lỗi khi tải danh sách đơn hàng!");
       setMessageType("error");
     }
@@ -381,7 +384,7 @@ const handleConfirmOrder = async (orderId: string) => {
     }
   } catch (error) {
     console.error('Error confirming order:', error);
-    antdMessage.error('Có lỗi xảy ra khi xác nhận đơn hàng');
+    handleError(error, 'Có lỗi xảy ra khi xác nhận đơn hàng');
   }
 };
 
@@ -401,7 +404,7 @@ const handleAssignConfirm = async (shipperId: string, assigningOrderId: string, 
     }
   } catch (error) {
     console.error('Error assigning shipper:', error);
-    antdMessage.error('Có lỗi xảy ra khi phân công shipper');
+    handleError(error, 'Có lỗi xảy ra khi phân công shipper');
   }
 };
 

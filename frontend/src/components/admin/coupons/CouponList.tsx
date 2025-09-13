@@ -4,8 +4,10 @@ import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getCoupons, deleteCoupon } from "./api";
 import { Coupon } from "./api";
+import { useErrorNotification } from "../../../hooks/useErrorNotification";
 
 const CouponList: React.FC = () => {
+  const { handleError } = useErrorNotification();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -16,7 +18,7 @@ const CouponList: React.FC = () => {
       const response = await getCoupons();
       setCoupons(response.coupons || []);
     } catch (error) {
-      message.error("Lỗi khi tải danh sách mã giảm giá");
+      handleError(error, "Lỗi khi tải danh sách mã giảm giá");
     } finally {
       setLoading(false);
     }
@@ -32,7 +34,7 @@ const CouponList: React.FC = () => {
       message.success("Xóa mã giảm giá thành công");
       fetchCoupons();
     } catch (error) {
-      message.error("Lỗi khi xóa mã giảm giá");
+      handleError(error, "Lỗi khi xóa mã giảm giá");
     }
   };
 
