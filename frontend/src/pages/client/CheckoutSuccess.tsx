@@ -12,6 +12,22 @@ interface OrderDetails {
     quantity: number;
     price: number;
     image: string;
+    variantId?: string;
+    variantInfo?: {
+      _id?: string;
+      name?: string;
+      price?: number;
+      salePrice?: number;
+      stock?: number;
+      images?: string[];
+      sku?: string;
+      color?: {
+        name?: string;
+        code?: string;
+      };
+      size?: number;
+      specifications?: Record<string, string>;
+    };
   }>;
   totalPrice: number;
   status: string;
@@ -192,7 +208,6 @@ const CheckoutSuccess: React.FC = () => {
       if (!token || !orderId) return;
 
       const response = await axiosInstance.get(`/order/${orderId}`);
-
       setOrderDetails(response.data);
       setLoading(false);
     } catch (error) {
@@ -334,24 +349,32 @@ const CheckoutSuccess: React.FC = () => {
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Sản phẩm đã đặt</h2>
             <div className="space-y-4">
-              {orderDetails.orderItems.map((item, index) => (
-                <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{item.name}</h3>
-                    <p className="text-sm text-gray-600">Số lượng: {item.quantity}</p>
+              {orderDetails.orderItems.map((item, index) => {
+                // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
+                const displayImage = item.variantInfo?.images?.[0] || item.image;
+                return (
+                  <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
+                    <img
+                      src={displayImage}
+                      alt={item.name}
+                      className="w-16 h-16 object-cover rounded-lg"
+                      title={item.variantInfo?.images?.[0] ? 'Ảnh sản phẩm' : 'Ảnh sản phẩm'}
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{item.name}</h3>
+                      {item.variantInfo && item.variantInfo.name && (
+                        <p className="text-sm text-blue-600 font-medium"> sản phẩm: {item.variantInfo.name}</p>
+                      )}
+                      <p className="text-sm text-gray-600">Số lượng: {item.quantity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {(item.price * item.quantity).toLocaleString('vi-VN')}đ
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900">
-                      {(item.price * item.quantity).toLocaleString('vi-VN')}đ
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

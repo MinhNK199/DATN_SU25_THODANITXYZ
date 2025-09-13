@@ -103,6 +103,10 @@ const ProductEdit: React.FC = () => {
             let cleanSpecs = {}
             if (variant.specifications && typeof variant.specifications === "object") {
               cleanSpecs = { ...variant.specifications }
+              console.log(`🔍 Variant ${index} specifications from API:`, variant.specifications)
+              console.log(`✅ Cleaned specifications:`, cleanSpecs)
+            } else {
+              console.log(`⚠️ Variant ${index} has no specifications or invalid format:`, variant.specifications)
             }
 
             const cleanedVariant = {

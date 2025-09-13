@@ -98,8 +98,10 @@ export const cartApi = {
   },
 
   // Xóa sản phẩm khỏi giỏ hàng
-  removeFromCart: async (productId: string): Promise<Cart> => {
-    const response = await api.delete(`/cart/${productId}`);
+  removeFromCart: async (productId: string, variantId?: string): Promise<Cart> => {
+    const response = await api.delete(`/cart/${productId}`, {
+      data: { variantId }
+    });
     return response.data;
   },
 

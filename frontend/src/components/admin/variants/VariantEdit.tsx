@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { SaveOutlined, ArrowLeftOutlined, UploadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, Form, Input, Select, InputNumber, Switch, Upload, Card, Row, Col, Divider, message as antdMessage, Spin, ColorPicker } from 'antd';
@@ -83,7 +83,12 @@ const VariantEdit: React.FC = () => {
           isActive: variant.isActive ?? true,
           product: variant.product?._id || variant.product || ''
         });
-        setSpecifications(variant.specifications || {});
+        
+        // Set specifications ngay lập tức
+        console.log("🔍 VariantEdit: variant.specifications:", variant.specifications);
+        const specs = variant.specifications || {};
+        console.log("🔍 VariantEdit: setting specifications:", specs);
+        setSpecifications(specs);
       } catch (error) {
         console.error('Error fetching variant:', error);
         error('Không thể tải thông tin biến thể');
@@ -165,6 +170,7 @@ const VariantEdit: React.FC = () => {
         color: processedColor,
       };
 
+
       await axios.put(`http://localhost:8000/api/variant/${id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -182,6 +188,11 @@ const VariantEdit: React.FC = () => {
   const handleImageUpload = (info: any) => {
     setFileList(info.fileList);
   };
+
+  const handleSpecificationsChange = useCallback((newSpecs: Record<string, string>) => {
+    console.log("🔍 VariantEdit: handleSpecificationsChange called with:", newSpecs);
+    setSpecifications(newSpecs);
+  }, []);
 
   if (initialLoading) {
     return (
@@ -364,7 +375,10 @@ const VariantEdit: React.FC = () => {
 
             <Divider orientation="left">Thông số kỹ thuật</Divider>
             <Form.Item label="Thông số kỹ thuật">
-              <SpecificationEditor value={specifications} onChange={setSpecifications} />
+              <SpecificationEditor 
+                value={specifications} 
+                onChange={handleSpecificationsChange} 
+              />
             </Form.Item>
 
             <Divider orientation="left">Ảnh sản phẩm</Divider>

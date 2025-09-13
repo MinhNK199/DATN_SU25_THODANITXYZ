@@ -23,6 +23,23 @@ interface OrderItem {
   product?: string;
   name: string;
   image?: string;
+  variantId?: string;
+  variantInfo?: {
+    _id?: string;
+    name?: string;
+    price?: number;
+    salePrice?: number;
+    stock?: number;
+    images?: string[];
+    sku?: string;
+    color?: {
+      name?: string;
+      code?: string;
+    };
+    size?: number;
+    specifications?: Record<string, string>;
+  };
+  // Giữ lại variant cũ để tương thích ngược
   variant?: {
     _id: string;
     name: string;
@@ -506,11 +523,11 @@ const Orders = () => {
                         <h4 className="font-medium text-gray-900">
                           {item.name}
                         </h4>
-                        {item.variant && (
-                          <p className="text-sm text-gray-600">
-                            Phân loại: {item.variant.name}
+                        {(item.variantInfo && item.variantInfo.name) || (item.variant && item.variant.name) ? (
+                          <p className="text-sm text-blue-600 font-medium">
+                            Chi tiết sản phẩm: {item.variantInfo?.name || item.variant?.name}
                           </p>
-                        )}
+                        ) : null}
                         <p className="text-sm text-gray-600">
                           Số lượng: {item.quantity} × {formatPrice(item.price)}
                         </p>

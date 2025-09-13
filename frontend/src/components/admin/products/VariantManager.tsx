@@ -794,6 +794,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                       value={variant.specifications || {}}
                       onChange={(specs) => handleSpecificationsChange(variant.id, specs)}
                     />
+                    {/* Debug info */}
+                    <div style={{ fontSize: 10, color: "#999", marginTop: 4 }}>
+                      Debug: {JSON.stringify(variant.specifications || {})}
+                    </div>
                   </div>
                 </Col>
               </Row>

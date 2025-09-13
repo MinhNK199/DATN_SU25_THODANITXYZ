@@ -262,7 +262,16 @@ const OrderDetail: React.FC = () => {
       dataIndex: "name",
       key: "name",
       render: (text: string, record: any) => (
-        <Link to={`/product/${record.product}`}>{text}</Link>
+        <div>
+          <Link to={`/product/${record.product}`} className="font-medium text-blue-600 hover:text-blue-800">
+            {text}
+          </Link>
+          {(record.variantInfo && record.variantInfo.name) || (record.variant && record.variant.name) ? (
+            <div className="text-sm text-gray-500 mt-1">
+              Chi tiết sản phẩm: {record.variantInfo?.name || record.variant?.name}
+            </div>
+          ) : null}
+        </div>
       ),
     },
     { title: "Số lượng", dataIndex: "quantity", key: "quantity" },

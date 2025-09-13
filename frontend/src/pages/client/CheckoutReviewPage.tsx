@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
@@ -34,11 +34,53 @@ const CheckoutReviewPage: React.FC = () => {
   const [taxRate, setTaxRate] = useState(0.08);
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   const { state: cartState, removeOrderedItemsFromCart } = useCart();
   const { voucher } = useCheckout();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
+
+  // Khởi tạo selectedItems và buyNowProduct
+  useEffect(() => {
+    const buyNowProductData = localStorage.getItem('buyNowProduct');
+    if (buyNowProductData) {
+      try {
+        const product = JSON.parse(buyNowProductData);
+        setSelectedItems(new Set([product._id]));
+      } catch (error) {
+        console.error('❌ Error parsing buyNowProduct:', error);
+        localStorage.removeItem('buyNowProduct');
+      }
+    } else if (cartState.items && cartState.items.length > 0) {
+      const allItemIds = new Set(cartState.items.map(item => item._id));
+      setSelectedItems(allItemIds);
+    }
+  }, [cartState.items]);
+
+  // Lấy buyNowProduct để sử dụng trong useEffect
+  const buyNowProduct = useMemo(() => {
+    try {
+      const buyNowData = localStorage.getItem('buyNowProduct');
+      if (buyNowData) {
+        const product = JSON.parse(buyNowData);
+        return product;
+      }
+    } catch (error) {
+      console.error('❌ Lỗi parse buyNowProduct:', error);
+      localStorage.removeItem('buyNowProduct');
+    }
+    return null;
+  }, []);
+
+  // Tính toán selectedCartItems với useMemo để tránh re-render
+  const selectedCartItems = useMemo(() => {
+    const items = buyNowProduct 
+      ? [buyNowProduct]
+      : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
+    
+    return items;
+  }, [buyNowProduct, cartState.items, selectedItems]);
 
   useEffect(() => {
     getTaxConfig()
@@ -58,16 +100,16 @@ const CheckoutReviewPage: React.FC = () => {
       setCardInfo(savedCardInfo);
       setWalletInfo(savedWalletInfo);
       setBankTransferInfo(savedBankTransferInfo);
-    } else {
-      // Nếu không có thông tin đầy đủ, quay về trang shipping
+    } else if (!buyNowProduct) {
+      // Nếu không có thông tin đầy đủ và không có sản phẩm mua ngay, quay về trang shipping
       navigate('/checkout/shipping');
     }
 
-    // Kiểm tra nếu không có sản phẩm trong giỏ hàng, redirect về Cart
-    if (!cartState.items || cartState.items.length === 0) {
+    // Kiểm tra nếu không có sản phẩm trong giỏ hàng và không có sản phẩm mua ngay, redirect về Cart
+    if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
       navigate('/cart');
     }
-  }, [navigate, cartState.items]);
+  }, [navigate, cartState.items, buyNowProduct]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -103,12 +145,16 @@ const CheckoutReviewPage: React.FC = () => {
     setIsProcessing(true);
     try {
       const orderData = {
-        orderItems: cartState.items.map((item) => ({
+        orderItems: selectedCartItems.map((item) => ({
           name: item.product.name,
           quantity: item.quantity,
           image: item.product.images?.[0] || "",
-          price: item.product.salePrice || item.product.price,
+          price: item.variantInfo ? 
+            (item.variantInfo.salePrice && item.variantInfo.salePrice < item.variantInfo.price ? item.variantInfo.salePrice : item.variantInfo.price) :
+            (item.product.salePrice || item.product.price),
           product: item.product._id,
+          variantId: item.variantId,
+          variantInfo: item.variantInfo,
         })),
         shippingAddress: {
           fullName: formData.lastName,
@@ -119,7 +165,7 @@ const CheckoutReviewPage: React.FC = () => {
           phone: formData.phone,
         },
         paymentMethod: formData.paymentMethod,
-        itemsPrice: cartState.total,
+        itemsPrice: subtotal,
         voucherDiscount: voucherDiscount,
         taxPrice: taxPrice,
         shippingPrice: shippingFee,
@@ -134,7 +180,13 @@ const CheckoutReviewPage: React.FC = () => {
 
       // ✅ CHỈ xóa giỏ hàng cho COD, online payment sẽ xóa sau khi thanh toán thành công
       if (formData.paymentMethod === "COD") {
-        await removeOrderedItemsFromCart(orderData.orderItems);
+        if (buyNowProduct) {
+          // Nếu là mua ngay, xóa sản phẩm tạm thời
+          localStorage.removeItem('buyNowProduct');
+        } else {
+          // Nếu là từ giỏ hàng, xóa sản phẩm khỏi giỏ hàng
+          await removeOrderedItemsFromCart(orderData.orderItems);
+        }
       }
       // ⚠️ Online payment: KHÔNG xóa giỏ hàng ngay, chỉ xóa khi thanh toán thành công
       // Nếu thanh toán thất bại, sản phẩm vẫn còn trong giỏ hàng để người dùng thử lại
@@ -276,7 +328,17 @@ const CheckoutReviewPage: React.FC = () => {
     navigate('/checkout/payment');
   };
 
-  const subtotal = cartState.total || 0;
+  // Tính toán giá từ selectedCartItems
+  const subtotal = selectedCartItems.reduce((sum, item) => {
+    const variant = item.variantInfo;
+    const displayPrice = variant ? 
+      (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+      (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
+    const price = Number(displayPrice) || 0;
+    const quantity = Number(item.quantity) || 0;
+    return sum + (price * quantity);
+  }, 0);
+
   const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
   const shippingFee = subtotal >= 500000 ? 0 : 30000;
   const taxPrice = (subtotal - voucherDiscount) * taxRate;
@@ -383,6 +445,7 @@ const CheckoutReviewPage: React.FC = () => {
                   cardInfo={cardInfo}
                   walletInfo={walletInfo}
                   bankTransferInfo={bankTransferInfo}
+                  selectedCartItems={selectedCartItems}
                 />
               </div>
             </div>
@@ -403,7 +466,7 @@ const CheckoutReviewPage: React.FC = () => {
                       <div className="text-left">
                         <h3 className="text-xl font-bold text-white">Tóm tắt đơn hàng</h3>
                         <p className="text-green-100 text-sm mt-1">
-                          {cartState.items?.length || 0} sản phẩm • {formatPrice(finalTotal)}
+                          {selectedCartItems.length} sản phẩm • {formatPrice(finalTotal)}
                         </p>
                       </div>
                     </div>
@@ -428,44 +491,91 @@ const CheckoutReviewPage: React.FC = () => {
                     <div className="mb-6">
                       <h4 className="text-base font-bold text-gray-800 mb-3 flex items-center">
                         <span className="mr-2">🛍️</span>
-                        Sản phẩm ({cartState.items?.length || 0})
+                        Sản phẩm ({selectedCartItems.length})
                       </h4>
                       <div className="space-y-3 max-h-48 overflow-y-auto">
-                        {cartState.items?.slice(0, 4).map((item, index) => (
-                          <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                            <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
-                              {item.product.images?.[0] ? (
-                                <img
-                                  src={item.product.images[0]}
-                                  alt={item.product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                                  <span className="text-gray-500 text-xs">No Image</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate mb-1">
-                                {item.product.name}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {formatPrice(item.product.salePrice || item.product.price)}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-bold text-gray-900">
-                                {formatPrice((item.product.salePrice || item.product.price) * item.quantity)}
+                        {selectedCartItems.length > 0 ? (
+                          <>
+                            {selectedCartItems.slice(0, 4).map((item, index) => {
+                              try {
+                                return (
+                                  <div key={index} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+                                    <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0 overflow-hidden shadow-sm">
+                                      {(() => {
+                                        const variant = item.variantInfo;
+                                        // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
+                                        const displayImage = variant?.images?.[0] || item.product?.images?.[0];
+                                        return displayImage ? (
+                                          <img 
+                                            src={displayImage} 
+                                            alt={item.product?.name || 'Sản phẩm'}
+                                            className="w-full h-full object-cover"
+                                            title={variant?.images?.[0] ? 'Ảnh sản phẩm' : 'Ảnh sản phẩm'}
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                                            <span className="text-gray-500 text-xs">No Image</span>
+                                          </div>
+                                        );
+                                      })()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-gray-900 truncate mb-1">
+                                        {item.product?.name || 'Tên sản phẩm'}
+                                      </p>
+                                      {item.variantInfo && (
+                                        <p className="text-xs text-gray-500 mb-1">
+                                          {item.variantInfo.color?.name || item.variantInfo.name || 'Chi tiết sản phẩm'}
+                                          {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
+                                        </p>
+                                      )}
+                                      <p className="text-xs text-gray-600">
+                                        SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
+                                          const variant = item.variantInfo;
+                                          const displayPrice = variant ? 
+                                            (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                            (item.product?.salePrice && item.product?.salePrice < item.product?.price ? item.product?.salePrice : item.product?.price);
+                                          return formatPrice(displayPrice || 0);
+                                        })()}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm font-bold text-gray-900">
+                                        {(() => {
+                                          const variant = item.variantInfo;
+                                          const displayPrice = variant ? 
+                                            (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
+                                            (item.product?.salePrice && item.product?.salePrice < item.product?.price ? item.product?.salePrice : item.product?.price);
+                                          return formatPrice((displayPrice || 0) * (item.quantity || 0));
+                                        })()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              } catch (error) {
+                                console.error('❌ Error rendering item:', error, item);
+                                return (
+                                  <div key={index} className="flex items-center space-x-3 p-3 bg-red-50 rounded-xl border border-red-200">
+                                    <div className="text-red-600 text-sm">
+                                      Lỗi hiển thị sản phẩm: {error.message}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            })}
+                            {selectedCartItems.length > 4 && (
+                              <div className="text-center py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
+                                <span className="text-blue-700 font-semibold text-sm">
+                                  +{selectedCartItems.length - 4} sản phẩm khác
+                                </span>
                               </div>
-                            </div>
-                          </div>
-                        ))}
-                        {cartState.items && cartState.items.length > 4 && (
-                          <div className="text-center py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
-                            <span className="text-blue-700 font-semibold text-sm">
-                              +{cartState.items.length - 4} sản phẩm khác
-                            </span>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-8">
+                            <div className="text-gray-400 text-6xl mb-4">✓</div>
+                            <p className="text-gray-600 text-lg">Không có sản phẩm nào trong đơn hàng.</p>
+                            <p className="text-gray-500 text-sm mt-2">Vui lòng quay lại để chọn sản phẩm.</p>
                           </div>
                         )}
                       </div>
@@ -591,16 +701,16 @@ const CheckoutReviewPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - cartState.total)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                               <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((cartState.total / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(cartState.total)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
                             </p>
                           </div>
                         </div>

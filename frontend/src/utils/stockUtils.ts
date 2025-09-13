@@ -16,24 +16,24 @@ export const getAvailableStock = (item: CartItem): number => {
 
     // ✅ ƯU TIÊN STOCK CỦA VARIANT (vì đây là stock thực tế của biến thể)
     if (variant?.stock !== undefined && variant.stock > 0) {
-        console.log(`🔍 Using variant stock: ${variant.stock} for variant: ${variant.name}`);
+        // console.log(`🔍 Using variant stock: ${variant.stock} for variant: ${variant.name}`);
         return variant.stock;
     }
 
     // Sau đó đến availableStock từ variantInfo
     if (variant?.availableStock !== undefined && variant.availableStock > 0) {
-        console.log(`🔍 Using variant availableStock: ${variant.availableStock} for variant: ${variant.name}`);
+        // console.log(`🔍 Using variant availableStock: ${variant.availableStock} for variant: ${variant.name}`);
         return variant.availableStock;
     }
 
     // Sau đó đến availableStock từ product
     if (item.product.availableStock !== undefined && item.product.availableStock > 0) {
-        console.log(`🔍 Using product availableStock: ${item.product.availableStock} for product: ${item.product.name}`);
+        // console.log(`🔍 Using product availableStock: ${item.product.availableStock} for product: ${item.product.name}`);
         return item.product.availableStock;
     }
 
     // Cuối cùng mới đến stock của product
-    console.log(`🔍 Using product stock: ${item.product.stock} for product: ${item.product.name}`);
+    // console.log(`🔍 Using product stock: ${item.product.stock} for product: ${item.product.name}`);
     return item.product.stock ?? 0;
 };
 
@@ -139,7 +139,7 @@ export const getVariantStockMessage = (item: CartItem): {
     if (item.variantId && item.variantInfo?.stock !== undefined) {
         // Nếu có variant, sử dụng stock của variant
         availableStock = item.variantInfo.stock;
-        console.log(`🔍 Force using variant stock: ${availableStock} for variant: ${item.variantInfo.name}`);
+        // console.log(`🔍 Force using variant stock: ${availableStock} for variant: ${item.variantInfo.name}`);
     } else {
         // Nếu không có variant, sử dụng logic cũ
         availableStock = getAvailableStock(item);

@@ -36,8 +36,14 @@ const ProductList: React.FC = () => {
 
   useEffect(() => {
     axios.get('/api/category')
-      .then(res => setCategories(res.data))
-      .catch(() => setCategories([]));
+      .then(res => {
+        console.log("🔍 Categories loaded:", res.data);
+        setCategories(res.data);
+      })
+      .catch(err => {
+        console.error("❌ Error loading categories:", err);
+        setCategories([]);
+      });
     axios.get('/api/brand')
       .then(res => setBrands(res.data))
       .catch(() => setBrands([]));
@@ -60,9 +66,11 @@ const ProductList: React.FC = () => {
       console.log("🔍 Available categories:", categories);
       const foundCategory = categories.find(cat => cat._id === category || cat.slug === category);
       console.log("🔍 Found category match:", foundCategory);
+      console.log("🔍 Category name:", foundCategory?.name);
       setFilterCategory(category);
       setPage(1); // Reset về trang 1 khi có category mới
       setSearchTerm(''); // Clear search term khi có category
+      setFilterBrand(''); // Clear brand filter khi có category
     } else {
       // Reset filter nếu không có category trong URL
       setFilterCategory('');
@@ -97,6 +105,8 @@ const ProductList: React.FC = () => {
     setFilterInStock(false);
     setSearchTerm('');
     setPage(1);
+    // Update URL to remove all filters
+    window.history.replaceState({}, '', '/products');
   };
 
   const removeFilter = (filterType: string) => {
@@ -206,16 +216,44 @@ const ProductList: React.FC = () => {
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                  Tất cả sản phẩm
+                  {filterCategory ? 
+                    (() => {
+                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      return selectedCategory ? selectedCategory.name : 'Danh mục sản phẩm';
+                    })() :
+                    'Tất cả sản phẩm'
+                  }
                 </h1>
                 <p className="text-gray-600 text-lg">
                   {filterCategory ? 
-                    `Sản phẩm trong danh mục "${categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory)?.name || filterCategory}"` :
+                    (() => {
+                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      return selectedCategory ? 
+                        `Khám phá ${total.toLocaleString()} sản phẩm trong danh mục "${selectedCategory.name}"` :
+                        `Khám phá ${total.toLocaleString()} sản phẩm`;
+                    })() :
                     `Khám phá ${total.toLocaleString()} sản phẩm chất lượng cao`
                   }
                 </p>
               </div>
               <div className="flex items-center gap-4">
+                {filterCategory && (
+                  <button
+                    onClick={() => {
+                      setFilterCategory('');
+                      setPage(1);
+                      // Update URL to remove category parameter
+                      const params = new URLSearchParams(location.search);
+                      params.delete('category');
+                      const newUrl = params.toString() ? `?${params.toString()}` : '/products';
+                      window.history.replaceState({}, '', newUrl);
+                    }}
+                    className="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <FaTimes className="w-4 h-4" />
+                    Xóa bộ lọc danh mục
+                  </button>
+                )}
                 <div className="bg-blue-50 rounded-2xl px-4 py-2">
                   <span className="text-blue-700 font-semibold">
                     {products.length} sản phẩm
@@ -299,17 +337,42 @@ const ProductList: React.FC = () => {
                 <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                   Danh mục
+                  {filterCategory && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                      Đã chọn
+                    </span>
+                  )}
                 </h3>
                 <select
                   className="w-full px-3 py-2 border-0 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm text-gray-700 bg-white shadow-sm"
                   value={filterCategory}
-                  onChange={e => setFilterCategory(e.target.value)}
+                  onChange={e => {
+                    setFilterCategory(e.target.value);
+                    setPage(1);
+                    // Update URL
+                    const params = new URLSearchParams(location.search);
+                    if (e.target.value) {
+                      params.set('category', e.target.value);
+                    } else {
+                      params.delete('category');
+                    }
+                    const newUrl = params.toString() ? `?${params.toString()}` : '/products';
+                    window.history.replaceState({}, '', newUrl);
+                  }}
                 >
                   <option value="">Tất cả danh mục</option>
                   {categories.map((cat: any) => (
                     <option key={cat._id} value={cat.slug || cat._id}>{cat.name}</option>
                   ))}
                 </select>
+                {filterCategory && (
+                  <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                    Đang hiển thị: {(() => {
+                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      return selectedCategory ? selectedCategory.name : filterCategory;
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Stock Filter */}
@@ -381,7 +444,7 @@ const ProductList: React.FC = () => {
                           setFilterPriceRange([filterPriceRange[0], value]);
                         }}
                         className="w-full px-3 py-2 border-0 rounded-lg focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm bg-white shadow-sm text-center"
-                        placeholder="50000000"
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -496,6 +559,10 @@ const ProductList: React.FC = () => {
                       product.brand && typeof product.brand === 'object'
                         ? product.brand.name
                         : product.brand,
+                    category:
+                      product.category && typeof product.category === 'object'
+                        ? product.category.name
+                        : product.category,
                     rating: product.averageRating || 0,
                     reviewCount: product.numReviews || 0,
                     discount: product.salePrice

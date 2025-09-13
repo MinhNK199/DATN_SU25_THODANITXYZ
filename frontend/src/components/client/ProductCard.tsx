@@ -29,6 +29,10 @@ interface ProductCardProps {
     }
     | string
     | null;
+    category?: {
+      _id?: string;
+      name: string;
+    } | string | null;
     rating?: number;
     reviewCount?: number;
     averageRating?: number;
@@ -302,9 +306,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       <div className="p-4">
         <div className="text-sm text-blue-600 font-medium mb-1">
-          {product.brand && typeof product.brand === "object"
-            ? product.brand.name
-            : product.brand || "Không rõ thương hiệu"}
+          {product.category && typeof product.category === "object"
+            ? product.category.name
+            : product.category || "Không rõ danh mục"}
         </div>
 
         <Link to={`/product/${product._id}`}>

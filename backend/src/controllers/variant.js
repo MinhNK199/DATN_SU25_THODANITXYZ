@@ -124,6 +124,7 @@ export const getVariantById = async(req, res) => {
             weight: variant.weight,
             images: variant.images,
             isActive: variant.isActive,
+            specifications: variant.specifications || {},
             product: {
                 _id: product._id,
                 name: product.name,
