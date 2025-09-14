@@ -8,6 +8,7 @@ import {
   FaBalanceScale,
 } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
+import { useCompare } from "../../contexts/CompareContext";
 import cartApi from "../../services/cartApi";
 import { toast } from "react-hot-toast";
 import wishlistApi from "../../services/wishlistApi";
@@ -62,6 +63,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [availableStock, setAvailableStock] = useState<number | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
   const { addToCart } = useCart();
+  const { addToCompare, isInCompare, canAddToCompare } = useCompare();
   const [isFavorite, setIsFavorite] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
@@ -192,7 +194,48 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleCompare = () => {
-    toast.success("Tính năng so sánh sẽ được phát triển sau");
+    if (isInCompare(product._id)) {
+      toast.error("Sản phẩm này đã có trong danh sách so sánh");
+      return;
+    }
+    
+    if (!canAddToCompare) {
+      toast.error("Bạn chỉ có thể so sánh tối đa 4 sản phẩm");
+      return;
+    }
+
+    // Convert ProductCard format to Product interface format
+    const productForCompare = {
+      _id: product._id,
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      salePrice: product.salePrice,
+      images: product.images || (product.image ? [product.image] : []),
+      additionalImages: product.additionalImages || [],
+      thumbnails: product.thumbnails || [],
+      category: product.category,
+      brand: product.brand,
+      stock: product.stock,
+      variants: product.variants || [],
+      specifications: product.specifications || {},
+      features: product.features || [],
+      averageRating: product.averageRating || product.rating || 0,
+      numReviews: product.numReviews || product.reviewCount || 0,
+      isActive: product.isActive !== undefined ? product.isActive : true,
+      isFeatured: product.isFeatured || product.isNew || false,
+      tags: product.tags || [],
+      sku: product.sku,
+      weight: product.weight,
+      dimensions: product.dimensions,
+      warranty: product.warranty,
+      meta: product.meta,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt
+    };
+
+    addToCompare(productForCompare);
+    toast.success("Đã thêm vào danh sách so sánh");
   };
 
   const getTotalStock = (product: any) => {
@@ -296,7 +339,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </Link>
             <button
               onClick={handleCompare}
-              className="p-2 bg-white text-gray-600 hover:bg-green-500 hover:text-white rounded-lg transition-colors"
+              disabled={!canAddToCompare && !isInCompare(product._id)}
+              className={`p-2 rounded-lg transition-colors ${
+                isInCompare(product._id)
+                  ? "text-green-500 bg-green-100 hover:bg-green-200"
+                  : canAddToCompare
+                  ? "text-gray-600 bg-white hover:bg-green-500 hover:text-white"
+                  : "text-gray-400 bg-gray-100 cursor-not-allowed"
+              }`}
+              title={
+                isInCompare(product._id)
+                  ? "Đã có trong danh sách so sánh"
+                  : canAddToCompare
+                  ? "Thêm vào so sánh"
+                  : "Đã đạt giới hạn so sánh (4 sản phẩm)"
+              }
             >
               <FaBalanceScale className="w-4 h-4" />
             </button>

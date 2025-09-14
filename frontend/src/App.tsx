@@ -53,7 +53,9 @@ import { CheckoutProvider } from './contexts/CheckoutContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { InventoryProvider } from './contexts/InventoryContext';
 import { OrderProvider } from './contexts/OrderContext';
+import { CompareProvider } from './contexts/CompareContext';
 import ErrorTestPage from './pages/admin/ErrorTestPage';
+import CompareProducts from './pages/client/CompareProducts';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
@@ -108,8 +110,9 @@ function App() {
             <OrderProvider>
               <CartProvider>
                 <WishlistProvider>
-                  <ChatProvider>
-                    <CheckoutProvider>
+                  <CompareProvider>
+                    <ChatProvider>
+                      <CheckoutProvider>
                     <ScrollToTop />
                     <Routes>
                       {/* Test routes */}
@@ -168,7 +171,7 @@ function App() {
                         <Route path="about" element={<About />} />
                         <Route path="contact" element={<Contact />} />
                         <Route path="faq" element={<FAQ />} />
-                        <Route path="compare" element={<ProductComparison />} />
+                        <Route path="compare" element={<CompareProducts />} />
                         <Route path="reviews" element={<ProductReviews />} />
                         <Route path="blogs" element={<BlogList />} />
                         <Route path="blog/:slug" element={<BlogDetail />} />
@@ -235,8 +238,9 @@ function App() {
                     {/* Global Components */}
                     <PromotionBanner />
                     <Toaster />
-                    </CheckoutProvider>
-                  </ChatProvider>
+                      </CheckoutProvider>
+                    </ChatProvider>
+                  </CompareProvider>
                 </WishlistProvider>
               </CartProvider>
             </OrderProvider>
