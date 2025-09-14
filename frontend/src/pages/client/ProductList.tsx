@@ -271,48 +271,6 @@ const ProductList: React.FC = () => {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Active Filters - Compact */}
-          {activeFilters.length > 0 && (
-            <div className="w-50px bg-blue-50 rounded-2xl shadow-sm p-4 mb-4 border border-blue-100">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm font-semibold text-gray-700">Bộ lọc:</span>
-                  <span className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full">
-                    {activeFilters.length}
-                  </span>
-                </div>
-                <button
-                  onClick={resetFilters}
-                  className="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded-lg transition-all duration-200 flex items-center gap-1"
-                >
-                  <FaUndo className="w-3 h-3" />
-                  Xóa tất cả
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {activeFilters.map((filter, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-600 text-xs rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 w-fit"
-                  >
-                    {filter}
-                    <button
-                      onClick={() => {
-                        if (filter.startsWith('Danh mục:')) removeFilter('category');
-                        else if (filter === 'Còn hàng') removeFilter('stock');
-                        else if (filter.startsWith('Thương hiệu:')) removeFilter('brand');
-                        else if (filter.startsWith('Giá:')) removeFilter('price');
-                      }}
-                      className="hover:text-red-600 hover:bg-red-50 p-0.5 rounded-md transition-all duration-200"
-                    >
-                      <FaTimes className="w-2.5 h-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
 
           <aside className="lg:w-64 w-full bg-white rounded-3xl shadow-xl p-6 mb-8 lg:mb-0 flex-shrink-0 border border-gray-100">
             <div className="flex items-center justify-between mb-4">

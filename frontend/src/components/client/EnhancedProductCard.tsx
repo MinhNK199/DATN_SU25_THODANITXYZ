@@ -105,20 +105,8 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({ product }) =>
   }, [product._id, product.stock, product]);
 
   const handleAddToCart = async () => {
-    if (product.variants && product.variants.length > 0) {
-      toast("Vui lòng chọn loại sản phẩm từ trang chi tiết");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await addToCart(product._id, 1);
-      toast.success("Đã thêm vào giỏ hàng!");
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      toast.error("Không thể thêm sản phẩm vào giỏ hàng!");
-    } finally {
-      setIsLoading(false);
-    }
+    // Always navigate to product detail page
+    navigate(`/product/${product._id}`);
   };
 
   useEffect(() => {
@@ -231,9 +219,7 @@ const EnhancedProductCard: React.FC<EnhancedProductCardProps> = ({ product }) =>
                   ? "Đang thêm..."
                   : isOutOfStock
                   ? "Hết hàng"
-                  : product.variants && product.variants.length > 0
-                  ? "Chọn loại"
-                  : "Thêm vào giỏ"}
+                  : "Thêm vào giỏ hàng"}
               </span>
             </button>
             <button

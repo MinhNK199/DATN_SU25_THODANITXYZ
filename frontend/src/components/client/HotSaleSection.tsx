@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaFire, FaStar, FaShoppingCart } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import EnhancedProductCard from './EnhancedProductCard';
 
 interface Product {
@@ -29,44 +30,45 @@ const HotSaleSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState({
-    hours: 0,
-    minutes: 9,
-    seconds: 59,
-    milliseconds: 1
+    days: 2,
+    hours: 14,
+    minutes: 30,
+    seconds: 45
   });
 
   // Countdown timer
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        let { hours, minutes, seconds, milliseconds } = prev;
+        let { days, hours, minutes, seconds } = prev;
         
-        if (milliseconds > 0) {
-          milliseconds--;
-        } else if (seconds > 0) {
+        if (seconds > 0) {
           seconds--;
-          milliseconds = 99;
         } else if (minutes > 0) {
           minutes--;
           seconds = 59;
-          milliseconds = 99;
         } else if (hours > 0) {
           hours--;
           minutes = 59;
           seconds = 59;
-          milliseconds = 99;
-        } else {
-          // Reset when countdown ends
+        } else if (days > 0) {
+          days--;
           hours = 23;
           minutes = 59;
           seconds = 59;
-          milliseconds = 99;
+        } else {
+          // Reset when countdown ends
+          days = 2;
+          hours = 14;
+          minutes = 30;
+          seconds = 45;
         }
         
-        return { hours, minutes, seconds, milliseconds };
+        return { days, hours, minutes, seconds };
       });
-    }, 10); // Update every 10ms for smooth countdown
+    }, 1000); // Update every second
 
     return () => clearInterval(timer);
   }, []);
@@ -320,6 +322,16 @@ const HotSaleSection: React.FC = () => {
 
   const formatTime = (value: number) => value.toString().padStart(2, '0');
 
+  // Handle Buy Now - Navigate to product detail
+  const handleBuyNow = (product: Product) => {
+    navigate(`/product/${product._id}`);
+  };
+
+  // Handle Add to Cart - Navigate to product detail
+  const handleAddToCart = (product: Product) => {
+    navigate(`/product/${product._id}`);
+  };
+
   const nextSlide = () => {
     setCurrentIndex((prev) => 
       prev >= hotSaleProducts.length - 5 ? 0 : prev + 1
@@ -383,7 +395,7 @@ const HotSaleSection: React.FC = () => {
               <span className="text-white text-lg font-medium">Kết thúc sau:</span>
               <div className="flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-sm px-6 py-3 rounded-xl border border-white border-opacity-30">
                 <span className="text-white text-2xl font-bold drop-shadow-lg">
-                  {formatTime(timeLeft.hours)} : {formatTime(timeLeft.minutes)} : {formatTime(timeLeft.seconds)} : {formatTime(timeLeft.milliseconds)}
+                  {formatTime(timeLeft.days)} : {formatTime(timeLeft.hours)} : {formatTime(timeLeft.minutes)} : {formatTime(timeLeft.seconds)}
                 </span>
               </div>
             </div>
@@ -432,7 +444,10 @@ const HotSaleSection: React.FC = () => {
                     </div>
 
                     {/* Product Image */}
-                    <div className="relative h-32 sm:h-40 lg:h-48 bg-gray-50 overflow-hidden flex items-center justify-center">
+                    <div 
+                      className="relative h-32 sm:h-40 lg:h-48 bg-gray-50 overflow-hidden flex items-center justify-center cursor-pointer"
+                      onClick={() => navigate(`/product/${product._id}`)}
+                    >
                       <img
                         src={product.image || (product.images && product.images.length > 0 ? product.images[0] : 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop')}
                         alt={product.name}
@@ -453,7 +468,10 @@ const HotSaleSection: React.FC = () => {
                       <div className="text-xs text-gray-500 mb-1 hidden sm:block">{product.brand?.name || 'Brand'}</div>
                       
                       {/* Product Name */}
-                      <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-xs sm:text-sm leading-tight">
+                      <h3 
+                        className="font-semibold text-gray-900 mb-2 line-clamp-2 text-xs sm:text-sm leading-tight cursor-pointer hover:text-red-600 transition-colors duration-200"
+                        onClick={() => navigate(`/product/${product._id}`)}
+                      >
                         {product.name}
                       </h3>
 
@@ -510,10 +528,16 @@ const HotSaleSection: React.FC = () => {
 
                       {/* CTA Buttons */}
                       <div className="flex gap-1 sm:gap-2">
-                        <button className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white py-1.5 sm:py-2 px-2 sm:px-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium hover:from-red-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl">
+                        <button 
+                          onClick={() => handleBuyNow(product)}
+                          className="flex-1 bg-gradient-to-r from-red-500 to-orange-500 text-white py-1.5 sm:py-2 px-2 sm:px-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium hover:from-red-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl active:scale-95"
+                        >
                           Mua ngay
                         </button>
-                        <button className="bg-white border-2 border-red-500 text-red-500 py-1.5 sm:py-2 px-2 sm:px-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium hover:bg-red-500 hover:text-white transition-all duration-300">
+                        <button 
+                          onClick={() => handleAddToCart(product)}
+                          className="bg-white border-2 border-red-500 text-red-500 py-1.5 sm:py-2 px-2 sm:px-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-medium hover:bg-red-500 hover:text-white transition-all duration-300 active:scale-95"
+                        >
                           <FaShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                       </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import EnhancedProductCard from './EnhancedProductCard';
 
 interface Product {
@@ -24,6 +25,7 @@ interface Product {
 }
 
 const FeaturedProductsSection: React.FC = () => {
+  const navigate = useNavigate();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
