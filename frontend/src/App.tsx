@@ -29,6 +29,7 @@ import BannerEdit from "./components/admin/Banner/BannerEdit";
 import Activity from "./components/admin/activity/activity";
 import RatingList from "./components/admin/rating/ratinglist";
 import Dashboard from "./components/admin/dashboard";
+import SettingsPage from "./pages/admin/SettingsPage";
 import VariantList from "./components/admin/variants/VariantList";
 import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
@@ -51,7 +52,10 @@ import { ChatProvider } from './contexts/ChatContext';
 import { CheckoutProvider } from './contexts/CheckoutContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { InventoryProvider } from './contexts/InventoryContext';
+import { OrderProvider } from './contexts/OrderContext';
+import { CompareProvider } from './contexts/CompareContext';
 import ErrorTestPage from './pages/admin/ErrorTestPage';
+import CompareProducts from './pages/client/CompareProducts';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
 import PromotionBanner from './components/client/PromotionBanner';
@@ -103,10 +107,12 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <InventoryProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <ChatProvider>
-                  <CheckoutProvider>
+            <OrderProvider>
+              <CartProvider>
+                <WishlistProvider>
+                  <CompareProvider>
+                    <ChatProvider>
+                      <CheckoutProvider>
                     <ScrollToTop />
                     <Routes>
                       {/* Test routes */}
@@ -165,7 +171,7 @@ function App() {
                         <Route path="about" element={<About />} />
                         <Route path="contact" element={<Contact />} />
                         <Route path="faq" element={<FAQ />} />
-                        <Route path="compare" element={<ProductComparison />} />
+                        <Route path="compare" element={<CompareProducts />} />
                         <Route path="reviews" element={<ProductReviews />} />
                         <Route path="blogs" element={<BlogList />} />
                         <Route path="blog/:slug" element={<BlogDetail />} />
@@ -212,6 +218,7 @@ function App() {
                         <Route path="banners/add" element={<BannerAdd />} />
                         <Route path="banners/edit/:id" element={<BannerEdit />} />
                         <Route path="activities" element={<Activity />} />
+                        <Route path="settings" element={<SettingsPage />} />
                         <Route path="ratings" element={<RatingList />} />
                         <Route path="ratings/:id" element={<RatingDetail />} />
                         <Route path="vouchers" element={<VoucherList />} />
@@ -231,10 +238,12 @@ function App() {
                     {/* Global Components */}
                     <PromotionBanner />
                     <Toaster />
-                  </CheckoutProvider>
-                </ChatProvider>
-              </WishlistProvider>
-            </CartProvider>
+                      </CheckoutProvider>
+                    </ChatProvider>
+                  </CompareProvider>
+                </WishlistProvider>
+              </CartProvider>
+            </OrderProvider>
           </InventoryProvider>
         </NotificationProvider>
       </AuthProvider>

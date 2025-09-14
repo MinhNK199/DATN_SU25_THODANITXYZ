@@ -38,7 +38,9 @@ export const createOrder = async (req, res) => {
 
     // ✅ KIỂM TRA TÍNH KHẢ DỤNG CỦA SẢN PHẨM TRƯỚC KHI TẠO ĐƠN HÀNG
     console.log("🔍 Kiểm tra tính khả dụng của sản phẩm...");
+    console.log("🔍 [DEBUG] Order items received:", JSON.stringify(orderItems, null, 2));
     const availabilityCheck = await InventoryService.checkAvailability(orderItems);
+    console.log("🔍 [DEBUG] Availability check result:", JSON.stringify(availabilityCheck, null, 2));
 
     if (!availabilityCheck.available) {
       console.error("❌ Một số sản phẩm không khả dụng:", availabilityCheck.unavailableItems);
@@ -129,6 +131,15 @@ export const createOrder = async (req, res) => {
     );
 
     const createdOrder = await order.save();
+
+    // Emit WebSocket event for new order creation
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_order_created', {
+        order: createdOrder
+      });
+      console.log('📡 Emitted new order created event');
+    }
 
     // ✅ TRỪ SỐ LƯỢNG KHO NGAY KHI TẠO ĐƠN HÀNG (CHO CẢ COD VÀ ONLINE PAYMENT)
     console.log("📦 Bắt đầu trừ kho cho đơn hàng...");
@@ -268,6 +279,20 @@ export const confirmOrderAfterPayment = async (orderId, paymentInfo) => {
     console.log(`✅ Đơn hàng giờ sẽ hiển thị trong profile và admin panel`);
     console.log(`✅ Payment method: ${order.paymentMethod}, Total: ${order.totalPrice}`);
 
+    // Emit WebSocket events for realtime updates
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('order_payment_updated', {
+        orderId: order._id,
+        isPaid: order.isPaid,
+        paidAt: order.paidAt,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        statusHistory: order.statusHistory
+      });
+      console.log('📡 Emitted payment update event for online payment');
+    }
+
     // ✅ GIỎ HÀNG ĐÃ ĐƯỢC XÓA TRONG createOrder, KHÔNG CẦN XÓA LẠI
     console.log("ℹ️ Giỏ hàng đã được xóa khi tạo đơn hàng, không cần xóa lại");
 
@@ -333,6 +358,20 @@ export const handlePaymentFailed = async (orderId, reason = "Thanh toán thất 
     await order.save();
     console.log(`✅ Order after failure handling: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
     console.log(`✅ Đơn hàng đã được cập nhật trạng thái thất bại`);
+
+    // Emit WebSocket events for realtime updates
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('order_payment_updated', {
+        orderId: order._id,
+        isPaid: order.isPaid,
+        paidAt: order.paidAt,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        statusHistory: order.statusHistory
+      });
+      console.log('📡 Emitted payment failure event');
+    }
 
     // ✅ GỬI THÔNG BÁO CHO USER
     try {
@@ -893,6 +932,30 @@ export const updateOrderStatus = async (req, res) => {
         `/profile?tab=orders`,
         { orderId: order._id }
       );
+
+      // Send email notification to shipper about successful refund
+      try {
+        if (order.shipper) {
+          const { sendShipperNotification } = await import('../utils/shipperNotification.js');
+          const Shipper = (await import('../models/Shipper.js')).default;
+          const shipper = await Shipper.findById(order.shipper);
+          
+          if (shipper) {
+            await sendShipperNotification(shipper.email, 'refund_completed', {
+              shipperName: shipper.fullName,
+              orderId: order._id,
+              customerName: order.shippingAddress?.fullName || 'Khách hàng',
+              refundAmount: order.totalPrice?.toLocaleString('vi-VN') + ' VNĐ',
+              refundDate: new Date().toLocaleDateString('vi-VN'),
+              reason: 'Khách hàng yêu cầu hoàn tiền và đã được chấp nhận'
+            });
+            console.log(`✅ Refund completed email sent to shipper: ${shipper.email}`);
+          }
+        }
+      } catch (emailError) {
+        console.error('Failed to send refund completed email:', emailError);
+        // Don't fail the request if email fails
+      }
     } else if (status === "delivered_success" && refundCount > 0) {
       await createNotificationForUser(
         order.user,

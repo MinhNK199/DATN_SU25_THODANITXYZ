@@ -573,7 +573,7 @@ const Cart: React.FC = () => {
                                     )}
                                     {displaySize && (
                                       <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                        Size: {displaySize}
+                                        Size: {displaySize} inch
                                       </span>
                                     )}
                                     {displaySKU && (
@@ -846,7 +846,7 @@ const Cart: React.FC = () => {
                                 {variant && (
                                   <div className="text-gray-500 truncate text-xs">
                                     {variant.color?.name || variant.name || `Màu ${variant.color?.code || ''}`}
-                                    {variant.size && ` - Size ${variant.size}`}
+                                    {variant.size && ` - Size ${variant.size} inch`}
                                   </div>
                                 )}
                                 {/* Fallback nếu không có variantInfo */}
@@ -1219,9 +1219,9 @@ const Cart: React.FC = () => {
                         </div>
                       </div>
                       <div>
-                        <span className="font-medium text-blue-700">Kích thước:</span>
+                        <span className="font-medium text-blue-700">Size (inch):</span>
                         <div className="text-blue-900 font-semibold mt-1">
-                          {variantData.size || "N/A"}
+                          {variantData.size ? `${variantData.size} inch` : "N/A"}
                         </div>
                       </div>
                       <div>
@@ -1297,7 +1297,7 @@ const Cart: React.FC = () => {
                           <div>Màu sắc: {detailItem.variantInfo.color.name}</div>
                         )}
                         {detailItem.variantInfo.size && (
-                          <div>Kích thước: {detailItem.variantInfo.size}</div>
+                          <div>Size (inch): {detailItem.variantInfo.size} inch</div>
                         )}
                         {detailItem.variantInfo.sku && (
                           <div>SKU: {detailItem.variantInfo.sku}</div>
@@ -1318,7 +1318,7 @@ const Cart: React.FC = () => {
                                 <div>Màu sắc: {fallbackVariant.color.name}</div>
                               )}
                               {fallbackVariant.size && (
-                                <div>Kích thước: {fallbackVariant.size}</div>
+                                <div>Size (inch): {fallbackVariant.size} inch</div>
                               )}
                               {fallbackVariant.sku && (
                                 <div>SKU: {fallbackVariant.sku}</div>

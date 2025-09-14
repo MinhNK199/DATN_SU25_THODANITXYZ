@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, MapPin, Phone, User, Calendar, Truck, CheckCircle, XCircle, Clock, CreditCard, RotateCcw, Star, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axiosInstance from '../../../api/axiosInstance';
+import { useOrder } from '../../../contexts/OrderContext';
 
 interface OrderItem {
   _id: string;
@@ -80,6 +81,7 @@ interface OrderDetail {
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { updateOrder } = useOrder();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefunding, setIsRefunding] = useState(false);
@@ -109,6 +111,21 @@ const OrderDetail = () => {
       fetchOrderDetail(id);
     }
   }, [id]);
+
+  // Listen for realtime order updates
+  useEffect(() => {
+    const handleOrderUpdate = (event: CustomEvent) => {
+      const { orderId, updates } = event.detail;
+      if (order && order._id === orderId) {
+        setOrder(prevOrder => prevOrder ? { ...prevOrder, ...updates } : null);
+      }
+    };
+
+    window.addEventListener('orderUpdated', handleOrderUpdate as EventListener);
+    return () => {
+      window.removeEventListener('orderUpdated', handleOrderUpdate as EventListener);
+    };
+  }, [order]);
 
   const fetchOrderDetail = async (orderId: string) => {
     try {
@@ -541,8 +558,19 @@ const OrderDetail = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Trạng thái:</span>
-                <span className={`font-medium ${order.paymentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {order.paymentStatus === 'paid' ? 'Đã thanh toán' : (order.paymentStatus || 'Chưa thanh toán')}
+                <span className={`font-medium ${
+                  (order.paymentMethod === 'COD' ? order.isPaid : order.paymentStatus === 'paid') 
+                    ? 'text-green-600' 
+                    : order.paymentStatus === 'failed' 
+                    ? 'text-red-600' 
+                    : 'text-yellow-600'
+                }`}>
+                  {order.paymentMethod === 'COD' 
+                    ? (order.isPaid ? 'Đã thanh toán COD' : 'Chưa thanh toán COD')
+                    : (order.paymentStatus === 'paid' ? `Đã thanh toán ${order.paymentMethod.toUpperCase()}` : 
+                       order.paymentStatus === 'failed' ? 'Thanh toán thất bại' : 
+                       order.paymentStatus === 'pending' ? 'Chờ thanh toán' : 'Chưa thanh toán')
+                  }
                 </span>
               </div>
               {order.paidAt && (

@@ -221,14 +221,18 @@ class InventoryService {
         };
 
         try {
+            console.log("🔍 [DEBUG] checkAvailability - Input orderItems:", JSON.stringify(orderItems, null, 2));
+            
             for (const item of orderItems) {
                 const { product: productId, quantity, variantId } = item;
+                console.log(`🔍 [DEBUG] Processing item - productId: ${productId}, quantity: ${quantity}, variantId: ${variantId}`);
 
                 const product = await Product.findById(productId);
                 if (!product) {
+                    console.log(`❌ Product not found: ${productId}`);
                     results.unavailableItems.push({
                         productId,
-                        error: "Không tìm thấy sản phẩm"
+                        error: "Sản phẩm không còn khả dụng hoặc đã bị xóa"
                     });
                     continue;
                 }

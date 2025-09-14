@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes, FaPhone, FaEnvelope, FaMapMarkerAlt, FaChevronDown } from 'react-icons/fa';
+import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes, FaPhone, FaEnvelope, FaMapMarkerAlt, FaChevronDown, FaBalanceScale } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useCompare } from '../../contexts/CompareContext';
 import SearchBar from './SearchBar';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
@@ -41,6 +42,7 @@ const Header: React.FC = () => {
 
   const { state: cartState, loadCart } = useCart();
   const { state: wishlistState } = useWishlist();
+  const { compareList } = useCompare();
 
   // Check login status
   useEffect(() => {
@@ -356,6 +358,16 @@ const Header: React.FC = () => {
                 {wishlistState.itemCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {wishlistState.itemCount}
+                  </span>
+                )}
+              </Link>
+
+              {/* Compare */}
+              <Link to="/compare" className="relative text-gray-700 hover:text-blue-600 transition-colors">
+                <FaBalanceScale className="w-5 h-5" />
+                {compareList.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {compareList.length}
                   </span>
                 )}
               </Link>

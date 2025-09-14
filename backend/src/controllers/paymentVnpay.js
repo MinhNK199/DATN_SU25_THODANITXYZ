@@ -249,6 +249,20 @@ export const vnpayCallback = async (req, res) => {
                 });
                 
                 console.log(`✅ VNPay payment confirmed successfully for order ${order._id}`);
+
+                // Emit WebSocket events for realtime updates
+                const io = req.app.get('io');
+                if (io) {
+                    io.emit('order_payment_updated', {
+                        orderId: order._id,
+                        isPaid: order.isPaid,
+                        paidAt: order.paidAt,
+                        status: order.status,
+                        paymentStatus: order.paymentStatus,
+                        statusHistory: order.statusHistory
+                    });
+                    console.log('📡 Emitted payment update event for VNPay payment');
+                }
                 
             } catch (confirmError) {
                 console.error("❌ Error confirming VNPay payment:", confirmError);

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Modal, Radio, Card, List, Typography, Space, Button, Spin, Tag, message } from 'antd';
+import { UserOutlined, PhoneOutlined, EnvironmentOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { Order } from '../../../interfaces/Order';
 import { Shipper } from '../../../interfaces/Shipper';
 
@@ -9,6 +11,8 @@ interface AssignOrderModalProps {
   shipper: Shipper | null;
 }
 
+const { Title, Text } = Typography;
+
 const AssignOrderModal: React.FC<AssignOrderModalProps> = ({
   isOpen,
   onClose,
@@ -18,6 +22,7 @@ const AssignOrderModal: React.FC<AssignOrderModalProps> = ({
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -30,7 +35,7 @@ const AssignOrderModal: React.FC<AssignOrderModalProps> = ({
       setIsLoading(true);
       console.log('🔍 Fetching available orders for assignment...');
       
-      const response = await fetch('/api/order?status=confirmed&unassigned=true', {
+      const response = await fetch('http://localhost:8000/api/order?status=confirmed&unassigned=true', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -46,19 +51,28 @@ const AssignOrderModal: React.FC<AssignOrderModalProps> = ({
         setOrders(data.data?.orders || []);
       } else {
         console.error('❌ Failed to fetch orders:', response.status);
+        message.error('Không thể tải danh sách đơn hàng');
       }
     } catch (error) {
       console.error('❌ Error fetching orders:', error);
+      message.error('Có lỗi xảy ra khi tải danh sách đơn hàng');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (selectedOrder) {
-      onAssign(selectedOrder);
-      onClose();
-      setSelectedOrder('');
+      try {
+        setAssigning(true);
+        await onAssign(selectedOrder);
+        onClose();
+        setSelectedOrder('');
+      } catch (error) {
+        console.error('Error assigning order:', error);
+      } finally {
+        setAssigning(false);
+      }
     }
   };
 
@@ -79,126 +93,136 @@ const AssignOrderModal: React.FC<AssignOrderModalProps> = ({
     }).format(price);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-        <div className="mt-3">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Phân công đơn hàng cho: {shipper?.fullName}
-            </h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <span className="sr-only">Đóng</span>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <Modal
+      title={
+        <Space align="center">
+          <UserOutlined className="text-blue-600" />
+          <span>Phân công đơn hàng cho: {shipper?.fullName}</span>
+        </Space>
+      }
+      open={isOpen}
+      onCancel={onClose}
+      width={800}
+      footer={[
+        <Button key="cancel" onClick={onClose}>
+          Hủy
+        </Button>,
+        <Button
+          key="assign"
+          type="primary"
+          onClick={handleAssign}
+          disabled={!selectedOrder || isLoading}
+          loading={assigning}
+        >
+          Phân công
+        </Button>,
+      ]}
+    >
+      {isLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <Spin size="large" />
+        </div>
+      ) : (
+        <div>
+          <Title level={5} className="mb-4">
+            Chọn đơn hàng cần phân công:
+          </Title>
+          
+          {orders.length === 0 ? (
+            <div className="text-center py-8">
+              <ShoppingCartOutlined className="text-6xl text-gray-400 mb-4" />
+              <Text type="secondary">Không có đơn hàng nào cần phân công</Text>
             </div>
           ) : (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chọn đơn hàng cần phân công:
-              </label>
-              
-              {orders.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  <p className="mt-2">Không có đơn hàng nào cần phân công</p>
-                </div>
-              ) : (
-                <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                  {orders.map((order) => (
-                    <div
-                      key={order._id}
-                      className={`p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 ${
-                        selectedOrder === order._id ? 'bg-blue-50 border-blue-200' : ''
+            <Radio.Group
+              value={selectedOrder}
+              onChange={(e) => setSelectedOrder(e.target.value)}
+              className="w-full"
+            >
+              <List
+                dataSource={orders}
+                renderItem={(order) => (
+                  <List.Item className="!px-0">
+                    <Card
+                      className={`w-full cursor-pointer transition-all ${
+                        selectedOrder === order._id 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'hover:border-gray-400'
                       }`}
                       onClick={() => setSelectedOrder(order._id)}
                     >
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          name="selectedOrder"
-                          value={order._id}
-                          checked={selectedOrder === order._id}
-                          onChange={() => setSelectedOrder(order._id)}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-                        />
-                        <div className="ml-3 flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                Đơn hàng #{order._id.slice(-8)}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Khách hàng: {order.shippingAddress?.fullName || 'N/A'}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                Địa chỉ: {order.shippingAddress?.address}, {order.shippingAddress?.ward}, {order.shippingAddress?.district}, {order.shippingAddress?.province}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                SĐT: {order.shippingAddress?.phone || 'N/A'}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-gray-900">
-                                {formatPrice(order.totalAmount)}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {formatDate(order.createdAt)}
-                              </p>
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                                {order.status === 'confirmed' ? 'Đã xác nhận' : order.status}
-                              </span>
-                            </div>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-2">
+                            <Radio value={order._id} className="mr-3" />
+                            <Title level={5} className="!mb-0">
+                              Đơn hàng #{order._id.slice(-8)}
+                            </Title>
                           </div>
                           
-                          {order.items && order.items.length > 0 && (
-                            <div className="mt-2">
-                              <p className="text-xs text-gray-500">
-                                Sản phẩm: {order.items.map(item => `${item.name} (x${item.quantity})`).join(', ')}
-                              </p>
+                          <Space direction="vertical" size="small" className="w-full">
+                            <div className="flex items-center">
+                              <UserOutlined className="mr-2 text-gray-500" />
+                              <Text strong>Khách hàng:</Text>
+                              <Text className="ml-1">{order.shippingAddress?.fullName || 'N/A'}</Text>
                             </div>
-                          )}
+                            
+                            <div className="flex items-center">
+                              <PhoneOutlined className="mr-2 text-gray-500" />
+                              <Text strong>SĐT:</Text>
+                              <Text className="ml-1">{order.shippingAddress?.phone || 'N/A'}</Text>
+                            </div>
+                            
+                            <div className="flex items-start">
+                              <EnvironmentOutlined className="mr-2 text-gray-500 mt-1" />
+                              <div>
+                                <Text strong>Địa chỉ:</Text>
+                                <Text className="ml-1">
+                                  {order.shippingAddress?.address}, {order.shippingAddress?.ward}, {order.shippingAddress?.district}, {order.shippingAddress?.province}
+                                </Text>
+                              </div>
+                            </div>
+                            
+                            {order.items && order.items.length > 0 && (
+                              <div className="flex items-start">
+                                <ShoppingCartOutlined className="mr-2 text-gray-500 mt-1" />
+                                <div>
+                                  <Text strong>Sản phẩm:</Text>
+                                  <Text className="ml-1">
+                                    {order.items.map(item => `${item.name} (x${item.quantity})`).join(', ')}
+                                  </Text>
+                                </div>
+                              </div>
+                            )}
+                          </Space>
+                        </div>
+                        
+                        <div className="text-right ml-4">
+                          <div className="mb-2">
+                            <Text strong className="text-lg text-green-600">
+                              {formatPrice(order.totalAmount)}
+                            </Text>
+                          </div>
+                          <div className="mb-2">
+                            <Text type="secondary" className="text-sm">
+                              {formatDate(order.createdAt)}
+                            </Text>
+                          </div>
+                          <Tag color="processing">
+                            {order.status === 'confirmed' ? 'Đã xác nhận' : order.status}
+                          </Tag>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    </Card>
+                  </List.Item>
+                )}
+              />
+            </Radio.Group>
           )}
-
-          <div className="flex justify-end space-x-2 pt-4 border-t border-gray-200">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={handleAssign}
-              disabled={!selectedOrder || isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Phân công
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 };
 

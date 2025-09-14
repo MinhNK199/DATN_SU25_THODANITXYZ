@@ -381,8 +381,34 @@ const ProductDetail: React.FC = () => {
       : "N/A";
 
   const variantColumns: ColumnsType<ProductVariant> = [
-    { title: "SKU", dataIndex: "sku", key: "sku" },
-    { title: "Tên biến thể", dataIndex: "name", key: "name" },
+    { 
+      title: "SKU", 
+      dataIndex: "sku", 
+      key: "sku",
+      render: (sku: string, record: ProductVariant) => (
+        <Button 
+          type="link" 
+          onClick={() => navigate(`/admin/variants/detail/${record._id}`)}
+          className="p-0 h-auto font-medium text-blue-600 hover:text-blue-800"
+        >
+          {sku}
+        </Button>
+      )
+    },
+    { 
+      title: "Tên biến thể", 
+      dataIndex: "name", 
+      key: "name",
+      render: (name: string, record: ProductVariant) => (
+        <Button 
+          type="link" 
+          onClick={() => navigate(`/admin/variants/detail/${record._id}`)}
+          className="p-0 h-auto font-medium text-blue-600 hover:text-blue-800"
+        >
+          {name}
+        </Button>
+      )
+    },
     { title: "Giá", dataIndex: "price", key: "price", render: formatPrice },
     {
       title: "Giá sale",
@@ -445,10 +471,10 @@ const ProductDetail: React.FC = () => {
     //   },
     // },
     {
-      title: "Kích thước",
+      title: "Size (inch)",
       dataIndex: "size",
       key: "size",
-      render: (size) => size || "N/A",
+      render: (size) => size ? `${size} inch` : "N/A",
     },
     {
       title: "Trạng thái",
@@ -461,6 +487,21 @@ const ProductDetail: React.FC = () => {
         >
           {isActive ? "Hoạt động" : "Ẩn"}
         </Tag>
+      ),
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      width: 120,
+      render: (_, record: ProductVariant) => (
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => navigate(`/admin/variants/detail/${record._id}`)}
+          icon={<EyeOutlined />}
+        >
+          Xem chi tiết
+        </Button>
       ),
     },
   ];
@@ -736,20 +777,50 @@ const ProductDetail: React.FC = () => {
                           <InfoItem label="Thương hiệu">
                             <Tag color="geekblue">{brandName}</Tag>
                           </InfoItem>
+                          <InfoItem label="SKU">
+                            {product.sku || "N/A"}
+                          </InfoItem>
+                          <InfoItem label="Giá gốc">
+                            {formatPrice(product.price)}
+                          </InfoItem>
+                          <InfoItem label="Giá sale">
+                            {product.salePrice && product.salePrice < product.price ? (
+                              <Space>
+                                <Text type="danger" strong>
+                                  {formatPrice(product.salePrice)}
+                                </Text>
+                                <Tag color="red">
+                                  -{Math.round(((product.price - product.salePrice) / product.price) * 100)}%
+                                </Tag>
+                              </Space>
+                            ) : (
+                              "Không có"
+                            )}
+                          </InfoItem>
+                          <InfoItem label="Tồn kho tổng">
+                            <Tag color={product.stock > 0 ? "success" : "error"}>
+                              {product.stock > 0 ? `Còn hàng (${product.stock})` : "Hết hàng"}
+                            </Tag>
+                          </InfoItem>
+                        </Col>
+                        <Col xs={24} sm={12}>
                           <InfoItem label="Bảo hành">
                             {product.warranty
                               ? `${product.warranty} tháng`
                               : "N/A"}
                           </InfoItem>
-                          <InfoItem label="Cân nặng">
-                            {weight ? `${weight} gram` : "N/A"}
+                          <InfoItem label="Trạng thái hiển thị">
+                            <Tag
+                              icon={product.isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                              color={product.isActive ? "success" : "error"}
+                            >
+                              {product.isActive ? "Đang bán" : "Ngừng bán"}
+                            </Tag>
                           </InfoItem>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                          <InfoItem label="Kích thước">
-                            {length || width || height
-                              ? `${length} x ${width} x ${height} cm`
-                              : "N/A"}
+                          <InfoItem label="Trạng thái nổi bật">
+                            <Tag color={product.isFeatured ? "gold" : "default"}>
+                              {product.isFeatured ? "Nổi bật" : "Bình thường"}
+                            </Tag>
                           </InfoItem>
                           <InfoItem label="Tags">
                             {product.tags?.length ? (
@@ -762,12 +833,6 @@ const ProductDetail: React.FC = () => {
                               </Text>
                             )}
                           </InfoItem>
-                          <InfoItem label="Meta Title">
-                            {product.meta?.metaTitle || "N/A"}
-                          </InfoItem>
-                          <InfoItem label="Meta Description">
-                            {product.meta?.metaDescription || "N/A"}
-                          </InfoItem>
                         </Col>
                       </Row>
                       <Divider />
@@ -776,39 +841,33 @@ const ProductDetail: React.FC = () => {
                         {product.description ||
                           "Chưa có mô tả cho sản phẩm này."}
                       </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: "2",
-                  label: "Thông số kỹ thuật",
-                  children: (
-                    <div>
-                      {Object.keys(mergedSpecifications).length > 0 ? (
-                        <Table
-                          dataSource={Object.entries(mergedSpecifications).map(
-                            ([key, value]) => ({
-                              key,
-                              value,
-                            })
-                          )}
-                          columns={[
-                            {
-                              title: "Thông số",
-                              dataIndex: "key",
-                              key: "key",
-                              width: "40%",
-                            },
-                            { title: "Giá trị", dataIndex: "value", key: "value" },
-                          ]}
-                          pagination={false}
-                          size="small"
-                          className="border rounded-lg"
-                        />
-                      ) : (
-                        <Text type="secondary">
-                          Không có thông số kỹ thuật.
-                        </Text>
+                      
+                      {/* Thông số kỹ thuật nếu có */}
+                      {Object.keys(mergedSpecifications).length > 0 && (
+                        <>
+                          <Divider />
+                          <Title level={5}>Thông số kỹ thuật</Title>
+                          <Table
+                            dataSource={Object.entries(mergedSpecifications).map(
+                              ([key, value]) => ({
+                                key,
+                                value,
+                              })
+                            )}
+                            columns={[
+                              {
+                                title: "Thông số",
+                                dataIndex: "key",
+                                key: "key",
+                                width: "40%",
+                              },
+                              { title: "Giá trị", dataIndex: "value", key: "value" },
+                            ]}
+                            pagination={false}
+                            size="small"
+                            className="border rounded-lg"
+                          />
+                        </>
                       )}
                     </div>
                   ),
@@ -836,7 +895,7 @@ const ProductDetail: React.FC = () => {
                 //   ),
                 // },
                 {
-                  key: "4",
+                  key: "2",
                   label: `Biến thể (${product.variants?.length || 0})`,
                   children: (
                     <div>

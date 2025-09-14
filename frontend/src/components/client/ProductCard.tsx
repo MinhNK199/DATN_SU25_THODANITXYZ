@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaHeart,
   FaShoppingCart,
@@ -8,6 +8,7 @@ import {
   FaBalanceScale,
 } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
+import { useCompare } from "../../contexts/CompareContext";
 import cartApi from "../../services/cartApi";
 import { toast } from "react-hot-toast";
 import wishlistApi from "../../services/wishlistApi";
@@ -62,11 +63,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [availableStock, setAvailableStock] = useState<number | null>(null);
   const [stockLoading, setStockLoading] = useState(false);
   const { addToCart } = useCart();
+  const { addToCompare, isInCompare, canAddToCompare } = useCompare();
   const [isFavorite, setIsFavorite] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [filterText, setFilterText] = useState('');
   const [filterSize, setFilterSize] = useState<string | undefined>(undefined);
+  const navigate = useNavigate();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -130,21 +133,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
+  const handleProductClick = () => {
+    if (product.name.toLowerCase().includes('iphone 15')) {
+      navigate(`/products?search=iPhone 15&brand=Apple`);
+    } else {
+      navigate(`/product/${product._id}`);
+    }
+  };
+
   const handleAddToCart = async () => {
-    if (product.variants && product.variants.length > 0) {
-      openVariantModal();
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await addToCart(product._id, 1);
-      toast.success("Đã thêm vào giỏ hàng!");
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      toast.error("Không thể thêm sản phẩm vào giỏ hàng!");
-    } finally {
-      setIsLoading(false);
-    }
+    // Always navigate to product detail page
+    navigate(`/product/${product._id}`);
   };
 
   const sizeList = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
@@ -192,7 +191,48 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleCompare = () => {
-    toast.success("Tính năng so sánh sẽ được phát triển sau");
+    if (isInCompare(product._id)) {
+      toast.error("Sản phẩm này đã có trong danh sách so sánh");
+      return;
+    }
+    
+    if (!canAddToCompare) {
+      toast.error("Bạn chỉ có thể so sánh tối đa 4 sản phẩm");
+      return;
+    }
+
+    // Convert ProductCard format to Product interface format
+    const productForCompare = {
+      _id: product._id,
+      name: product.name,
+      description: product.description || '',
+      price: product.price,
+      salePrice: product.salePrice,
+      images: product.images || (product.image ? [product.image] : []),
+      additionalImages: product.additionalImages || [],
+      thumbnails: product.thumbnails || [],
+      category: product.category,
+      brand: product.brand,
+      stock: product.stock,
+      variants: product.variants || [],
+      specifications: product.specifications || {},
+      features: product.features || [],
+      averageRating: product.averageRating || product.rating || 0,
+      numReviews: product.numReviews || product.reviewCount || 0,
+      isActive: product.isActive !== undefined ? product.isActive : true,
+      isFeatured: product.isFeatured || product.isNew || false,
+      tags: product.tags || [],
+      sku: product.sku,
+      weight: product.weight,
+      dimensions: product.dimensions,
+      warranty: product.warranty,
+      meta: product.meta,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt
+    };
+
+    addToCompare(productForCompare);
+    toast.success("Đã thêm vào danh sách so sánh");
   };
 
   const getTotalStock = (product: any) => {
@@ -230,15 +270,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
 
   return (
-    <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
+    <div className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 p-3">
       <div className="relative overflow-hidden">
-        <Link to={`/product/${product._id}`}>
+        <div 
+          onClick={handleProductClick}
+          className="cursor-pointer"
+        >
           <img
             src={product.image || (product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg')}
             alt={product.name}
-            className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-48 object-contain group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/placeholder.svg';
+            }}
           />
-        </Link>
+        </div>
 
         <div className="absolute top-3 left-3 flex flex-col space-y-2">
           {product.isNew && (
@@ -258,6 +305,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
+        {/* Tmember discount badge */}
+        <div className="absolute top-3 right-3">
+          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+            Tmember
+          </span>
+        </div>
+
+
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="flex space-x-2">
             <button
@@ -274,9 +329,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   ? "Đang thêm..."
                   : isOutOfStock
                     ? "Hết hàng"
-                    : product.variants && product.variants.length > 0
-                      ? "Chọn loại"
-                      : "Thêm vào giỏ"}
+                      : "Thêm vào giỏ hàng"}
               </span>
             </button>
             <button
@@ -296,7 +349,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </Link>
             <button
               onClick={handleCompare}
-              className="p-2 bg-white text-gray-600 hover:bg-green-500 hover:text-white rounded-lg transition-colors"
+              disabled={!canAddToCompare && !isInCompare(product._id)}
+              className={`p-2 rounded-lg transition-colors ${
+                isInCompare(product._id)
+                  ? "text-green-500 bg-green-100 hover:bg-green-200"
+                  : canAddToCompare
+                  ? "text-gray-600 bg-white hover:bg-green-500 hover:text-white"
+                  : "text-gray-400 bg-gray-100 cursor-not-allowed"
+              }`}
+              title={
+                isInCompare(product._id)
+                  ? "Đã có trong danh sách so sánh"
+                  : canAddToCompare
+                  ? "Thêm vào so sánh"
+                  : "Đã đạt giới hạn so sánh (4 sản phẩm)"
+              }
             >
               <FaBalanceScale className="w-4 h-4" />
             </button>
@@ -304,18 +371,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-0">
         <div className="text-sm text-blue-600 font-medium mb-1">
           {product.category && typeof product.category === "object"
             ? product.category.name
             : product.category || "Không rõ danh mục"}
         </div>
 
-        <Link to={`/product/${product._id}`}>
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-            {product.name}
-          </h3>
-        </Link>
+        <h3 
+          onClick={handleProductClick}
+          className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer"
+        >
+          {product.name}
+        </h3>
 
         <div className="flex items-center space-x-1 mb-2">
           <div className="flex">
@@ -336,9 +404,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <span className="text-xl font-bold text-gray-900">
             {formatPrice(bestPrice)}
           </span>
-          {product.originalPrice && (
+          {(product.originalPrice || (product.salePrice && product.price)) && (
             <span className="text-sm text-gray-500 line-through">
-              {formatPrice(product.originalPrice)}
+              {formatPrice(product.originalPrice || product.price)}
             </span>
           )}
         </div>
@@ -374,9 +442,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               ? "Đang thêm..."
               : isOutOfStock
                 ? "Hết hàng"
-                : product.variants && product.variants.length > 0
-                  ? "Chọn loại sản phẩm"
-                  : "Thêm vào giỏ hàng"}
+                : "Thêm vào giỏ hàng"}
           </span>
         </button>
       </div>
@@ -424,7 +490,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
                     <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
                     <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
-                    <div className="mb-1">Kích thước: <span>{variant.size || 'N/A'}</span></div>
+                    <div className="mb-1">Size (inch): <span>{variant.size ? `${variant.size} inch` : 'N/A'}</span></div>
                     <div className="mb-1">Cân nặng: <span>{variant.weight ? `${variant.weight}g` : 'N/A'}</span></div>
                     <div className="mb-1">Trạng thái: <span className={variant.isActive ? 'text-green-600' : 'text-red-600'}>{variant.isActive ? 'Hoạt động' : 'Ẩn'}</span></div>
                     {variant.images && variant.images.length > 0 && (
@@ -496,7 +562,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     </div>
                     <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
                     {variant.size && (
-                      <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
+                      <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size} inch</Tag>
                     )}
                   </div>
                   <Button

@@ -478,7 +478,7 @@ const CheckoutPaymentPage: React.FC = () => {
                               {item.variantInfo && (
                                 <p className="text-xs text-gray-500 mb-1">
                                   {item.variantInfo.color?.name || item.variantInfo.name || 'Chi tiết sản phẩm'}
-                                  {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
+                                  {item.variantInfo.size && ` - Size ${item.variantInfo.size} inch`}
                                 </p>
                               )}
                               <p className="text-xs text-gray-600">

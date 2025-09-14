@@ -329,6 +329,13 @@ const assignOrderToShipper = async (req, res) => {
       });
     }
 
+    if (!shipper.isOnline) {
+      return res.status(400).json({
+        success: false,
+        message: 'Shipper hiện đang offline, không thể phân công đơn hàng'
+      });
+    }
+
     // Cập nhật đơn hàng
     order.shipper = shipperId;
     order.status = 'assigned';
@@ -349,6 +356,42 @@ const assignOrderToShipper = async (req, res) => {
 
     await orderTracking.save();
 
+    // Emit WebSocket events for realtime updates
+    const io = req.app.get('io');
+    if (io) {
+      // Emit order assignment event
+      io.emit('order_assigned', {
+        orderId: order._id,
+        shipper: {
+          _id: shipper._id,
+          fullName: shipper.fullName,
+          phone: shipper.phone,
+          email: shipper.email
+        },
+        status: order.status,
+        statusHistory: order.statusHistory
+      });
+      console.log('📡 Emitted order assignment event');
+    }
+
+    // Send notification email to shipper about new order assignment
+    try {
+      const { sendShipperNotification } = await import('../utils/shipperNotification.js');
+      await sendShipperNotification(shipper.email, 'order_assigned', {
+        shipperName: shipper.fullName,
+        orderId: order._id,
+        customerName: order.shippingAddress?.fullName || 'Khách hàng',
+        customerPhone: order.shippingAddress?.phone || 'N/A',
+        deliveryAddress: `${order.shippingAddress?.address}, ${order.shippingAddress?.ward}, ${order.shippingAddress?.district}, ${order.shippingAddress?.province}`,
+        estimatedDelivery: new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN'), // 24 hours from now
+        notes: order.notes || 'Không có ghi chú'
+      });
+      console.log(`✅ Order assignment email sent to shipper: ${shipper.email}`);
+    } catch (emailError) {
+      console.error('Failed to send order assignment email:', emailError);
+      // Don't fail the request if email fails
+    }
+
     res.json({
       success: true,
       message: 'Phân công đơn hàng thành công',
@@ -359,6 +402,28 @@ const assignOrderToShipper = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Lỗi server khi phân công đơn hàng',
+      error: error.message
+    });
+  }
+};
+
+// Lấy danh sách shipper online
+const getOnlineShippers = async (req, res) => {
+  try {
+    const onlineShippers = await Shipper.find({ 
+      status: 'active', 
+      isOnline: true 
+    }).select('_id fullName phone email vehicleType rating totalDeliveries avatar currentLocation');
+    
+    res.json({
+      success: true,
+      data: onlineShippers
+    });
+  } catch (error) {
+    console.error('Get online shippers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy danh sách shipper online',
       error: error.message
     });
   }
@@ -441,5 +506,6 @@ export {
   updateShipperStatus,
   deleteShipper,
   assignOrderToShipper,
+  getOnlineShippers,
   getShipperStats
 };

@@ -28,6 +28,7 @@ import routerAdminShipper from "./adminShipper.js";
 
 import routerChat from "./chat.js";
 import routerAdmin from "./admin.js";
+import routerSettings from "./settings.js";
 import routerAdminNotification from "./adminNotification.js";
 import routerReservation from "./reservation.js";
 
@@ -61,6 +62,7 @@ router.use("/admin/shipper", routerAdminShipper);
 router.use("/chat", routerChat);
 router.use("/admin", routerAdmin);
 router.use("/admin-notification", routerAdminNotification);
+router.use("/settings", routerSettings);
 router.use("/reservation", routerReservation);
 
 router.get('/provinces', getProvinces);

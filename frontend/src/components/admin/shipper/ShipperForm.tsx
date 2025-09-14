@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Form, Input, Select, Button, Card, Row, Col, Typography, Space, message } from 'antd';
+import { UserOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import { Shipper } from '../../../interfaces/Shipper';
 
 interface ShipperFormProps {
@@ -8,27 +10,18 @@ interface ShipperFormProps {
   isEdit?: boolean;
 }
 
+const { Option } = Select;
+const { Title } = Typography;
+
 const ShipperForm: React.FC<ShipperFormProps> = ({ shipper, onSave, onCancel, isEdit = false }) => {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    fullName: '',
-    phone: '',
-    address: '',
-    idCard: '',
-    licensePlate: '',
-    vehicleType: 'motorbike' as 'motorbike' | 'car' | 'bicycle',
-    status: 'active' as 'active' | 'inactive' | 'suspended',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (shipper && isEdit) {
-      setFormData({
+      form.setFieldsValue({
         username: shipper.username,
         email: shipper.email,
-        password: '', // Không hiển thị mật khẩu cũ
         fullName: shipper.fullName,
         phone: shipper.phone,
         address: shipper.address,
@@ -38,300 +31,203 @@ const ShipperForm: React.FC<ShipperFormProps> = ({ shipper, onSave, onCancel, is
         status: shipper.status,
       });
     }
-  }, [shipper, isEdit]);
+  }, [shipper, isEdit, form]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.username.trim()) {
-      newErrors.username = 'Tên đăng nhập là bắt buộc';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email là bắt buộc';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
-    }
-
-    if (!isEdit && !formData.password.trim()) {
-      newErrors.password = 'Mật khẩu là bắt buộc';
-    } else if (formData.password && formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    }
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Họ và tên là bắt buộc';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Số điện thoại là bắt buộc';
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = 'Địa chỉ là bắt buộc';
-    }
-
-    if (!formData.idCard.trim()) {
-      newErrors.idCard = 'Số CMND/CCCD là bắt buộc';
-    }
-
-    if (!formData.licensePlate.trim()) {
-      newErrors.licensePlate = 'Biển số xe là bắt buộc';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (validateForm()) {
-      const submitData = { ...formData };
+  const handleSubmit = async (values: any) => {
+    try {
+      setLoading(true);
+      
+      const submitData = { ...values };
       if (isEdit && !submitData.password) {
         delete submitData.password; // Không gửi mật khẩu nếu không thay đổi
       }
-      onSave(submitData);
+      
+      await onSave(submitData);
+    } catch (error) {
+      console.error('Error saving shipper:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white shadow sm:rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">
-          {isEdit ? 'Chỉnh sửa Shipper' : 'Thêm Shipper mới'}
-        </h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Tên đăng nhập *
-              </label>
-              <input
-                type="text"
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <Card className="shadow-md rounded-lg">
+        <Row justify="space-between" align="middle" className="mb-6">
+          <Col>
+            <Space align="center">
+              <UserOutlined className="text-2xl text-blue-600" />
+              <Title level={2} className="!mb-0">
+                {isEdit ? 'Chỉnh sửa Shipper' : 'Thêm Shipper mới'}
+              </Title>
+            </Space>
+          </Col>
+        </Row>
+
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          className="max-w-4xl"
+        >
+          <Row gutter={24}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Tên đăng nhập"
                 name="username"
-                id="username"
-                value={formData.username}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.username ? 'border-red-300' : ''
-                }`}
-                placeholder="Tên đăng nhập"
-              />
-              {errors.username && (
-                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập tên đăng nhập' },
+                  { min: 3, message: 'Tên đăng nhập phải có ít nhất 3 ký tự' }
+                ]}
+              >
+                <Input placeholder="Tên đăng nhập" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email *
-              </label>
-              <input
-                type="email"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Email"
                 name="email"
-                id="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.email ? 'border-red-300' : ''
-                }`}
-                placeholder="Email"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập email' },
+                  { type: 'email', message: 'Email không hợp lệ' }
+                ]}
+              >
+                <Input placeholder="Email" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Mật khẩu {!isEdit && '*'}
-              </label>
-              <input
-                type="password"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label={isEdit ? 'Mật khẩu mới (để trống nếu không thay đổi)' : 'Mật khẩu'}
                 name="password"
-                id="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.password ? 'border-red-300' : ''
-                }`}
-                placeholder={isEdit ? 'Để trống nếu không thay đổi' : 'Mật khẩu'}
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-              )}
-            </div>
+                rules={[
+                  { required: !isEdit, message: 'Vui lòng nhập mật khẩu' },
+                  { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự' }
+                ]}
+              >
+                <Input.Password placeholder={isEdit ? 'Mật khẩu mới' : 'Mật khẩu'} />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                Họ và tên *
-              </label>
-              <input
-                type="text"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Họ và tên"
                 name="fullName"
-                id="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.fullName ? 'border-red-300' : ''
-                }`}
-                placeholder="Họ và tên"
-              />
-              {errors.fullName && (
-                <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập họ và tên' },
+                  { min: 2, message: 'Họ và tên phải có ít nhất 2 ký tự' }
+                ]}
+              >
+                <Input placeholder="Họ và tên" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Số điện thoại *
-              </label>
-              <input
-                type="tel"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Số điện thoại"
                 name="phone"
-                id="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.phone ? 'border-red-300' : ''
-                }`}
-                placeholder="Số điện thoại"
-              />
-              {errors.phone && (
-                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập số điện thoại' },
+                  { pattern: /^[0-9+\-\s()]+$/, message: 'Số điện thoại không hợp lệ' }
+                ]}
+              >
+                <Input placeholder="Số điện thoại" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                Địa chỉ *
-              </label>
-              <input
-                type="text"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Địa chỉ"
                 name="address"
-                id="address"
-                value={formData.address}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.address ? 'border-red-300' : ''
-                }`}
-                placeholder="Địa chỉ"
-              />
-              {errors.address && (
-                <p className="mt-1 text-sm text-red-600">{errors.address}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập địa chỉ' }
+                ]}
+              >
+                <Input placeholder="Địa chỉ" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="idCard" className="block text-sm font-medium text-gray-700">
-                Số CMND/CCCD *
-              </label>
-              <input
-                type="text"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Số CMND/CCCD"
                 name="idCard"
-                id="idCard"
-                value={formData.idCard}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.idCard ? 'border-red-300' : ''
-                }`}
-                placeholder="Số CMND/CCCD"
-              />
-              {errors.idCard && (
-                <p className="mt-1 text-sm text-red-600">{errors.idCard}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập số CMND/CCCD' },
+                  { min: 9, message: 'Số CMND/CCCD không hợp lệ' }
+                ]}
+              >
+                <Input placeholder="Số CMND/CCCD" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="licensePlate" className="block text-sm font-medium text-gray-700">
-                Biển số xe *
-              </label>
-              <input
-                type="text"
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Biển số xe"
                 name="licensePlate"
-                id="licensePlate"
-                value={formData.licensePlate}
-                onChange={handleChange}
-                className={`mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${
-                  errors.licensePlate ? 'border-red-300' : ''
-                }`}
-                placeholder="Biển số xe"
-              />
-              {errors.licensePlate && (
-                <p className="mt-1 text-sm text-red-600">{errors.licensePlate}</p>
-              )}
-            </div>
+                rules={[
+                  { required: true, message: 'Vui lòng nhập biển số xe' }
+                ]}
+              >
+                <Input placeholder="Biển số xe" />
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="vehicleType" className="block text-sm font-medium text-gray-700">
-                Loại phương tiện *
-              </label>
-              <select
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Loại phương tiện"
                 name="vehicleType"
-                id="vehicleType"
-                value={formData.vehicleType}
-                onChange={handleChange}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                rules={[
+                  { required: true, message: 'Vui lòng chọn loại phương tiện' }
+                ]}
               >
-                <option value="motorbike">Xe máy</option>
-                <option value="car">Ô tô</option>
-                <option value="bicycle">Xe đạp</option>
-              </select>
-            </div>
+                <Select placeholder="Chọn loại phương tiện">
+                  <Option value="motorbike">Xe máy</Option>
+                  <Option value="car">Ô tô</Option>
+                  <Option value="bicycle">Xe đạp</Option>
+                </Select>
+              </Form.Item>
+            </Col>
 
-            <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                Trạng thái *
-              </label>
-              <select
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Trạng thái"
                 name="status"
-                id="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                rules={[
+                  { required: true, message: 'Vui lòng chọn trạng thái' }
+                ]}
               >
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Không hoạt động</option>
-                <option value="suspended">Tạm khóa</option>
-              </select>
-            </div>
-          </div>
+                <Select placeholder="Chọn trạng thái">
+                  <Option value="active">Hoạt động</Option>
+                  <Option value="inactive">Không hoạt động</Option>
+                  <Option value="suspended">Tạm khóa</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="ml-3 inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              {isEdit ? 'Cập nhật' : 'Tạo mới'}
-            </button>
-          </div>
-        </form>
-      </div>
+          <Row justify="end" className="mt-6">
+            <Space>
+              <Button
+                icon={<CloseOutlined />}
+                onClick={onCancel}
+                size="large"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                htmlType="submit"
+                loading={loading}
+                size="large"
+              >
+                {isEdit ? 'Cập nhật' : 'Tạo mới'}
+              </Button>
+            </Space>
+          </Row>
+        </Form>
+      </Card>
     </div>
   );
 };

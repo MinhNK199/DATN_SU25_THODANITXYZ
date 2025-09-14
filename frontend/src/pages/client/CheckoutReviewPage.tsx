@@ -40,7 +40,7 @@ const CheckoutReviewPage: React.FC = () => {
   const { state: cartState, removeOrderedItemsFromCart } = useCart();
   const { voucher } = useCheckout();
   const navigate = useNavigate();
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const location = useLocation();
 
   // Khởi tạo selectedItems và buyNowProduct
@@ -49,7 +49,16 @@ const CheckoutReviewPage: React.FC = () => {
     if (buyNowProductData) {
       try {
         const product = JSON.parse(buyNowProductData);
-        setSelectedItems(new Set([product._id]));
+        console.log('🔍 [DEBUG] buyNowProduct from localStorage:', product);
+        
+        // Check if product ID exists in current products
+        if (product.product && product.product._id) {
+          console.log('🔍 [DEBUG] Product ID from buyNowProduct:', product.product._id);
+          setSelectedItems(new Set([product._id]));
+        } else {
+          console.log('❌ [DEBUG] Invalid buyNowProduct structure, clearing localStorage');
+          localStorage.removeItem('buyNowProduct');
+        }
       } catch (error) {
         console.error('❌ Error parsing buyNowProduct:', error);
         localStorage.removeItem('buyNowProduct');
@@ -84,10 +93,14 @@ const CheckoutReviewPage: React.FC = () => {
 
   // Tính toán selectedCartItems với useMemo để tránh re-render
   const selectedCartItems = useMemo(() => {
-    const items = buyNowProduct
+    const items = buyNowProduct 
       ? [buyNowProduct]
       : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
-
+    
+    console.log("🔍 [DEBUG] selectedCartItems:", items);
+    console.log("🔍 [DEBUG] buyNowProduct:", buyNowProduct);
+    console.log("🔍 [DEBUG] cartState.items:", cartState.items);
+    
     return items;
   }, [buyNowProduct, cartState.items, selectedItems]);
 
@@ -141,30 +154,95 @@ const CheckoutReviewPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    console.log("🔍 [DEBUG] handleSubmit called");
+    console.log("🔍 [DEBUG] selectedAddress:", selectedAddress);
+    console.log("🔍 [DEBUG] formData.paymentMethod:", formData.paymentMethod);
+    
     if (!selectedAddress || !formData.paymentMethod) {
+      console.log("❌ [DEBUG] Validation failed - missing address or payment method");
+      showError("Lỗi", "Vui lòng chọn địa chỉ và phương thức thanh toán");
       return;
     }
 
     // Kiểm tra giới hạn COD
+    console.log("🔍 [DEBUG] isCODAllowed:", isCODAllowed);
     if (formData.paymentMethod === "COD" && !isCODAllowed) {
+      console.log("❌ [DEBUG] COD not allowed for this amount");
       alert("Đơn hàng có giá trị trên 100 triệu ₫ không được phép thanh toán COD. Vui lòng chọn phương thức thanh toán trực tuyến.");
       return;
     }
 
+    console.log("🔍 [DEBUG] Setting isProcessing to true");
     setIsProcessing(true);
+    console.log("🔍 [DEBUG] Starting try block");
     try {
+      // Validate selectedCartItems before creating order
+      console.log("🔍 [DEBUG] Validating selectedCartItems:", selectedCartItems);
+      if (!selectedCartItems || selectedCartItems.length === 0) {
+        console.log("❌ [DEBUG] No selectedCartItems");
+        showError("Lỗi", "Không có sản phẩm nào để đặt hàng");
+        setIsProcessing(false);
+        return;
+      }
+      console.log("✅ [DEBUG] selectedCartItems validation passed");
+
+      // Validate each item
+      console.log("🔍 [DEBUG] Starting item validation loop for", selectedCartItems.length, "items");
+      for (let i = 0; i < selectedCartItems.length; i++) {
+        const item = selectedCartItems[i];
+        console.log(`🔍 [DEBUG] Validating item ${i + 1}:`, item);
+        
+        if (!item.product || !item.product._id) {
+          console.log(`❌ [DEBUG] Item ${i + 1} - Invalid product info`);
+          showError("Lỗi", "Thông tin sản phẩm không hợp lệ");
+          setIsProcessing(false);
+          return;
+        }
+        console.log(`✅ [DEBUG] Item ${i + 1} - Product info valid`);
+        
+        if (!item.quantity || item.quantity <= 0) {
+          console.log(`❌ [DEBUG] Item ${i + 1} - Invalid quantity:`, item.quantity);
+          showError("Lỗi", "Số lượng sản phẩm không hợp lệ");
+          setIsProcessing(false);
+          return;
+        }
+        console.log(`✅ [DEBUG] Item ${i + 1} - Quantity valid:`, item.quantity);
+        
+        // Check if product still exists (basic validation) - DISABLED for testing
+        // if (item.product._id === '68c1263bfe5ee3ec6a03eb4f') {
+        //   console.log(`❌ [DEBUG] Item ${i + 1} - Product is blacklisted`);
+        //   showError("Lỗi", "Sản phẩm không còn khả dụng. Vui lòng làm mới trang và thử lại.");
+        //   setIsProcessing(false);
+        //   return;
+        // }
+        console.log(`✅ [DEBUG] Item ${i + 1} - Product not blacklisted`);
+      }
+      console.log("✅ [DEBUG] All items validation passed");
+      console.log("✅ [DEBUG] Item validation passed");
+
+      console.log("🔍 [DEBUG] Creating orderData...");
       const orderData = {
-        orderItems: selectedCartItems.map((item) => ({
-          name: item.product.name,
-          quantity: item.quantity,
-          image: item.product.images?.[0] || "",
-          price: item.variantInfo ?
-            (item.variantInfo.salePrice && item.variantInfo.salePrice < item.variantInfo.price ? item.variantInfo.salePrice : item.variantInfo.price) :
-            (item.product.salePrice || item.product.price),
-          product: item.product._id,
-          variantId: item.variantId,
-          variantInfo: item.variantInfo,
-        })),
+        orderItems: selectedCartItems.map((item) => {
+          const orderItem = {
+            name: item.product.name,
+            quantity: item.quantity,
+            image: item.product.images?.[0] || "",
+            price: item.variantInfo ? 
+              (item.variantInfo.salePrice && item.variantInfo.salePrice < item.variantInfo.price ? item.variantInfo.salePrice : item.variantInfo.price) :
+              (item.product.salePrice || item.product.price),
+            product: item.product._id,
+            variantId: item.variantId || undefined, // Ensure undefined instead of null
+            variantInfo: item.variantInfo,
+          };
+          console.log("🔍 [DEBUG] Order item being sent:", orderItem);
+          
+          // Additional validation
+          if (!orderItem.product) {
+            throw new Error(`Product ID is missing for item: ${orderItem.name}`);
+          }
+          
+          return orderItem;
+        }),
         shippingAddress: {
           fullName: formData.lastName,
           address: formData.address,
@@ -186,7 +264,9 @@ const CheckoutReviewPage: React.FC = () => {
         shippingPrice: shippingFee,
         totalPrice: finalTotal,
       };
+      console.log("🔍 [DEBUG] OrderData created:", orderData);
 
+      console.log("🔍 [DEBUG] Calling createOrder API...");
       const res = await createOrder(orderData);
       setOrderNumber(res._id || "");
       console.log("PaymentMethod before submit:", formData.paymentMethod);
@@ -209,7 +289,7 @@ const CheckoutReviewPage: React.FC = () => {
       // Xử lý từng loại thanh toán
       if (formData.paymentMethod === "momo") {
         console.log("🚀 MOMO Payment Started");
-        const momoRes = await createMomoPayment({
+        console.log("🔍 MOMO Payment Data:", {
           amount: orderData.totalPrice,
           orderId: res._id,
           orderInfo: `Thanh toán đơn hàng ${res._id}`,
@@ -217,19 +297,39 @@ const CheckoutReviewPage: React.FC = () => {
           ipnUrl: "http://localhost:8000/api/payment/momo/webhook",
           extraData: "",
         });
+        
+        try {
+          const momoRes = await createMomoPayment({
+            amount: orderData.totalPrice,
+            orderId: res._id,
+            orderInfo: `Thanh toán đơn hàng ${res._id}`,
+            redirectUrl: window.location.origin + "/checkout/status?orderId=" + res._id + "&paymentMethod=momo",
+            ipnUrl: "http://localhost:8000/api/payment/momo/webhook",
+            extraData: "",
+          });
 
-        if (momoRes && momoRes.payUrl) {
-          localStorage.setItem(
-            "pendingOrder",
-            JSON.stringify({
-              orderId: res._id,
-              paymentMethod: "momo",
-              orderItems: orderData.orderItems,
-            })
-          );
-          window.location.href = momoRes.payUrl;
-          return;
-        } else {
+          console.log("✅ MOMO Payment Response:", momoRes);
+
+          if (momoRes && momoRes.payUrl) {
+            console.log("🔗 Redirecting to MOMO payment URL:", momoRes.payUrl);
+            localStorage.setItem(
+              "pendingOrder",
+              JSON.stringify({
+                orderId: res._id,
+                paymentMethod: "momo",
+                orderItems: orderData.orderItems,
+              })
+            );
+            window.location.href = momoRes.payUrl;
+            return;
+          } else {
+            console.error("❌ MOMO Payment failed - no payUrl:", momoRes);
+            await handlePaymentFailure(res._id);
+            navigate(`/checkout/failed?orderId=${res._id}&paymentMethod=momo&error=payment_error&amount=${orderData.totalPrice}`);
+            return;
+          }
+        } catch (error) {
+          console.error("❌ MOMO Payment Error:", error);
           await handlePaymentFailure(res._id);
           navigate(`/checkout/failed?orderId=${res._id}&paymentMethod=momo&error=payment_error&amount=${orderData.totalPrice}`);
           return;
@@ -332,6 +432,16 @@ const CheckoutReviewPage: React.FC = () => {
         errorMessage = err.message;
       }
 
+      // Check if it's a product availability error
+      if (errorMessage.includes("không khả dụng") || errorMessage.includes("không tìm thấy")) {
+        showError("Lỗi", "Một số sản phẩm không còn khả dụng. Đang làm mới giỏ hàng...");
+        // Refresh cart data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        return;
+      }
+
       // Chuyển hướng đến trang thất bại
       navigate(`/checkout/failed?error=${errorMessage}&amount=${finalTotal}`);
     } finally {
@@ -346,7 +456,7 @@ const CheckoutReviewPage: React.FC = () => {
   // Tính toán giá từ selectedCartItems
   const subtotal = selectedCartItems.reduce((sum, item) => {
     const variant = item.variantInfo;
-    const displayPrice = variant ?
+    const displayPrice = variant ? 
       (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
       (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
     const price = Number(displayPrice) || 0;
@@ -542,8 +652,8 @@ const CheckoutReviewPage: React.FC = () => {
                                         // Ưu tiên ảnh biến thể, nếu không có thì dùng ảnh sản phẩm đại diện
                                         const displayImage = variant?.images?.[0] || item.product?.images?.[0];
                                         return displayImage ? (
-                                          <img
-                                            src={displayImage}
+                                          <img 
+                                            src={displayImage} 
                                             alt={item.product?.name || 'Sản phẩm'}
                                             className="w-full h-full object-cover"
                                             title={variant?.images?.[0] ? 'Ảnh sản phẩm' : 'Ảnh sản phẩm'}
@@ -562,13 +672,13 @@ const CheckoutReviewPage: React.FC = () => {
                                       {item.variantInfo && (
                                         <p className="text-xs text-gray-500 mb-1">
                                           {item.variantInfo.color?.name || item.variantInfo.name || 'Chi tiết sản phẩm'}
-                                          {item.variantInfo.size && ` - Size ${item.variantInfo.size}`}
+                                          {item.variantInfo.size && ` - Size ${item.variantInfo.size} inch`}
                                         </p>
                                       )}
                                       <p className="text-xs text-gray-600">
                                         SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
                                           const variant = item.variantInfo;
-                                          const displayPrice = variant ?
+                                          const displayPrice = variant ? 
                                             (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                                             (item.product?.salePrice && item.product?.salePrice < item.product?.price ? item.product?.salePrice : item.product?.price);
                                           return formatPrice(displayPrice || 0);
@@ -579,7 +689,7 @@ const CheckoutReviewPage: React.FC = () => {
                                       <div className="text-sm font-bold text-gray-900">
                                         {(() => {
                                           const variant = item.variantInfo;
-                                          const displayPrice = variant ?
+                                          const displayPrice = variant ? 
                                             (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                                             (item.product?.salePrice && item.product?.salePrice < item.product?.price ? item.product?.salePrice : item.product?.price);
                                           return formatPrice((displayPrice || 0) * (item.quantity || 0));
@@ -628,6 +738,12 @@ const CheckoutReviewPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Tạm tính:</span>
                           <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                         </div>
+                        {couponDiscount > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span className="text-green-700 text-sm">Giảm giá coupon:</span>
+                            <span className="font-semibold text-green-600">-{formatPrice(couponDiscount)}</span>
+                          </div>
+                        )}
                         {voucherDiscount > 0 && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-200">
                             <span className="text-green-700 text-sm">Giảm giá voucher:</span>
@@ -663,15 +779,15 @@ const CheckoutReviewPage: React.FC = () => {
                         Phương thức thanh toán
                       </h4>
                       <div className={`p-4 rounded-xl border-2 ${formData.paymentMethod === "COD" && !isCODAllowed
-                        ? 'border-red-200 bg-red-50'
-                        : 'border-gray-200 bg-gray-50'
+                          ? 'border-red-200 bg-red-50'
+                          : 'border-gray-200 bg-gray-50'
                         }`}>
                         <div className="flex items-center space-x-3">
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${formData.paymentMethod === "COD" && !isCODAllowed
-                            ? 'bg-red-100'
-                            : formData.paymentMethod === "COD"
-                              ? 'bg-green-100'
-                              : 'bg-blue-100'
+                              ? 'bg-red-100'
+                              : formData.paymentMethod === "COD"
+                                ? 'bg-green-100'
+                                : 'bg-blue-100'
                             }`}>
                             {formData.paymentMethod === "COD" ? (
                               <span className="text-lg">🚚</span>
@@ -681,8 +797,8 @@ const CheckoutReviewPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className={`font-semibold ${formData.paymentMethod === "COD" && !isCODAllowed
-                              ? 'text-red-800'
-                              : 'text-gray-800'
+                                ? 'text-red-800'
+                                : 'text-gray-800'
                               }`}>
                               {formData.paymentMethod === "COD"
                                 ? "Thanh toán khi nhận hàng (COD)"
@@ -737,16 +853,16 @@ const CheckoutReviewPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(10000000 - subtotalAfterDiscount)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                               <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotalAfterDiscount / 10000000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotalAfterDiscount)} / {formatPrice(10000000)}
                             </p>
                           </div>
                         </div>
@@ -809,8 +925,8 @@ const CheckoutReviewPage: React.FC = () => {
                         onClick={handleSubmit}
                         disabled={isProcessing || (formData.paymentMethod === "COD" && !isCODAllowed)}
                         className={`w-full inline-flex items-center justify-center px-6 py-4 rounded-2xl transition-all duration-300 shadow-xl font-bold text-lg ${isProcessing || (formData.paymentMethod === "COD" && !isCODAllowed)
-                          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 hover:shadow-2xl'
+                            ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 hover:shadow-2xl'
                           }`}
                       >
                         {isProcessing ? (

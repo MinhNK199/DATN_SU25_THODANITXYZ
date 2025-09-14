@@ -261,6 +261,20 @@ export const momoWebhook = async (req, res) => {
       await order.save();
       console.log('✅ Order status FORCED to PAID for MoMo payment:', orderId);
       console.log(`✅ Order after FORCE update: status=${order.status}, isPaid=${order.isPaid}, paymentStatus=${order.paymentStatus}`);
+
+      // Emit WebSocket events for realtime updates
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('order_payment_updated', {
+          orderId: order._id,
+          isPaid: order.isPaid,
+          paidAt: order.paidAt,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          statusHistory: order.statusHistory
+        });
+        console.log('📡 Emitted payment update event for MoMo payment');
+      }
       
     } else {
       // ❌ THANH TOÁN THẤT BẠI - ÉP TRẠNG THÁI THẤT BẠI

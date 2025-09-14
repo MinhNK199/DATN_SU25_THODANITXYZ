@@ -17,6 +17,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axiosInstance from "../../../api/axiosInstance";
 import RatingForm from "./components/RatingForm";
 import toast from "react-hot-toast";
+import { useOrder } from "../../../contexts/OrderContext";
 
 interface OrderItem {
   _id: string;
@@ -95,6 +96,7 @@ interface Order {
 }
 
 const Orders = () => {
+  const { orders: contextOrders, updateOrder, refreshOrders } = useOrder();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -114,6 +116,13 @@ const Orders = () => {
       window.removeEventListener("orderUpdated", handleOrderUpdated);
     };
   }, []);
+
+  // Sync with context orders
+  useEffect(() => {
+    if (contextOrders.length > 0) {
+      setOrders(contextOrders);
+    }
+  }, [contextOrders]);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -207,18 +216,18 @@ const Orders = () => {
 
   const getPaymentStatusText = (order: Order) => {
     if (order.paymentMethod === "COD") {
-      return order.paymentStatus === "paid"
+      return order.isPaid
         ? "Đã thanh toán COD"
         : "Chưa thanh toán COD";
     } else {
-      if (order.paymentStatus === "paid") {
+      if (order.isPaid || order.paymentStatus === "paid") {
         return `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
       } else if (order.paymentStatus === "failed") {
         return "Thanh toán thất bại";
       } else if (order.paymentStatus === "awaiting_payment") {
-        return "Chưa thanh toán";
+        return "Chờ thanh toán";
       } else if (order.paymentStatus === "pending") {
-        return "Chưa thanh toán";
+        return "Chờ thanh toán";
       } else {
         return "Chưa thanh toán";
       }
@@ -484,7 +493,7 @@ const Orders = () => {
                   </span>
                   <span
                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      order.paymentStatus === "paid"
+                      (order.paymentMethod === "COD" ? order.isPaid : order.paymentStatus === "paid")
                         ? "bg-green-100 text-green-800"
                         : order.paymentStatus === "failed"
                         ? "bg-red-100 text-red-800"
