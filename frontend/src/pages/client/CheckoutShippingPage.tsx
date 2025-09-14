@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useCheckout } from "../../contexts/CheckoutContext";
@@ -36,12 +36,14 @@ const CheckoutShippingPage: React.FC = () => {
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [buyNowProduct, setBuyNowProduct] = useState<any>(null);
+  const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<any>(null);
 
   const { state: cartState } = useCart();
   const { voucher } = useCheckout();
   const { revalidateVoucher } = useVoucher();
   const navigate = useNavigate();
   const { showSuccess } = useToast();
+  const location = useLocation();
 
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
@@ -66,8 +68,15 @@ const CheckoutShippingPage: React.FC = () => {
     }
   }, [cartState.items, navigate]);
 
+  // Nhận appliedDiscountCoupon từ state
+  useEffect(() => {
+    if (location.state?.appliedDiscountCoupon) {
+      setAppliedDiscountCoupon(location.state.appliedDiscountCoupon);
+    }
+  }, [location.state]);
+
   // Tính toán selectedCartItems
-  const selectedCartItems = buyNowProduct 
+  const selectedCartItems = buyNowProduct
     ? [buyNowProduct]
     : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
 
@@ -143,7 +152,18 @@ const CheckoutShippingPage: React.FC = () => {
         selectedAddress,
         formData
       }));
-      navigate('/checkout/payment');
+      navigate('/checkout/payment', {
+        state: {
+          appliedDiscountCoupon,
+          subtotal,
+          couponDiscount,
+          voucherDiscount,
+          totalDiscount,
+          shippingFee,
+          taxPrice,
+          finalTotal
+        }
+      });
     } else if (buyNowProduct && formData.lastName && formData.phone && formData.address) {
       // Nếu là mua ngay và có thông tin form, tạo địa chỉ tạm thời
       const tempAddress = {
@@ -155,12 +175,23 @@ const CheckoutShippingPage: React.FC = () => {
         ward: formData.ward_code,
         isDefault: false
       };
-      
+
       localStorage.setItem('checkoutShippingData', JSON.stringify({
         selectedAddress: tempAddress,
         formData
       }));
-      navigate('/checkout/payment');
+      navigate('/checkout/payment', {
+        state: {
+          appliedDiscountCoupon,
+          subtotal,
+          couponDiscount,
+          voucherDiscount,
+          totalDiscount,
+          shippingFee,
+          taxPrice,
+          finalTotal
+        }
+      });
     } else {
       alert("Vui lòng chọn địa chỉ giao hàng hoặc điền đầy đủ thông tin!");
     }
@@ -169,7 +200,7 @@ const CheckoutShippingPage: React.FC = () => {
   // Tính toán giá từ selectedCartItems
   const subtotal = selectedCartItems.reduce((sum, item) => {
     const variant = item.variantInfo;
-    const displayPrice = variant ? 
+    const displayPrice = variant ?
       (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
       (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
     const price = Number(displayPrice) || 0;
@@ -177,10 +208,31 @@ const CheckoutShippingPage: React.FC = () => {
     return sum + (price * quantity);
   }, 0);
 
+  // Tính toán coupon discount
+  const couponDiscount = useMemo(() => {
+    if (!appliedDiscountCoupon) return 0;
+
+    const discountValue = appliedDiscountCoupon.discount || appliedDiscountCoupon.value || 0;
+    if (appliedDiscountCoupon.type === "percentage") {
+      const discount = (subtotal * discountValue) / 100;
+      // Áp dụng giới hạn tối đa nếu có
+      const maxDiscount = appliedDiscountCoupon.maxDiscount || appliedDiscountCoupon.maxDiscountValue;
+      if (maxDiscount && discount > maxDiscount) {
+        return maxDiscount;
+      }
+      return discount;
+    } else if (appliedDiscountCoupon.type === "fixed") {
+      return Math.min(discountValue, subtotal);
+    }
+    return 0;
+  }, [appliedDiscountCoupon, subtotal]);
+
   const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
-  const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const taxPrice = (subtotal - voucherDiscount) * taxRate;
-  const finalTotal = subtotal - voucherDiscount + shippingFee + taxPrice;
+  const totalDiscount = couponDiscount + voucherDiscount;
+  const subtotalAfterDiscount = subtotal - totalDiscount;
+  const shippingFee = subtotalAfterDiscount >= 10000000 ? 0 : 30000; // Đồng bộ với giỏ hàng: freeship từ 10tr
+  const taxPrice = subtotalAfterDiscount * taxRate;
+  const finalTotal = subtotalAfterDiscount + shippingFee + taxPrice;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -337,8 +389,8 @@ const CheckoutShippingPage: React.FC = () => {
                                 const variant = item.variantInfo;
                                 const displayImage = variant?.images?.[0] || item.product.images?.[0];
                                 return displayImage ? (
-                                  <img 
-                                    src={displayImage} 
+                                  <img
+                                    src={displayImage}
                                     alt={item.product.name}
                                     className="w-full h-full object-cover"
                                   />
@@ -362,7 +414,7 @@ const CheckoutShippingPage: React.FC = () => {
                               <p className="text-xs text-gray-600">
                                 SL: <span className="font-semibold text-blue-600">{item.quantity}</span> × {(() => {
                                   const variant = item.variantInfo;
-                                  const displayPrice = variant ? 
+                                  const displayPrice = variant ?
                                     (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                                     (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
                                   return formatPrice(displayPrice);
@@ -373,7 +425,7 @@ const CheckoutShippingPage: React.FC = () => {
                               <div className="text-sm font-bold text-gray-900">
                                 {(() => {
                                   const variant = item.variantInfo;
-                                  const displayPrice = variant ? 
+                                  const displayPrice = variant ?
                                     (variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price) :
                                     (item.product.salePrice && item.product.salePrice < item.product.price ? item.product.salePrice : item.product.price);
                                   return formatPrice(displayPrice * item.quantity);
@@ -436,6 +488,12 @@ const CheckoutShippingPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Tạm tính:</span>
                           <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                         </div>
+                        {couponDiscount > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span className="text-green-700 text-sm">Giảm giá mã giảm giá:</span>
+                            <span className="font-semibold text-green-600">-{formatPrice(couponDiscount)}</span>
+                          </div>
+                        )}
                         {voucherDiscount > 0 && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-200">
                             <span className="text-green-700 text-sm">Giảm giá voucher:</span>
@@ -473,16 +531,16 @@ const CheckoutShippingPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(10000000 - subtotalAfterDiscount)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                               <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotalAfterDiscount / 10000000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotalAfterDiscount)} / {formatPrice(10000000)}
                             </p>
                           </div>
                         </div>

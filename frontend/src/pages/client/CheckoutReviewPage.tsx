@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useCheckout } from "../../contexts/CheckoutContext";
@@ -35,11 +35,13 @@ const CheckoutReviewPage: React.FC = () => {
   const [isOrderSummaryOpen, setIsOrderSummaryOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<any>(null);
 
   const { state: cartState, removeOrderedItemsFromCart } = useCart();
   const { voucher } = useCheckout();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
+  const location = useLocation();
 
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
@@ -66,6 +68,13 @@ const CheckoutReviewPage: React.FC = () => {
       setSelectedItems(allItemIds);
     }
   }, [cartState.items]);
+
+  // Nhận appliedDiscountCoupon từ state
+  useEffect(() => {
+    if (location.state?.appliedDiscountCoupon) {
+      setAppliedDiscountCoupon(location.state.appliedDiscountCoupon);
+    }
+  }, [location.state]);
 
   // Lấy buyNowProduct để sử dụng trong useEffect
   const buyNowProduct = useMemo(() => {
@@ -244,7 +253,13 @@ const CheckoutReviewPage: React.FC = () => {
         },
         paymentMethod: formData.paymentMethod,
         itemsPrice: subtotal,
+        // ✅ THÊM THÔNG TIN COUPON
+        couponDiscount: couponDiscount,
+        couponCode: appliedDiscountCoupon?.code || null,
+        // ✅ THÊM THÔNG TIN VOUCHER
         voucherDiscount: voucherDiscount,
+        voucherCode: voucher?.code || null,
+        voucherProductId: voucher?.productId || null,
         taxPrice: taxPrice,
         shippingPrice: shippingFee,
         totalPrice: finalTotal,
@@ -449,10 +464,31 @@ const CheckoutReviewPage: React.FC = () => {
     return sum + (price * quantity);
   }, 0);
 
+  // Tính toán coupon discount
+  const couponDiscount = useMemo(() => {
+    if (!appliedDiscountCoupon) return 0;
+
+    const discountValue = appliedDiscountCoupon.discount || appliedDiscountCoupon.value || 0;
+    if (appliedDiscountCoupon.type === "percentage") {
+      const discount = (subtotal * discountValue) / 100;
+      // Áp dụng giới hạn tối đa nếu có
+      const maxDiscount = appliedDiscountCoupon.maxDiscount || appliedDiscountCoupon.maxDiscountValue;
+      if (maxDiscount && discount > maxDiscount) {
+        return maxDiscount;
+      }
+      return discount;
+    } else if (appliedDiscountCoupon.type === "fixed") {
+      return Math.min(discountValue, subtotal);
+    }
+    return 0;
+  }, [appliedDiscountCoupon, subtotal]);
+
   const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
-  const shippingFee = subtotal >= 500000 ? 0 : 30000;
-  const taxPrice = (subtotal - voucherDiscount) * taxRate;
-  const finalTotal = subtotal - voucherDiscount + shippingFee + taxPrice;
+  const totalDiscount = couponDiscount + voucherDiscount;
+  const subtotalAfterDiscount = subtotal - totalDiscount;
+  const shippingFee = subtotalAfterDiscount >= 10000000 ? 0 : 30000; // Đồng bộ với giỏ hàng: freeship từ 10tr
+  const taxPrice = subtotalAfterDiscount * taxRate;
+  const finalTotal = subtotalAfterDiscount + shippingFee + taxPrice;
 
   // Kiểm tra giới hạn COD (100 triệu)
   const COD_LIMIT = 100000000; // 100 triệu VND
@@ -702,6 +738,12 @@ const CheckoutReviewPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Tạm tính:</span>
                           <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                         </div>
+                        {couponDiscount > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                            <span className="text-green-700 text-sm">Giảm giá coupon:</span>
+                            <span className="font-semibold text-green-600">-{formatPrice(couponDiscount)}</span>
+                          </div>
+                        )}
                         {voucherDiscount > 0 && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-200">
                             <span className="text-green-700 text-sm">Giảm giá voucher:</span>
@@ -811,16 +853,16 @@ const CheckoutReviewPage: React.FC = () => {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-blue-800 mb-1">
-                              Thêm {formatPrice(500000 - subtotal)} để được miễn phí vận chuyển!
+                              Thêm {formatPrice(10000000 - subtotalAfterDiscount)} để được miễn phí vận chuyển!
                             </p>
                             <div className="w-full bg-blue-200 rounded-full h-2 mb-1">
                               <div
                                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500 shadow-sm"
-                                style={{ width: `${Math.min((subtotal / 500000) * 100, 100)}%` }}
+                                style={{ width: `${Math.min((subtotalAfterDiscount / 10000000) * 100, 100)}%` }}
                               ></div>
                             </div>
                             <p className="text-xs text-blue-600">
-                              Đã tiết kiệm: {formatPrice(subtotal)} / {formatPrice(500000)}
+                              Đã tiết kiệm: {formatPrice(subtotalAfterDiscount)} / {formatPrice(10000000)}
                             </p>
                           </div>
                         </div>

@@ -23,6 +23,11 @@ export const createOrder = async (req, res) => {
       taxPrice,
       shippingPrice,
       totalPrice,
+      couponDiscount,
+      couponCode,
+      voucherDiscount,
+      voucherCode,
+      voucherProductId,
     } = req.body;
 
     if (!orderItems || orderItems.length === 0) {
@@ -47,6 +52,32 @@ export const createOrder = async (req, res) => {
 
     console.log("✅ Tất cả sản phẩm đều khả dụng");
 
+    // ✅ XỬ LÝ VOUCHER NẾU CÓ
+    let voucherInfo = null;
+    if (voucherCode && voucherProductId && voucherDiscount > 0) {
+      try {
+        const Product = (await import("../models/Product.js")).default;
+        const product = await Product.findById(voucherProductId);
+
+        if (product) {
+          const voucher = product.vouchers.find((v) => v.code === voucherCode);
+          if (voucher) {
+            voucherInfo = {
+              productId: voucherProductId,
+              code: voucherCode,
+              discountType: voucher.discountType,
+              value: voucher.value,
+              discountAmount: voucherDiscount,
+            };
+            console.log("✅ Đã lưu thông tin voucher:", voucherInfo);
+          }
+        }
+      } catch (voucherError) {
+        console.error("❌ Lỗi khi xử lý voucher:", voucherError);
+        // Không hủy đơn hàng nếu có lỗi voucher, chỉ ghi log
+      }
+    }
+
     // ✅ SỬA LOGIC: Luôn tạo đơn hàng draft cho tất cả các phương thức thanh toán online
     const isOnlinePayment = [
       "momo",
@@ -64,6 +95,12 @@ export const createOrder = async (req, res) => {
       taxPrice,
       shippingPrice,
       totalPrice,
+      // ✅ THÊM THÔNG TIN COUPON
+      couponDiscount: couponDiscount || 0,
+      couponCode: couponCode || null,
+      // ✅ THÊM THÔNG TIN VOUCHER NẾU CÓ
+      voucher: voucherInfo,
+      discountAmount: voucherDiscount || 0,
       // ✅ CHỈ COD mới pending ngay, các phương thức khác đều draft
       status: paymentMethod === "COD" ? "pending" : "draft",
       isPaid: false,
@@ -124,6 +161,31 @@ export const createOrder = async (req, res) => {
     await createdOrder.save();
 
     console.log("✅ Đã trừ kho thành công cho đơn hàng", createdOrder._id);
+
+    // ✅ CẬP NHẬT SỐ LƯỢNG SỬ DỤNG VOUCHER NẾU CÓ
+    if (voucherInfo && voucherInfo.code && voucherInfo.productId) {
+      try {
+        const { updateVoucherUsage } = await import("../controllers/product.js");
+        await updateVoucherUsage({
+          body: {
+            productId: voucherInfo.productId,
+            code: voucherInfo.code,
+          }
+        }, {
+          json: (result) => {
+            console.log("✅ Đã cập nhật số lượt sử dụng voucher:", result);
+          },
+          status: (code) => {
+            if (code !== 200) {
+              console.error("❌ Lỗi khi cập nhật voucher usage:", code);
+            }
+          }
+        });
+      } catch (voucherUpdateError) {
+        console.error("❌ Lỗi khi cập nhật voucher usage:", voucherUpdateError);
+        // Không hủy đơn hàng nếu có lỗi cập nhật voucher
+      }
+    }
 
     // ✅ XÓA SẢN PHẨM KHỎI GIỎ HÀNG VÀ XÓA RESERVATION (CHO TẤT CẢ PHƯƠNG THỨC THANH TOÁN)
     try {
@@ -1347,7 +1409,7 @@ export const cancelOrder = async (req, res) => {
 export const confirmOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    
+
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
@@ -1372,10 +1434,10 @@ export const confirmOrder = async (req, res) => {
     });
   } catch (error) {
     console.error('Confirm order error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Lỗi server khi xác nhận đơn hàng',
-      error: error.message 
+      error: error.message
     });
   }
 };

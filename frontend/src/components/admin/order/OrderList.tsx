@@ -9,6 +9,7 @@ import AssignShipperModal from "./AssignShipperModal";
 import OrderDetailModal from "./OrderDetailModal";
 import axiosInstance from "../../../api/axiosInstance";
 import { useErrorNotification } from "../../../hooks/useErrorNotification";
+import AdminPagination from "../common/AdminPagination";
 import { useOrder } from "../../../contexts/OrderContext";
 
 const API_URL = '/api/order';
@@ -31,11 +32,12 @@ const OrderList: React.FC = () => {
   const [showOrderIdModal, setShowOrderIdModal] = useState(false);
   const [modalOrderId, setModalOrderId] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigningOrderId, setAssigningOrderId] = useState("");
-  
-  const fetchOrders = async (pageNumber = 1) => {
+
+  const fetchOrders = async (pageNumber = page, size = pageSize) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -43,11 +45,12 @@ const OrderList: React.FC = () => {
       if (orderId) params.append("search", orderId);
       if (status) params.append("status", status);
       params.append("page", pageNumber.toString());
-      
+      params.append("limit", size.toString());
+
       const response = await axiosInstance.get(`/order?${params.toString()}`);
       const data = response.data;
       console.log('📊 Admin Orders API Response:', data);
-      
+
       // Backend trả về data.data.orders
       const ordersData = Array.isArray(data.data?.orders) ? data.data.orders : [];
       console.log('📋 Orders details:', ordersData.map(o => ({
@@ -58,7 +61,7 @@ const OrderList: React.FC = () => {
         hasShipper: !!o.shipper,
         shipperName: o.shipper?.fullName
       })));
-      
+
       setOrders(ordersData);
       setTotal(data.data?.total || 0);
 
@@ -74,6 +77,20 @@ const OrderList: React.FC = () => {
   useEffect(() => {
     fetchOrders(page);
   }, [customerName, orderId, status, page]);
+
+  const handlePageChange = (newPage: number, size?: number) => {
+    setPage(newPage);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+    }
+    fetchOrders(newPage, size || pageSize);
+  };
+
+  const handlePageSizeChange = (current: number, size: number) => {
+    setPage(1);
+    setPageSize(size);
+    fetchOrders(1, size);
+  };
 
   // Sync with context orders for realtime updates
   useEffect(() => {
@@ -210,14 +227,14 @@ const OrderList: React.FC = () => {
       ),
     },
     {
-        title: "Thanh toán",
-        dataIndex: "isPaid",
-        key: "isPaid",
-        render: (isPaid: boolean) => (
-            <Tag color={isPaid ? 'green' : 'red'}>
-                {isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
-            </Tag>
-        )
+      title: "Thanh toán",
+      dataIndex: "isPaid",
+      key: "isPaid",
+      render: (isPaid: boolean) => (
+        <Tag color={isPaid ? 'green' : 'red'}>
+          {isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
+        </Tag>
+      )
     },
     {
       title: "Ngày tạo",
@@ -225,7 +242,7 @@ const OrderList: React.FC = () => {
       key: "createdAt",
       render: (date: string) => formatDate(date),
     },
-    
+
     {
       title: "Thao tác",
       key: "actions",
@@ -233,11 +250,11 @@ const OrderList: React.FC = () => {
         <div className="flex gap-2 justify-center">
           <Tooltip title="Xem chi tiết">
             <Link to={`/admin/orders/${record._id}`}>
-                <Button
+              <Button
                 type="primary"
                 className="admin-primary-button"
                 icon={<FaEye />}
-                />
+              />
             </Link>
           </Tooltip>
           {record.status === 'pending' && (
@@ -352,11 +369,10 @@ const OrderList: React.FC = () => {
       {message && (
         <div
           className={`mb-4 px-4 py-2 rounded-md italic text-center shadow-md font-medium
-      ${
-        messageType === "success"
-          ? "text-green-700 bg-green-100"
-          : "text-red-700 bg-red-100"
-      }`}
+      ${messageType === "success"
+              ? "text-green-700 bg-green-100"
+              : "text-red-700 bg-red-100"
+            }`}
         >
           {message}
         </div>
@@ -367,14 +383,15 @@ const OrderList: React.FC = () => {
         columns={columns}
         rowKey="_id"
         loading={loading}
-        pagination={{
-          current: page,
-          pageSize: 10,
-          total: total,
-          showSizeChanger: false,
-          showTotal: (total) => `Tổng ${total} đơn hàng`,
-          onChange: (newPage) => setPage(newPage),
-        }}
+        pagination={false}
+      />
+      <AdminPagination
+        current={page}
+        pageSize={pageSize}
+        total={total}
+        onChange={handlePageChange}
+        onShowSizeChange={handlePageSizeChange}
+        itemText="đơn hàng"
       />
       <Modal
         open={showOrderIdModal}

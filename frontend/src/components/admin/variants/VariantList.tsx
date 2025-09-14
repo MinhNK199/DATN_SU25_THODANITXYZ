@@ -8,6 +8,7 @@ import { ColumnsType } from 'antd/es/table';
 import { debounce } from 'lodash';
 import axios from 'axios';
 import { variantApi } from './api';
+import AdminPagination from '../common/AdminPagination';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -49,7 +50,9 @@ const VariantList: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalVariants, setTotalVariants] = useState(0);
   const [selectedVariants, setSelectedVariants] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
@@ -59,20 +62,21 @@ const VariantList: React.FC = () => {
       setLoading(true);
       const params = {
         page: currentPage,
-        limit: 20,
+        limit: pageSize,
         search: searchTerm,
         product: selectedProduct,
         isActive:
           selectedStatus === "active"
             ? true
             : selectedStatus === "inactive"
-            ? false
-            : undefined,
+              ? false
+              : undefined,
       };
-      
+
       const response = await variantApi.getVariants(params);
       setVariants(response.variants || []);
       setTotalPages(response.pages || 1);
+      setTotalVariants(response.total || 0);
     } catch (error) {
       console.error('Error fetching variants:', error);
       handleError(error, 'Không thể tải danh sách biến thể');
@@ -93,7 +97,19 @@ const VariantList: React.FC = () => {
 
   useEffect(() => {
     fetchVariants();
-  }, [currentPage, searchTerm, selectedProduct, selectedStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentPage, pageSize, searchTerm, selectedProduct, selectedStatus]);
+
+  const handlePageChange = (page: number, size?: number) => {
+    setCurrentPage(page);
+    if (size && size !== pageSize) {
+      setPageSize(size);
+    }
+  };
+
+  const handlePageSizeChange = (current: number, size: number) => {
+    setCurrentPage(1);
+    setPageSize(size);
+  }; // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchProducts();
@@ -176,13 +192,13 @@ const VariantList: React.FC = () => {
       width: 180,
       render: (_, record) => (
         <Space size={8}>
-          <Avatar 
-            shape="square" 
-            size={48} 
+          <Avatar
+            shape="square"
+            size={48}
             src={record.images && record.images.length > 0 ? record.images[0] : undefined}
-            style={{ 
-              backgroundColor: typeof record.color === 'object' && record.color !== null 
-                ? record.color.code 
+            style={{
+              backgroundColor: typeof record.color === 'object' && record.color !== null
+                ? record.color.code
                 : (typeof record.color === 'string' ? record.color : '#f0f0f0')
             }}
             onError={() => {
@@ -196,16 +212,16 @@ const VariantList: React.FC = () => {
             <Space size="small">
               {record.color && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div 
-                    style={{ 
-                      width: 14, 
-                      height: 14, 
-                      borderRadius: '50%', 
-                      backgroundColor: typeof record.color === 'object' && record.color !== null 
-                        ? record.color.code 
+                  <div
+                    style={{
+                      width: 14,
+                      height: 14,
+                      borderRadius: '50%',
+                      backgroundColor: typeof record.color === 'object' && record.color !== null
+                        ? record.color.code
                         : (typeof record.color === 'string' ? record.color : '#000000'),
                       border: '1px solid #d9d9d9'
-                    }} 
+                    }}
                   />
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {typeof record.color === 'object' && record.color !== null && 'name' in record.color
@@ -299,11 +315,11 @@ const VariantList: React.FC = () => {
             <Button icon={<EditOutlined />} size="small" onClick={() => navigate(`/admin/variants/edit/${record._id}`)} />
           </Tooltip>
           <Tooltip title="Xóa">
-            <Button 
-              icon={<DeleteOutlined />} 
-              danger 
+            <Button
+              icon={<DeleteOutlined />}
+              danger
               size="small"
-              onClick={() => handleDelete(record._id)} 
+              onClick={() => handleDelete(record._id)}
             />
           </Tooltip>
         </Space>
@@ -336,9 +352,9 @@ const VariantList: React.FC = () => {
               <Button icon={<DownloadOutlined />}>
                 Export
               </Button>
-              <Button 
+              <Button
                 type="primary"
-                className="admin-primary-button" 
+                className="admin-primary-button"
                 icon={<PlusOutlined />}
                 onClick={() => navigate('/admin/variants/add')}
               >
@@ -386,7 +402,7 @@ const VariantList: React.FC = () => {
             </Select>
           </Col>
           <Col span={6}>
-            <Button 
+            <Button
               onClick={() => {
                 setSearchTerm('');
                 setSelectedProduct('');
@@ -425,16 +441,16 @@ const VariantList: React.FC = () => {
           rowKey="_id"
           loading={loading}
           rowSelection={rowSelection}
-          pagination={{
-            current: currentPage,
-            total: totalPages * 20,
-            pageSize: 20,
-            onChange: (page) => setCurrentPage(page),
-            showSizeChanger: false,
-            showQuickJumper: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} biến thể`,
-          }}
+          pagination={false}
           scroll={{ x: 'max-content' }}
+        />
+        <AdminPagination
+          current={currentPage}
+          pageSize={pageSize}
+          total={totalVariants}
+          onChange={handlePageChange}
+          onShowSizeChange={handlePageSizeChange}
+          itemText="biến thể"
         />
       </Card>
     </div>
