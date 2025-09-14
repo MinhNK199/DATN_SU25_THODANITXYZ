@@ -424,7 +424,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
                     <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
                     <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
-                    <div className="mb-1">Kích thước: <span>{variant.size || 'N/A'}</span></div>
+                    <div className="mb-1">Size (inch): <span>{variant.size ? `${variant.size} inch` : 'N/A'}</span></div>
                     <div className="mb-1">Cân nặng: <span>{variant.weight ? `${variant.weight}g` : 'N/A'}</span></div>
                     <div className="mb-1">Trạng thái: <span className={variant.isActive ? 'text-green-600' : 'text-red-600'}>{variant.isActive ? 'Hoạt động' : 'Ẩn'}</span></div>
                     {variant.images && variant.images.length > 0 && (
@@ -496,7 +496,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     </div>
                     <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
                     {variant.size && (
-                      <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size}</Tag>
+                      <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size} inch</Tag>
                     )}
                   </div>
                   <Button

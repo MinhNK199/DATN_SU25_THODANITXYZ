@@ -138,9 +138,9 @@ export const formatVariantInfo = (item: CartItem): string => {
     parts.push(`Màu: ${variant.color.name}`);
   }
 
-  // Thêm thông tin dung lượng/kích thước nếu có
+  // Thêm thông tin size nếu có
   if (variant.size && variant.size > 0) {
-    parts.push(`Dung lượng: ${variant.size}GB`);
+    parts.push(`Size: ${variant.size} inch`);
   }
 
   // Thêm các thông số khác từ specifications

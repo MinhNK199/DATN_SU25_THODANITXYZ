@@ -59,7 +59,8 @@ const mapCodeToName = async (code, type) => {
         }
     } catch (error) {
         console.error('Error mapping code to name:', error);
-        return null;
+        // Return a fallback name instead of null to prevent crashes
+        return `${type} ${code}`;
     }
     return null;
 };

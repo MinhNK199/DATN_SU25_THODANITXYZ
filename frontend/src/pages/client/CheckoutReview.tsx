@@ -102,7 +102,7 @@ const CheckoutReview: React.FC<Props> = ({
                       {variant && (
                         <p className="text-xs text-blue-600 font-medium mb-1">
                           {variant.color?.name || variant.name || ' sản phẩm'}
-                          {variant.size && ` - Size ${variant.size}`}
+                          {variant.size && ` - Size ${variant.size} inch`}
                         </p>
                       )}
                       {hasDiscount ? (

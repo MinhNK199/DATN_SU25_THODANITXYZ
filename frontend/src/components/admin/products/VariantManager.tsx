@@ -672,10 +672,12 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Size:</label>
                     <InputNumber
-                      placeholder="Size (mm, cm, ...)"
+                      placeholder="Size (inch)"
                       value={variant.size || undefined}
                       onChange={(value) => updateVariant(variant.id, "size", value || 0)}
                       min={1}
+                      step={0.1}
+                      addonAfter="inch"
                       className="w-full"
                       {...validatePositiveNumber(variant.size)}
                     />

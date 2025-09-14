@@ -80,10 +80,22 @@ export const variantApi = {
     }
   },
 
-  // Delete variant
+  // Delete variant (hard delete)
   deleteVariant: async (id: string) => {
     try {
       const response = await axios.delete(`${API_BASE}/variant/${id}`, {
+        headers: getHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Soft delete variant
+  softDeleteVariant: async (id: string) => {
+    try {
+      const response = await axios.delete(`${API_BASE}/variant/${id}/soft`, {
         headers: getHeaders()
       });
       return response.data;

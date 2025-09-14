@@ -1,35 +1,26 @@
 import React, { useState } from 'react';
+import { Form, Input, Button, Card, Typography, Space, message } from 'antd';
+import { UserOutlined, LockOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useShipper } from '../../contexts/ShipperContext';
 import { useNavigate } from 'react-router-dom';
 
+const { Title, Text } = Typography;
+
 const ShipperLogin: React.FC = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [form] = Form.useForm();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const { login } = useShipper();
   const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
+  const handleSubmit = async (values: any) => {
     try {
-      await login(formData.email, formData.password);
+      setIsLoading(true);
+      await login(values.email, values.password);
+      message.success('Đăng nhập thành công!');
       navigate('/shipper/dashboard');
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Đăng nhập thất bại');
+      message.error(error.response?.data?.message || 'Đăng nhập thất bại');
     } finally {
       setIsLoading(false);
     }
@@ -37,85 +28,77 @@ const ShipperLogin: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
-            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Đăng nhập Shipper
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Quản lý giao hàng của bạn
-          </p>
+      <Card className="w-full max-w-md shadow-lg">
+        <div className="text-center mb-6">
+          <Space direction="vertical" size="large" className="w-full">
+            <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <ShoppingCartOutlined className="text-2xl text-blue-600" />
+            </div>
+            <div>
+              <Title level={2} className="!mb-2">Đăng nhập Shipper</Title>
+              <Text type="secondary">Quản lý giao hàng của bạn</Text>
+            </div>
+          </Space>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Mật khẩu
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="Mật khẩu"
-                value={formData.password}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          size="large"
+        >
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[
+              { required: true, message: 'Vui lòng nhập email' },
+              { type: 'email', message: 'Email không hợp lệ' }
+            ]}
+          >
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="Email address"
+            />
+          </Form.Item>
 
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          <Form.Item
+            label="Mật khẩu"
+            name="password"
+            rules={[
+              { required: true, message: 'Vui lòng nhập mật khẩu' }
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Password"
+            />
+          </Form.Item>
+
+          <Form.Item className="mb-0">
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={isLoading}
+              className="w-full"
+              size="large"
             >
               {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-            </button>
-          </div>
+            </Button>
+          </Form.Item>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
+          <div className="text-center mt-4">
+            <Text type="secondary">
               Chưa có tài khoản?{' '}
-              <button
-                type="button"
+              <Button
+                type="link"
                 onClick={() => navigate('/shipper/register')}
-                className="font-medium text-blue-600 hover:text-blue-500"
+                className="p-0 h-auto"
               >
                 Đăng ký ngay
-              </button>
-            </p>
+              </Button>
+            </Text>
           </div>
-        </form>
-      </div>
+        </Form>
+      </Card>
     </div>
   );
 };

@@ -8,6 +8,7 @@ import {
   updateShipperStatus,
   deleteShipper,
   assignOrderToShipper,
+  getOnlineShippers,
   getShipperStats
 } from '../controllers/adminShipper.js';
 import { protect, checkAdmin } from '../middlewares/authMiddleware.js';
@@ -18,6 +19,7 @@ router.use(checkAdmin(['manage_shipper']));
 
 // Routes
 router.get('/', getAllShippers);
+router.get('/online', getOnlineShippers);
 router.get('/stats', getShipperStats);
 router.get('/:id', getShipperById);
 router.post('/', createShipper);

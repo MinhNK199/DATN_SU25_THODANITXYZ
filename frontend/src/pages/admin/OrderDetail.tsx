@@ -7,6 +7,7 @@ import {
   getValidOrderStatusOptions,
 } from "../../services/orderApi";
 import { Order } from "../../interfaces/Order";
+import { useOrder } from "../../contexts/OrderContext";
 import {
   Card,
   Spin,
@@ -47,11 +48,17 @@ const statusOptions = {
   pending: "Chờ xác nhận",
   confirmed: "Đã xác nhận",
   processing: "Đang xử lý",
+  assigned: "Đã phân công",
+  picked_up: "Đã nhận hàng",
+  in_transit: "Đang giao hàng",
+  arrived: "Đã đến điểm giao",
   shipped: "Đang giao hàng",
+  delivered: "Đã giao",
   delivered_success: "Giao hàng thành công",
   delivered_failed: "Giao hàng thất bại",
   partially_delivered: "Giao hàng một phần",
   returned: "Hoàn hàng",
+  return_requested: "Yêu cầu hoàn hàng",
   on_hold: "Tạm dừng",
   completed: "Thành công",
   cancelled: "Đã hủy",
@@ -158,6 +165,7 @@ const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { success, error: showError } = useNotification();
+  const { updateOrder } = useOrder();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -193,6 +201,21 @@ const OrderDetail: React.FC = () => {
   useEffect(() => {
     fetchOrder();
   }, [id]);
+
+  // Listen for realtime order updates
+  useEffect(() => {
+    const handleOrderUpdate = (event: CustomEvent) => {
+      const { orderId, updates } = event.detail;
+      if (order && order._id === orderId) {
+        setOrder(prevOrder => prevOrder ? { ...prevOrder, ...updates } : null);
+      }
+    };
+
+    window.addEventListener('orderUpdated', handleOrderUpdate as EventListener);
+    return () => {
+      window.removeEventListener('orderUpdated', handleOrderUpdate as EventListener);
+    };
+  }, [order]);
 
   const handleStatusUpdate = async (values: {
     status: string;
@@ -406,9 +429,12 @@ const OrderDetail: React.FC = () => {
                   let statusLabel =
                     statusOptions[s.status as keyof typeof statusOptions] ||
                     s.status;
+                  let statusColor = getStatusColor(s.status);
+                  
                   // 1. paid_cod hiển thị rõ ràng
                   if (s.status === "paid_cod") {
                     statusLabel = "Đã thanh toán COD";
+                    statusColor = "green";
                   }
                   // 2. delivered_success sau refund_requested thì là từ chối hoàn tiền
                   if (
@@ -418,15 +444,26 @@ const OrderDetail: React.FC = () => {
                       .some((x) => x.status === "refund_requested")
                   ) {
                     statusLabel = "Từ chối hoàn tiền";
+                    statusColor = "red";
                   }
+                  
                   return (
-                    <Timeline.Item key={index}>
-                      <p>
-                        <strong>{statusLabel}</strong> -{" "}
-                        {new Date(s.date).toLocaleString("vi-VN")}
-                      </p>
+                    <Timeline.Item 
+                      key={index}
+                      color={statusColor}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Tag color={statusColor} style={{ margin: 0 }}>
+                          {statusLabel}
+                        </Tag>
+                        <span className="text-sm text-gray-500">
+                          {new Date(s.date).toLocaleString("vi-VN")}
+                        </span>
+                      </div>
                       {s.note && (
-                        <p className="text-gray-500">Ghi chú: {s.note}</p>
+                        <p className="text-sm text-gray-600 mt-1 ml-0">
+                          💬 {s.note}
+                        </p>
                       )}
                     </Timeline.Item>
                   );
@@ -473,40 +510,21 @@ const OrderDetail: React.FC = () => {
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Phương thức thanh toán">
-                {order.paymentMethod}
+                <Tag color={order.paymentMethod === 'COD' ? 'orange' : order.paymentMethod === 'BANKING' ? 'blue' : 'green'}>
+                  {order.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : 
+                   order.paymentMethod === 'BANKING' ? 'Chuyển khoản ngân hàng' : 
+                   order.paymentMethod === 'E-WALLET' ? 'Ví điện tử' : order.paymentMethod}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái thanh toán">
-                <div className="flex items-center gap-2">
-                  <Tag color={order.isPaid ? "green" : "red"}>
-                    {order.isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                <Tag color={order.isPaid ? "green" : "red"}>
+                  {order.isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                </Tag>
+                {order.paymentMethod === "COD" && order.isPaid && (
+                  <Tag color="orange" style={{ marginLeft: 8 }}>
+                    💰 Thu tiền COD
                   </Tag>
-                  {order.paymentMethod === "COD" && !order.isPaid && (
-                    <Button
-                      type="primary"
-                      danger
-                      size="small"
-                      onClick={async () => {
-                        try {
-                          await updateOrderPaidCOD(order._id);
-                          success(
-                            "Cập nhật trạng thái thanh toán COD thành công!"
-                          );
-                          fetchOrder();
-                        } catch (err: any) {
-                          showError(
-                            err.message ||
-                              "Cập nhật trạng thái thanh toán thất bại!"
-                          );
-                        }
-                      }}
-                      disabled={["delivered_failed", "cancelled", "payment_failed"].includes(
-                        order.status
-                      )}
-                    >
-                      Xác nhận thanh toán
-                    </Button>
-                  )}
-                </div>
+                )}
               </Descriptions.Item>
 
               <Descriptions.Item label="Phí vận chuyển">
@@ -516,10 +534,34 @@ const OrderDetail: React.FC = () => {
                 {order.taxPrice.toLocaleString()}₫
               </Descriptions.Item>
               <Descriptions.Item label="Tổng cộng">
-                <span className="font-bold text-lg text-red-600">
-                  {order.totalPrice.toLocaleString()}₫
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-lg text-blue-600">
+                    {order.totalPrice.toLocaleString()}₫
+                  </span>
+                  {order.discountAmount > 0 && (
+                    <Tag color="green">
+                      -{order.discountAmount.toLocaleString()}₫ (Giảm giá)
+                    </Tag>
+                  )}
+                </div>
               </Descriptions.Item>
+              {order.shipper && (
+                <Descriptions.Item label="Shipper">
+                  <div className="flex items-center gap-2">
+                    <Tag color="cyan">🚚 {order.shipper.fullName}</Tag>
+                    <span className="text-sm text-gray-600">
+                      {order.shipper.phone}
+                    </span>
+                  </div>
+                </Descriptions.Item>
+              )}
+              {order.deliveredAt && (
+                <Descriptions.Item label="Thời gian giao hàng">
+                  <span className="text-sm">
+                    {new Date(order.deliveredAt).toLocaleString('vi-VN')}
+                  </span>
+                </Descriptions.Item>
+              )}
             </Descriptions>
           </Card>
 

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Table, Card, Tag, Button, Space, Avatar, Image, Modal, message, Spin } from 'antd';
+import { EditOutlined, DeleteOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
 import { Shipper } from '../../../interfaces/Shipper';
 
 interface ShipperListProps {
@@ -14,6 +16,8 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [previewImage, setPreviewImage] = useState<string>('');
+  const [previewVisible, setPreviewVisible] = useState(false);
 
   useEffect(() => {
     fetchShippers();
@@ -22,7 +26,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
   const fetchShippers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/admin/shipper?page=${currentPage}&search=${searchTerm}&status=${statusFilter}`, {
+      const response = await fetch(`http://localhost:8000/api/admin/shipper?page=${currentPage}&search=${searchTerm}&status=${statusFilter}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -35,6 +39,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
       }
     } catch (error) {
       console.error('Error fetching shippers:', error);
+      message.error('Có lỗi xảy ra khi tải danh sách shipper');
     } finally {
       setIsLoading(false);
     }
@@ -42,7 +47,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
 
   const handleStatusChange = async (shipperId: string, newStatus: string) => {
     try {
-      const response = await fetch(`/api/admin/shipper/${shipperId}/status`, {
+      const response = await fetch(`http://localhost:8000/api/admin/shipper/${shipperId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -52,23 +57,27 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
       });
       
       if (response.ok) {
+        message.success('Cập nhật trạng thái thành công!');
         fetchShippers();
+      } else {
+        message.error('Có lỗi xảy ra khi cập nhật trạng thái');
       }
     } catch (error) {
       console.error('Error updating shipper status:', error);
+      message.error('Có lỗi xảy ra khi cập nhật trạng thái');
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'success';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
       case 'suspended':
-        return 'bg-red-100 text-red-800';
+        return 'error';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
@@ -85,166 +94,204 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
     }
   };
 
+  const getVehicleTypeText = (type: string) => {
+    switch (type) {
+      case 'motorbike':
+        return 'Xe máy';
+      case 'car':
+        return 'Ô tô';
+      case 'bicycle':
+        return 'Xe đạp';
+      default:
+        return type;
+    }
+  };
+
+  const handlePreviewImage = (imageUrl: string) => {
+    setPreviewImage(imageUrl);
+    setPreviewVisible(true);
+  };
+
+  const columns = [
+    {
+      title: 'Avatar',
+      dataIndex: 'avatar',
+      key: 'avatar',
+      width: 80,
+      render: (avatar: string, record: Shipper) => (
+        <Avatar
+          size={50}
+          src={avatar ? `http://localhost:8000/${avatar}` : undefined}
+          icon={<UserOutlined />}
+          onClick={() => avatar && handlePreviewImage(`http://localhost:8000/${avatar}`)}
+          style={{ cursor: avatar ? 'pointer' : 'default' }}
+        />
+      ),
+    },
+    {
+      title: 'Thông tin',
+      key: 'info',
+      render: (record: Shipper) => (
+        <div>
+          <div className="font-medium text-gray-900">{record.fullName}</div>
+          <div className="text-sm text-gray-500">{record.email}</div>
+          <div className="text-sm text-gray-500">{record.phone}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Phương tiện',
+      key: 'vehicle',
+      render: (record: Shipper) => (
+        <div>
+          <div className="text-sm">{getVehicleTypeText(record.vehicleType)}</div>
+          <div className="text-sm text-gray-500">{record.licensePlate}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Đánh giá',
+      dataIndex: 'rating',
+      key: 'rating',
+      render: (rating: number) => (
+        <div className="text-center">
+          <div className="text-lg font-bold text-blue-600">{rating}/5</div>
+          <div className="text-sm text-gray-500">⭐</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Giao hàng',
+      dataIndex: 'totalDeliveries',
+      key: 'totalDeliveries',
+      render: (count: number) => (
+        <div className="text-center">
+          <div className="text-lg font-bold text-green-600">{count}</div>
+          <div className="text-sm text-gray-500">đơn</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string, record: Shipper) => (
+        <div className="space-y-1">
+          <Tag color={getStatusColor(status)}>
+            {getStatusText(status)}
+          </Tag>
+          {status === 'active' && (
+            <Tag color={record.isOnline ? 'green' : 'red'}>
+              {record.isOnline ? '🟢 Online' : '🔴 Offline'}
+            </Tag>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: 'Tài liệu',
+      key: 'documents',
+      render: (record: Shipper) => (
+        <div className="space-y-1">
+          {record.documents && record.documents.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {record.documents.slice(0, 3).map((doc, index) => (
+                <Button
+                  key={index}
+                  type="link"
+                  size="small"
+                  onClick={() => handlePreviewImage(`http://localhost:8000/${doc.url}`)}
+                >
+                  {doc.type === 'id_card' ? 'CCCD' : 
+                   doc.type === 'driver_license' ? 'GPLX' :
+                   doc.type === 'vehicle_registration' ? 'Đăng ký xe' : 'Bảo hiểm'}
+                </Button>
+              ))}
+              {record.documents.length > 3 && (
+                <span className="text-xs text-gray-500">+{record.documents.length - 3}</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-gray-400 text-sm">Chưa có</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: 'Hành động',
+      key: 'actions',
+      render: (record: Shipper) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => onEdit(record)}
+          >
+            Sửa
+          </Button>
+          <Button
+            type="default"
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() => onAssignOrder(record)}
+          >
+            Phân công
+          </Button>
+          <Button
+            type="primary"
+            danger
+            icon={<DeleteOutlined />}
+            size="small"
+            onClick={() => onDelete(record._id)}
+          >
+            Xóa
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Spin size="large" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <input
-            type="text"
-            placeholder="Tìm kiếm shipper..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="active">Hoạt động</option>
-            <option value="inactive">Không hoạt động</option>
-            <option value="suspended">Tạm khóa</option>
-          </select>
-        </div>
-      </div>
+    <div>
+      <Table
+        columns={columns}
+        dataSource={shippers}
+        rowKey="_id"
+        pagination={{
+          current: currentPage,
+          total: totalPages * 10, // Assuming 10 items per page
+          pageSize: 10,
+          onChange: (page) => setCurrentPage(page),
+          showSizeChanger: false,
+          showQuickJumper: true,
+          showTotal: (total, range) => 
+            `${range[0]}-${range[1]} của ${total} shipper`,
+        }}
+        scroll={{ x: 1200 }}
+      />
 
-      {/* Shipper Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-md">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">Danh sách Shipper</h3>
-        </div>
-        <ul className="divide-y divide-gray-200">
-          {shippers.map((shipper) => (
-            <li key={shipper._id} className="px-4 py-5 sm:px-6">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-700">
-                          {shipper.fullName.charAt(0)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {shipper.fullName}
-                      </p>
-                      <p className="text-sm text-gray-500 truncate">
-                        {shipper.email} • {shipper.phone}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                    <div>
-                      <span className="font-medium">Phương tiện:</span> {shipper.vehicleType}
-                    </div>
-                    <div>
-                      <span className="font-medium">Biển số:</span> {shipper.licensePlate}
-                    </div>
-                    <div>
-                      <span className="font-medium">Đánh giá:</span> {shipper.rating}/5
-                    </div>
-                    <div>
-                      <span className="font-medium">Giao hàng:</span> {shipper.totalDeliveries}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(shipper.status)}`}>
-                    {getStatusText(shipper.status)}
-                  </span>
-                  {shipper.isOnline && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Online
-                    </span>
-                  )}
-                  <div className="flex space-x-1">
-                    <button
-                      onClick={() => onEdit(shipper)}
-                      className="text-blue-600 hover:text-blue-900 text-sm font-medium"
-                    >
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => onAssignOrder(shipper)}
-                      className="text-green-600 hover:text-green-900 text-sm font-medium"
-                    >
-                      Phân công
-                    </button>
-                    <button
-                      onClick={() => onDelete(shipper._id)}
-                      className="text-red-600 hover:text-red-900 text-sm font-medium"
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Sau
-            </button>
-          </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Trang <span className="font-medium">{currentPage}</span> của{' '}
-                <span className="font-medium">{totalPages}</span>
-              </p>
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Trước
-                </button>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                  disabled={currentPage === totalPages}
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Sau
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={previewVisible}
+        title="Xem ảnh"
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+        width={800}
+      >
+        <Image
+          alt="Preview"
+          style={{ width: '100%' }}
+          src={previewImage}
+        />
+      </Modal>
     </div>
   );
 };

@@ -6,8 +6,10 @@ import { Button, Card, Tag, Tooltip, Table, Input, Select, Row, Col, Modal, mess
 import type { ColumnsType } from "antd/es/table";
 import { EyeOutlined } from "@ant-design/icons";
 import AssignShipperModal from "./AssignShipperModal";
+import OrderDetailModal from "./OrderDetailModal";
 import axiosInstance from "../../../api/axiosInstance";
 import { useErrorNotification } from "../../../hooks/useErrorNotification";
+import { useOrder } from "../../../contexts/OrderContext";
 
 const API_URL = '/api/order';
 
@@ -15,6 +17,7 @@ const { Option } = Select;
 
 const OrderList: React.FC = () => {
   const { handleError } = useErrorNotification();
+  const { orders: contextOrders, updateOrder, addOrder } = useOrder();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -50,6 +53,8 @@ const OrderList: React.FC = () => {
       console.log('📋 Orders details:', ordersData.map(o => ({
         id: o._id?.slice(-6),
         status: o.status,
+        totalPrice: o.totalPrice,
+        totalAmount: o.totalAmount,
         hasShipper: !!o.shipper,
         shipperName: o.shipper?.fullName
       })));
@@ -70,6 +75,17 @@ const OrderList: React.FC = () => {
     fetchOrders(page);
   }, [customerName, orderId, status, page]);
 
+  // Sync with context orders for realtime updates
+  useEffect(() => {
+    if (contextOrders.length > 0) {
+      // Merge context orders with current orders, prioritizing context data
+      setOrders(prevOrders => {
+        const contextOrderMap = new Map(contextOrders.map(order => [order._id, order]));
+        return prevOrders.map(order => contextOrderMap.get(order._id) || order);
+      });
+    }
+  }, [contextOrders]);
+
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString("vi-VN", {
       year: "numeric",
@@ -86,13 +102,20 @@ const OrderList: React.FC = () => {
       case "pending": return "orange";
       case "confirmed": return "blue";
       case "processing": return "purple";
+      case "assigned": return "cyan";
+      case "picked_up": return "blue";
+      case "in_transit": return "purple";
+      case "arrived": return "orange";
       case "shipped": return "cyan";
       case "delivered": return "green";
       case "delivered_success": return "green";
       case "delivered_failed": return "red";
+      case "partially_delivered": return "orange";
+      case "returned": return "volcano";
+      case "return_requested": return "orange";
+      case "on_hold": return "gray";
       case "completed": return "green";
       case "cancelled": return "red";
-      case "returned": return "volcano";
       case "refund_requested": return "gold";
       case "refunded": return "lime";
       case "payment_failed": return "red";
@@ -106,13 +129,20 @@ const OrderList: React.FC = () => {
       case "pending": return "Chờ xác nhận";
       case "confirmed": return "Đã xác nhận";
       case "processing": return "Đang xử lý";
-      case "shipped": return "Đang giao";
+      case "assigned": return "Đã phân công";
+      case "picked_up": return "Đã nhận hàng";
+      case "in_transit": return "Đang giao hàng";
+      case "arrived": return "Đã đến điểm giao";
+      case "shipped": return "Đang giao hàng";
       case "delivered": return "Đã giao";
       case "delivered_success": return "Giao hàng thành công";
       case "delivered_failed": return "Giao hàng thất bại";
+      case "partially_delivered": return "Giao hàng một phần";
+      case "returned": return "Hoàn hàng";
+      case "return_requested": return "Yêu cầu hoàn hàng";
+      case "on_hold": return "Tạm dừng";
       case "completed": return "Thành công";
       case "cancelled": return "Đã hủy";
-      case "returned": return "Hoàn hàng";
       case "refund_requested": return "Yêu cầu hoàn tiền";
       case "refunded": return "Hoàn tiền thành công";
       case "payment_failed": return "Thanh toán thất bại";
@@ -161,8 +191,8 @@ const OrderList: React.FC = () => {
     },
     {
       title: "Tổng tiền",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
+      dataIndex: "totalPrice",
+      key: "totalPrice",
       render: (amount: number) => (
         <span className="text-green-600 font-semibold">
           {amount?.toLocaleString() || 0}₫
@@ -279,11 +309,27 @@ const OrderList: React.FC = () => {
             allowClear
             style={{ width: '100%' }}
           >
+            <Option value="draft">Đang tạo</Option>
             <Option value="pending">Chờ xác nhận</Option>
+            <Option value="confirmed">Đã xác nhận</Option>
             <Option value="processing">Đang xử lý</Option>
-            <Option value="shipped">Đang giao</Option>
-            <Option value="delivered_success">Đã giao</Option>
+            <Option value="assigned">Đã phân công</Option>
+            <Option value="picked_up">Đã nhận hàng</Option>
+            <Option value="in_transit">Đang giao hàng</Option>
+            <Option value="arrived">Đã đến điểm giao</Option>
+            <Option value="shipped">Đang giao hàng</Option>
+            <Option value="delivered">Đã giao</Option>
+            <Option value="delivered_success">Giao hàng thành công</Option>
+            <Option value="delivered_failed">Giao hàng thất bại</Option>
+            <Option value="partially_delivered">Giao hàng một phần</Option>
+            <Option value="returned">Hoàn hàng</Option>
+            <Option value="return_requested">Yêu cầu hoàn hàng</Option>
+            <Option value="on_hold">Tạm dừng</Option>
+            <Option value="completed">Thành công</Option>
             <Option value="cancelled">Đã hủy</Option>
+            <Option value="refund_requested">Yêu cầu hoàn tiền</Option>
+            <Option value="refunded">Hoàn tiền thành công</Option>
+            <Option value="payment_failed">Thanh toán thất bại</Option>
           </Select>
         </Col>
         <Col span={6}>
@@ -334,22 +380,11 @@ const OrderList: React.FC = () => {
         open={showOrderIdModal}
         onCancel={() => setShowOrderIdModal(false)}
         footer={null}
-        title="Mã đơn hàng"
+        title="Chi tiết đơn hàng"
+        width={1000}
+        className="order-detail-modal"
       >
-        <div style={{ wordBreak: "break-all", fontSize: 16, fontWeight: 600 }}>
-          {modalOrderId}
-          <Button
-            type="link"
-            size="small"
-            style={{ marginLeft: 8 }}
-            onClick={() => {
-              navigator.clipboard.writeText(modalOrderId);
-              antdMessage.success("Đã copy mã đơn hàng!");
-            }}
-          >
-            Copy
-          </Button>
-        </div>
+        {modalOrderId && <OrderDetailModal orderId={modalOrderId} />}
       </Modal>
 
       <AssignShipperModal

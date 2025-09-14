@@ -47,24 +47,19 @@ const productVariantSchema = new mongoose.Schema({
     },
     size: {
         type: Number,
-        default: 0,
     },
     length: {
         type: Number,
-        default: 0,
     },
     width: {
         type: Number,
-        default: 0,
     },
     height: {
         type: Number,
-        default: 0,
     },
     weight: {
         type: Number,
         min: 0,
-        default: 0,
     },
     images: [{
         type: String,

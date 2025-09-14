@@ -5,6 +5,7 @@ import {
     createVariant,
     updateVariant,
     deleteVariant,
+    softDeleteVariant,
     getVariantStats
 } from "../controllers/variant.js";
 import { protect } from "../middlewares/authMiddleware.js";
@@ -20,5 +21,6 @@ routerVariant.get("/:id", getVariantById);
 routerVariant.post("/", protect, createVariantValidation, validateRequest, createVariant);
 routerVariant.put("/:id", protect, updateVariantValidation, validateRequest, updateVariant);
 routerVariant.delete("/:id", protect, deleteVariant);
+routerVariant.delete("/:id/soft", protect, softDeleteVariant);
 
 export default routerVariant; 

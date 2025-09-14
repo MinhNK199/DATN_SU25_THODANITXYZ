@@ -1,26 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Card, Row, Col, Statistic, Button, List, Tag, Space, Typography, Avatar, message, notification, Spin } from 'antd';
+import { 
+  UserOutlined, 
+  LogoutOutlined, 
+  ShoppingCartOutlined, 
+  ClockCircleOutlined, 
+  CheckCircleOutlined, 
+  StarOutlined,
+  EyeOutlined,
+  PlayCircleOutlined,
+  EnvironmentOutlined
+} from '@ant-design/icons';
 import { useShipper } from '../../contexts/ShipperContext';
+import { useOrder } from '../../contexts/OrderContext';
 import { shipperApi } from '../../services/shipperApi';
 import { Order } from '../../interfaces/Order';
 import { OrderTracking } from '../../interfaces/Shipper';
 
+const { Title, Text } = Typography;
+
 const ShipperDashboard: React.FC = () => {
   const { state, logout, updateOnlineStatus } = useShipper();
+  const { orders: contextOrders, updateOrder } = useOrder();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    // Redirect về trang login chính thay vì shipper login
+    message.success('Đăng xuất thành công!');
     navigate('/login');
   };
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [onlineStatus, setOnlineStatus] = useState(state.shipper?.isOnline || false);
+  const [onlineStatus, setOnlineStatus] = useState(() => {
+    // Load online status from localStorage on init
+    const savedStatus = localStorage.getItem('shipperOnlineStatus');
+    return savedStatus ? JSON.parse(savedStatus) : (state.shipper?.isOnline || false);
+  });
 
   useEffect(() => {
     fetchOrders();
+    // Load online status from backend on mount
+    loadOnlineStatus();
+    
+    // Clear any existing notifications on page load
+    notification.destroy();
+    
+    // Auto refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
+
+  const loadOnlineStatus = async () => {
+    try {
+      const token = localStorage.getItem('shipperToken');
+      if (!token) return;
+
+      // Only load from backend if no saved status in localStorage
+      const savedStatus = localStorage.getItem('shipperOnlineStatus');
+      if (savedStatus) {
+        const isOnline = JSON.parse(savedStatus);
+        setOnlineStatus(isOnline);
+        return; // Use saved status, don't override
+      }
+
+      const response = await fetch('http://localhost:8000/api/shipper/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const isOnline = data.shipper?.isOnline || false;
+        setOnlineStatus(isOnline);
+        localStorage.setItem('shipperOnlineStatus', JSON.stringify(isOnline));
+      }
+    } catch (error) {
+      console.error('Error loading online status:', error);
+    }
+  };
+
+  // Sync with context orders for realtime updates
+  useEffect(() => {
+    if (contextOrders.length > 0) {
+      // Filter orders assigned to this shipper
+      const shipperOrders = contextOrders.filter(order => 
+        order.shipper && order.shipper._id === state.shipper?._id
+      );
+      
+      // Always update orders to reflect current state
+      setOrders(prevOrders => {
+        // Check if orders are actually different to avoid unnecessary updates
+        const currentIds = prevOrders.map(o => o._id).sort();
+        const newIds = shipperOrders.map(o => o._id).sort();
+        
+        if (JSON.stringify(currentIds) !== JSON.stringify(newIds)) {
+          // Check if there are new orders (more orders than before)
+          if (newIds.length > currentIds.length) {
+            // Count only pending orders (not completed)
+            const pendingOrders = shipperOrders.filter(order => 
+              !['delivered', 'delivered_success', 'completed', 'cancelled'].includes(order.status)
+            );
+            
+            // Only show notification if there are actually pending orders
+            if (pendingOrders.length > 0) {
+              notification.success({
+                message: 'Có đơn hàng mới được phân công!',
+                description: `Bạn có ${pendingOrders.length} đơn hàng cần xử lý`,
+                placement: 'topRight',
+                duration: 5, // Auto close after 5 seconds
+              });
+            }
+          }
+          return shipperOrders;
+        }
+        return prevOrders;
+      });
+    } else {
+      // If no orders in context, clear local orders
+      setOrders([]);
+    }
+  }, [contextOrders, state.shipper?._id]);
 
   const fetchOrders = async () => {
     try {
@@ -74,13 +179,19 @@ const ShipperDashboard: React.FC = () => {
       setOrders(orders);
       console.log('✅ Orders loaded:', orders.length);
       
-      if (orders.length > 0) {
-        console.log('🎉 Found orders:', orders);
+      // Check if there are pending orders and show/hide notification accordingly
+      const pendingOrders = orders.filter(order => 
+        !['delivered', 'delivered_success', 'completed', 'cancelled'].includes(order.status)
+      );
+      
+      if (pendingOrders.length === 0) {
+        // Clear any existing notifications if no pending orders
+        notification.destroy();
       }
     } catch (error: any) {
       console.error('❌ Error fetching orders:', error);
       console.error('❌ Error response:', error.response?.data);
-      alert('Lỗi tải đơn hàng: ' + (error.response?.data?.message || error.message));
+      message.error('Lỗi tải đơn hàng: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +207,7 @@ const ShipperDashboard: React.FC = () => {
       
       const newStatus = !onlineStatus;
       
-      const response = await fetch('/api/shipper/online-status', {
+      const response = await fetch('http://localhost:8000/api/shipper/online-status', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -109,30 +220,33 @@ const ShipperDashboard: React.FC = () => {
       
       if (response.ok) {
         setOnlineStatus(newStatus);
+        // Save to localStorage for persistence
+        localStorage.setItem('shipperOnlineStatus', JSON.stringify(newStatus));
+        message.success(`Đã ${newStatus ? 'bật' : 'tắt'} trạng thái online`);
       } else {
         throw new Error(result.message || 'Cập nhật trạng thái thất bại');
       }
       
     } catch (error: any) {
       console.error('Error updating online status:', error);
-      alert('Lỗi cập nhật trạng thái: ' + (error.message || 'Lỗi không xác định'));
+      message.error('Lỗi cập nhật trạng thái: ' + (error.message || 'Lỗi không xác định'));
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'assigned':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'processing';
       case 'picked_up':
-        return 'bg-blue-100 text-blue-800';
+        return 'blue';
       case 'in_transit':
-        return 'bg-purple-100 text-purple-800';
+        return 'purple';
       case 'delivered':
-        return 'bg-green-100 text-green-800';
+        return 'success';
       case 'failed':
-        return 'bg-red-100 text-red-800';
+        return 'error';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'default';
     }
   };
 
@@ -153,238 +267,218 @@ const ShipperDashboard: React.FC = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const getActionButton = (order: Order) => {
+    switch (order.status) {
+      case 'assigned':
+      case 'processing':
+        return (
+          <Button 
+            type="primary" 
+            icon={<PlayCircleOutlined />}
+            onClick={() => navigate(`/shipper/order/${order._id}`)}
+          >
+            Bắt đầu giao
+          </Button>
+        );
+      case 'picked_up':
+        return (
+          <Button 
+            type="primary" 
+            icon={<CheckCircleOutlined />}
+            onClick={() => navigate(`/shipper/order/${order._id}`)}
+          >
+            Xác nhận giao hàng
+          </Button>
+        );
+      case 'in_transit':
+        return (
+          <Button 
+            type="primary" 
+            icon={<EnvironmentOutlined />}
+            onClick={() => navigate(`/shipper/order/${order._id}`)}
+          >
+            Cập nhật vị trí
+          </Button>
+        );
+      default:
+        return (
+          <Button 
+            icon={<EyeOutlined />}
+            onClick={() => navigate(`/shipper/order/${order._id}`)}
+          >
+            Xem chi tiết
+          </Button>
+        );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">Shipper Dashboard</h1>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Trạng thái:</span>
-                <button
+      <Card className="mb-6">
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Space align="center">
+              <ShoppingCartOutlined className="text-2xl text-blue-600" />
+              <Title level={2} className="!mb-0">Shipper Dashboard</Title>
+            </Space>
+          </Col>
+          <Col>
+            <Space>
+              <Space align="center">
+                <Text>Trạng thái:</Text>
+                <Button
+                  type={onlineStatus ? 'primary' : 'default'}
+                  danger={!onlineStatus}
                   onClick={handleToggleOnlineStatus}
-                  className={`px-4 py-2 rounded-full text-sm font-bold cursor-pointer hover:shadow-md transition-all duration-200 ${
-                    onlineStatus
-                      ? 'bg-green-500 text-white hover:bg-green-600'
-                      : 'bg-red-500 text-white hover:bg-red-600'
-                  }`}
-                  title="Click để thay đổi trạng thái"
+                  icon={onlineStatus ? <UserOutlined /> : <UserOutlined />}
                 >
                   {onlineStatus ? '🟢 Online' : '🔴 Offline'}
-                </button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">
-                  Xin chào, {state.shipper?.fullName}
-                </span>
-                <button
+                </Button>
+              </Space>
+              <Space align="center">
+                <Avatar icon={<UserOutlined />} />
+                <Text>Xin chào, {state.shipper?.fullName}</Text>
+                <Button
+                  type="primary"
+                  danger
+                  icon={<LogoutOutlined />}
                   onClick={handleLogout}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                 >
                   Đăng xuất
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+                </Button>
+              </Space>
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Tổng đơn hàng</dt>
-                    <dd className="text-lg font-medium text-gray-900">{state.shipper?.totalDeliveries || 0}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Stats Cards */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Tổng đơn hàng"
+              value={orders.length}
+              prefix={<ShoppingCartOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Cần xử lý"
+              value={orders.filter(order => ['assigned', 'picked_up', 'in_transit', 'shipped'].includes(order.status)).length}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: '#faad14' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Đã hoàn thành"
+              value={orders.filter(order => ['delivered', 'delivered_success', 'completed'].includes(order.status)).length}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Đánh giá"
+              value={state.shipper?.rating || 0}
+              suffix="/5"
+              prefix={<StarOutlined />}
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Đang xử lý</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {orders.filter(order => ['assigned', 'picked_up', 'in_transit'].includes(order.status)).length}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Orders List */}
+      <Card>
+        <Row justify="space-between" align="middle" className="mb-4">
+          <Col>
+            <Title level={3} className="!mb-0">Đơn hàng được phân công</Title>
+            <Text type="secondary">Danh sách các đơn hàng bạn cần giao ({orders.length} đơn)</Text>
+          </Col>
+          <Col>
+            <Button 
+              icon={<ClockCircleOutlined />} 
+              onClick={fetchOrders}
+              loading={isLoading}
+            >
+              Làm mới
+            </Button>
+          </Col>
+        </Row>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Đã hoàn thành</dt>
-                    <dd className="text-lg font-medium text-gray-900">
-                      {orders.filter(order => order.status === 'delivered_success').length}
-                    </dd>
-                  </dl>
-                </div>
-              </div>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <Spin size="large" />
+            <div className="mt-4">
+              <Text type="secondary">Đang tải danh sách đơn hàng...</Text>
             </div>
           </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="p-5">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Đánh giá</dt>
-                    <dd className="text-lg font-medium text-gray-900">{state.shipper?.rating || 0}/5</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-12">
+            <ShoppingCartOutlined className="text-6xl text-gray-400 mb-4" />
+            <Text type="secondary" className="text-lg">Chưa có đơn hàng nào được phân công</Text>
           </div>
-        </div>
-
-        {/* Orders List */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <div className="px-4 py-5 sm:px-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">Đơn hàng được phân công</h3>
-                <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                  Danh sách các đơn hàng bạn cần giao
-                </p>
-              </div>
-            </div>
-          </div>
-          <ul className="divide-y divide-gray-200">
-            {orders.length === 0 ? (
-              <li className="px-4 py-5 sm:px-6">
-                <div className="text-center text-gray-500">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  <p className="mt-2">Chưa có đơn hàng nào được phân công</p>
-                </div>
-              </li>
-            ) : (
-              orders.map((order) => (
-                <li key={order._id} className="px-4 py-5 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-3">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          Đơn hàng #{order._id.slice(-8)}
-                        </p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {getStatusText(order.status)}
-                        </span>
+        ) : (
+          <List
+            dataSource={orders}
+            renderItem={(order) => (
+              <List.Item
+                actions={[
+                  getActionButton(order)
+                ]}
+              >
+                <List.Item.Meta
+                  title={
+                    <Space>
+                      <Text strong>Đơn hàng #{order._id.slice(-8)}</Text>
+                      <Tag color={getStatusColor(order.status)}>
+                        {getStatusText(order.status)}
+                      </Tag>
+                    </Space>
+                  }
+                  description={
+                    <Space direction="vertical" size="small">
+                      <div>
+                        <Text strong>Khách hàng:</Text> {order.user?.fullName || 'N/A'} | 
+                        <Text strong> SĐT:</Text> {order.user?.phone || 'N/A'}
                       </div>
-                      <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                        <div>
-                          <span className="font-medium">Khách hàng:</span> {order.user?.fullName}
-                        </div>
-                        <div>
-                          <span className="font-medium">SĐT:</span> {order.user?.phone}
-                        </div>
-                        <div>
-                          <span className="font-medium">Tổng tiền:</span> {order.totalPrice?.toLocaleString('vi-VN')} VNĐ
-                        </div>
+                      <div>
+                        <Text strong>Tổng tiền:</Text> {order.totalPrice?.toLocaleString('vi-VN') || 0} VNĐ
+                        {order.paymentMethod === 'COD' && (
+                          <Tag color="orange" style={{ marginLeft: 8 }}>
+                            💰 COD
+                          </Tag>
+                        )}
+                        {order.paymentMethod && order.paymentMethod !== 'COD' && (
+                          <Tag color="blue" style={{ marginLeft: 8 }}>
+                            {order.paymentMethod.toUpperCase()}
+                          </Tag>
+                        )}
                       </div>
-                      <div className="mt-1 text-sm text-gray-500">
-                        <span className="font-medium">Địa chỉ giao:</span> {order.shippingAddress?.address}, {order.shippingAddress?.city}
+                      <div>
+                        <Text strong>Địa chỉ giao:</Text> {order.shippingAddress?.address || 'N/A'}, {order.shippingAddress?.city || 'N/A'}
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => {
-                          console.log('🔍 Navigating to order detail:', order._id);
-                          console.log('📦 Order object:', order);
-                          navigate(`/shipper/order/${order._id}`);
-                        }}
-                        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                      >
-                        Xem chi tiết
-                      </button>
-                      {(order.status === 'assigned' || order.status === 'processing') && (
-                        <button 
-                          onClick={() => navigate(`/shipper/order/${order._id}`)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                        >
-                          Bắt đầu giao
-                        </button>
-                      )}
-                      {order.status === 'picked_up' && (
-                        <button 
-                          onClick={() => navigate(`/shipper/order/${order._id}`)}
-                          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                        >
-                          Xác nhận giao hàng
-                        </button>
-                      )}
-                      {order.status === 'in_transit' && (
-                        <button 
-                          onClick={() => navigate(`/shipper/order/${order._id}`)}
-                          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                        >
-                          Cập nhật vị trí
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))
+                      <div>
+                        <Text strong>Ngày tạo:</Text> {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                      </div>
+                    </Space>
+                  }
+                />
+              </List.Item>
             )}
-          </ul>
-        </div>
-      </main>
+          />
+        )}
+      </Card>
     </div>
   );
 };
