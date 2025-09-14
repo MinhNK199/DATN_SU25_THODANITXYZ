@@ -122,6 +122,9 @@ export const getVariantById = async(req, res) => {
             color: variant.color,
             size: variant.size,
             weight: variant.weight,
+            length: variant.length,
+            width: variant.width,
+            height: variant.height,
             images: variant.images,
             isActive: variant.isActive,
             specifications: variant.specifications || {},
@@ -132,6 +135,14 @@ export const getVariantById = async(req, res) => {
                 brand: product.brand
             }
         };
+
+        console.log('🔍 getVariantById - Returning variant data:', {
+            size: variantData.size,
+            weight: variantData.weight,
+            length: variantData.length,
+            width: variantData.width,
+            height: variantData.height
+        });
 
         res.json(variantData);
     } catch (error) {
@@ -163,15 +174,18 @@ export const createVariant = async(req, res) => {
             price: Number(variantData.price) || 0,
             salePrice: variantData.salePrice ? Number(variantData.salePrice) : undefined,
             stock: Number(variantData.stock) || 0,
-            size: Number(variantData.size) || 0,
-            weight: Number(variantData.weight) || 0,
-            length: Number(variantData.length) || 0,
-            width: Number(variantData.width) || 0,
-            height: Number(variantData.height) || 0,
+            size: variantData.size ? Number(variantData.size) : undefined,
+            weight: variantData.weight ? Number(variantData.weight) : undefined,
+            length: variantData.length ? Number(variantData.length) : undefined,
+            width: variantData.width ? Number(variantData.width) : undefined,
+            height: variantData.height ? Number(variantData.height) : undefined,
             images: Array.isArray(variantData.images) ? variantData.images : [],
             isActive: Boolean(variantData.isActive),
             specifications: variantData.specifications || {}
         };
+
+        console.log('🔍 createVariant - Received data:', variantData);
+        console.log('🔍 createVariant - Cleaned data:', cleanVariantData);
 
         // Handle color data
         if (variantData.color) {
@@ -233,6 +247,8 @@ export const updateVariant = async(req, res) => {
             }
         }
 
+        console.log('🔍 updateVariant - Received data:', updateData);
+
         // Update variant fields
         Object.keys(updateData).forEach(key => {
             if (key !== 'product') {
@@ -249,10 +265,23 @@ export const updateVariant = async(req, res) => {
                     variant.color = {...color };
                 } else if (key === 'specifications' && typeof updateData[key] === 'object') {
                     variant.specifications = updateData[key];
+                } else if (['size', 'weight', 'length', 'width', 'height'].includes(key)) {
+                    // Handle numeric fields - set to undefined if empty, otherwise convert to number
+                    const newValue = updateData[key] ? Number(updateData[key]) : undefined;
+                    console.log(`🔍 updateVariant - Setting ${key}:`, newValue);
+                    variant[key] = newValue;
                 } else {
                     variant[key] = updateData[key];
                 }
             }
+        });
+
+        console.log('🔍 updateVariant - Final variant data:', {
+            size: variant.size,
+            weight: variant.weight,
+            length: variant.length,
+            width: variant.width,
+            height: variant.height
         });
 
         await product.save();
@@ -267,7 +296,7 @@ export const updateVariant = async(req, res) => {
     }
 };
 
-// Delete variant
+// Delete variant (hard delete)
 export const deleteVariant = async(req, res) => {
     try {
         const { id } = req.params;
@@ -289,6 +318,35 @@ export const deleteVariant = async(req, res) => {
         res.json({ message: 'Variant deleted successfully' });
     } catch (error) {
         console.error('Error deleting variant:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Soft delete variant
+export const softDeleteVariant = async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await Product.findOne({ "variants._id": id });
+        if (!product) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        const variant = product.variants.id(id);
+        if (!variant) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        // Mark variant as deleted (soft delete)
+        variant.isDeleted = true;
+        variant.isActive = false; // Also deactivate it
+        variant.deletedAt = new Date();
+        
+        await product.save();
+
+        res.json({ message: 'Variant moved to trash successfully' });
+    } catch (error) {
+        console.error('Error soft deleting variant:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

@@ -27,7 +27,8 @@ const AssignShipperModal: React.FC<AssignShipperModalProps> = ({
   const fetchAvailableShippers = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/admin/shipper?status=active', {
+      // Only fetch online shippers for assignment
+      const response = await fetch('http://localhost:8000/api/admin/shipper/online', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -35,10 +36,15 @@ const AssignShipperModal: React.FC<AssignShipperModalProps> = ({
       
       if (response.ok) {
         const data = await response.json();
-        setShippers(data.data.shippers || []);
+        setShippers(data.data || []);
+        console.log(`✅ Found ${data.data?.length || 0} online shippers for assignment`);
+      } else {
+        console.error('❌ Failed to fetch online shippers:', response.status);
+        message.error('Không thể tải danh sách shipper online');
       }
     } catch (error) {
-      console.error('Error fetching shippers:', error);
+      console.error('Error fetching online shippers:', error);
+      message.error('Có lỗi xảy ra khi tải danh sách shipper online');
     } finally {
       setIsLoading(false);
     }
@@ -58,9 +64,12 @@ const AssignShipperModal: React.FC<AssignShipperModalProps> = ({
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
         <div className="mt-3">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
             Phân công Shipper
           </h3>
+          <p className="text-sm text-blue-600 mb-4">
+            🟢 Chỉ hiển thị shipper đang online và sẵn sàng nhận đơn hàng
+          </p>
           
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -81,18 +90,23 @@ const AssignShipperModal: React.FC<AssignShipperModalProps> = ({
                 {shippers.map((shipper) => (
                   <option key={shipper._id} value={shipper._id}>
                     {shipper.fullName} - {shipper.phone} 
-                    {shipper.isOnline ? ' (Online)' : ' (Offline)'}
                     {shipper.vehicleType === 'motorbike' ? ' 🏍️' : 
                      shipper.vehicleType === 'car' ? ' 🚗' : ' 🚲'}
+                    {shipper.rating ? ` (⭐${shipper.rating})` : ''}
                   </option>
                 ))}
               </select>
             )}
             
             {shippers.length === 0 && !isLoading && (
-              <p className="text-sm text-gray-500 mt-2">
-                Không có shipper nào khả dụng
-              </p>
+              <div className="text-center py-4">
+                <p className="text-sm text-orange-500 mb-2">
+                  🔴 Không có shipper nào đang online
+                </p>
+                <p className="text-xs text-gray-500">
+                  Vui lòng chờ shipper chuyển sang trạng thái online để phân công đơn hàng
+                </p>
+              </div>
             )}
           </div>
 

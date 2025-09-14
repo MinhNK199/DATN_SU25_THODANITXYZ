@@ -80,6 +80,13 @@ const ProductDetail: React.FC = () => {
       .then((response) => {
         const data = response.data;
         setProduct(data);
+        
+        // Auto-select first variant if product has variants and no variant is selected
+        if (data.variants && data.variants.length > 0 && !selectedVariantId) {
+          setSelectedVariantId(data.variants[0]._id);
+          console.log('🔍 Auto-selected first variant:', data.variants[0]._id);
+        }
+        
         setLoading(false);
       })
       .catch((err) => {
@@ -212,6 +219,16 @@ const ProductDetail: React.FC = () => {
       return;
     }
     
+    // Kiểm tra thêm: nếu có variants nhưng selectedVariantId không tồn tại trong danh sách variants
+    if (selectedVariantId && product.variants && product.variants.length > 0) {
+      const variantExists = product.variants.find((v: any) => v._id === selectedVariantId);
+      if (!variantExists) {
+        toast.error("Sản phẩm đã chọn không hợp lệ. Vui lòng chọn lại.");
+        setSelectedVariantId(undefined);
+        return;
+      }
+    }
+    
     try {
       const finalQuantity = selectedVariantId
         ? getVariantQuantity(selectedVariantId)
@@ -264,6 +281,9 @@ const ProductDetail: React.FC = () => {
       // Lưu sản phẩm tạm thời vào localStorage
       localStorage.setItem('buyNowProduct', JSON.stringify(tempProduct));
       console.log('🔍 ProductDetail - Lưu buyNowProduct:', tempProduct);
+      console.log('🔍 ProductDetail - selectedVariantId:', selectedVariantId);
+      console.log('🔍 ProductDetail - selectedVariant:', selectedVariant);
+      console.log('🔍 ProductDetail - tempProduct.variantId:', tempProduct.variantId);
       console.log('🔍 ProductDetail - localStorage buyNowProduct:', localStorage.getItem('buyNowProduct'));
       
       // Chuyển đến trang checkout

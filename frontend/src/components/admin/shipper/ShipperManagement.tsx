@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Button, Card, Row, Col, Typography, Space, message } from 'antd';
+import { PlusOutlined, UserOutlined } from '@ant-design/icons';
 import { Shipper } from '../../../interfaces/Shipper';
 import ShipperList from './ShipperList';
 import ShipperForm from './ShipperForm';
@@ -24,25 +26,25 @@ const ShipperManagement: React.FC = () => {
   };
 
   const handleDelete = async (shipperId: string) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa shipper này?')) {
-      try {
-              const response = await fetch(`/api/admin/shipper/${shipperId}`, {
+    try {
+      const response = await fetch(`http://localhost:8000/api/admin/shipper/${shipperId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-        
-        if (response.ok) {
-          // Refresh the list
-          window.location.reload();
-        } else {
-          alert('Có lỗi xảy ra khi xóa shipper');
-        }
-      } catch (error) {
-        console.error('Error deleting shipper:', error);
-        alert('Có lỗi xảy ra khi xóa shipper');
+      
+      if (response.ok) {
+        message.success('Xóa shipper thành công!');
+        // Refresh the list
+        window.location.reload();
+      } else {
+        const errorData = await response.json();
+        message.error(errorData.message || 'Có lỗi xảy ra khi xóa shipper');
       }
+    } catch (error) {
+      console.error('Error deleting shipper:', error);
+      message.error('Có lỗi xảy ra khi xóa shipper');
     }
   };
 
@@ -55,7 +57,7 @@ const ShipperManagement: React.FC = () => {
     if (!assigningShipper) return;
 
     try {
-      const response = await fetch('/api/admin/shipper/assign-order', {
+      const response = await fetch('http://localhost:8000/api/admin/shipper/assign-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,23 +70,24 @@ const ShipperManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        alert(`Phân công đơn hàng thành công cho ${assigningShipper.fullName}!`);
+        message.success(`Phân công đơn hàng thành công cho ${assigningShipper.fullName}!`);
+        message.info('Thông báo đã được gửi đến shipper qua email');
         setShowAssignModal(false);
         setAssigningShipper(null);
         // Optionally refresh the shipper list or show success notification
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'Có lỗi xảy ra khi phân công đơn hàng');
+        message.error(errorData.message || 'Có lỗi xảy ra khi phân công đơn hàng');
       }
     } catch (error) {
       console.error('Error assigning order:', error);
-      alert('Có lỗi xảy ra khi phân công đơn hàng');
+      message.error('Có lỗi xảy ra khi phân công đơn hàng');
     }
   };
 
   const handleSave = async (shipperData: Partial<Shipper>) => {
     try {
-      const url = isEdit ? `/api/admin/shipper/${editingShipper?._id}` : '/api/admin/shipper';
+      const url = isEdit ? `http://localhost:8000/api/admin/shipper/${editingShipper?._id}` : 'http://localhost:8000/api/admin/shipper';
       const method = isEdit ? 'PUT' : 'POST';
       
       const response = await fetch(url, {
@@ -97,6 +100,7 @@ const ShipperManagement: React.FC = () => {
       });
       
       if (response.ok) {
+        message.success(isEdit ? 'Cập nhật shipper thành công!' : 'Tạo shipper thành công!');
         setShowForm(false);
         setEditingShipper(null);
         setIsEdit(false);
@@ -104,11 +108,11 @@ const ShipperManagement: React.FC = () => {
         window.location.reload();
       } else {
         const errorData = await response.json();
-        alert(errorData.message || 'Có lỗi xảy ra khi lưu shipper');
+        message.error(errorData.message || 'Có lỗi xảy ra khi lưu shipper');
       }
     } catch (error) {
       console.error('Error saving shipper:', error);
-      alert('Có lỗi xảy ra khi lưu shipper');
+      message.error('Có lỗi xảy ra khi lưu shipper');
     }
   };
 
@@ -130,32 +134,45 @@ const ShipperManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900">Quản lý Shipper</h2>
-        <button
-          onClick={handleAddNew}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          Thêm Shipper mới
-        </button>
-      </div>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <Card className="shadow-md rounded-lg">
+        <Row justify="space-between" align="middle" className="mb-6">
+          <Col>
+            <Space align="center">
+              <UserOutlined className="text-2xl text-blue-600" />
+              <Typography.Title level={2} className="!mb-0">
+                Quản lý Shipper
+              </Typography.Title>
+            </Space>
+          </Col>
+          <Col>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddNew}
+              size="large"
+            >
+              Thêm Shipper mới
+            </Button>
+          </Col>
+        </Row>
 
-      <ShipperList
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onAssignOrder={handleAssignOrder}
-      />
+        <ShipperList
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAssignOrder={handleAssignOrder}
+        />
 
-      <AssignOrderModal
-        isOpen={showAssignModal}
-        onClose={() => {
-          setShowAssignModal(false);
-          setAssigningShipper(null);
-        }}
-        onAssign={handleAssignConfirm}
-        shipper={assigningShipper}
-      />
+        <AssignOrderModal
+          isOpen={showAssignModal}
+          onClose={() => {
+            setShowAssignModal(false);
+            setAssigningShipper(null);
+          }}
+          onAssign={handleAssignConfirm}
+          shipper={assigningShipper}
+        />
+      </Card>
     </div>
   );
 };

@@ -15,6 +15,7 @@ import {
   confirmDelivery,
   completeDelivery,
   reportDeliveryFailure,
+  updateShipperStatus,
   uploadMiddleware,
   deliveryUploadMiddleware
 } from '../controllers/shipper.js';
@@ -44,5 +45,8 @@ router.post('/orders/:orderId/complete-delivery', deliveryUploadMiddleware, comp
 
 router.put('/location', updateLocation);
 router.post('/orders/:orderId/report-failure', reportDeliveryFailure);
+
+// Admin routes (no auth middleware for now, will be handled by admin routes)
+router.put('/:shipperId/status', updateShipperStatus);
 
 export default router;

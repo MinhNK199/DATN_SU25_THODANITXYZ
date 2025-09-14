@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { sendShipperNotification } from '../utils/shipperNotification.js';
 
 // Cấu hình multer cho upload ảnh
 const storage = multer.diskStorage({
@@ -96,6 +97,8 @@ const registerShipper = async (req, res) => {
     });
 
     await shipper.save();
+
+    // No email needed for account creation - shipper will be notified when approved
 
     // Tạo JWT token
     const token = jwt.sign(
@@ -263,6 +266,8 @@ const updateShipperProfile = async (req, res) => {
 
     await shipper.save();
 
+    // No email needed for profile updates
+
     res.json({
       success: true,
       message: 'Cập nhật thông tin thành công',
@@ -308,6 +313,8 @@ const updateOnlineStatus = async (req, res) => {
     shipper.lastActiveAt = new Date();
 
     await shipper.save();
+
+    // No email needed for online/offline status changes
 
     res.json({
       success: true,
@@ -549,11 +556,23 @@ const confirmDelivery = async (req, res) => {
     order.isDelivered = true;
     order.deliveredAt = new Date();
     order.autoConfirmAt = null; // Xóa thời gian tự động xác nhận
-    order.statusHistory.push({
-      status: 'delivered_success',
-      note: 'Giao hàng thành công',
-      date: new Date()
-    });
+    
+    // Nếu là đơn hàng COD, cập nhật trạng thái thanh toán
+    if (order.paymentMethod === 'COD') {
+      order.isPaid = true;
+      order.paidAt = new Date();
+      order.statusHistory.push({
+        status: 'delivered_success',
+        note: 'Giao hàng thành công - Đã thu tiền COD',
+        date: new Date()
+      });
+    } else {
+      order.statusHistory.push({
+        status: 'delivered_success',
+        note: 'Giao hàng thành công',
+        date: new Date()
+      });
+    }
 
     await order.save();
 
@@ -561,6 +580,31 @@ const confirmDelivery = async (req, res) => {
     const shipper = await Shipper.findById(req.shipperId);
     shipper.totalDeliveries += 1;
     await shipper.save();
+
+    // Emit WebSocket events for realtime updates
+    const io = req.app.get('io');
+    if (io) {
+      // Emit to all connected clients
+      io.emit('order_status_updated', {
+        orderId: order._id,
+        status: order.status,
+        updates: {
+          isDelivered: order.isDelivered,
+          deliveredAt: order.deliveredAt
+        }
+      });
+
+      // Emit payment update for COD orders
+      if (order.paymentMethod === 'COD') {
+        io.emit('order_payment_updated', {
+          orderId: order._id,
+          isPaid: order.isPaid,
+          paidAt: order.paidAt,
+          status: order.status,
+          statusHistory: order.statusHistory
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -850,11 +894,23 @@ const completeDelivery = async (req, res) => {
     order.deliveredAt = new Date();
     order.autoConfirmAt = null;
     order.orderTracking = orderTracking._id;
-    order.statusHistory.push({
-      status: 'delivered_success',
-      note: 'Demo: Giao hàng thành công!',
-      date: new Date()
-    });
+    
+    // Nếu là đơn hàng COD, cập nhật trạng thái thanh toán
+    if (order.paymentMethod === 'COD') {
+      order.isPaid = true;
+      order.paidAt = new Date();
+      order.statusHistory.push({
+        status: 'delivered_success',
+        note: 'Demo: Giao hàng thành công - Đã thu tiền COD!',
+        date: new Date()
+      });
+    } else {
+      order.statusHistory.push({
+        status: 'delivered_success',
+        note: 'Demo: Giao hàng thành công!',
+        date: new Date()
+      });
+    }
 
     await order.save();
 
@@ -863,6 +919,22 @@ const completeDelivery = async (req, res) => {
     if (shipper) {
       shipper.totalDeliveries += 1;
       await shipper.save();
+    }
+
+    // Send email notification to shipper about successful delivery
+    try {
+      await sendShipperNotification(shipper.email, 'delivery_completed', {
+        shipperName: shipper.fullName,
+        orderId: order._id,
+        customerName: order.shippingAddress?.fullName || 'Khách hàng',
+        deliveryAddress: `${order.shippingAddress?.address}, ${order.shippingAddress?.ward}, ${order.shippingAddress?.district}, ${order.shippingAddress?.province}`,
+        deliveryTime: new Date().toLocaleString('vi-VN'),
+        totalPrice: order.totalPrice?.toLocaleString('vi-VN') + ' VNĐ'
+      });
+      console.log(`✅ Delivery completed email sent to shipper: ${shipper.email}`);
+    } catch (emailError) {
+      console.error('Failed to send delivery completed email:', emailError);
+      // Don't fail the request if email fails
     }
 
     res.json({
@@ -925,6 +997,26 @@ const reportDeliveryFailure = async (req, res) => {
 
     await order.save();
 
+    // Send email notification to shipper about delivery failure
+    try {
+      const shipper = await Shipper.findById(req.shipperId);
+      if (shipper) {
+        await sendShipperNotification(shipper.email, 'delivery_failed', {
+          shipperName: shipper.fullName,
+          orderId: order._id,
+          customerName: order.shippingAddress?.fullName || 'Khách hàng',
+          deliveryAddress: `${order.shippingAddress?.address}, ${order.shippingAddress?.ward}, ${order.shippingAddress?.district}, ${order.shippingAddress?.province}`,
+          failureReason: failureReason,
+          retryCount: order.retryDeliveryCount,
+          notes: notes || 'Không có ghi chú'
+        });
+        console.log(`✅ Delivery failure email sent to shipper: ${shipper.email}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send delivery failure email:', emailError);
+      // Don't fail the request if email fails
+    }
+
     res.json({
       success: true,
       message: 'Báo cáo giao hàng thất bại thành công',
@@ -935,6 +1027,65 @@ const reportDeliveryFailure = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Lỗi server khi báo cáo giao hàng thất bại',
+      error: error.message
+    });
+  }
+};
+
+// Cập nhật trạng thái shipper (Admin only)
+const updateShipperStatus = async (req, res) => {
+  try {
+    const { shipperId } = req.params;
+    const { status, reason } = req.body;
+
+    // Validate status
+    const validStatuses = ['active', 'inactive', 'suspended'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Trạng thái không hợp lệ'
+      });
+    }
+
+    // Find shipper
+    const shipper = await Shipper.findById(shipperId);
+    if (!shipper) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy shipper'
+      });
+    }
+
+    const oldStatus = shipper.status;
+    shipper.status = status;
+    await shipper.save();
+
+    // Send email notification
+    try {
+      await sendShipperNotification(shipper.email, 'status_updated', {
+        shipperName: shipper.fullName,
+        newStatus: status,
+        reason: reason || 'Trạng thái tài khoản đã được cập nhật bởi admin'
+      });
+    } catch (emailError) {
+      console.error('Failed to send status update email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.json({
+      success: true,
+      message: 'Cập nhật trạng thái shipper thành công',
+      data: {
+        shipperId: shipper._id,
+        oldStatus,
+        newStatus: status
+      }
+    });
+  } catch (error) {
+    console.error('Update shipper status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi cập nhật trạng thái shipper',
       error: error.message
     });
   }
@@ -955,6 +1106,7 @@ export {
   confirmDelivery,
   completeDelivery,
   reportDeliveryFailure,
+  updateShipperStatus,
   uploadMiddleware,
   deliveryUploadMiddleware
 };

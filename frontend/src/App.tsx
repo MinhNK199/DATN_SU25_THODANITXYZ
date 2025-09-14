@@ -51,6 +51,7 @@ import { ChatProvider } from './contexts/ChatContext';
 import { CheckoutProvider } from './contexts/CheckoutContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { InventoryProvider } from './contexts/InventoryContext';
+import { OrderProvider } from './contexts/OrderContext';
 import ErrorTestPage from './pages/admin/ErrorTestPage';
 import ProductComparison from './components/client/ProductComparison';
 import ProductReviews from './components/client/ProductReviews';
@@ -103,10 +104,11 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <InventoryProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <ChatProvider>
-                  <CheckoutProvider>
+            <OrderProvider>
+              <CartProvider>
+                <WishlistProvider>
+                  <ChatProvider>
+                    <CheckoutProvider>
                     <ScrollToTop />
                     <Routes>
                       {/* Test routes */}
@@ -231,10 +233,11 @@ function App() {
                     {/* Global Components */}
                     <PromotionBanner />
                     <Toaster />
-                  </CheckoutProvider>
-                </ChatProvider>
-              </WishlistProvider>
-            </CartProvider>
+                    </CheckoutProvider>
+                  </ChatProvider>
+                </WishlistProvider>
+              </CartProvider>
+            </OrderProvider>
           </InventoryProvider>
         </NotificationProvider>
       </AuthProvider>

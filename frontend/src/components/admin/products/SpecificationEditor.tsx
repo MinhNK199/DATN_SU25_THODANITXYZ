@@ -12,43 +12,88 @@ interface SpecificationEditorProps {
 const SpecificationEditor: React.FC<SpecificationEditorProps> = ({ value = {}, onChange }) => {
   const [specs, setSpecs] = React.useState<{ key: string; value: string }[]>([])
   const [initialized, setInitialized] = React.useState(false)
+  const isUpdatingFromParent = React.useRef(false)
 
   console.log("🔍 SpecificationEditor received value:", value);
 
   // Khởi tạo từ value prop
   React.useEffect(() => {
-    console.log("🔍 useEffect triggered:", { value, initialized });
-    const entries = Object.entries(value || {})
-    console.log("🔍 Entries:", entries);
-    if (entries.length > 0) {
-      const newSpecs = entries.map(([key, val]) => ({ key, value: val }))
-      console.log("🔍 Setting specs from value:", newSpecs);
-      setSpecs(newSpecs)
-    } else if (specs.length === 0) {
-      console.log("🔍 Setting empty specs");
-      setSpecs([{ key: "", value: "" }])
+    if (!initialized) {
+      console.log("🔍 useEffect triggered:", { value, initialized });
+      const entries = Object.entries(value || {})
+      console.log("🔍 Entries:", entries);
+      if (entries.length > 0) {
+        const newSpecs = entries.map(([key, val]) => ({ key, value: val }))
+        console.log("🔍 Setting specs from value:", newSpecs);
+        setSpecs(newSpecs)
+      } else {
+        console.log("🔍 Setting empty specs");
+        setSpecs([{ key: "", value: "" }])
+      }
+      setInitialized(true)
     }
-    setInitialized(true)
-  }, [value, specs.length])
+  }, [initialized])
+
+  // Cập nhật specs khi value prop thay đổi từ bên ngoài
+  React.useEffect(() => {
+    console.log("🔍 useEffect for value change triggered:", { 
+      initialized, 
+      isUpdatingFromParent: isUpdatingFromParent.current, 
+      value 
+    });
+    if (initialized && !isUpdatingFromParent.current) {
+      console.log("🔍 value prop changed, updating specs:", value);
+      const entries = Object.entries(value || {})
+      const newSpecs = entries.length > 0 
+        ? entries.map(([key, val]) => ({ key, value: val }))
+        : [{ key: "", value: "" }]
+      console.log("🔍 setting newSpecs from value:", newSpecs);
+      setSpecs(newSpecs)
+    } else {
+      console.log("🔍 Skipping update because:", { 
+        initialized, 
+        isUpdatingFromParent: isUpdatingFromParent.current 
+      });
+    }
+  }, [value, initialized])
+
+  // Thêm useEffect để reset flag sau khi render
+  React.useEffect(() => {
+    if (isUpdatingFromParent.current) {
+      console.log("🔍 Resetting isUpdatingFromParent after render");
+      isUpdatingFromParent.current = false
+    }
+  })
 
   const updateParent = (newSpecs: { key: string; value: string }[]) => {
+    console.log("🔍 updateParent called with:", newSpecs);
+    // Chỉ gửi những specs có cả key và value không rỗng
+    const validSpecs = newSpecs.filter((s) => s.key.trim() && s.value.trim())
     const newSpecsObject = Object.fromEntries(
-      newSpecs
-        .filter((s) => s.key.trim() && s.value.trim())
-        .map((s) => [s.key.trim(), s.value.trim()])
+      validSpecs.map((s) => [s.key.trim(), s.value.trim()])
     )
+    console.log("🔍 newSpecsObject to parent:", newSpecsObject);
+    console.log("🔍 isUpdatingFromParent before:", isUpdatingFromParent.current);
+    
+    // Đánh dấu rằng đang cập nhật từ parent để tránh vòng lặp
+    isUpdatingFromParent.current = true
+    console.log("🔍 isUpdatingFromParent after setting true:", isUpdatingFromParent.current);
     onChange(newSpecsObject)
   }
 
   const handleChange = (idx: number, field: "key" | "value", val: string) => {
+    console.log("🔍 handleChange called:", { idx, field, val, currentSpecs: specs });
     const newSpecs = [...specs]
     newSpecs[idx][field] = val
+    console.log("🔍 newSpecs after change:", newSpecs);
     setSpecs(newSpecs)
     updateParent(newSpecs)
   }
 
   const handleAdd = () => {
+    console.log("🔍 handleAdd called, current specs:", specs);
     const newSpecs = [...specs, { key: "", value: "" }]
+    console.log("🔍 newSpecs after add:", newSpecs);
     setSpecs(newSpecs)
     updateParent(newSpecs)
   }
@@ -75,6 +120,8 @@ const SpecificationEditor: React.FC<SpecificationEditorProps> = ({ value = {}, o
     return true
   }
 
+  console.log("🔍 Rendering with specs:", specs);
+  
   return (
     <div style={{ marginTop: 8 }}>
       {specs.map((spec, idx) => (
