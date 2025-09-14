@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   FaHeart,
   FaShoppingCart,
@@ -67,6 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
   const [filterText, setFilterText] = useState('');
   const [filterSize, setFilterSize] = useState<string | undefined>(undefined);
+  const navigate = useNavigate();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -130,21 +131,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }
   };
 
+  const handleProductClick = () => {
+    if (product.name.toLowerCase().includes('iphone 15')) {
+      navigate(`/products?search=iPhone 15&brand=Apple`);
+    } else {
+      navigate(`/product/${product._id}`);
+    }
+  };
+
   const handleAddToCart = async () => {
-    if (product.variants && product.variants.length > 0) {
-      openVariantModal();
-      return;
-    }
-    setIsLoading(true);
-    try {
-      await addToCart(product._id, 1);
-      toast.success("Đã thêm vào giỏ hàng!");
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      toast.error("Không thể thêm sản phẩm vào giỏ hàng!");
-    } finally {
-      setIsLoading(false);
-    }
+    // Always navigate to product detail page
+    navigate(`/product/${product._id}`);
   };
 
   const sizeList = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
@@ -230,15 +227,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
 
   return (
-    <div className="group bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100">
+    <div className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 p-3">
       <div className="relative overflow-hidden">
-        <Link to={`/product/${product._id}`}>
+        <div 
+          onClick={handleProductClick}
+          className="cursor-pointer"
+        >
           <img
             src={product.image || (product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg')}
             alt={product.name}
-            className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-48 object-contain group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/placeholder.svg';
+            }}
           />
-        </Link>
+        </div>
 
         <div className="absolute top-3 left-3 flex flex-col space-y-2">
           {product.isNew && (
@@ -258,6 +262,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
+        {/* Tmember discount badge */}
+        <div className="absolute top-3 right-3">
+          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+            Tmember
+          </span>
+        </div>
+
+
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div className="flex space-x-2">
             <button
@@ -274,9 +286,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   ? "Đang thêm..."
                   : isOutOfStock
                     ? "Hết hàng"
-                    : product.variants && product.variants.length > 0
-                      ? "Chọn loại"
-                      : "Thêm vào giỏ"}
+                      : "Thêm vào giỏ hàng"}
               </span>
             </button>
             <button
@@ -304,18 +314,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-0">
         <div className="text-sm text-blue-600 font-medium mb-1">
           {product.category && typeof product.category === "object"
             ? product.category.name
             : product.category || "Không rõ danh mục"}
         </div>
 
-        <Link to={`/product/${product._id}`}>
-          <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-            {product.name}
-          </h3>
-        </Link>
+        <h3 
+          onClick={handleProductClick}
+          className="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer"
+        >
+          {product.name}
+        </h3>
 
         <div className="flex items-center space-x-1 mb-2">
           <div className="flex">
@@ -336,9 +347,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <span className="text-xl font-bold text-gray-900">
             {formatPrice(bestPrice)}
           </span>
-          {product.originalPrice && (
+          {(product.originalPrice || (product.salePrice && product.price)) && (
             <span className="text-sm text-gray-500 line-through">
-              {formatPrice(product.originalPrice)}
+              {formatPrice(product.originalPrice || product.price)}
             </span>
           )}
         </div>
@@ -374,9 +385,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               ? "Đang thêm..."
               : isOutOfStock
                 ? "Hết hàng"
-                : product.variants && product.variants.length > 0
-                  ? "Chọn loại sản phẩm"
-                  : "Thêm vào giỏ hàng"}
+                : "Thêm vào giỏ hàng"}
           </span>
         </button>
       </div>
