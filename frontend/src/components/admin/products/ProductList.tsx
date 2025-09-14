@@ -97,6 +97,10 @@ const ProductListPage: React.FC = () => {
         getBrands()
       ]);
 
+      console.log("🔍 ProductList - Raw productsResponse:", productsResponse);
+      console.log("🔍 ProductList - First product:", productsResponse.products[0]);
+      console.log("🔍 ProductList - First product images:", productsResponse.products[0]?.images);
+
       setProducts(productsResponse.products);
       setTotalPages(productsResponse.pages);
       setTotalProducts(productsResponse.total);
@@ -213,38 +217,56 @@ const ProductListPage: React.FC = () => {
       dataIndex: "name",
       key: "name",
       width: "30%",
-      render: (_, record) => (
-        <Space>
-          <div style={{ position: "relative" }}>
-            <Avatar shape="square" size={64} src={record.images[0]} />
-            {/* Hiển thị số lượng ảnh phụ */}
-            {record.additionalImages && record.additionalImages.length > 0 && (
-              <Badge 
-                count={record.additionalImages.length} 
-                style={{ 
-                  position: "absolute", 
-                  top: -8, 
-                  right: -8,
-                  backgroundColor: "#52c41a",
-                  fontSize: "10px"
-                }} 
+      render: (_, record) => {
+        console.log("🔍 ProductList - Rendering product:", record.name);
+        console.log("🔍 ProductList - Product images array:", record.images);
+        console.log("🔍 ProductList - Images type:", typeof record.images);
+        console.log("🔍 ProductList - Images length:", record.images?.length);
+        console.log("🔍 ProductList - First image:", record.images?.[0]);
+        
+        const mainImage = record.images && record.images.length > 0 ? record.images[0] : '/placeholder-product.png';
+        console.log("🔍 ProductList - Final image URL:", mainImage);
+        
+        return (
+          <Space>
+            <div style={{ position: "relative" }}>
+              <Avatar 
+                shape="square" 
+                size={64} 
+                src={mainImage}
+                onError={() => {
+                  console.error("Image load error for product:", record.name, "Image URL:", mainImage);
+                }}
               />
-            )}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <Text strong>{record.name}</Text>
-            <Text type="secondary">
-              SKU: {record.sku || record.variants?.[0]?.sku || "N/A"}
-            </Text>
-            {/* Hiển thị thông tin ảnh phụ */}
-            {record.additionalImages && record.additionalImages.length > 0 && (
-              <Text type="secondary" style={{ fontSize: "11px" }}>
-                +{record.additionalImages.length} ảnh phụ
+              {/* Hiển thị số lượng ảnh phụ */}
+              {record.additionalImages && record.additionalImages.length > 0 && (
+                <Badge 
+                  count={record.additionalImages.length} 
+                  style={{ 
+                    position: "absolute", 
+                    top: -8, 
+                    right: -8,
+                    backgroundColor: "#52c41a",
+                    fontSize: "10px"
+                  }} 
+                />
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <Text strong>{record.name}</Text>
+              <Text type="secondary">
+                SKU: {record.sku || record.variants?.[0]?.sku || "N/A"}
               </Text>
-            )}
-          </div>
-        </Space>
-      ),
+              {/* Hiển thị thông tin ảnh phụ */}
+              {record.additionalImages && record.additionalImages.length > 0 && (
+                <Text type="secondary" style={{ fontSize: "11px" }}>
+                  +{record.additionalImages.length} ảnh phụ
+                </Text>
+              )}
+            </div>
+          </Space>
+        );
+      },
     },
     {
       title: "Giá",

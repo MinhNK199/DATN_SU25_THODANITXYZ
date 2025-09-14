@@ -262,6 +262,14 @@ export const getProducts = async(req, res) => {
             ]),
         };
 
+        // Debug: Log first product images
+        if (productsWithVariants.length > 0) {
+            console.log("🔍 getProducts - First product:", productsWithVariants[0].name);
+            console.log("🔍 getProducts - First product images:", productsWithVariants[0].images);
+            console.log("🔍 getProducts - First product images type:", typeof productsWithVariants[0].images);
+            console.log("🔍 getProducts - First product images length:", productsWithVariants[0].images?.length);
+        }
+
         // 📤 Trả kết quả về client
         res.json({
             products: productsWithVariants,
@@ -360,12 +368,12 @@ export const createProduct = async(req, res) => {
 
         // Chỉ xử lý ảnh đại diện khi KHÔNG phải route additional-images
         const isAdditionalImagesRoute = req.path.includes('/additional-images');
-        let imageUrls = []; // Khởi tạo biến imageUrls để tránh lỗi undefined
+        let imageUrls = null; // Sử dụng null để phân biệt với rỗng
 
         if (!isAdditionalImagesRoute) {
             // Xử lý ảnh upload (ảnh đại diện)
             if (req.file) {
-                imageUrls.push(`/uploads/images/${req.file.filename}`);
+                imageUrls = [`/uploads/images/${req.file.filename}`];
             } else if (req.files && Array.isArray(req.files)) {
                 imageUrls = req.files.map(f => `/uploads/images/${f.filename}`);
             } else if (req.body.images) {
@@ -379,13 +387,13 @@ export const createProduct = async(req, res) => {
                     imageUrls = req.body.images;
                 }
             }
-            if (!imageUrls || imageUrls.length < 1) {
+            // Chỉ validate khi có ảnh mới được gửi lên
+            if (imageUrls !== null && (!imageUrls || imageUrls.length < 1)) {
                 return res.status(400).json({ message: "Phải có ít nhất 1 hình ảnh" });
             }
         } else {
             console.log("🔍 Additional images route - skipping main image processing");
-            // Khởi tạo imageUrls rỗng để tránh lỗi undefined
-            imageUrls = [];
+            imageUrls = null;
         }
 
         // Xử lý ảnh phụ (chỉ khi KHÔNG phải route additional-images)
@@ -541,6 +549,26 @@ export const updateProduct = async(req, res) => {
             return res.status(400).json({ message: "Số lượng tồn kho không được âm" });
         }
 
+        // Xử lý ảnh đại diện
+        let imageUrls = null; // Sử dụng null để phân biệt với rỗng
+        
+        // Xử lý ảnh upload (ảnh đại diện)
+        if (req.file) {
+            imageUrls = [`/uploads/images/${req.file.filename}`];
+        } else if (req.files && Array.isArray(req.files)) {
+            imageUrls = req.files.map(f => `/uploads/images/${f.filename}`);
+        } else if (req.body.images) {
+            if (typeof req.body.images === "string") {
+                try {
+                    imageUrls = JSON.parse(req.body.images);
+                } catch (e) {
+                    imageUrls = [req.body.images];
+                }
+            } else if (Array.isArray(req.body.images)) {
+                imageUrls = req.body.images;
+            }
+        }
+
         // Process variants
         let processedVariants = [];
         if (variants && Array.isArray(variants)) {
@@ -565,11 +593,12 @@ export const updateProduct = async(req, res) => {
         if (description !== undefined) {
             product.description = description;
         }
-        // Chỉ cập nhật images khi có imageUrls (không phải route additional-images)
-        if (typeof imageUrls !== 'undefined' && imageUrls && imageUrls.length > 0) {
+        // Chỉ cập nhật images khi có imageUrls mới (không phải route additional-images)
+        if (imageUrls !== null) {
             product.images = imageUrls;
+            console.log("✅ Updated product images:", imageUrls);
         } else {
-            console.log("🔍 imageUrls is undefined or empty, skipping images update");
+            console.log("🔍 No new images provided, keeping existing images");
         }
         product.videos = videos || product.videos;
         product.brand = brand;
