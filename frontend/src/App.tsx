@@ -29,6 +29,7 @@ import BannerEdit from "./components/admin/Banner/BannerEdit";
 import Activity from "./components/admin/activity/activity";
 import RatingList from "./components/admin/rating/ratinglist";
 import Dashboard from "./components/admin/dashboard";
+import SettingsPage from "./pages/admin/SettingsPage";
 import VariantList from "./components/admin/variants/VariantList";
 import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
@@ -214,6 +215,7 @@ function App() {
                         <Route path="banners/add" element={<BannerAdd />} />
                         <Route path="banners/edit/:id" element={<BannerEdit />} />
                         <Route path="activities" element={<Activity />} />
+                        <Route path="settings" element={<SettingsPage />} />
                         <Route path="ratings" element={<RatingList />} />
                         <Route path="ratings/:id" element={<RatingDetail />} />
                         <Route path="vouchers" element={<VoucherList />} />
