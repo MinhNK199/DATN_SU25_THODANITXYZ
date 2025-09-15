@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock, FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaPaperPlane } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaClock, FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaPaperPlane, FaYoutube } from 'react-icons/fa';
+import { getSettings } from '../../services/settingsService';
 
 const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -9,39 +10,74 @@ const Contact: React.FC = () => {
     message: ''
   });
 
+  const [settings, setSettings] = useState({
+    contactPhone: '+84 123 456 789',
+    contactEmail: 'support@techtrend.vn',
+    contactAddress: '123 Đường ABC, Quận 1, TP. Hồ Chí Minh, Việt Nam',
+    socialFacebook: '#',
+    socialTwitter: '#',
+    socialInstagram: '#',
+    socialYoutube: '#',
+    socialLinkedin: '#'
+  });
+
   const contactInfo = [
     {
       icon: FaPhone,
       title: 'Điện thoại',
-      details: ['+84 (24) 123-4567', '+84 (24) 987-6543'],
+      details: [settings.contactPhone, '+84 987 654 321'],
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: FaEnvelope,
       title: 'Email',
-      details: ['support@electronstore.com', 'sales@electronstore.com'],
+      details: [settings.contactEmail, 'info@techtrend.vn'],
       color: 'from-purple-500 to-purple-600'
     },
     {
       icon: FaMapMarkerAlt,
       title: 'Địa chỉ',
-      details: ['123 Đường Công nghệ, Quận 1', 'TP. Hồ Chí Minh, Việt Nam'],
+      details: [settings.contactAddress],
       color: 'from-green-500 to-green-600'
     },
     {
       icon: FaClock,
       title: 'Giờ làm việc',
-      details: ['Thứ 2 - Thứ 6: 8:00 - 18:00', 'Thứ 7 - Chủ nhật: 9:00 - 16:00'],
+      details: ['Thứ 2 - Thứ 6: 8:00 - 20:00', 'Thứ 7: 8:00 - 18:00', 'Chủ nhật: 9:00 - 17:00'],
       color: 'from-orange-500 to-orange-600'
     }
   ];
 
   const socialLinks = [
-    { icon: FaFacebook, href: '#', label: 'Facebook' },
-    { icon: FaTwitter, href: '#', label: 'Twitter' },
-    { icon: FaInstagram, href: '#', label: 'Instagram' },
-    { icon: FaLinkedin, href: '#', label: 'LinkedIn' }
+    { icon: FaFacebook, href: settings.socialFacebook, label: 'Facebook' },
+    { icon: FaTwitter, href: settings.socialTwitter, label: 'Twitter' },
+    { icon: FaInstagram, href: settings.socialInstagram, label: 'Instagram' },
+    { icon: FaYoutube, href: settings.socialYoutube, label: 'YouTube' },
+    { icon: FaLinkedin, href: settings.socialLinkedin, label: 'LinkedIn' }
   ];
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settingsData = await getSettings();
+        setSettings(prev => ({
+          ...prev,
+          contactPhone: settingsData.contactPhone || prev.contactPhone,
+          contactEmail: settingsData.contactEmail || prev.contactEmail,
+          contactAddress: settingsData.contactAddress || prev.contactAddress,
+          socialFacebook: settingsData.socialFacebook || prev.socialFacebook,
+          socialTwitter: settingsData.socialTwitter || prev.socialTwitter,
+          socialInstagram: settingsData.socialInstagram || prev.socialInstagram,
+          socialYoutube: settingsData.socialYoutube || prev.socialYoutube,
+          socialLinkedin: settingsData.socialLinkedin || prev.socialLinkedin
+        }));
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
@@ -50,10 +86,17 @@ const Contact: React.FC = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Form submitted:', formData);
+    try {
+      // TODO: Implement contact form submission API
+      console.log('Form submitted:', formData);
+      alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.');
+    }
   };
 
   return (
@@ -61,9 +104,10 @@ const Contact: React.FC = () => {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-6">Liên hệ chúng tôi</h1>
+          <h1 className="text-5xl font-bold mb-6">Liên hệ TechTrend</h1>
           <p className="text-xl max-w-2xl mx-auto">
-            Có câu hỏi? Chúng tôi rất muốn nghe từ bạn. Gửi tin nhắn cho chúng tôi và chúng tôi sẽ phản hồi sớm nhất có thể.
+            Có câu hỏi về sản phẩm công nghệ? Chúng tôi rất muốn nghe từ bạn. 
+            Gửi tin nhắn cho chúng tôi và chúng tôi sẽ phản hồi sớm nhất có thể.
           </p>
         </div>
       </div>
@@ -147,10 +191,12 @@ const Contact: React.FC = () => {
                   >
                     <option value="">Chọn chủ đề</option>
                     <option value="general">Thắc mắc chung</option>
-                    <option value="support">Hỗ trợ kỹ thuật</option>
-                    <option value="sales">Câu hỏi về bán hàng</option>
+                    <option value="product">Tư vấn sản phẩm</option>
+                    <option value="order">Hỗ trợ đơn hàng</option>
+                    <option value="technical">Hỗ trợ kỹ thuật</option>
+                    <option value="warranty">Bảo hành sản phẩm</option>
                     <option value="billing">Vấn đề thanh toán</option>
-                    <option value="partnership">Hợp tác</option>
+                    <option value="partnership">Hợp tác kinh doanh</option>
                     <option value="other">Khác</option>
                   </select>
                 </div>
@@ -167,7 +213,7 @@ const Contact: React.FC = () => {
                     value={formData.message}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                    placeholder="Hãy cho chúng tôi biết chúng tôi có thể giúp gì cho bạn..."
+                    placeholder="Hãy cho chúng tôi biết về sản phẩm công nghệ bạn quan tâm hoặc vấn đề cần hỗ trợ..."
                   />
                 </div>
 
@@ -189,7 +235,7 @@ const Contact: React.FC = () => {
                   <div className="text-center">
                     <FaMapMarkerAlt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600">Bản đồ tương tác sắp ra mắt</p>
-                    <p className="text-sm text-gray-500">123 Đường Công nghệ, Quận 1, TP. Hồ Chí Minh</p>
+                    <p className="text-sm text-gray-500">{settings.contactAddress}</p>
                   </div>
                 </div>
               </div>
@@ -213,7 +259,7 @@ const Contact: React.FC = () => {
                   })}
                 </div>
                 <p className="text-gray-600 mt-4">
-                  Theo dõi chúng tôi trên mạng xã hội để cập nhật những sản phẩm mới nhất và ưu đãi đặc biệt.
+                  Theo dõi TechTrend trên mạng xã hội để cập nhật những sản phẩm công nghệ mới nhất và ưu đãi đặc biệt.
                 </p>
               </div>
 
@@ -221,7 +267,7 @@ const Contact: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Câu hỏi thường gặp</h3>
                 <p className="text-gray-600 mb-4">
-                  Tìm câu trả lời cho những câu hỏi thường gặp về sản phẩm, dịch vụ và chính sách của chúng tôi.
+                  Tìm câu trả lời cho những câu hỏi thường gặp về sản phẩm công nghệ, dịch vụ và chính sách của TechTrend.
                 </p>
                 <a
                   href="/faq"
@@ -244,7 +290,7 @@ const Contact: React.FC = () => {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Các cách liên hệ khác</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Chúng tôi cung cấp nhiều cách để bạn có thể liên hệ với chúng tôi. Chọn cách thuận tiện nhất cho bạn.
+              TechTrend cung cấp nhiều cách để bạn có thể liên hệ với chúng tôi. Chọn cách thuận tiện nhất cho bạn.
             </p>
           </div>
           
@@ -257,7 +303,7 @@ const Contact: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Gọi trực tiếp cho chúng tôi để được tư vấn nhanh chóng
               </p>
-              <p className="text-lg font-semibold text-blue-600">+84 (24) 123-4567</p>
+              <p className="text-lg font-semibold text-blue-600">{settings.contactPhone}</p>
             </div>
 
             <div className="text-center p-6 rounded-2xl bg-gray-50">
@@ -268,7 +314,7 @@ const Contact: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Gửi email cho chúng tôi và nhận phản hồi trong vòng 24 giờ
               </p>
-              <p className="text-lg font-semibold text-blue-600">support@electronstore.com</p>
+              <p className="text-lg font-semibold text-blue-600">{settings.contactEmail}</p>
             </div>
 
             <div className="text-center p-6 rounded-2xl bg-gray-50">
@@ -279,7 +325,7 @@ const Contact: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Ghé thăm cửa hàng của chúng tôi để trải nghiệm trực tiếp
               </p>
-              <p className="text-lg font-semibold text-blue-600">123 Đường Công nghệ, Q1</p>
+              <p className="text-lg font-semibold text-blue-600">{settings.contactAddress.split(',')[0]}</p>
             </div>
           </div>
         </div>

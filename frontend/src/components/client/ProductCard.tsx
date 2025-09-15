@@ -6,6 +6,7 @@ import {
   FaEye,
   FaStar,
   FaBalanceScale,
+  FaCheck,
 } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
 import { useCompare } from "../../contexts/CompareContext";
@@ -67,8 +68,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
+  const [selectedVariants, setSelectedVariants] = useState<{[key: string]: number}>({});
   const [filterText, setFilterText] = useState('');
   const [filterSize, setFilterSize] = useState<string | undefined>(undefined);
+  const [quantity, setQuantity] = useState(1);
   const navigate = useNavigate();
 
   const formatPrice = (price: number) => {
@@ -98,6 +101,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const openVariantModal = () => {
     setShowVariantModal(true);
     setSelectedVariantId(undefined);
+    setSelectedVariants({});
+    setQuantity(1);
   };
 
   const closeVariantModal = () => {
@@ -105,32 +110,85 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleVariantSelect = async () => {
-    if (!selectedVariantId) {
-      toast.error("Vui lòng chọn một loại sản phẩm!");
+    const selectedVariantIds = Object.keys(selectedVariants);
+    if (selectedVariantIds.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một loại sản phẩm!");
       return;
     }
-    const validVariant = product.variants?.find(v => v._id === selectedVariantId);
-    if (!validVariant) {
-      toast.error("Loại sản phẩm không hợp lệ hoặc không tồn tại!");
-      return;
-    }
-    if (validVariant.stock <= 0) {
-      toast.error("Loại sản phẩm đã hết hàng!");
-      return;
-    }
-
 
     setIsLoading(true);
     try {
-      await addToCart(product._id, 1, selectedVariantId); // Gửi productId và variantId riêng biệt
-      toast.success("Đã thêm vào giỏ hàng!");
-      closeVariantModal();
+      let totalAdded = 0;
+      for (const variantId of selectedVariantIds) {
+        const quantity = selectedVariants[variantId];
+        const validVariant = product.variants?.find(v => v._id === variantId);
+        if (!validVariant) {
+          toast.error(`Loại sản phẩm ${variantId} không hợp lệ!`);
+          continue;
+        }
+        if (validVariant.stock <= 0) {
+          toast.error(`Loại sản phẩm ${validVariant.name || variantId} đã hết hàng!`);
+          continue;
+        }
+        if (quantity > validVariant.stock) {
+          toast.error(`Loại sản phẩm ${validVariant.name || variantId} chỉ còn ${validVariant.stock} sản phẩm trong kho!`);
+          continue;
+        }
+
+        await addToCart(product._id, quantity, variantId);
+        totalAdded += quantity;
+      }
+      
+      if (totalAdded > 0) {
+        toast.success(`Đã thêm ${totalAdded} sản phẩm vào giỏ hàng!`);
+        closeVariantModal();
+      }
     } catch (error: any) {
       console.error("Error adding to cart:", error);
       toast.error(error.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng!");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleVariantToggle = (variantId: string, variant: any) => {
+    if (variant.stock <= 0) return;
+    
+    setSelectedVariants(prev => {
+      const newSelected = { ...prev };
+      if (newSelected[variantId]) {
+        delete newSelected[variantId];
+      } else {
+        newSelected[variantId] = 1;
+      }
+      return newSelected;
+    });
+  };
+
+  const handleVariantQuantityChange = (variantId: string, newQuantity: number) => {
+    const variant = product.variants?.find(v => v._id === variantId);
+    if (!variant) return;
+    
+    const maxStock = variant.stock;
+    const validQuantity = Math.min(Math.max(1, newQuantity), maxStock);
+    
+    setSelectedVariants(prev => ({
+      ...prev,
+      [variantId]: validQuantity
+    }));
+  };
+
+  const getTotalPrice = () => {
+    return Object.entries(selectedVariants).reduce((total, [variantId, quantity]) => {
+      const variant = product.variants?.find(v => v._id === variantId);
+      if (!variant) return total;
+      const price = variant.salePrice && variant.salePrice > 0 ? variant.salePrice : variant.price;
+      return total + (price * quantity);
+    }, 0);
+  };
+
+  const getTotalQuantity = () => {
+    return Object.values(selectedVariants).reduce((total, quantity) => total + quantity, 0);
   };
 
   const handleProductClick = () => {
@@ -142,8 +200,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const handleAddToCart = async () => {
-    // Always navigate to product detail page
-    navigate(`/product/${product._id}`);
+    // Nếu có variants, hiển thị modal chọn variant
+    if (product.variants && product.variants.length > 0) {
+      openVariantModal();
+    } else {
+      // Nếu không có variants, thêm trực tiếp vào giỏ hàng
+      setIsLoading(true);
+      try {
+        await addToCart(product._id, 1);
+        toast.success("Đã thêm vào giỏ hàng!");
+      } catch (error: any) {
+        console.error("Error adding to cart:", error);
+        toast.error(error.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng!");
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
   const sizeList = Array.from(new Set((product.variants || []).map((v: any) => v.size).filter(Boolean)));
@@ -265,9 +337,30 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const isOutOfStock = availableStock === 0;
 
-  const bestPrice = product.variants && product.variants.length > 0
-    ? Math.min(...product.variants.map((v: any) => v.salePrice && v.salePrice > 0 && v.salePrice < v.price ? v.salePrice : v.price))
-    : product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
+  // Logic mới: Giá hiện tại trong DB là giá sale, cần tính giá gốc
+  const getDisplayPrices = () => {
+    if (product.variants && product.variants.length > 0) {
+      // Nếu có variants, lấy variant có giá thấp nhất
+      const minVariant = product.variants.reduce((min, current) => {
+        const currentPrice = current.salePrice && current.salePrice > 0 ? current.salePrice : current.price;
+        const minPrice = min.salePrice && min.salePrice > 0 ? min.salePrice : min.price;
+        return currentPrice < minPrice ? current : min;
+      });
+      
+      const salePrice = minVariant.salePrice && minVariant.salePrice > 0 ? minVariant.salePrice : minVariant.price;
+      const originalPrice = minVariant.salePrice && minVariant.salePrice > 0 ? minVariant.price : null;
+      
+      return { salePrice, originalPrice };
+    } else {
+      // Nếu không có variants, sử dụng giá sản phẩm chính
+      const salePrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price;
+      const originalPrice = product.salePrice && product.salePrice > 0 ? product.price : null;
+      
+      return { salePrice, originalPrice };
+    }
+  };
+
+  const { salePrice, originalPrice } = getDisplayPrices();
 
   return (
     <div className="group bg-white rounded-lg shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 p-3">
@@ -305,16 +398,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Tmember discount badge */}
-        <div className="absolute top-3 right-3">
-          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-            Tmember
-          </span>
-        </div>
 
 
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
             <button
               onClick={handleAddToCart}
               disabled={isLoading || isOutOfStock}
@@ -332,41 +419,43 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                       : "Thêm vào giỏ hàng"}
               </span>
             </button>
-            <button
-              onClick={handleAddFavorite}
-              className={`p-2 rounded-lg transition-colors ${isFavorite
-                ? "text-red-500 bg-red-100 hover:bg-red-200"
-                : "text-gray-600 bg-white hover:bg-red-500 hover:text-white"
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={handleAddFavorite}
+                className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center ${isFavorite
+                  ? "text-red-500 bg-red-100 hover:bg-red-200"
+                  : "text-gray-600 bg-white hover:bg-red-500 hover:text-white"
+                  }`}
+              >
+                <FaHeart className="w-4 h-4" />
+              </button>
+              <Link
+                to={`/product/${product._id}`}
+                className="w-8 h-8 bg-white text-gray-600 hover:bg-blue-500 hover:text-white rounded-md transition-colors flex items-center justify-center"
+              >
+                <FaEye className="w-4 h-4" />
+              </Link>
+              <button
+                onClick={handleCompare}
+                disabled={!canAddToCompare && !isInCompare(product._id)}
+                className={`w-8 h-8 rounded-md transition-colors flex items-center justify-center ${
+                  isInCompare(product._id)
+                    ? "text-green-500 bg-green-100 hover:bg-green-200"
+                    : canAddToCompare
+                    ? "text-gray-600 bg-white hover:bg-green-500 hover:text-white"
+                    : "text-gray-400 bg-gray-100 cursor-not-allowed"
                 }`}
-            >
-              <FaHeart className="w-4 h-4" />
-            </button>
-            <Link
-              to={`/product/${product._id}`}
-              className="p-2 bg-white text-gray-600 hover:bg-blue-500 hover:text-white rounded-lg transition-colors"
-            >
-              <FaEye className="w-4 h-4" />
-            </Link>
-            <button
-              onClick={handleCompare}
-              disabled={!canAddToCompare && !isInCompare(product._id)}
-              className={`p-2 rounded-lg transition-colors ${
-                isInCompare(product._id)
-                  ? "text-green-500 bg-green-100 hover:bg-green-200"
-                  : canAddToCompare
-                  ? "text-gray-600 bg-white hover:bg-green-500 hover:text-white"
-                  : "text-gray-400 bg-gray-100 cursor-not-allowed"
-              }`}
-              title={
-                isInCompare(product._id)
-                  ? "Đã có trong danh sách so sánh"
-                  : canAddToCompare
-                  ? "Thêm vào so sánh"
-                  : "Đã đạt giới hạn so sánh (4 sản phẩm)"
-              }
-            >
-              <FaBalanceScale className="w-4 h-4" />
-            </button>
+                title={
+                  isInCompare(product._id)
+                    ? "Đã có trong danh sách so sánh"
+                    : canAddToCompare
+                    ? "Thêm vào so sánh"
+                    : "Đã đạt giới hạn so sánh (4 sản phẩm)"
+                }
+              >
+                <FaBalanceScale className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -390,23 +479,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             {[...Array(5)].map((_, i) => (
               <FaStar
                 key={i}
-                className={`w-4 h-4 ${i < Math.floor(product.rating || product.averageRating || 0)
+                className={`w-4 h-4 ${i < Math.floor(product.averageRating || product.rating || 0)
                   ? "text-yellow-400 fill-current"
                   : "text-gray-300"
                   }`}
               />
             ))}
           </div>
-          <span className="text-sm text-gray-600">({product.reviewCount || product.numReviews || 0})</span>
+          <span className="text-sm text-gray-600">
+            ({product.numReviews || product.reviewCount || 0} đánh giá)
+          </span>
         </div>
 
         <div className="flex items-center space-x-2 mb-3">
-          <span className="text-xl font-bold text-gray-900">
-            {formatPrice(bestPrice)}
-          </span>
-          {(product.originalPrice || (product.salePrice && product.price)) && (
-            <span className="text-sm text-gray-500 line-through">
-              {formatPrice(product.originalPrice || product.price)}
+          {originalPrice ? (
+            // Có giá sale: hiển thị giá gốc (gạch ngang, nhỏ, mờ) và giá sale (to, đậm, đỏ)
+            <>
+              <span className="text-2xl font-bold text-red-600">
+                {formatPrice(salePrice)}
+              </span>
+              <span className="text-sm text-gray-400 line-through">
+                {formatPrice(originalPrice)}
+              </span>
+            </>
+          ) : (
+            // Không có giá sale: hiển thị giá gốc như hiện tại
+            <span className="text-xl font-bold text-gray-900">
+              {formatPrice(salePrice)}
             </span>
           )}
         </div>
@@ -416,7 +515,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="space-y-1 mb-3">
           <div className="flex items-center text-xs text-gray-600">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            Miễn phí vận chuyển
+            Miễn phí vận chuyển cho đơn hàng từ 10Tr đồng
           </div>
           <div className="flex items-center text-xs text-gray-600">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
@@ -436,7 +535,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             : "bg-blue-600 hover:bg-blue-700 text-white"
             }`}
         >
-          <FaShoppingCart className="w-4 h-4" />
+          <FaShoppingCart className="w-4 h-4 flex-shrink-0" />
           <span>
             {isLoading
               ? "Đang thêm..."
@@ -472,8 +571,69 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 16, paddingTop: 8 }}>
+          {filteredVariants.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              padding: '12px 16px',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              marginBottom: '8px'
+            }}>
+              <div
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  border: Object.keys(selectedVariants).length === filteredVariants.filter(v => v.stock > 0).length ? '2px solid #3b82f6' : '2px solid #d1d5db',
+                  borderRadius: '4px',
+                  background: Object.keys(selectedVariants).length === filteredVariants.filter(v => v.stock > 0).length ? '#3b82f6' : 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onClick={() => {
+                  const availableVariants = filteredVariants.filter(v => v.stock > 0);
+                  const allSelected = Object.keys(selectedVariants).length === availableVariants.length;
+                  
+                  if (allSelected) {
+                    // Bỏ chọn tất cả
+                    setSelectedVariants({});
+                  } else {
+                    // Chọn tất cả
+                    const newSelected: {[key: string]: number} = {};
+                    availableVariants.forEach(variant => {
+                      newSelected[variant._id] = 1;
+                    });
+                    setSelectedVariants(newSelected);
+                  }
+                }}
+              >
+                {Object.keys(selectedVariants).length === filteredVariants.filter(v => v.stock > 0).length && (
+                  <FaCheck 
+                    style={{ 
+                      color: 'white', 
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }} 
+                  />
+                )}
+              </div>
+              <span style={{ fontWeight: '600', color: '#374151' }}>
+                {Object.keys(selectedVariants).length === filteredVariants.filter(v => v.stock > 0).length 
+                  ? 'Bỏ chọn tất cả' 
+                  : 'Chọn tất cả'
+                } ({filteredVariants.filter(v => v.stock > 0).length} sản phẩm có sẵn)
+              </span>
+            </div>
+          )}
           {filteredVariants.length === 0 && <div style={{ color: '#888', textAlign: 'center', padding: 32 }}>Không có loại sản phẩm phù hợp.</div>}
           {filteredVariants.map((variant: any, index: number) => {
+            const isSelected = selectedVariants[variant._id] > 0;
+            const selectedQuantity = selectedVariants[variant._id] || 0;
             return (
               <Popover
                 key={variant._id}
@@ -487,7 +647,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                         style={{ width: 120, height: 120, borderRadius: 8, objectFit: 'cover', border: '1px solid #eee', marginBottom: 8 }}
                       />
                     </div>
-                    <div className="mb-1">Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice && variant.salePrice < variant.price ? variant.salePrice : variant.price)}</span></div>
+                    <div className="mb-1">
+                      {variant.salePrice && variant.salePrice > 0 ? (
+                        <>
+                          Giá: <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice)}</span>
+                          <span className="text-gray-400 line-through ml-2">{formatPrice(variant.price)}</span>
+                        </>
+                      ) : (
+                        <>Giá: <span className="text-gray-900 font-semibold">{formatPrice(variant.price)}</span></>
+                      )}
+                    </div>
                     <div className="mb-1">Tồn kho: <span className="font-semibold">{variant.stock}</span></div>
                     <div className="mb-1">SKU: <span className="font-mono">{variant.sku || 'N/A'}</span></div>
                     <div className="mb-1">Size (inch): <span>{variant.size ? `${variant.size} inch` : 'N/A'}</span></div>
@@ -524,19 +693,79 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 16,
-                    border: '1px solid #e5e7eb',
+                    border: isSelected ? '2px solid #3b82f6' : '1px solid #e5e7eb',
                     borderRadius: 12,
                     padding: 14,
-                    background: variant.stock === 0 ? '#f8d7da' : variant.stock <= 5 ? '#fffbe6' : '#fff',
-                    boxShadow: '0 2px 8px #f0f1f2',
+                    background: isSelected 
+                      ? '#eff6ff' 
+                      : variant.stock === 0 
+                        ? '#f8d7da' 
+                        : variant.stock <= 5 
+                          ? '#fffbe6' 
+                          : '#fff',
+                    boxShadow: isSelected 
+                      ? '0 4px 12px rgba(59, 130, 246, 0.15)' 
+                      : '0 2px 8px #f0f1f2',
                     marginBottom: 4,
                     position: 'relative',
-                    transition: 'box-shadow 0.2s',
+                    transition: 'all 0.2s',
                     cursor: variant.stock > 0 ? 'pointer' : 'not-allowed',
                   }}
-                  className={variant.stock > 0 ? 'hover:shadow-lg transition-shadow' : ''}
-                  onClick={() => variant.stock > 0 && setSelectedVariantId(variant._id)}
+                  className={variant.stock > 0 ? 'hover:shadow-lg transition-all' : ''}
+                  onClick={() => variant.stock > 0 && handleVariantToggle(variant._id, variant)}
                 >
+                  {isSelected && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      background: '#3b82f6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}>
+                      ✓
+                    </div>
+                  )}
+                  {/* Checkbox */}
+                  <div
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      border: isSelected ? '2px solid #3b82f6' : '2px solid #d1d5db',
+                      borderRadius: '4px',
+                      background: isSelected ? '#3b82f6' : 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: variant.stock > 0 ? 'pointer' : 'not-allowed',
+                      transition: 'all 0.2s',
+                      flexShrink: 0,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (variant.stock > 0) {
+                        handleVariantToggle(variant._id, variant);
+                      }
+                    }}
+                  >
+                    {isSelected && (
+                      <FaCheck 
+                        style={{ 
+                          color: 'white', 
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }} 
+                      />
+                    )}
+                  </div>
+
                   <Badge.Ribbon
                     text={variant.stock === 0 ? 'Hết hàng' : variant.stock <= 5 ? 'Sắp hết hàng' : ''}
                     color={variant.stock === 0 ? 'red' : 'orange'}
@@ -551,13 +780,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   <div style={{ flex: 1 }}>
                     <div className="font-semibold text-base mb-1">{variant.name || `${variant.size || ''}`}</div>
                     <div className="mb-1">
-                      {variant.salePrice && variant.salePrice < variant.price ? (
+                      {variant.salePrice && variant.salePrice > 0 ? (
                         <>
                           <span className="text-red-600 font-semibold">{formatPrice(variant.salePrice)}</span>
                           <span className="text-gray-400 line-through ml-2">{formatPrice(variant.price)}</span>
                         </>
                       ) : (
-                        <span>{formatPrice(variant.price)}</span>
+                        <span className="text-gray-900 font-semibold">{formatPrice(variant.price)}</span>
                       )}
                     </div>
                     <div className="text-gray-600 text-sm mb-1">Tồn kho: {variant.stock}</div>
@@ -565,32 +794,120 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                       <Tag color="blue" style={{ marginLeft: 0 }}>{variant.size} inch</Tag>
                     )}
                   </div>
-                  <Button
-                    type="primary"
-                    disabled={variant.stock <= 0}
-                    onClick={() => {
-                      if (variant.stock > 0 && variant._id) {
-                        setSelectedVariantId(variant._id);
-                      }
-                    }}
-                    style={{ minWidth: 120, fontWeight: 600 }}
-                  >
-                    Chọn
-                  </Button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Quantity controls */}
+                    {isSelected && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Button
+                          size="small"
+                          disabled={selectedQuantity <= 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVariantQuantityChange(variant._id, selectedQuantity - 1);
+                          }}
+                          style={{ minWidth: '24px', height: '24px', padding: '0' }}
+                        >
+                          -
+                        </Button>
+                        <Input
+                          value={selectedQuantity}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 1;
+                            handleVariantQuantityChange(variant._id, value);
+                          }}
+                          style={{ width: '50px', textAlign: 'center', height: '24px' }}
+                          min={1}
+                          max={variant.stock}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <Button
+                          size="small"
+                          disabled={selectedQuantity >= variant.stock}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVariantQuantityChange(variant._id, selectedQuantity + 1);
+                          }}
+                          style={{ minWidth: '24px', height: '24px', padding: '0' }}
+                        >
+                          +
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Action button */}
+                    <Button
+                      type={isSelected ? "primary" : "default"}
+                      disabled={variant.stock <= 0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (variant.stock > 0 && variant._id) {
+                          handleVariantToggle(variant._id, variant);
+                        }
+                      }}
+                      style={{ minWidth: 80, fontWeight: 600 }}
+                    >
+                      {isSelected ? 'Bỏ chọn' : 'Chọn'}
+                    </Button>
+                  </div>
                 </div>
               </Popover>
             );
           })}
         </div>
+        {Object.keys(selectedVariants).length > 0 && (
+          <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                Sản phẩm đã chọn ({Object.keys(selectedVariants).length} loại):
+              </div>
+              {Object.entries(selectedVariants).map(([variantId, quantity]) => {
+                const variant = product.variants?.find(v => v._id === variantId);
+                if (!variant) return null;
+                const price = variant.salePrice && variant.salePrice > 0 ? variant.salePrice : variant.price;
+                return (
+                  <div key={variantId} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    background: 'white',
+                    borderRadius: '6px',
+                    marginBottom: '4px',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div>
+                      <span style={{ fontWeight: '500' }}>{variant.name || `${variant.size || ''}`}</span>
+                      <span style={{ color: '#6b7280', marginLeft: '8px' }}>x{quantity}</span>
+                    </div>
+                    <div style={{ fontWeight: '600', color: '#374151' }}>
+                      {formatPrice(price * quantity)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span style={{ color: '#6b7280', fontSize: '14px' }}>
+                Tổng số lượng: {getTotalQuantity()} sản phẩm
+              </span>
+              <span style={{ fontWeight: '700', color: '#1f2937', fontSize: '16px' }}>
+                Tổng tiền: {formatPrice(getTotalPrice())}
+              </span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-center mt-6">
           <Button
             type="primary"
-            disabled={!selectedVariantId || isLoading}
+            disabled={Object.keys(selectedVariants).length === 0 || isLoading}
             onClick={handleVariantSelect}
             loading={isLoading}
             style={{ minWidth: 120 }}
           >
-            Xác nhận
+            {Object.keys(selectedVariants).length > 0 
+              ? `Thêm ${getTotalQuantity()} sản phẩm vào giỏ` 
+              : 'Chọn sản phẩm trước'
+            }
           </Button>
         </div>
       </Modal>

@@ -30,6 +30,8 @@ export interface SettingsData {
     socialFacebook: string;
     socialTwitter: string;
     socialInstagram: string;
+    socialYoutube: string;
+    socialLinkedin: string;
     contactPhone: string;
     contactAddress: string;
     contactEmail: string;
