@@ -20,7 +20,7 @@ import {
   Clock,
   Star
 } from 'lucide-react';
-import { useModernNotification } from '../../../components/client/ModernNotification';
+import { useNotification } from '../../../contexts/NotificationContext';
 import axiosInstance from '../../../api/axiosInstance';
 
 interface Notification {
@@ -40,7 +40,7 @@ const Notifications = () => {
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
-  const { showSuccess, showError } = useModernNotification();
+  const { success: showSuccess, error: showError } = useNotification();
 
   useEffect(() => {
     fetchNotifications();
@@ -54,7 +54,7 @@ const Notifications = () => {
         setNotifications(response.data.notifications);
       }
     } catch (error: any) {
-      showError('Lỗi tải thông báo', error.response?.data?.message || 'Không thể tải thông báo');
+      showError(error.response?.data?.message || 'Không thể tải thông báo');
     } finally {
       setIsLoading(false);
     }
@@ -69,10 +69,10 @@ const Notifications = () => {
             notif._id === notificationId ? { ...notif, isRead: true } : notif
           )
         );
-        showSuccess('Thành công', 'Đã đánh dấu là đã đọc');
+        showSuccess('Đã đánh dấu là đã đọc');
       }
     } catch (error: any) {
-      showError('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
@@ -85,10 +85,10 @@ const Notifications = () => {
             notif._id === notificationId ? { ...notif, isRead: false } : notif
           )
         );
-        showSuccess('Thành công', 'Đã đánh dấu là chưa đọc');
+        showSuccess('Đã đánh dấu là chưa đọc');
       }
     } catch (error: any) {
-      showError('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
@@ -99,10 +99,10 @@ const Notifications = () => {
         setNotifications(prev =>
           prev.map(notif => ({ ...notif, isRead: true }))
         );
-        showSuccess('Thành công', 'Đã đánh dấu tất cả là đã đọc');
+        showSuccess('Đã đánh dấu tất cả là đã đọc');
       }
     } catch (error: any) {
-      showError('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
@@ -111,16 +111,16 @@ const Notifications = () => {
       const response = await axiosInstance.delete(`/notification/${notificationId}`);
       if (response.data.success) {
         setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
-        showSuccess('Thành công', 'Đã xóa thông báo');
+        showSuccess('Đã xóa thông báo');
       }
     } catch (error: any) {
-      showError('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
   const deleteSelected = async () => {
     if (selectedNotifications.length === 0) {
-      showError('Lỗi', 'Vui lòng chọn thông báo để xóa');
+      showError('Vui lòng chọn thông báo để xóa');
       return;
     }
 
@@ -131,10 +131,10 @@ const Notifications = () => {
       if (response.data.success) {
         setNotifications(prev => prev.filter(notif => !selectedNotifications.includes(notif._id)));
         setSelectedNotifications([]);
-        showSuccess('Thành công', `Đã xóa ${selectedNotifications.length} thông báo`);
+        showSuccess(`Đã xóa ${selectedNotifications.length} thông báo`);
       }
     } catch (error: any) {
-      showError('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra');
+      showError(error.response?.data?.message || 'Có lỗi xảy ra');
     }
   };
 
