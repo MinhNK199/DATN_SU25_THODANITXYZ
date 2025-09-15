@@ -17,13 +17,13 @@ const Contact: React.FC = () => {
     {
       icon: FaPhone,
       title: 'Điện thoại',
-      details: ['+84 (24) 123-4567', '+84 (24) 987-6543'],
+      details: ['+84 (28) 123-4567', '+84 (28) 987-6543'],
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: FaEnvelope,
       title: 'Email',
-      details: ['support@electronstore.com', 'sales@electronstore.com'],
+      details: ['support@techtrend.com', 'sales@techtrend.com'],
       color: 'from-purple-500 to-purple-600'
     },
     {
@@ -41,10 +41,10 @@ const Contact: React.FC = () => {
   ];
 
   const socialLinks = [
-    { icon: FaFacebook, href: '#', label: 'Facebook' },
-    { icon: FaTwitter, href: '#', label: 'Twitter' },
-    { icon: FaInstagram, href: '#', label: 'Instagram' },
-    { icon: FaLinkedin, href: '#', label: 'LinkedIn' }
+    { icon: FaFacebook, href: 'https://facebook.com/techtrendstore', label: 'Facebook' },
+    { icon: FaTwitter, href: 'https://twitter.com/techtrendstore', label: 'Twitter' },
+    { icon: FaInstagram, href: 'https://instagram.com/techtrendstore', label: 'Instagram' },
+    { icon: FaLinkedin, href: 'https://linkedin.com/company/techtrendstore', label: 'LinkedIn' }
   ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -93,9 +93,9 @@ const Contact: React.FC = () => {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-5xl font-bold mb-6">Liên hệ chúng tôi</h1>
+          <h1 className="text-5xl font-bold mb-6">Liên hệ TechTrend Store</h1>
           <p className="text-xl max-w-2xl mx-auto">
-            Có câu hỏi? Chúng tôi rất muốn nghe từ bạn. Gửi tin nhắn cho chúng tôi và chúng tôi sẽ phản hồi sớm nhất có thể.
+            Có câu hỏi về sản phẩm? Cần hỗ trợ kỹ thuật? Chúng tôi luôn sẵn sàng hỗ trợ bạn 24/7. Gửi tin nhắn và chúng tôi sẽ phản hồi trong vòng 24 giờ.
           </p>
         </div>
       </div>
@@ -263,11 +263,24 @@ const Contact: React.FC = () => {
             <div className="space-y-8">
               {/* Map */}
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="h-64 bg-gray-200 flex items-center justify-center">
-                  <div className="text-center">
-                    <FaMapMarkerAlt className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">Bản đồ tương tác sắp ra mắt</p>
-                    <p className="text-sm text-gray-500">123 Đường Công nghệ, Quận 1, TP. Hồ Chí Minh</p>
+                <div className="h-64 relative">
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.3251290358!2d106.6641!3d10.7769!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f4b90b68bd3%3A0x8d0a16ebc3d161c!2zMTIzIMSQxrDhu51uZyBDw7RuZyBuZ2jhu4cgVGjDoG5oIHBo4buRIEjDgSB0w6J5IGjhu5MgQ2jDrSBNaW5o!5e0!3m2!1svi!2s!4v1634567890123!5m2!1svi!2s"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="TechTrend Store Location"
+                    className="rounded-lg"
+                  ></iframe>
+                  <div className="absolute top-4 left-4 bg-white px-3 py-2 rounded-lg shadow-md">
+                    <div className="flex items-center space-x-2">
+                      <FaMapMarkerAlt className="w-4 h-4 text-red-500" />
+                      <span className="text-sm font-medium text-gray-700">TechTrend Store</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">123 Đường Công nghệ, Quận 1, TP.HCM</p>
                   </div>
                 </div>
               </div>
@@ -282,6 +295,8 @@ const Contact: React.FC = () => {
                       <a
                         key={index}
                         href={social.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-300"
                         aria-label={social.label}
                       >
