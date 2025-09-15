@@ -455,7 +455,7 @@ const HotSaleSection: React.FC = () => {
                           e.currentTarget.src = 'https://via.placeholder.com/300x300/f3f4f6/9ca3af?text=No+Image';
                         }}
                         onLoad={() => {
-                          console.log('Image loaded successfully:', product.name);
+                          // console.log('Image loaded successfully:', product.name);
                         }}
                       />
                     </div>

@@ -37,21 +37,39 @@ const RecommendedProductsSection: React.FC = () => {
         setLoading(true);
         
         // Try to fetch user-specific recommendations first
-        const response = await fetch('/api/product/recommendations/user', {
-          credentials: 'include'
+        const response = await fetch('http://localhost:8000/api/product/recommendations/user', {
+          credentials: 'include',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
         });
         
         let products = [];
         
         if (response.ok) {
           const data = await response.json();
-          products = data.products || data || [];
+          // Handle different response structures
+          if (data.recommendations && Array.isArray(data.recommendations)) {
+            products = data.recommendations;
+          } else if (data.products && Array.isArray(data.products)) {
+            products = data.products;
+          } else if (Array.isArray(data)) {
+            products = data;
+          } else {
+            products = [];
+          }
         } else {
           // Fallback to general recommendations or featured products
-          const fallbackResponse = await fetch('/api/product?isFeatured=true&limit=5');
+          const fallbackResponse = await fetch('http://localhost:8000/api/product?isFeatured=true&limit=5');
           if (fallbackResponse.ok) {
             const fallbackData = await fallbackResponse.json();
-            products = fallbackData.products || fallbackData || [];
+            if (fallbackData.products && Array.isArray(fallbackData.products)) {
+              products = fallbackData.products;
+            } else if (Array.isArray(fallbackData)) {
+              products = fallbackData;
+            } else {
+              products = [];
+            }
           }
         }
         
@@ -191,7 +209,9 @@ const RecommendedProductsSection: React.FC = () => {
           ];
         }
         
-        setRecommendedProducts(products.slice(0, 10));
+        // Ensure products is an array before slicing
+        const safeProducts = Array.isArray(products) ? products : [];
+        setRecommendedProducts(safeProducts.slice(0, 10));
       } catch (err: any) {
         setError(err.message);
         console.error('Error fetching recommended products:', err);

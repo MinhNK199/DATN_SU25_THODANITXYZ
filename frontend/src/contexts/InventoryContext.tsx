@@ -135,7 +135,7 @@ export const InventoryProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
 
     newSocket.on('connect', () => {
-      console.log('🔌 Connected to inventory socket');
+      // console.log('🔌 Connected to inventory socket');
       dispatch({ type: 'SET_CONNECTED', payload: true });
     });
 

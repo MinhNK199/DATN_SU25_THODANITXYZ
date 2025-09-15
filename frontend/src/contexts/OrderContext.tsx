@@ -46,7 +46,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({ children }) => {
     });
 
     newSocket.on('connect', () => {
-      console.log('🔌 Connected to order socket');
+      // console.log('🔌 Connected to order socket');
       setIsConnected(true);
     });
 

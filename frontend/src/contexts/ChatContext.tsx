@@ -70,19 +70,19 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
         const userData = JSON.parse(storedUser);
         setToken(storedToken);
         setUser(userData);
-        console.log('ChatContext: Loaded user and token', { user: userData.name, hasToken: !!storedToken });
+        // console.log('ChatContext: Loaded user and token', { user: userData.name, hasToken: !!storedToken });
       } catch (error) {
         console.error('Error parsing stored user data:', error);
       }
     } else {
-      console.log('ChatContext: No user or token found in localStorage');
+      // console.log('ChatContext: No user or token found in localStorage');
     }
   }, []);
 
   // Initialize socket connection
   useEffect(() => {
     if (user && token) {
-      console.log('ChatContext: Initializing socket connection', { user: user.name, hasToken: !!token });
+      // console.log('ChatContext: Initializing socket connection', { user: user.name, hasToken: !!token });
       
       const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:8000', {
         auth: {
@@ -96,7 +96,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       });
 
       newSocket.on('connect', () => {
-        console.log('ChatContext: Connected to chat server', { socketId: newSocket.id, userRole: user.role });
+        // console.log('ChatContext: Connected to chat server', { socketId: newSocket.id, userRole: user.role });
         setIsConnected(true);
       });
 
