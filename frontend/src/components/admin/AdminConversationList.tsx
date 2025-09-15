@@ -8,6 +8,7 @@ import {
 // import { format, formatDistanceToNow } from 'date-fns';
 import { useChat } from '../../contexts/ChatContext';
 import { Conversation, ChatFilters } from '../../interfaces/Chat';
+import { chatApi } from '../../services/chatApi';
 
 const { Text, Title } = Typography;
 
