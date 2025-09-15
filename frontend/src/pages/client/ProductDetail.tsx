@@ -161,15 +161,17 @@ const ProductDetail: React.FC = () => {
     const fetchTrendingProducts = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/product/suggest");
-        setTrendingProducts(res.data.slice(0, 6));
+        // Check if res.data is an array, if not use res.data.suggestions or res.data.products or empty array
+        const products = Array.isArray(res.data) ? res.data : (res.data.suggestions || res.data.products || []);
+        setTrendingProducts(products.slice(0, 6));
       } catch (err) {
         console.error("Error fetching trending products:", err);
-        // Fallback: try search for popular products
+        // Fallback: try to get products with high rating
         try {
-          const searchRes = await axios.get("http://localhost:8000/api/product/search?q=popular&limit=6");
-          setTrendingProducts(searchRes.data.slice(0, 6));
+          const searchRes = await axios.get("http://localhost:8000/api/product?minRating=4&limit=6&sort=-averageRating");
+          setTrendingProducts(searchRes.data.products?.slice(0, 6) || []);
         } catch (searchErr) {
-          console.error("Error fetching search products:", searchErr);
+          console.error("Error fetching trending products:", searchErr);
           // Final fallback: use related products as trending
           if (relatedProducts.length > 0) {
             setTrendingProducts(relatedProducts.slice(0, 6));
