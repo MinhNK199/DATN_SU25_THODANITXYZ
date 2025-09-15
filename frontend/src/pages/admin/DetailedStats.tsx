@@ -11,33 +11,51 @@ import {
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
+interface ChartDataItem {
+  name: string;
+  totalRevenue?: number;
+  orderCount?: number;
+  _id?: { week?: number; month?: number };
+  newCustomers?: number;
+  returningCustomers?: number;
+  customers?: number;
+  views?: number;
+  category?: string;
+  purchases?: number;
+  revenue?: number;
+  sold?: number;
+  rating?: number;
+  value?: number;
+  color?: string;
+}
+
 interface StatsData {
   revenue: {
     total: number;
     growth: number;
-    daily: any[];
-    weekly: any[];
-    monthly: any[];
-    byPaymentMethod: any[];
-    byCategory: any[];
+    daily: ChartDataItem[];
+    weekly: ChartDataItem[];
+    monthly: ChartDataItem[];
+    byPaymentMethod: ChartDataItem[];
+    byCategory: ChartDataItem[];
   };
   customers: {
     total: number;
     new: number;
     active: number;
     growth: number;
-    bySegment: any[];
-    byLocation: any[];
+    bySegment: ChartDataItem[];
+    byLocation: ChartDataItem[];
     retention: number;
   };
   products: {
     total: number;
     active: number;
     outOfStock: number;
-    topSelling: any[];
-    byCategory: any[];
-    byBrand: any[];
-    lowStock: any[];
+    topSelling: ChartDataItem[];
+    byCategory: ChartDataItem[];
+    byBrand: ChartDataItem[];
+    lowStock: ChartDataItem[];
   };
 }
 
@@ -556,6 +574,13 @@ const CustomerStats: React.FC<{ data: StatsData['customers'] }> = ({ data }) => 
     topViewedProducts: [],
     topPurchasedProducts: []
   });
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
 
   // Fetch real customer data
   useEffect(() => {
