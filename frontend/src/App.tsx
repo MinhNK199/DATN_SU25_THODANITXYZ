@@ -3,6 +3,9 @@ import './App.css';
 import './styles/admin-buttons.css';
 import ClientLayout from './layout/ClientLayout';
 import Home from './pages/client/Home';
+import NotFound from './pages/NotFound';
+import AdminNotFound from './pages/admin/AdminNotFound';
+import AdminAccessDenied from './components/AdminAccessDenied';
 import PrivateRouteAdmin from "./components/privateRouteAdmin";
 import AdminLayout from "./layout/admin";
 import Login from "./components/Login";
@@ -232,7 +235,13 @@ function App() {
                         <Route path="detailed-stats" element={<DetailedStats />} />
                         <Route path="shipper" element={<ShipperManagement />} />
                         <Route path="error-test" element={<ErrorTestPage />} />
+                        
+                        {/* Admin 404 Catch-all route */}
+                        <Route path="*" element={<AdminNotFound />} />
                       </Route>
+                      
+                      {/* 404 Catch-all route */}
+                      <Route path="*" element={<NotFound />} />
                     </Routes>
 
                     {/* Global Components */}
