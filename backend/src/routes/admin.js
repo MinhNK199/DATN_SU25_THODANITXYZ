@@ -12,7 +12,14 @@ const router = Router();
 
 // Tất cả routes đều cần authentication và admin role
 router.use(protect);
-router.use(checkAdmin(['admin', 'superadmin']));
+router.use((req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+    return res.status(403).json({
+      message: 'Chỉ admin mới có quyền truy cập'
+    });
+  }
+  next();
+});
 
 // Dashboard routes
 router.get('/dashboard', getDashboardStats);
