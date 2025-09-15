@@ -431,9 +431,7 @@ const HotSaleSection: React.FC = () => {
               className="flex gap-1 sm:gap-2 lg:gap-3 transition-transform duration-300 ease-in-out"
               style={{ transform: `translateX(-${currentIndex * (100 / 5)}%)` }}
             >
-              {hotSaleProducts.slice(currentIndex, currentIndex + 5).map((product) => {
-                console.log('Product data:', product);
-                return (
+              {hotSaleProducts.slice(currentIndex, currentIndex + 5).map((product) => (
                 <div key={product._id} className="flex-shrink-0 w-1/5 px-0.5 sm:px-1 lg:px-2">
                   <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl transition-all duration-300 overflow-hidden group relative">
                     {/* Discount Badge */}
@@ -544,8 +542,7 @@ const HotSaleSection: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                );
-              })}
+              ))}
             </div>
           </div>
         </div>

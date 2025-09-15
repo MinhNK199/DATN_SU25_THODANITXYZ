@@ -79,6 +79,13 @@ const ProductDetail: React.FC = () => {
       .get(`http://localhost:8000/api/product/${id}`)
       .then((response) => {
         const data = response.data;
+        console.log('🔍 ProductDetail - Fetched product data:', {
+          id: data._id,
+          name: data.name,
+          price: data.price,
+          salePrice: data.salePrice,
+          variants: data.variants?.length || 0
+        });
         setProduct(data);
         
         // Auto-select first variant if product has variants and no variant is selected
@@ -95,6 +102,7 @@ const ProductDetail: React.FC = () => {
         setLoading(false);
       });
   }, [id]);
+
 
   useEffect(() => {
     if (!id || id === "undefined" || id === "null" || !product) {
@@ -184,11 +192,44 @@ const ProductDetail: React.FC = () => {
 
 
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null) => {
+    if (!price || price === 0) {
+      return "Liên hệ";
+    }
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
     }).format(price);
+  };
+
+  const getDisplayPrice = (product: any, selectedVariantId?: string) => {
+    if (!product) return 0;
+    
+    // If variant is selected, use variant price
+    if (selectedVariantId && product.variants) {
+      const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+      if (variant) {
+        return variant.salePrice || variant.price || 0;
+      }
+    }
+    
+    // Use product price
+    return product.salePrice || product.price || 0;
+  };
+
+  const getOriginalPrice = (product: any, selectedVariantId?: string) => {
+    if (!product) return 0;
+    
+    // If variant is selected, use variant original price
+    if (selectedVariantId && product.variants) {
+      const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+      if (variant) {
+        return variant.salePrice ? variant.price : 0;
+      }
+    }
+    
+    // Use product original price
+    return product.salePrice ? product.price : 0;
   };
 
   const handleAddToCart = async () => {
@@ -681,61 +722,33 @@ const ProductDetail: React.FC = () => {
               {/* Price Section */}
               <div className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  {selectedVariantId &&
-                  product.variants?.find(
-                    (v: Variant) => v._id === selectedVariantId
-                  )?.salePrice &&
-                  product.variants?.find(
-                    (v: Variant) => v._id === selectedVariantId
-                  )?.salePrice <
-                    product.variants?.find(
-                      (v: Variant) => v._id === selectedVariantId
-                    )?.price ? (
-                    <>
-                      <span className="text-2xl md:text-3xl font-bold text-red-600">
-                        {formatPrice(
-                          product.variants.find(
-                            (v: Variant) => v._id === selectedVariantId
-                          )?.salePrice || 0
-                        )}
-                      </span>
-                      <span className="text-lg text-gray-500 line-through">
-                        {formatPrice(
-                          product.variants.find(
-                            (v: Variant) => v._id === selectedVariantId
-                          )?.price || 0
-                        )}
-                      </span>
-                      <span className="bg-red-500 text-white px-2 py-1 rounded text-sm font-bold">
-                        -{Math.round(100 - ((product.variants.find((v: Variant) => v._id === selectedVariantId)?.salePrice || 0) / (product.variants.find((v: Variant) => v._id === selectedVariantId)?.price || 1)) * 100)}%
-                      </span>
-                    </>
-                  ) : selectedVariantId ? (
-                    <span className="text-2xl md:text-3xl font-bold text-gray-900">
-                      {formatPrice(
-                        product.variants.find(
-                          (v: Variant) => v._id === selectedVariantId
-                        )?.price || 0
-                      )}
-                    </span>
-                  ) : product.salePrice &&
-                    product.salePrice < product.price ? (
-                    <>
-                      <span className="text-2xl md:text-3xl font-bold text-red-600">
-                        {formatPrice(product.salePrice)}
-                      </span>
-                      <span className="text-lg text-gray-500 line-through">
-                        {formatPrice(product.price)}
-                      </span>
-                      <span className="bg-red-500 text-white px-2 py-1 rounded text-sm font-bold">
-                        -{Math.round(100 - (product.salePrice / product.price) * 100)}%
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-2xl md:text-3xl font-bold text-gray-900">
-                      {formatPrice(product.price)}
-                    </span>
-                  )}
+                  {(() => {
+                    const displayPrice = getDisplayPrice(product, selectedVariantId);
+                    const originalPrice = getOriginalPrice(product, selectedVariantId);
+                    const hasDiscount = originalPrice > 0 && displayPrice < originalPrice;
+                    
+                    if (hasDiscount) {
+                      return (
+                        <>
+                          <span className="text-2xl md:text-3xl font-bold text-red-600">
+                            {formatPrice(displayPrice)}
+                          </span>
+                          <span className="text-lg text-gray-500 line-through">
+                            {formatPrice(originalPrice)}
+                          </span>
+                          <span className="bg-red-500 text-white px-2 py-1 rounded text-sm font-bold">
+                            -{Math.round(100 - (displayPrice / originalPrice) * 100)}%
+                          </span>
+                        </>
+                      );
+                    } else {
+                      return (
+                        <span className="text-2xl md:text-3xl font-bold text-gray-900">
+                          {formatPrice(displayPrice)}
+                        </span>
+                      );
+                    }
+                  })()}
                 </div>
 
                 {/* Voucher Section */}
@@ -754,10 +767,7 @@ const ProductDetail: React.FC = () => {
                     <div>
                       <span className="text-sm font-bold text-blue-600">0% TRẢ GÓP</span>
                       <div className="text-xs text-gray-600 mt-1">
-                        12 tháng x {formatPrice(Math.round((selectedVariantId ? 
-                          (product.variants.find((v: Variant) => v._id === selectedVariantId)?.salePrice || 
-                           product.variants.find((v: Variant) => v._id === selectedVariantId)?.price || 0) :
-                          (product.salePrice || product.price)) / 12))} (Lãi suất 0%)
+                        12 tháng x {formatPrice(Math.round(getDisplayPrice(product, selectedVariantId) / 12))} (Lãi suất 0%)
                       </div>
                     </div>
                     <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
