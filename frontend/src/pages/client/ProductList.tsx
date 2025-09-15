@@ -37,11 +37,9 @@ const ProductList: React.FC = () => {
   useEffect(() => {
     axios.get('/api/category')
       .then(res => {
-        console.log("🔍 Categories loaded:", res.data);
         setCategories(res.data);
       })
       .catch(err => {
-        console.error("❌ Error loading categories:", err);
         setCategories([]);
       });
     axios.get('/api/brand')
@@ -62,11 +60,7 @@ const ProductList: React.FC = () => {
 
     // Nếu có category từ URL, sử dụng trực tiếp (backend đã hỗ trợ slug)
     if (category) {
-      console.log("🔍 Category from URL:", category);
-      console.log("🔍 Available categories:", categories);
       const foundCategory = categories.find(cat => cat._id === category || cat.slug === category);
-      console.log("🔍 Found category match:", foundCategory);
-      console.log("🔍 Category name:", foundCategory?.name);
       setFilterCategory(category);
       setPage(1); // Reset về trang 1 khi có category mới
       setSearchTerm(''); // Clear search term khi có category
@@ -128,23 +122,14 @@ const ProductList: React.FC = () => {
 
   const fetchProducts = async (pageNum = 1) => {
     if (loading) {
-      console.log("⏸️ Skipping fetch - already loading");
       return;
     }
     setLoading(true);
     setError(null);
     let url = `/api/product?page=${pageNum}`;
     
-    console.log("🔍 Starting fetchProducts with filters:");
-    console.log("  - filterCategory:", filterCategory);
-    console.log("  - filterBrand:", filterBrand);
-    console.log("  - filterPriceRange:", filterPriceRange);
-    console.log("  - filterInStock:", filterInStock);
-    console.log("  - searchTerm:", searchTerm);
-    
     if (filterCategory) {
       url += `&category=${filterCategory}`;
-      console.log("✅ Added category filter:", filterCategory);
     }
     if (filterBrand) url += `&brand=${filterBrand}`;
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
@@ -152,7 +137,6 @@ const ProductList: React.FC = () => {
     if (filterInStock) url += '&inStock=true';
     if (searchTerm.trim()) {
       url += `&keyword=${encodeURIComponent(searchTerm.trim())}`;
-      console.log("✅ Added search term:", searchTerm.trim());
     }
   
     let sortParam = '-createdAt';
@@ -162,15 +146,9 @@ const ProductList: React.FC = () => {
     else if (sortBy === 'newest') sortParam = '-createdAt';
     url += `&sort=${encodeURIComponent(sortParam)}`;
     
-    console.log("🔍 Final URL:", url);
-    
     try {
       const res = await axios.get(url);
       const filtered = res.data.products || [];
-      console.log("📦 API Response:", res.data);
-      console.log("📦 Products received:", filtered.length);
-      console.log("📦 Total products:", res.data.total);
-      console.log("📦 Current filterCategory when setting products:", filterCategory);
       setProducts(filtered);
       setPage(res.data.page || 1);
       setPages(res.data.pages || 1);

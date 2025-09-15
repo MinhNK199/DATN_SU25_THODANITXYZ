@@ -97,9 +97,6 @@ const ProductListPage: React.FC = () => {
         getBrands()
       ]);
 
-      console.log("🔍 ProductList - Raw productsResponse:", productsResponse);
-      console.log("🔍 ProductList - First product:", productsResponse.products[0]);
-      console.log("🔍 ProductList - First product images:", productsResponse.products[0]?.images);
 
       setProducts(productsResponse.products);
       setTotalPages(productsResponse.pages);
@@ -218,14 +215,7 @@ const ProductListPage: React.FC = () => {
       key: "name",
       width: "30%",
       render: (_, record) => {
-        console.log("🔍 ProductList - Rendering product:", record.name);
-        console.log("🔍 ProductList - Product images array:", record.images);
-        console.log("🔍 ProductList - Images type:", typeof record.images);
-        console.log("🔍 ProductList - Images length:", record.images?.length);
-        console.log("🔍 ProductList - First image:", record.images?.[0]);
-        
         const mainImage = record.images && record.images.length > 0 ? record.images[0] : '/placeholder-product.png';
-        console.log("🔍 ProductList - Final image URL:", mainImage);
         
         return (
           <Space>

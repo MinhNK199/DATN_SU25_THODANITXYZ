@@ -222,7 +222,6 @@ export const getProducts = async(req, res) => {
         }
 
         // 🧮 Đếm tổng số sản phẩm phù hợp với bộ lọc
-        console.log("Filter used for product search:", filter)
         const count = await Product.countDocuments(filter);
 
         // 📦 Lấy danh sách sản phẩm đã lọc và sắp xếp theo sortField + sortOrder
@@ -262,13 +261,6 @@ export const getProducts = async(req, res) => {
             ]),
         };
 
-        // Debug: Log first product images
-        if (productsWithVariants.length > 0) {
-            console.log("🔍 getProducts - First product:", productsWithVariants[0].name);
-            console.log("🔍 getProducts - First product images:", productsWithVariants[0].images);
-            console.log("🔍 getProducts - First product images type:", typeof productsWithVariants[0].images);
-            console.log("🔍 getProducts - First product images length:", productsWithVariants[0].images?.length);
-        }
 
         // 📤 Trả kết quả về client
         res.json({
