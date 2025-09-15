@@ -15,6 +15,7 @@ import { initializeSocket } from "./config/socket.js";
 import fs from 'fs';
 import path from 'path';
 import uploadRoutes from "./routes/upload.js";
+import contactRoutes from "./routes/contact.js";
 
 const app = express();
 
@@ -67,6 +68,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use("/api/upload", uploadRoutes); // Đặt lên trên
+app.use("/api/contact", contactRoutes); // Contact routes
 app.use("/api", router);
 
 // Khởi động server
