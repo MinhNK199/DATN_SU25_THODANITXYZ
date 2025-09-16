@@ -292,7 +292,7 @@ const ProductEdit: React.FC = () => {
       formData.append("brand", getId(values.brand))
       formData.append("category", getId(values.category))
       formData.append("price", String(processedVariants[0]?.price || 0))
-      formData.append("stock", String(processedVariants.reduce((sum, v) => sum + (v.stock || 0), 0)))
+      formData.append("stock", "0") // Sản phẩm gốc không có stock thực tế, chỉ là template
       formData.append("variants", JSON.stringify(processedVariants))
       formData.append("isActive", String(values.isActive))
       formData.append("isFeatured", String(values.isFeatured))

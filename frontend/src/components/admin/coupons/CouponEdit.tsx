@@ -412,7 +412,7 @@ const CouponEdit: React.FC = () => {
             <Button onClick={() => navigate("/admin/coupons")}>
               Hủy
             </Button>
-            <Button type="primary" htmlType="submit" loading={loading} className="bg-blue-600 hover:bg-blue-700">
+            <Button type="primary" htmlType="submit" loading={loading} className="admin-primary-button">
               Cập nhật mã giảm giá
             </Button>
           </div>

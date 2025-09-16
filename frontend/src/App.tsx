@@ -37,6 +37,7 @@ import VariantList from "./components/admin/variants/VariantList";
 import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
 import VariantDetail from "./components/admin/variants/VariantDetail";
+import VariantTrash from "./components/admin/variants/VariantTrash";
 import { Toaster } from "react-hot-toast";
 import Cart from './pages/client/Cart';
 import ProductListClient from './pages/client/ProductList';
@@ -210,6 +211,7 @@ function App() {
                         <Route path="variants/add" element={<VariantAdd />} />
                         <Route path="variants/edit/:id" element={<VariantEdit />} />
                         <Route path="variants/detail/:id" element={<VariantDetail />} />
+                        <Route path="variants/trash" element={<VariantTrash />} />
                         <Route path="categories" element={<CategoryList />} />
                         <Route path="categories/add" element={<CategoryAdd />} />
                         <Route path="categories/edit/:id" element={<CategoryEdit />} />

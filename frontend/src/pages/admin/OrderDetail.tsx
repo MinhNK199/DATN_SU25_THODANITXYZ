@@ -625,6 +625,7 @@ const OrderDetail: React.FC = () => {
                     htmlType="submit"
                     loading={updating}
                     block
+                    className="admin-primary-button"
                   >
                     Cập nhật
                   </Button>
@@ -661,7 +662,7 @@ const OrderDetail: React.FC = () => {
               <div className="flex gap-3">
                 <Button
                   type="primary"
-                  danger
+                  className="admin-primary-button"
                   onClick={async () => {
                     // Đếm số lần yêu cầu hoàn tiền
                     const refundCount =
@@ -695,7 +696,11 @@ const OrderDetail: React.FC = () => {
                 >
                   Chấp nhận hoàn tiền
                 </Button>
-                <Button onClick={() => setShowRejectModal(true)}>
+                <Button 
+                  type="primary"
+                  className="admin-primary-button"
+                  onClick={() => setShowRejectModal(true)}
+                >
                   Từ chối
                 </Button>
               </div>
@@ -722,10 +727,16 @@ const OrderDetail: React.FC = () => {
                   placeholder="Nhập lý do từ chối..."
                 />
                 <div className="flex justify-end gap-2">
-                  <Button onClick={() => setShowRejectModal(false)}>Hủy</Button>
+                  <Button 
+                    type="primary"
+                    className="admin-primary-button"
+                    onClick={() => setShowRejectModal(false)}
+                  >
+                    Hủy
+                  </Button>
                   <Button
                     type="primary"
-                    danger
+                    className="admin-primary-button"
                     loading={rejectLoading}
                     disabled={!rejectReason.trim()}
                     onClick={async () => {

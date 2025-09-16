@@ -230,6 +230,7 @@ const SettingsPage: React.FC = () => {
               <Tooltip title="Xem trước">
                 <Button
                   type={previewMode ? "primary" : "default"}
+                  className={previewMode ? "admin-primary-button" : ""}
                   icon={<EyeOutlined />}
                   onClick={() => setPreviewMode(!previewMode)}
                 >
@@ -702,7 +703,7 @@ const SettingsPage: React.FC = () => {
                   loading={loading}
                   icon={<SaveOutlined />}
                   size="large"
-                  className="rounded-lg"
+                  className="admin-primary-button rounded-lg"
                 >
                   Lưu cài đặt
                 </Button>

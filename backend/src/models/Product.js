@@ -71,6 +71,14 @@ const productVariantSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    deletedAt: {
+        type: Date,
+        default: null,
+    },
     specifications: {
         type: mongoose.Schema.Types.Mixed,
         default: {},

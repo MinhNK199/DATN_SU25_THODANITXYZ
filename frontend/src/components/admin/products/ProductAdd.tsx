@@ -136,7 +136,7 @@ const ProductAddPage: React.FC = () => {
   const productName = values.name?.trim() || "";
   const productDescription = values.description?.trim() || "";
   const productPrice = variants[0]?.price ? Number(variants[0].price) : 0;
-  const productStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  const productStock = 0; // Sản phẩm gốc không có stock thực tế, chỉ là template
   const productCategory = categoryId || (typeof values.category === "string" ? values.category : "");
   const productBrand = brandId || (typeof values.brand === "string" ? values.brand : "");
 

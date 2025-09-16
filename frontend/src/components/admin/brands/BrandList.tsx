@@ -392,7 +392,7 @@ const BrandList: React.FC = () => {
           <Form.Item>
             <Space className="flex justify-end">
               <Button onClick={() => setIsAdding(false)}>Hủy</Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" className="admin-primary-button" htmlType="submit">
                 Thêm
               </Button>
             </Space>
@@ -478,7 +478,7 @@ const BrandList: React.FC = () => {
           <Form.Item>
             <Space className="flex justify-end">
               <Button onClick={() => setEditingBrand(null)}>Hủy</Button>
-              <Button type="primary" htmlType="submit">
+              <Button type="primary" className="admin-primary-button" htmlType="submit">
                 Cập nhật
               </Button>
             </Space>

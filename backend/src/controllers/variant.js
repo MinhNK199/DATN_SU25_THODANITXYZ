@@ -32,22 +32,24 @@ export const getVariants = async(req, res) => {
             .skip((page - 1) * limit)
             .exec();
 
-        // Extract variants from products
+        // Extract variants from products (exclude deleted ones)
         let allVariants = [];
         products.forEach(product => {
             product.variants.forEach(variant => {
-                allVariants.push({
-                    _id: variant._id,
-                    name: variant.name,
-                    sku: variant.sku,
-                    price: variant.price,
-                    salePrice: variant.salePrice,
-                    stock: variant.stock,
-                    color: variant.color,
-                    size: variant.size,
-                    weight: variant.weight,
-                    images: variant.images,
-                    isActive: variant.isActive,
+                // Only include non-deleted variants
+                if (!variant.isDeleted) {
+                    allVariants.push({
+                        _id: variant._id,
+                        name: variant.name,
+                        sku: variant.sku,
+                        price: variant.price,
+                        salePrice: variant.salePrice,
+                        stock: variant.stock,
+                        color: variant.color,
+                        size: variant.size,
+                        weight: variant.weight,
+                        images: variant.images,
+                        isActive: variant.isActive,
                     product: {
                         _id: product._id,
                         name: product.name,
@@ -55,6 +57,7 @@ export const getVariants = async(req, res) => {
                         brand: product.brand
                     }
                 });
+                }
             });
         });
 
@@ -227,27 +230,33 @@ export const updateVariant = async(req, res) => {
         const { id } = req.params;
         const updateData = req.body;
 
+        console.log('🔍 updateVariant - Received data:', updateData);
+        console.log('🔍 updateVariant - Variant ID:', id);
+
         const product = await Product.findOne({ "variants._id": id });
         if (!product) {
+            console.log('❌ updateVariant - Product not found for variant:', id);
             return res.status(404).json({ message: 'Variant not found' });
         }
 
         const variant = product.variants.id(id);
         if (!variant) {
+            console.log('❌ updateVariant - Variant not found in product:', id);
             return res.status(404).json({ message: 'Variant not found' });
         }
 
-        // Check if SKU already exists (excluding current variant)
+        // Check if SKU already exists (excluding current variant) - only if SKU is being changed
         if (updateData.sku && updateData.sku !== variant.sku) {
             const existingVariant = product.variants.find(v =>
                 v.sku === updateData.sku && v._id.toString() !== id
             );
             if (existingVariant) {
+                console.log('❌ updateVariant - SKU already exists:', updateData.sku);
                 return res.status(400).json({ message: 'SKU already exists for this product' });
             }
         }
 
-        console.log('🔍 updateVariant - Received data:', updateData);
+        console.log('🔍 updateVariant - Updating variant:', variant.name);
 
         // Update variant fields
         Object.keys(updateData).forEach(key => {
@@ -286,12 +295,14 @@ export const updateVariant = async(req, res) => {
 
         await product.save();
 
+        console.log('✅ updateVariant - Successfully updated variant:', variant.name, 'isActive:', variant.isActive);
+
         res.json({
             message: 'Variant updated successfully',
             variant: variant
         });
     } catch (error) {
-        console.error('Error updating variant:', error);
+        console.error('❌ updateVariant - Error updating variant:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };
@@ -382,6 +393,112 @@ export const getVariantStats = async(req, res) => {
         });
     } catch (error) {
         console.error('Error getting variant stats:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Get deleted variants (trash)
+export const getDeletedVariants = async(req, res) => {
+    try {
+        const products = await Product.find({});
+        const deletedVariants = [];
+
+        products.forEach(product => {
+            product.variants.forEach(variant => {
+                if (variant.isDeleted) {
+                    deletedVariants.push({
+                        _id: variant._id,
+                        name: variant.name,
+                        sku: variant.sku,
+                        price: variant.price,
+                        salePrice: variant.salePrice,
+                        stock: variant.stock,
+                        color: variant.color,
+                        size: variant.size,
+                        weight: variant.weight,
+                        images: variant.images,
+                        isActive: variant.isActive,
+                        product: {
+                            _id: product._id,
+                            name: product.name
+                        },
+                        deletedAt: variant.deletedAt,
+                        createdAt: variant.createdAt,
+                        updatedAt: variant.updatedAt
+                    });
+                }
+            });
+        });
+
+        res.json({
+            variants: deletedVariants,
+            total: deletedVariants.length
+        });
+    } catch (error) {
+        console.error('Error getting deleted variants:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Restore variant from trash
+export const restoreVariant = async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await Product.findOne({ "variants._id": id });
+        if (!product) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        const variant = product.variants.id(id);
+        if (!variant) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        if (!variant.isDeleted) {
+            return res.status(400).json({ message: 'Variant is not deleted' });
+        }
+
+        // Restore variant
+        variant.isDeleted = false;
+        variant.isActive = true; // Reactivate it
+        variant.deletedAt = undefined;
+        
+        await product.save();
+
+        res.json({ message: 'Variant restored successfully' });
+    } catch (error) {
+        console.error('Error restoring variant:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+// Permanently delete variant
+export const permanentDeleteVariant = async(req, res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await Product.findOne({ "variants._id": id });
+        if (!product) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        const variant = product.variants.id(id);
+        if (!variant) {
+            return res.status(404).json({ message: 'Variant not found' });
+        }
+
+        if (!variant.isDeleted) {
+            return res.status(400).json({ message: 'Variant is not deleted' });
+        }
+
+        // Remove variant from product permanently
+        product.variants = product.variants.filter(v => v._id.toString() !== id);
+        await product.save();
+
+        res.json({ message: 'Variant permanently deleted successfully' });
+    } catch (error) {
+        console.error('Error permanently deleting variant:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 };

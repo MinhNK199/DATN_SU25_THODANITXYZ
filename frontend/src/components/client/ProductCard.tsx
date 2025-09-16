@@ -279,7 +279,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <img
             src={product.image || (product.images && product.images.length > 0 ? product.images[0] : '/placeholder.svg')}
             alt={product.name}
-            className="w-full h-48 object-contain group-hover:scale-105 transition-transform duration-300 bg-gray-50"
+            className="w-4/5 h-48 object-contain group-hover:scale-105 transition-transform duration-300 bg-gray-50 mx-auto"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.src = '/placeholder.svg';
@@ -288,11 +288,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         <div className="absolute top-3 left-3 flex flex-col space-y-2">
-          {product.isNew && (
-            <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              Mới
-            </span>
-          )}
+          {(() => {
+            // Kiểm tra sản phẩm được thêm trong vòng 3 ngày gần nhất
+            const isRecentlyAdded = product.createdAt && 
+              new Date().getTime() - new Date(product.createdAt).getTime() <= 3 * 24 * 60 * 60 * 1000;
+            
+            return isRecentlyAdded && (
+              <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                Mới
+              </span>
+            );
+          })()}
           {product.isHot && (
             <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
               Hot
@@ -305,36 +311,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        {/* Tmember discount badge */}
-        <div className="absolute top-3 right-3">
-          <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-            Tmember
-          </span>
-        </div>
 
 
-        <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="flex space-x-2">
-            <button
-              onClick={handleAddToCart}
-              disabled={isLoading || isOutOfStock}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1 ${isOutOfStock
-                ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-                }`}
-            >
-              <FaShoppingCart className="w-3 h-3" />
-              <span>
-                {isLoading
-                  ? "Đang thêm..."
-                  : isOutOfStock
-                    ? "Hết hàng"
-                      : "Thêm vào giỏ hàng"}
-              </span>
-            </button>
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="flex flex-col space-y-2">
             <button
               onClick={handleAddFavorite}
-              className={`p-2 rounded-lg transition-colors ${isFavorite
+              className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${isFavorite
                 ? "text-red-500 bg-red-100 hover:bg-red-200"
                 : "text-gray-600 bg-white hover:bg-red-500 hover:text-white"
                 }`}
@@ -343,14 +326,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             </button>
             <Link
               to={`/product/${product._id}`}
-              className="p-2 bg-white text-gray-600 hover:bg-blue-500 hover:text-white rounded-lg transition-colors"
+              className="w-8 h-8 bg-white text-gray-600 hover:bg-blue-500 hover:text-white rounded-lg transition-colors flex items-center justify-center"
             >
               <FaEye className="w-4 h-4" />
             </Link>
             <button
               onClick={handleCompare}
               disabled={!canAddToCompare && !isInCompare(product._id)}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${
                 isInCompare(product._id)
                   ? "text-green-500 bg-green-100 hover:bg-green-200"
                   : canAddToCompare
@@ -401,14 +384,53 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         <div className="flex items-center space-x-2 mb-3">
-          <span className="text-xl font-bold text-gray-900">
-            {formatPrice(bestPrice)}
-          </span>
-          {(product.originalPrice || (product.salePrice && product.price)) && (
-            <span className="text-sm text-gray-500 line-through">
-              {formatPrice(product.originalPrice || product.price)}
-            </span>
-          )}
+          {(() => {
+            // Kiểm tra nếu có variants
+            if (product.variants && product.variants.length > 0) {
+              const hasSaleVariant = product.variants.some((v: any) => v.salePrice && v.salePrice > 0 && v.salePrice < v.price);
+              if (hasSaleVariant) {
+                // Hiển thị giá sale thấp nhất và giá gốc cao nhất
+                const minSalePrice = Math.min(...product.variants.map((v: any) => v.salePrice && v.salePrice > 0 && v.salePrice < v.price ? v.salePrice : Infinity).filter(p => p !== Infinity));
+                const maxOriginalPrice = Math.max(...product.variants.map((v: any) => v.price));
+                return (
+                  <>
+                    <span className="text-xl font-bold text-red-600">
+                      {formatPrice(minSalePrice)}
+                    </span>
+                    <span className="text-sm text-gray-400 line-through">
+                      {formatPrice(maxOriginalPrice)}
+                    </span>
+                  </>
+                );
+              } else {
+                const minPrice = Math.min(...product.variants.map((v: any) => v.price));
+                return (
+                  <span className="text-xl font-bold text-gray-900">
+                    {formatPrice(minPrice)}
+                  </span>
+                );
+              }
+            }
+            // Kiểm tra sản phẩm thường
+            else if (product.salePrice && product.salePrice > 0 && product.salePrice < product.price) {
+              return (
+                <>
+                  <span className="text-xl font-bold text-red-600">
+                    {formatPrice(product.salePrice)}
+                  </span>
+                  <span className="text-sm text-gray-400 line-through">
+                    {formatPrice(product.price)}
+                  </span>
+                </>
+              );
+            } else {
+              return (
+                <span className="text-xl font-bold text-gray-900">
+                  {formatPrice(product.price)}
+                </span>
+              );
+            }
+          })()}
         </div>
 
         <div className="mb-3">{getStockStatus()}</div>
@@ -416,7 +438,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="space-y-1 mb-3">
           <div className="flex items-center text-xs text-gray-600">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            Miễn phí vận chuyển
+            Miễn phí vận chuyển cho đơn hàng trên 10 Tr
           </div>
           <div className="flex items-center text-xs text-gray-600">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>

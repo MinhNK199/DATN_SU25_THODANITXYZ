@@ -1,27 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Table, Typography, Button, Space, Input, Select, Avatar, Tag, Modal, Tooltip, message as antdMessage, Row, Col, Switch, Badge } from 'antd';
+import { Card, Table, Typography, Button, Space, Input, Select, Avatar, Tag, Modal, Tooltip, Row, Col, Badge } from 'antd';
 import { useNotification } from '../../../hooks/useNotification';
 import { useErrorNotification } from '../../../hooks/useErrorNotification';
-import { PlusOutlined, DeleteOutlined, EyeOutlined, EditOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, ExclamationCircleFilled, DeleteOutlined as TrashOutlined, UndoOutlined } from '@ant-design/icons';
+import { 
+  DeleteOutlined, 
+  EyeOutlined, 
+  UndoOutlined, 
+  SearchOutlined, 
+  ExclamationCircleFilled,
+  ArrowLeftOutlined
+} from '@ant-design/icons';
 import { ColumnsType } from 'antd/es/table';
 import { debounce } from 'lodash';
 import axios from 'axios';
-import { variantApi } from './api';
 import AdminPagination from '../common/AdminPagination';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { confirm } = Modal;
 
-interface Variant {
+interface DeletedVariant {
   _id: string;
   name: string;
   sku: string;
   price: number;
   salePrice?: number;
   stock: number;
-  color?: { code: string; name: string } | string; // <-- Sửa dòng này
+  color?: { code: string; name: string } | string;
   size?: string;
   weight?: number;
   images: string[];
@@ -30,6 +36,7 @@ interface Variant {
     _id: string;
     name: string;
   };
+  deletedAt: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,15 +46,14 @@ interface Product {
   name: string;
 }
 
-const VariantList: React.FC = () => {
+const VariantTrash: React.FC = () => {
   const navigate = useNavigate();
   const { success, error } = useNotification();
   const { handleError } = useErrorNotification();
-  const [variants, setVariants] = useState<Variant[]>([]);
+  const [deletedVariants, setDeletedVariants] = useState<DeletedVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -55,33 +61,31 @@ const VariantList: React.FC = () => {
   const [totalVariants, setTotalVariants] = useState(0);
   const [selectedVariants, setSelectedVariants] = useState<string[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [deletedVariants, setDeletedVariants] = useState<Variant[]>([]);
-  const [isTrashVisible, setTrashVisible] = useState(false);
 
-  // Fetch variants
-  const fetchVariants = async () => {
+  // Fetch deleted variants
+  const fetchDeletedVariants = async () => {
     try {
       setLoading(true);
+      const token = localStorage.getItem('token');
       const params = {
         page: currentPage,
         limit: pageSize,
         search: searchTerm,
         product: selectedProduct,
-        isActive:
-          selectedStatus === "active"
-            ? true
-            : selectedStatus === "inactive"
-              ? false
-              : undefined,
+        deleted: true
       };
 
-      const response = await variantApi.getVariants(params);
-      setVariants(response.variants || []);
-      setTotalPages(response.pages || 1);
-      setTotalVariants(response.total || 0);
+      const response = await axios.get('http://localhost:8000/api/product/variants/trash', {
+        headers: { Authorization: `Bearer ${token}` },
+        params
+      });
+
+      setDeletedVariants(response.data.variants || []);
+      setTotalPages(response.data.pages || 1);
+      setTotalVariants(response.data.total || 0);
     } catch (error) {
-      console.error('Error fetching variants:', error);
-      handleError(error, 'Không thể tải danh sách biến thể');
+      console.error('Error fetching deleted variants:', error);
+      handleError(error, 'Không thể tải danh sách biến thể đã xóa');
     } finally {
       setLoading(false);
     }
@@ -97,24 +101,9 @@ const VariantList: React.FC = () => {
     }
   };
 
-  // Fetch deleted variants
-  const fetchDeletedVariants = async () => {
-    try {
-      console.log('🗑️ Fetching deleted variants...');
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8000/api/variant/trash', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('✅ Deleted variants response:', response.data);
-      setDeletedVariants(response.data.variants || []);
-    } catch (error) {
-      console.error('❌ Error fetching deleted variants:', error);
-    }
-  };
-
   useEffect(() => {
-    fetchVariants();
-  }, [currentPage, pageSize, searchTerm, selectedProduct, selectedStatus]);
+    fetchDeletedVariants();
+  }, [currentPage, pageSize, searchTerm, selectedProduct]);
 
   const handlePageChange = (page: number, size?: number) => {
     setCurrentPage(page);
@@ -126,59 +115,39 @@ const VariantList: React.FC = () => {
   const handlePageSizeChange = (current: number, size: number) => {
     setCurrentPage(1);
     setPageSize(size);
-  }; // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   useEffect(() => {
     fetchProducts();
-    fetchDeletedVariants();
   }, []);
 
-  // Soft delete variant
-  const handleSoftDelete = async (id: string) => {
+  // Restore variant
+  const handleRestore = async (id: string) => {
     confirm({
-      title: 'Xóa biến thể',
-      icon: <ExclamationCircleFilled />,
-      content: 'Biến thể sẽ được chuyển vào thùng rác và có thể khôi phục sau.',
-      okText: 'Xóa',
-      okType: 'danger',
+      title: 'Khôi phục biến thể',
+      icon: <UndoOutlined />,
+      content: 'Bạn có chắc chắn muốn khôi phục biến thể này?',
+      okText: 'Khôi phục',
+      okType: 'primary',
       cancelText: 'Hủy',
       onOk: async () => {
         try {
-          console.log('🗑️ Soft deleting variant:', id);
           const token = localStorage.getItem('token');
-          const response = await axios.delete(`http://localhost:8000/api/variant/${id}/soft`, {
+          await axios.post(`http://localhost:8000/api/product/variants/${id}/restore`, {}, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          console.log('✅ Soft delete response:', response.data);
-          success('Biến thể đã được chuyển vào thùng rác');
-          fetchVariants();
+          success('Khôi phục biến thể thành công');
           fetchDeletedVariants();
         } catch (error) {
-          console.error('❌ Error soft deleting variant:', error);
-          handleError(error, 'Không thể xóa biến thể');
+          console.error('Error restoring variant:', error);
+          handleError(error, 'Không thể khôi phục biến thể');
         }
       },
     });
   };
 
-  // Restore variant
-  const handleRestore = async (id: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`http://localhost:8000/api/variant/${id}/restore`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      success('Khôi phục biến thể thành công');
-      fetchDeletedVariants();
-      fetchVariants();
-    } catch (error) {
-      console.error('Error restoring variant:', error);
-      handleError(error, 'Không thể khôi phục biến thể');
-    }
-  };
-
-  // Hard delete variant
-  const handleHardDelete = async (id: string) => {
+  // Permanently delete variant
+  const handlePermanentDelete = async (id: string) => {
     confirm({
       title: 'Xóa vĩnh viễn biến thể',
       icon: <ExclamationCircleFilled />,
@@ -189,63 +158,81 @@ const VariantList: React.FC = () => {
       onOk: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.delete(`http://localhost:8000/api/variant/${id}/permanent`, {
+          await axios.delete(`http://localhost:8000/api/product/variants/${id}/permanent`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           success('Xóa vĩnh viễn biến thể thành công');
           fetchDeletedVariants();
         } catch (error) {
-          console.error('Error hard deleting variant:', error);
+          console.error('Error permanently deleting variant:', error);
           handleError(error, 'Không thể xóa vĩnh viễn biến thể');
         }
       },
     });
   };
 
-  // Toggle variant status
-  const handleToggleStatus = async (variantId: string, currentStatus: boolean) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`http://localhost:8000/api/variant/${variantId}`, 
-        { isActive: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      success('Cập nhật trạng thái thành công');
-      fetchVariants();
-    } catch (error) {
-      console.error('Error toggling variant status:', error);
-      handleError(error, 'Không thể cập nhật trạng thái');
-    }
-  };
-
-  // Bulk operations
-  const handleBulkDelete = () => {
+  // Bulk restore
+  const handleBulkRestore = () => {
     if (selectedVariants.length === 0) {
-      error('Vui lòng chọn biến thể để xóa');
+      error('Vui lòng chọn biến thể để khôi phục');
       return;
     }
 
     confirm({
-      title: `Bạn có chắc chắn muốn xóa ${selectedVariants.length} biến thể?`,
+      title: `Bạn có chắc chắn muốn khôi phục ${selectedVariants.length} biến thể?`,
+      icon: <UndoOutlined />,
+      content: 'Các biến thể sẽ được khôi phục và hiển thị lại trong danh sách chính.',
+      okText: 'Khôi phục',
+      okType: 'primary',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          const token = localStorage.getItem('token');
+          await axios.post(`http://localhost:8000/api/product/variants/bulk-restore`, {
+            variantIds: selectedVariants
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          success(`Đã khôi phục ${selectedVariants.length} biến thể`);
+          setSelectedVariants([]);
+          setSelectedRowKeys([]);
+          fetchDeletedVariants();
+        } catch (error) {
+          console.error('Error bulk restoring variants:', error);
+          handleError(error, 'Không thể khôi phục biến thể');
+        }
+      },
+    });
+  };
+
+  // Bulk permanent delete
+  const handleBulkPermanentDelete = () => {
+    if (selectedVariants.length === 0) {
+      error('Vui lòng chọn biến thể để xóa vĩnh viễn');
+      return;
+    }
+
+    confirm({
+      title: `Bạn có chắc chắn muốn xóa vĩnh viễn ${selectedVariants.length} biến thể?`,
       icon: <ExclamationCircleFilled />,
       content: 'Hành động này không thể hoàn tác.',
-      okText: 'Xóa',
+      okText: 'Xóa vĩnh viễn',
       okType: 'danger',
       cancelText: 'Hủy',
       onOk: async () => {
         try {
           const token = localStorage.getItem('token');
-          await axios.delete(`http://localhost:8000/api/product/variants/bulk`, {
+          await axios.delete(`http://localhost:8000/api/product/variants/bulk-permanent`, {
             headers: { Authorization: `Bearer ${token}` },
             data: { variantIds: selectedVariants }
           });
-          success(`Đã xóa ${selectedVariants.length} biến thể`);
+          success(`Đã xóa vĩnh viễn ${selectedVariants.length} biến thể`);
           setSelectedVariants([]);
           setSelectedRowKeys([]);
-          fetchVariants();
+          fetchDeletedVariants();
         } catch (error) {
-          console.error('Error bulk deleting variants:', error);
-          handleError(error, 'Không thể xóa biến thể');
+          console.error('Error bulk permanently deleting variants:', error);
+          handleError(error, 'Không thể xóa vĩnh viễn biến thể');
         }
       },
     });
@@ -258,12 +245,21 @@ const VariantList: React.FC = () => {
     }).format(price);
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const debouncedSearch = debounce((value: string) => {
     setSearchTerm(value);
   }, 300);
 
-  const columns: ColumnsType<Variant> = [
+  const columns: ColumnsType<DeletedVariant> = [
     {
       title: 'Biến thể',
       dataIndex: 'name',
@@ -356,35 +352,21 @@ const VariantList: React.FC = () => {
       ),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      align: 'center',
-      width: 90,
-      render: (isActive, record) => (
-        <Switch
-          checked={isActive}
-          onChange={() => handleToggleStatus(record._id, isActive)}
-          checkedChildren="Bật"
-          unCheckedChildren="Tắt"
-          size="small"
-        />
+      title: 'Ngày xóa',
+      dataIndex: 'deletedAt',
+      key: 'deletedAt',
+      width: 120,
+      render: (deletedAt) => (
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {formatDate(deletedAt)}
+        </Text>
       ),
     },
-    // {
-    //   title: 'Ngày tạo',
-    //   dataIndex: 'createdAt',
-    //   key: 'createdAt',
-    //   width: '12%',
-    //   render: (createdAt) => (
-    //     <Text type="secondary">{formatDate(createdAt)}</Text>
-    //   ),
-    // },
     {
       title: 'Hành động',
       key: 'action',
       align: 'right',
-      width: '15%',
+      width: '20%',
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
@@ -398,81 +380,25 @@ const VariantList: React.FC = () => {
               }}
             />
           </Tooltip>
-          <Tooltip title="Chỉnh sửa">
+          <Tooltip title="Khôi phục">
             <Button 
               type="primary"
               className="admin-primary-button"
-              icon={<EditOutlined />} 
+              icon={<UndoOutlined />} 
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/admin/variants/edit/${record._id}`);
+                handleRestore(record._id);
               }}
-            />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Button
-              type="primary"
-              className="admin-primary-button"
-              icon={<DeleteOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSoftDelete(record._id);
-              }}
-            />
-          </Tooltip>
-        </Space>
-      ),
-    },
-  ];
-
-  const trashColumns: ColumnsType<Variant> = [
-    {
-      title: 'Biến thể',
-      key: 'variant',
-      render: (_, record) => (
-        <Space>
-          <Avatar
-            shape="square"
-            size={32}
-            src={record.images && record.images.length > 0 ? record.images[0] : undefined}
-            style={{
-              backgroundColor: typeof record.color === 'object' && record.color !== null
-                ? record.color.code
-                : (typeof record.color === 'string' ? record.color : '#f0f0f0')
-            }}
-          />
-          <div>
-            <Text strong>{record.name}</Text>
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>SKU: {record.sku}</Text>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: 'Sản phẩm',
-      key: 'product',
-      render: (_, record) => (
-        <Text>{record.product?.name || 'N/A'}</Text>
-      ),
-    },
-    {
-      title: 'Hành động',
-      key: 'action',
-      align: 'right',
-      render: (_, record) => (
-        <Space>
-          <Tooltip title="Khôi phục">
-            <Button
-              icon={<UndoOutlined />}
-              onClick={() => handleRestore(record._id)}
             />
           </Tooltip>
           <Tooltip title="Xóa vĩnh viễn">
             <Button
               danger
               icon={<DeleteOutlined />}
-              onClick={() => handleHardDelete(record._id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePermanentDelete(record._id);
+              }}
             />
           </Tooltip>
         </Space>
@@ -482,7 +408,7 @@ const VariantList: React.FC = () => {
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: (newSelectedRowKeys: React.Key[], newSelectedRows: Variant[]) => {
+    onChange: (newSelectedRowKeys: React.Key[], newSelectedRows: DeletedVariant[]) => {
       setSelectedRowKeys(newSelectedRowKeys);
       setSelectedVariants(newSelectedRows.map(row => row._id));
     },
@@ -494,18 +420,45 @@ const VariantList: React.FC = () => {
         {/* Header */}
         <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
           <Col>
-            <Title level={2} style={{ margin: 0 }}>Quản lý biến thể sản phẩm</Title>
-            <Text type="secondary">Quản lý các biến thể của sản phẩm</Text>
+            <Space>
+              <Button 
+                icon={<ArrowLeftOutlined />}
+                onClick={() => navigate('/admin/variants')}
+              >
+                Quay lại
+              </Button>
+              <div>
+                <Title level={2} style={{ margin: 0 }}>
+                  <Badge count={totalVariants} showZero color="#ff4d4f">
+                    Thùng rác biến thể
+                  </Badge>
+                </Title>
+                <Text type="secondary">Quản lý các biến thể đã bị xóa</Text>
+              </div>
+            </Space>
           </Col>
           <Col>
-            <Button
-              type="primary"
-              className="admin-primary-button"
-              icon={<PlusOutlined />}
-              onClick={() => navigate('/admin/variants/add')}
-            >
-              Thêm biến thể
-            </Button>
+            <Space>
+              {selectedVariants.length > 0 && (
+                <>
+                  <Button 
+                    type="primary"
+                    className="admin-primary-button"
+                    icon={<UndoOutlined />}
+                    onClick={handleBulkRestore}
+                  >
+                    Khôi phục đã chọn
+                  </Button>
+                  <Button 
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={handleBulkPermanentDelete}
+                  >
+                    Xóa vĩnh viễn
+                  </Button>
+                </>
+              )}
+            </Space>
           </Col>
         </Row>
 
@@ -513,7 +466,7 @@ const VariantList: React.FC = () => {
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Input
-              placeholder="Tìm kiếm biến thể..."
+              placeholder="Tìm kiếm biến thể đã xóa..."
               prefix={<SearchOutlined />}
               onChange={(e) => debouncedSearch(e.target.value)}
               allowClear
@@ -535,23 +488,10 @@ const VariantList: React.FC = () => {
             </Select>
           </Col>
           <Col span={6}>
-            <Select
-              placeholder="Tất cả trạng thái"
-              style={{ width: '100%' }}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-            >
-              <Option value="all">Tất cả trạng thái</Option>
-              <Option value="active">Kích hoạt</Option>
-              <Option value="inactive">Không kích hoạt</Option>
-            </Select>
-          </Col>
-          <Col span={6}>
             <Button
               onClick={() => {
                 setSearchTerm('');
                 setSelectedProduct('');
-                setSelectedStatus('all');
               }}
             >
               Xóa bộ lọc
@@ -565,9 +505,6 @@ const VariantList: React.FC = () => {
             <Col>
               <Space>
                 <Text>Đã chọn {selectedVariants.length} biến thể</Text>
-                <Button danger onClick={handleBulkDelete}>
-                  Xóa đã chọn
-                </Button>
                 <Button onClick={() => {
                   setSelectedVariants([]);
                   setSelectedRowKeys([]);
@@ -582,7 +519,7 @@ const VariantList: React.FC = () => {
         {/* Table */}
         <Table
           columns={columns}
-          dataSource={variants}
+          dataSource={deletedVariants}
           rowKey="_id"
           loading={loading}
           rowSelection={rowSelection}
@@ -596,61 +533,12 @@ const VariantList: React.FC = () => {
             total={totalVariants}
             onChange={handlePageChange}
             onShowSizeChange={handlePageSizeChange}
-            itemText="biến thể"
+            itemText="biến thể đã xóa"
           />
         </div>
       </Card>
-
-      {/* Trash Modal */}
-      <Modal
-        title="Thùng rác biến thể"
-        open={isTrashVisible}
-        onCancel={() => setTrashVisible(false)}
-        footer={null}
-        width={600}
-      >
-        <Table
-          columns={trashColumns}
-          dataSource={deletedVariants}
-          rowKey="_id"
-          pagination={{ pageSize: 5 }}
-        />
-      </Modal>
-
-      {/* Floating Trash Button */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 32,
-          right: 32,
-          zIndex: 1000,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-end",
-        }}
-      >
-        <Badge count={deletedVariants.length} showZero>
-          <Button
-            type="primary"
-            className="admin-primary-button"
-            shape="circle"
-            size="large"
-            icon={<DeleteOutlined />}
-            style={{
-              boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
-              background: "#fff",
-              color: "#d4380d",
-              border: "2px solid #d4380d",
-              width: 56,
-              height: 56,
-              fontSize: 24,
-            }}
-            onClick={() => setTrashVisible(true)}
-          />
-        </Badge>
-      </div>
     </div>
   );
 };
 
-export default VariantList;
+export default VariantTrash;
