@@ -27,7 +27,6 @@ interface Brand {
 }
 
 const Header: React.FC = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showMiniCart, setShowMiniCart] = useState(false);
@@ -145,13 +144,6 @@ const Header: React.FC = () => {
     fetchBrands();
   }, []);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     if (!showMiniCart) return;
@@ -198,18 +190,14 @@ const Header: React.FC = () => {
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
-              <span>Miễn phí vận chuyển cho đơn hàng trên 500K</span>
-              <div className="flex items-center space-x-2">
-                <FaMapMarkerAlt className="w-3 h-3" />
-                <span>Theo dõi đơn hàng</span>
-              </div>
+              <span>Miễn phí vận chuyển cho đơn hàng trên 10Tr</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Header */}
-      <header className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white'}`}>
+      <header className="bg-white">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             {/* Logo */}

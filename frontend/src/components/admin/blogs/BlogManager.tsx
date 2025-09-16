@@ -179,7 +179,7 @@ const BlogManager: React.FC = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 admin-bg-blue text-white rounded-lg hover:admin-bg-blue transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 shadow-lg flex items-center gap-2"
           >
             <FaPlus />
              Thêm bài viết
@@ -273,33 +273,33 @@ const BlogManager: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleView(blog)}
-                        className="text-blue-600 hover:text-blue-900 p-1"
+                        className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 shadow-md flex items-center gap-1"
                         title="Xem chi tiết"
                       >
-                        <FaEye />
+                        <FaEye className="text-sm" />
                       </button>
                       <button
                         onClick={() => handleEdit(blog)}
-                        className="text-indigo-600 hover:text-indigo-900 p-1"
+                        className="px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all duration-200 shadow-md flex items-center gap-1"
                         title="Chỉnh sửa"
                       >
-                        <FaEdit />
+                        <FaEdit className="text-sm" />
                       </button>
                       {!blog.isPublished && (
                         <button
                           onClick={() => handlePublish(blog._id)}
-                          className="text-green-600 hover:text-green-900 p-1"
+                          className="px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg transition-all duration-200 shadow-md flex items-center gap-1"
                           title="Đăng bài"
                         >
-                          <FaRocket />
+                          <FaRocket className="text-sm" />
                         </button>
                       )}
                       <button
                         onClick={() => handleDelete(blog._id)}
-                        className="text-red-600 hover:text-red-900 p-1"
+                        className="px-3 py-1 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-lg transition-all duration-200 shadow-md flex items-center gap-1"
                         title="Xóa"
                       >
-                        <FaTrash />
+                        <FaTrash className="text-sm" />
                       </button>
                     </div>
                   </td>
@@ -317,14 +317,14 @@ const BlogManager: React.FC = () => {
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                  className="relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md"
                 >
                   Trước
                 </button>
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                  className="ml-3 relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md"
                 >
                   Sau
                 </button>
@@ -342,10 +342,10 @@ const BlogManager: React.FC = () => {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
                           currentPage === page
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            ? 'z-10 bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                            : 'bg-white text-gray-500 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-500 hover:text-white shadow-md'
                         }`}
                       >
                         {page}

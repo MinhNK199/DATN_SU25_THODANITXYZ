@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import EnhancedProductCard from './EnhancedProductCard';
+import ProductCard from './ProductCard';
+import BlogSection from './BlogSection';
 
 interface Product {
   _id: string;
@@ -22,6 +23,7 @@ interface Product {
   stock: number;
   variants?: any[];
   isFeatured?: boolean;
+  createdAt?: string;
 }
 
 const RecommendedProductsSection: React.FC = () => {
@@ -209,9 +211,17 @@ const RecommendedProductsSection: React.FC = () => {
           ];
         }
         
-        // Ensure products is an array before slicing
+        // Sort products by creation date (newest first) and take 8 products
         const safeProducts = Array.isArray(products) ? products : [];
-        setRecommendedProducts(safeProducts.slice(0, 10));
+        const newestProducts = safeProducts
+          .sort((a, b) => {
+            const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+            const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+            return dateB - dateA; // Sort from newest to oldest
+          })
+          .slice(0, 8); // Take only 8 newest products
+        
+        setRecommendedProducts(newestProducts);
       } catch (err: any) {
         setError(err.message);
         console.error('Error fetching recommended products:', err);
@@ -229,10 +239,10 @@ const RecommendedProductsSection: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              SẢN PHẨM ĐỀ XUẤT CHO BẠN
+              SẢN PHẨM MỚI NHẤT
             </h2>
           </div>
-          <div className="text-center text-gray-500">Đang tải sản phẩm đề xuất...</div>
+          <div className="text-center text-gray-500">Đang tải sản phẩm mới nhất...</div>
         </div>
       </section>
     );
@@ -244,7 +254,7 @@ const RecommendedProductsSection: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              SẢN PHẨM ĐỀ XUẤT CHO BẠN
+              SẢN PHẨM MỚI NHẤT
             </h2>
           </div>
           <div className="text-center text-red-500">{error}</div>
@@ -259,30 +269,37 @@ const RecommendedProductsSection: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            SẢN PHẨM ĐỀ XUẤT CHO BẠN
+            SẢN PHẨM MỚI NHẤT
           </h2>
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {recommendedProducts.slice(0, 10).map((product) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {recommendedProducts.map((product) => {
+            // Kiểm tra sản phẩm được tạo trong vòng 3 ngày gần nhất
+            const isRecentlyAdded = product.createdAt && 
+              new Date().getTime() - new Date(product.createdAt).getTime() <= 3 * 24 * 60 * 60 * 1000;
+            
             const mappedProduct = {
               _id: product._id,
               name: product.name,
-              price: product.salePrice || product.price,
-              originalPrice: product.salePrice ? product.price : undefined,
+              price: product.price,
+              salePrice: product.salePrice,
+              originalPrice: product.originalPrice,
               image: product.image || (product.images && product.images.length > 0 ? product.images[0] : ''),
+              images: product.images,
               brand: product.brand,
               category: product.category,
               rating: product.rating || product.averageRating || 0,
               reviewCount: product.reviewCount || product.numReviews || 0,
               discount: product.discount,
-              isNew: product.isNew || false,
-              isHot: product.isHot || false,
+              isNew: isRecentlyAdded || false, // Tự động dựa trên thời gian tạo
+              isHot: false, // Không tự động HOT cho sản phẩm mới
               stock: product.stock || 0,
               variants: product.variants || [],
+              createdAt: product.createdAt,
             };
-            return <EnhancedProductCard key={mappedProduct._id} product={mappedProduct} />;
+            return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
           })}
         </div>
 
@@ -296,6 +313,9 @@ const RecommendedProductsSection: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Blog Section */}
+      <BlogSection />
     </section>
   );
 };

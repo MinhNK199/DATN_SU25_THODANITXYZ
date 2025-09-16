@@ -148,6 +148,7 @@ const ShipperManagement: React.FC = () => {
           <Col>
             <Button
               type="primary"
+              className="admin-primary-button"
               icon={<PlusOutlined />}
               onClick={handleAddNew}
               size="large"

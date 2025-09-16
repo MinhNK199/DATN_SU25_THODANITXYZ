@@ -224,6 +224,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
         <Space>
           <Button
             type="primary"
+            className="admin-primary-button"
             icon={<EditOutlined />}
             size="small"
             onClick={() => onEdit(record)}
@@ -231,7 +232,8 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
             Sửa
           </Button>
           <Button
-            type="default"
+            type="primary"
+            className="admin-primary-button"
             icon={<EyeOutlined />}
             size="small"
             onClick={() => onAssignOrder(record)}
@@ -240,7 +242,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onEdit, onDelete, onAssignOrd
           </Button>
           <Button
             type="primary"
-            danger
+            className="admin-primary-button"
             icon={<DeleteOutlined />}
             size="small"
             onClick={() => onDelete(record._id)}

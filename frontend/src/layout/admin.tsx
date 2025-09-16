@@ -5,7 +5,7 @@ import AdminSidebar from '../components/admin/sidebar';
 
 const AdminLayout = () => {
   return (
-    <div className="flex h-screen">
+    <div className="admin-layout flex h-screen">
       <AdminSidebar />
 
       <div className="flex-1 flex flex-col">

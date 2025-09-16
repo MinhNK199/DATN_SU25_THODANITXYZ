@@ -175,7 +175,12 @@ const BannerAdd: React.FC = () => {
         </Space>
       ))}
       <Form.Item>
-        <Button type="dashed" onClick={() => add()} block>
+        <Button 
+          type="primary" 
+          className="admin-primary-button"
+          onClick={() => add()} 
+          block
+        >
           + Thêm tính năng
         </Button>
       </Form.Item>
@@ -204,7 +209,13 @@ setPreviewImage(URL.createObjectURL(file));
     accept="image/*"
     showUploadList={false}
   >
-    <Button icon={<UploadOutlined />}>Chọn ảnh</Button>
+    <Button 
+      type="primary"
+      className="admin-primary-button"
+      icon={<UploadOutlined />}
+    >
+      Chọn ảnh
+    </Button>
   </Upload>
   {previewImage && (
     <img
@@ -258,19 +269,14 @@ setPreviewImage(URL.createObjectURL(file));
                     Lưu banner
                   </Button>
                   <Button
-                    type="default"
+                    type="primary"
+                    className="admin-primary-button"
                     icon={<ArrowLeftOutlined />}
                     htmlType="button"
                     onClick={() => navigate("/admin/banners")}
                     shape="round"
                     size="large"
                     block
-                    style={{
-                      background: "#fff",
-                      color: "#888",
-                      border: "2px solid #bbb",
-                      fontWeight: 500,
-                    }}
                   >
                     Quay lại
                   </Button>

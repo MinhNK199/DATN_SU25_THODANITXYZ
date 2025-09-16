@@ -1,29 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaFacebook, FaTwitter, FaInstagram, FaYoutube, FaLinkedin, FaPhone, FaEnvelope, FaMapMarkerAlt, FaTruck, FaShieldAlt, FaHeadset, FaCreditCard } from 'react-icons/fa';
+import { Category } from '../../interfaces/Category';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const quickLinks = [
     { name: 'Trang chủ', href: '/' },
     { name: 'Sản phẩm', href: '/products' },
     { name: 'Giới thiệu', href: '/about' },
     { name: 'Liên hệ', href: '/contact' },
-    { name: 'FAQ', href: '/faq' },
-    { name: 'Chính sách bảo mật', href: '/privacy' },
-    { name: 'Điều khoản sử dụng', href: '/terms' },
-    { name: 'Hướng dẫn mua hàng', href: '/guide' }
+    { name: 'FAQ', href: '/faq' }
   ];
 
-  const categories = [
-    { name: 'Điện thoại', href: '/products?category=mobile' },
-    { name: 'Laptop', href: '/products?category=laptop' },
-    { name: 'Máy tính bảng', href: '/products?category=tablets' },
-    { name: 'Đồng hồ thông minh', href: '/products?category=watches' },
-    { name: 'Tai nghe', href: '/products?category=headphones' },
-    { name: 'Phụ kiện', href: '/products?category=accessories' }
-  ];
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/category');
+        const data = await response.json();
+        const activeCategories = data.filter((cat: Category) => cat.isActive);
+        setCategories(activeCategories.slice(0, 5)); // Take only first 5 categories
+      } catch (error) {
+        // Fallback to default categories
+        setCategories([
+          { _id: '1', name: 'Điện thoại', slug: 'mobile', description: '', isActive: true },
+          { _id: '2', name: 'Laptop', slug: 'laptop', description: '', isActive: true },
+          { _id: '3', name: 'Máy tính bảng', slug: 'tablets', description: '', isActive: true },
+          { _id: '4', name: 'Đồng hồ thông minh', slug: 'watches', description: '', isActive: true },
+          { _id: '5', name: 'Phụ kiện', slug: 'accessories', description: '', isActive: true }
+        ]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const brands = [
     { name: 'Apple', href: '/products?brand=apple' },
@@ -38,7 +51,7 @@ const Footer: React.FC = () => {
     {
       icon: FaTruck,
       title: 'Miễn phí vận chuyển',
-      description: 'Cho đơn hàng trên 500K'
+      description: 'Cho đơn hàng trên 10Tr'
     },
     {
       icon: FaShieldAlt,
@@ -123,10 +136,10 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="text-lg font-semibold mb-6">Danh mục sản phẩm</h4>
             <ul className="space-y-3">
-              {categories.map((category, index) => (
-                <li key={index}>
+              {categories.map((category) => (
+                <li key={category._id}>
                   <Link
-                    to={category.href}
+                    to={`/products?category=${category.slug || category.name.toLowerCase()}`}
                     className="text-gray-400 hover:text-white transition-colors duration-200"
                   >
                     {category.name}

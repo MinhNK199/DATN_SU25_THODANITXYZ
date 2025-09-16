@@ -6,7 +6,10 @@ import {
     updateVariant,
     deleteVariant,
     softDeleteVariant,
-    getVariantStats
+    getVariantStats,
+    getDeletedVariants,
+    restoreVariant,
+    permanentDeleteVariant
 } from "../controllers/variant.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
@@ -17,6 +20,13 @@ const routerVariant = express.Router();
 // Variant CRUD operations
 routerVariant.get("/", getVariants);
 routerVariant.get("/stats", protect, getVariantStats);
+
+// Trash management routes (must be before /:id routes)
+routerVariant.get("/trash", protect, getDeletedVariants);
+routerVariant.post("/:id/restore", protect, restoreVariant);
+routerVariant.delete("/:id/permanent", protect, permanentDeleteVariant);
+
+// Other routes
 routerVariant.get("/:id", getVariantById);
 routerVariant.post("/", protect, createVariantValidation, validateRequest, createVariant);
 routerVariant.put("/:id", protect, updateVariantValidation, validateRequest, updateVariant);

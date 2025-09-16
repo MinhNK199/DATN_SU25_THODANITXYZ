@@ -162,7 +162,7 @@ const RatingDetail: React.FC = () => {
             </div>
           </div>
         ) : (
-          <Button type="primary" onClick={() => setShowReplyForm(true)}>
+          <Button type="primary" className="admin-primary-button" onClick={() => setShowReplyForm(true)}>
             Thêm phản hồi
           </Button>
         )}

@@ -92,7 +92,7 @@ const CategoryDetail: React.FC = () => {
                     <Col>
                         <Space>
                             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/admin/categories')}>Quay lại</Button>
-                            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/admin/categories/edit/${id}`)}>Chỉnh sửa</Button>
+                            <Button type="primary" className="admin-primary-button" icon={<EditOutlined />} onClick={() => navigate(`/admin/categories/edit/${id}`)}>Chỉnh sửa</Button>
                         </Space>
                     </Col>
                 </Row>

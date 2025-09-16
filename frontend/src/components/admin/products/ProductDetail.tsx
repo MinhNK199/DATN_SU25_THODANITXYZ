@@ -47,6 +47,22 @@ const ProductDetail: React.FC = () => {
   const [savingStock, setSavingStock] = useState<string | null>(null);
   const [showAdditionalImagesModal, setShowAdditionalImagesModal] = useState(false);
   const [additionalImageFileList, setAdditionalImageFileList] = useState<any[]>([]);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [newStockValue, setNewStockValue] = useState<number>(0);
+  const [showTextModal, setShowTextModal] = useState(false);
+  const [modalText, setModalText] = useState({ title: "", content: "" });
+  const [variantPage, setVariantPage] = useState(1);
+  const [variantPageSize, setVariantPageSize] = useState(10);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+
+  // ✅ FUNCTION TÍNH TỔNG STOCK TỪ CÁC BIẾN THỂ
+  const getTotalStock = (product: Product) => {
+    if (product.variants && product.variants.length > 0) {
+      return product.variants.reduce((total, variant) => total + (variant.stock || 0), 0);
+    }
+    return 0;
+  };
 
   useEffect(() => {
     if (!id) {
@@ -151,6 +167,84 @@ const ProductDetail: React.FC = () => {
     } finally {
       setSavingStock(null);
     }
+  };
+
+  // ✅ FUNCTION MỞ MODAL CẬP NHẬT STOCK
+  const handleOpenStockModal = (variant: ProductVariant) => {
+    setSelectedVariant(variant);
+    setNewStockValue(variant.stock || 0);
+    setShowStockModal(true);
+  };
+
+  // ✅ FUNCTION ĐÓNG MODAL
+  const handleCloseStockModal = () => {
+    setShowStockModal(false);
+    setSelectedVariant(null);
+    setNewStockValue(0);
+  };
+
+  // ✅ FUNCTION CẬP NHẬT STOCK QUA MODAL
+  const handleSaveStockModal = async () => {
+    if (!product || !selectedVariant) return;
+
+    if (newStockValue < 0) {
+      error("Số lượng tồn kho không hợp lệ!");
+      return;
+    }
+
+    setSavingStock(selectedVariant._id!);
+    try {
+      await updateVariantStock(product._id!, selectedVariant._id!, newStockValue);
+
+      // Cập nhật state local
+      setProduct(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          variants: prev.variants?.map(variant =>
+            variant._id === selectedVariant._id
+              ? { ...variant, stock: newStockValue }
+              : variant
+          )
+        };
+      });
+
+      success("Cập nhật tồn kho thành công!");
+      handleCloseStockModal();
+    } catch (err) {
+      error("Có lỗi xảy ra khi cập nhật tồn kho.");
+    } finally {
+      setSavingStock(null);
+    }
+  };
+
+  // ✅ FUNCTION MỞ MODAL XEM TEXT ĐẦY ĐỦ
+  const handleShowTextModal = (title: string, content: string) => {
+    setModalText({ title, content });
+    setShowTextModal(true);
+  };
+
+  // ✅ FUNCTION ĐÓNG MODAL TEXT
+  const handleCloseTextModal = () => {
+    setShowTextModal(false);
+    setModalText({ title: "", content: "" });
+  };
+
+  // ✅ FUNCTION XỬ LÝ PHÂN TRANG BIẾN THỂ
+  const handleVariantPageChange = (page: number, pageSize?: number) => {
+    setVariantPage(page);
+    if (pageSize && pageSize !== variantPageSize) {
+      setVariantPageSize(pageSize);
+    }
+  };
+
+  // ✅ FUNCTION XỬ LÝ MODAL MÔ TẢ
+  const handleShowDescriptionModal = () => {
+    setShowDescriptionModal(true);
+  };
+
+  const handleCloseDescriptionModal = () => {
+    setShowDescriptionModal(false);
   };
 
   // Xử lý upload ảnh phụ
@@ -385,29 +479,58 @@ const ProductDetail: React.FC = () => {
       title: "SKU", 
       dataIndex: "sku", 
       key: "sku",
-      render: (sku: string, record: ProductVariant) => (
-        <Button 
-          type="link" 
-          onClick={() => navigate(`/admin/variants/detail/${record._id}`)}
-          className="p-0 h-auto font-medium text-blue-600 hover:text-blue-800"
-        >
-          {sku}
-        </Button>
-      )
+      width: 120,
+      align: "center",
+      render: (sku: string) => {
+        const displaySku = sku || "N/A";
+        const isLong = displaySku.length > 5;
+        const truncatedSku = isLong ? displaySku.substring(0, 5) + "..." : displaySku;
+        
+        return (
+          <div className="flex flex-col items-center justify-center text-center w-full">
+            <div className="font-mono text-sm mb-1">{truncatedSku}</div>
+            {isLong && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => handleShowTextModal("SKU", displaySku)}
+                className="p-0 h-auto text-xs text-blue-500 hover:text-blue-700"
+              >
+                Xem
+              </Button>
+            )}
+          </div>
+        );
+      }
     },
     { 
       title: "Tên biến thể", 
       dataIndex: "name", 
       key: "name",
-      render: (name: string, record: ProductVariant) => (
-        <Button 
-          type="link" 
-          onClick={() => navigate(`/admin/variants/detail/${record._id}`)}
-          className="p-0 h-auto font-medium text-blue-600 hover:text-blue-800"
-        >
-          {name}
-        </Button>
-      )
+      width: 200,
+      align: "center",
+      render: (name: string) => {
+        const isLong = name.length > 5;
+        const truncatedName = isLong ? name.substring(0, 5) + "..." : name;
+        
+        return (
+          <div className="flex flex-col items-center justify-center text-center w-full">
+            <div className="font-medium text-sm mb-1">{truncatedName}</div>
+            {isLong && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EyeOutlined />}
+                onClick={() => handleShowTextModal("Tên biến thể", name)}
+                className="p-0 h-auto text-xs text-blue-500 hover:text-blue-700"
+              >
+                Xem
+              </Button>
+            )}
+          </div>
+        );
+      }
     },
     { title: "Giá", dataIndex: "price", key: "price", render: formatPrice },
     {
@@ -421,27 +544,27 @@ const ProductDetail: React.FC = () => {
       dataIndex: "stock",
       key: "stock",
       width: 150,
-      render: (stock: number, record: ProductVariant) => (
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            min={0}
-            value={editingStock[record._id!] !== undefined ? editingStock[record._id!] : stock}
-            onChange={(e) => handleStockChange(record._id!, parseInt(e.target.value) || 0)}
-            className="w-16"
-            size="small"
-          />
-          <Button
-            type="primary"
-            size="small"
-            icon={<SaveOutlined />}
-            loading={savingStock === record._id}
-            onClick={() => handleSaveStock(record._id!)}
-            className="bg-green-500 hover:bg-green-600 border-green-500"
-            disabled={editingStock[record._id!] === undefined || editingStock[record._id!] === stock}
-          />
-        </div>
-      )
+      render: (stock: number, record: ProductVariant) => {
+        return (
+          <div className="text-center space-y-2">
+            {/* Hiển thị số lượng hiện tại */}
+            <Tag color={stock > 0 ? "green" : "red"} className="text-sm px-3 py-1">
+              {stock} sản phẩm
+            </Tag>
+            
+            {/* Nút mở modal */}
+            <Button
+              type="primary"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenStockModal(record)}
+              className="admin-primary-button w-full"
+            >
+              Cập nhật
+            </Button>
+          </div>
+        );
+      }
     },
     // {
     //   title: "Màu",
@@ -471,12 +594,6 @@ const ProductDetail: React.FC = () => {
     //   },
     // },
     {
-      title: "Size (inch)",
-      dataIndex: "size",
-      key: "size",
-      render: (size) => size ? `${size} inch` : "N/A",
-    },
-    {
       title: "Trạng thái",
       dataIndex: "isActive",
       key: "isActive",
@@ -497,6 +614,7 @@ const ProductDetail: React.FC = () => {
         <Button
           type="primary"
           size="small"
+          className="admin-primary-button"
           onClick={() => navigate(`/admin/variants/detail/${record._id}`)}
           icon={<EyeOutlined />}
         >
@@ -537,17 +655,18 @@ const ProductDetail: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header Card */}
-      <Card className="mb-6 shadow-md rounded-lg">
-        <Row justify="space-between" align="middle">
+      <Card className="mb-6 shadow-md rounded-lg sticky top-0 z-50 bg-white">
+        <Row justify="space-between" align="top">
           <Col xs={24} sm={18}>
             <Title level={3} className="!mt-0">
               {product.name}
             </Title>
-            <Text type="secondary">{product.sku || "N/A"}</Text>
-          </Col>Ảnh phụ sản phẩm (0)
-          <Col xs={24} sm={6} className="text-right mt-4 sm:mt-0">
-            <Space direction="horizontal" size="middle" className="flex-wrap">
+          </Col>
+          <Col xs={24} sm={6} className="text-right">
+            <Space direction="horizontal" size="middle" className="justify-end">
               <Button
+                type="primary"
+                className="admin-primary-button"
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate("/admin/products")}
               >
@@ -555,13 +674,15 @@ const ProductDetail: React.FC = () => {
               </Button>
               <Button
                 type="primary"
+                className="admin-primary-button"
                 icon={<EditOutlined />}
                 onClick={() => navigate(`/admin/products/edit/${product._id}`)}
               >
                 Chỉnh sửa
               </Button>
               <Button
-                danger
+                type="primary"
+                className="admin-primary-button"
                 icon={<DeleteOutlined />}
                 onClick={handleSoftDelete}
               >
@@ -570,29 +691,6 @@ const ProductDetail: React.FC = () => {
             </Space>
           </Col>
         </Row>
-        <div className="mt-4">
-          {product.salePrice && product.salePrice < product.price ? (
-            <Space align="baseline">
-              <Text delete type="secondary" className="text-lg">
-                {formatPrice(product.price)}
-              </Text>
-              <Text type="danger" strong className="text-2xl">
-                {formatPrice(product.salePrice)}
-              </Text>
-              <Tag color="red">
-                -
-                {Math.round(
-                  ((product.price - product.salePrice) / product.price) * 100
-                )}
-                %
-              </Tag>
-            </Space>
-          ) : (
-            <Text strong className="text-2xl">
-              {formatPrice(product.price)}
-            </Text>
-          )}
-        </div>
       </Card>
 
       <Row gutter={[16, 16]}>
@@ -603,21 +701,23 @@ const ProductDetail: React.FC = () => {
               {/* Ảnh chính to */}
               <Image
                 width="100%"
-                height={400}
+                height={500}
                 src={mainImage}
                 fallback="/placeholder.svg"
                 alt={product.name}
-                className="rounded-lg border border-gray-200 object-cover mb-4"
+                className="rounded-lg border border-gray-200 object-contain mb-4"
+                style={{ maxHeight: '500px' }}
               />
               
               {/* Tất cả ảnh - ảnh đại diện và ảnh phụ */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-3">
                   <Title level={5} className="!mb-0 text-gray-700">
-                    Tất cả ảnh sản phẩm ({product.images?.length || 0} ảnh chính + {product.additionalImages?.length || 0} ảnh phụ)
+                    Tất cả ảnh sản phẩm ({product.additionalImages?.length || 0} ảnh phụ)
                   </Title>
                   <Button
                     type="primary"
+                    className="admin-primary-button"
                     icon={<PlusOutlined />}
                     onClick={() => setShowAdditionalImagesModal(true)}
                     size="small"
@@ -627,15 +727,15 @@ const ProductDetail: React.FC = () => {
                 </div>
                 
                 <Image.PreviewGroup>
-                  <div className="flex gap-2 overflow-x-auto pb-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto">
                     {/* Ảnh đại diện */}
                     {product.images?.length ? (
                       product.images.map((image, index) => (
-                        <div key={`main-${index}`} className="relative flex-shrink-0">
+                        <div key={`main-${index}`} className="relative">
                           <Image
                             src={image}
-                            width={120}
-                            height={120}
+                            width="100%"
+                            height={100}
                             alt={`${product.name} thumbnail ${index}`}
                             onClick={() => setMainImage(image)}
                             className={`rounded-lg border-2 cursor-pointer object-cover ${mainImage === image
@@ -644,9 +744,6 @@ const ProductDetail: React.FC = () => {
                               }`}
                             preview={{ src: image }}
                           />
-                          <div className="absolute top-1 left-1 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
-                            {index + 1}
-                          </div>
                           <div className="absolute bottom-1 left-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
                             Chính
                           </div>
@@ -657,11 +754,11 @@ const ProductDetail: React.FC = () => {
                     {/* Ảnh phụ */}
                     {product.additionalImages?.length ? (
                       product.additionalImages.map((image, index) => (
-                        <div key={`additional-${index}`} className="relative group flex-shrink-0">
+                        <div key={`additional-${index}`} className="relative group">
                           <Image
                             src={image}
-                            width={120}
-                            height={120}
+                            width="100%"
+                            height={100}
                             alt={`Additional image ${index + 1}`}
                             className="rounded-lg border border-gray-200 object-cover"
                             preview={{
@@ -696,7 +793,7 @@ const ProductDetail: React.FC = () => {
                     
                     {/* Nếu không có ảnh nào */}
                     {(!product.images?.length && !product.additionalImages?.length) && (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="col-span-full text-center py-8 text-gray-500">
                         <FileImageOutlined className="text-4xl mb-2" />
                         <p>Chưa có ảnh nào</p>
                         <Button
@@ -713,48 +810,6 @@ const ProductDetail: React.FC = () => {
                 </Image.PreviewGroup>
               </div>
             </Card>
-            <Card className="shadow-md rounded-lg">
-              <Title level={4} className="!mb-4">
-                Trạng thái
-              </Title>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <InfoItem label="Hiển thị">
-                    <Tag
-                      icon={
-                        product.isActive ? (
-                          <CheckCircleOutlined />
-                        ) : (
-                          <CloseCircleOutlined />
-                        )
-                      }
-                      color={product.isActive ? "success" : "error"}
-                    >
-                      {product.isActive ? "Đang bán" : "Ngừng bán"}
-                    </Tag>
-                  </InfoItem>
-                </Col>
-                <Col span={12}>
-                  <InfoItem label="Nổi bật">
-                    <Tag color={product.isFeatured ? "gold" : "default"}>
-                      {product.isFeatured ? "Nổi bật" : "Bình thường"}
-                    </Tag>
-                  </InfoItem>
-                </Col>
-                <Col span={12}>
-                  <InfoItem label="Tồn kho">
-                    <Tag color={product.stock > 0 ? "success" : "error"}>
-                      {product.stock > 0
-                        ? `Còn hàng (${product.stock})`
-                        : "Hết hàng"}
-                    </Tag>
-                  </InfoItem>
-                </Col>
-                <Col span={12}>
-                  <InfoItem label="SKU">{product.sku || "N/A"}</InfoItem>
-                </Col>
-              </Row>
-            </Card>
           </Space>
         </Col>
 
@@ -768,107 +823,114 @@ const ProductDetail: React.FC = () => {
                   key: "1",
                   label: "Tổng quan",
                   children: (
-                    <div className="space-y-6">
-                      <Row gutter={[16, 16]}>
-                        <Col xs={24} sm={12}>
-                          <InfoItem label="Danh mục">
-                            <Tag color="blue">{categoryName}</Tag>
-                          </InfoItem>
-                          <InfoItem label="Thương hiệu">
-                            <Tag color="geekblue">{brandName}</Tag>
-                          </InfoItem>
-                          <InfoItem label="SKU">
-                            {product.sku || "N/A"}
-                          </InfoItem>
-                          <InfoItem label="Giá gốc">
-                            {formatPrice(product.price)}
-                          </InfoItem>
-                          <InfoItem label="Giá sale">
-                            {product.salePrice && product.salePrice < product.price ? (
-                              <Space>
-                                <Text type="danger" strong>
-                                  {formatPrice(product.salePrice)}
-                                </Text>
-                                <Tag color="red">
-                                  -{Math.round(((product.price - product.salePrice) / product.price) * 100)}%
-                                </Tag>
-                              </Space>
-                            ) : (
-                              "Không có"
-                            )}
-                          </InfoItem>
-                          <InfoItem label="Tồn kho tổng">
-                            <Tag color={product.stock > 0 ? "success" : "error"}>
-                              {product.stock > 0 ? `Còn hàng (${product.stock})` : "Hết hàng"}
-                            </Tag>
-                          </InfoItem>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                          <InfoItem label="Bảo hành">
-                            {product.warranty
-                              ? `${product.warranty} tháng`
-                              : "N/A"}
-                          </InfoItem>
-                          <InfoItem label="Trạng thái hiển thị">
-                            <Tag
-                              icon={product.isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                              color={product.isActive ? "success" : "error"}
-                            >
-                              {product.isActive ? "Đang bán" : "Ngừng bán"}
-                            </Tag>
-                          </InfoItem>
-                          <InfoItem label="Trạng thái nổi bật">
-                            <Tag color={product.isFeatured ? "gold" : "default"}>
-                              {product.isFeatured ? "Nổi bật" : "Bình thường"}
-                            </Tag>
-                          </InfoItem>
-                          <InfoItem label="Tags">
-                            {product.tags?.length ? (
-                              product.tags.map((tag) => (
-                                <Tag key={tag}>{tag}</Tag>
-                              ))
-                            ) : (
-                              <Text type="secondary">
-                                Không có thẻ tag
-                              </Text>
-                            )}
-                          </InfoItem>
-                        </Col>
-                      </Row>
-                      <Divider />
-                      <Title level={5}>Mô tả</Title>
-                      <div className="text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
-                        {product.description ||
-                          "Chưa có mô tả cho sản phẩm này."}
+                    <div className="flex flex-col h-full">
+                      {/* Phần thông tin cơ bản */}
+                      <div className="space-y-6 flex-shrink-0">
+                        <Row gutter={[16, 16]}>
+                          <Col xs={24} sm={12}>
+                            <InfoItem label="Danh mục">
+                              <Tag color="blue">{categoryName}</Tag>
+                            </InfoItem>
+                            <InfoItem label="Thương hiệu">
+                              <Tag color="geekblue">{brandName}</Tag>
+                            </InfoItem>
+                          </Col>
+                          <Col xs={24} sm={12}>
+                            <InfoItem label="Bảo hành">
+                              {product.warranty
+                                ? `${product.warranty} tháng`
+                                : "N/A"}
+                            </InfoItem>
+                            <InfoItem label="SKU">
+                              {product.sku || "N/A"}
+                            </InfoItem>
+                          </Col>
+                        </Row>
+                        <Divider />
+                      </div>
+
+                      {/* Phần mô tả - chiếm không gian còn lại */}
+                      <div className="flex-1 flex flex-col">
+                        <Title level={5}>Mô tả</Title>
+                        <div className="text-base text-gray-700 leading-relaxed flex-1">
+                          {(() => {
+                            const description = product.description || "Chưa có mô tả cho sản phẩm này.";
+                            const isLong = description.length > 50;
+                            const truncatedDescription = isLong ? description.substring(0, 50) + "..." : description;
+                            
+                            return (
+                              <div>
+                                <div className="whitespace-pre-wrap">{truncatedDescription}</div>
+                                {isLong && (
+                                  <Button
+                                    type="link"
+                                    size="small"
+                                    onClick={handleShowDescriptionModal}
+                                    className="p-0 h-auto text-blue-500 hover:text-blue-700 mt-2"
+                                  >
+                                    Xem thêm...
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
                       
-                      {/* Thông số kỹ thuật nếu có */}
-                      {Object.keys(mergedSpecifications).length > 0 && (
-                        <>
-                          <Divider />
-                          <Title level={5}>Thông số kỹ thuật</Title>
-                          <Table
-                            dataSource={Object.entries(mergedSpecifications).map(
-                              ([key, value]) => ({
-                                key,
-                                value,
-                              })
-                            )}
-                            columns={[
-                              {
-                                title: "Thông số",
-                                dataIndex: "key",
-                                key: "key",
-                                width: "40%",
-                              },
-                              { title: "Giá trị", dataIndex: "value", key: "value" },
-                            ]}
-                            pagination={false}
-                            size="small"
-                            className="border rounded-lg"
-                          />
-                        </>
-                      )}
+                      {/* Khối trạng thái - luôn ở dưới cùng */}
+                      <div className="mt-6 flex-shrink-0">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Tồn kho tổng */}
+                            <div className="text-center">
+                              <div className="text-sm text-gray-600 mb-2">Tồn kho tổng</div>
+                              <Tag 
+                                color={getTotalStock(product) > 0 ? "success" : "error"}
+                                className="text-base px-4 py-2"
+                              >
+                                {getTotalStock(product) > 0 ? `Còn hàng (${getTotalStock(product)})` : "Hết hàng"}
+                              </Tag>
+                            </div>
+                            
+                            {/* Trạng thái hiển thị */}
+                            <div className="text-center">
+                              <div className="text-sm text-gray-600 mb-2">Trạng thái hiển thị</div>
+                              <Tag
+                                icon={product.isActive ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                                color={product.isActive ? "success" : "error"}
+                                className="text-base px-4 py-2"
+                              >
+                                {product.isActive ? "Đang bán" : "Ngừng bán"}
+                              </Tag>
+                            </div>
+                            
+                            {/* Trạng thái nổi bật */}
+                            <div className="text-center">
+                              <div className="text-sm text-gray-600 mb-2">Trạng thái nổi bật</div>
+                              <Tag 
+                                color={product.isFeatured ? "gold" : "default"}
+                                className="text-base px-4 py-2"
+                              >
+                                {product.isFeatured ? "Nổi bật" : "Bình thường"}
+                              </Tag>
+                            </div>
+                            
+                            {/* Tags */}
+                            <div className="text-center">
+                              <div className="text-sm text-gray-600 mb-2">Tags</div>
+                              <div className="flex flex-wrap justify-center gap-1">
+                                {product.tags?.length ? (
+                                  product.tags.map((tag) => (
+                                    <Tag key={tag} className="text-sm px-2 py-1">{tag}</Tag>
+                                  ))
+                                ) : (
+                                  <Text type="secondary" className="text-sm">Không có</Text>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ),
                 },
@@ -904,7 +966,18 @@ const ProductDetail: React.FC = () => {
                           columns={variantColumns}
                           dataSource={product.variants}
                           rowKey="_id"
-                          pagination={false}
+                          pagination={{
+                            current: variantPage,
+                            pageSize: variantPageSize,
+                            total: product.variants.length,
+                            showSizeChanger: true,
+                            showQuickJumper: true,
+                            showTotal: (total, range) => 
+                              `${range[0]}-${range[1]} của ${total} biến thể`,
+                            pageSizeOptions: ['5', '10', '20', '50'],
+                            onChange: handleVariantPageChange,
+                            onShowSizeChange: handleVariantPageChange,
+                          }}
                           size="small"
                           scroll={{ x: 800 }}
                         />
@@ -1032,6 +1105,184 @@ const ProductDetail: React.FC = () => {
               <Text type="secondary" className="text-xs block">
                 • Định dạng: JPG, PNG, JPEG (tối đa 5MB/ảnh)
               </Text>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal cập nhật số lượng tồn kho */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2">
+            <EditOutlined className="text-blue-600" />
+            <span>Cập nhật số lượng tồn kho</span>
+          </div>
+        }
+        open={showStockModal}
+        onCancel={handleCloseStockModal}
+        footer={null}
+        width={600}
+        className="stock-update-modal"
+      >
+        {selectedVariant && (
+          <div className="space-y-6">
+            {/* Thông tin biến thể */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-xl">
+                    {selectedVariant.name?.charAt(0) || "V"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-lg text-gray-800 mb-1 truncate" title={selectedVariant.name}>
+                    {selectedVariant.name}
+                  </div>
+                  <div className="text-sm text-gray-600 truncate" title={selectedVariant.sku || "N/A"}>
+                    SKU: {selectedVariant.sku || "N/A"}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                {/* Trạng thái */}
+                <div className="bg-white p-4 rounded-lg border shadow-sm">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-2 text-center">Trạng thái</div>
+                  <Tag color={selectedVariant.isActive ? "green" : "red"} className="text-base px-4 py-2 w-full justify-center">
+                    {selectedVariant.isActive ? "Hoạt động" : "Tạm dừng"}
+                  </Tag>
+                </div>
+
+                {/* Tồn kho hiện tại */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200">
+                  <div className="text-xs text-green-600 uppercase tracking-wide mb-2 text-center">Tồn kho hiện tại</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">📦</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-700">{selectedVariant.stock}</div>
+                      <div className="text-xs text-green-600">sản phẩm</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Phần cập nhật số lượng */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
+                <span className="text-lg font-semibold text-gray-800">Cập nhật tồn kho</span>
+              </div>
+              
+              {/* Input số lượng mới */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200">
+                <div className="text-center mb-4">
+                  <div className="text-sm text-blue-600 uppercase tracking-wide mb-2">Nhập số lượng mới</div>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newStockValue}
+                    onChange={(e) => setNewStockValue(parseInt(e.target.value) || 0)}
+                    className="text-xl font-semibold text-center"
+                    size="large"
+                    placeholder="Nhập số lượng..."
+                  />
+                </div>
+              </div>
+
+              {/* Hiển thị thay đổi */}
+              {newStockValue !== selectedVariant.stock && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">⚡</span>
+                      </div>
+                      <span className="text-sm font-medium text-amber-700">Thay đổi</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-3xl font-bold ${newStockValue > selectedVariant.stock ? "text-green-600" : "text-red-600"}`}>
+                        {newStockValue > selectedVariant.stock ? "+" : ""}{newStockValue - selectedVariant.stock}
+                      </span>
+                      <div className="text-right">
+                        <div className={`text-sm font-medium ${newStockValue > selectedVariant.stock ? "text-green-600" : "text-red-600"}`}>
+                          {newStockValue > selectedVariant.stock ? "Tăng" : "Giảm"}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {newStockValue > selectedVariant.stock ? "Bổ sung kho" : "Trừ kho"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nút hành động */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  onClick={handleCloseStockModal}
+                  size="large"
+                  className="px-6"
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<SaveOutlined />}
+                  loading={savingStock === selectedVariant._id}
+                  onClick={handleSaveStockModal}
+                  className="admin-primary-button px-6"
+                  disabled={newStockValue === selectedVariant.stock}
+                >
+                  Lưu thay đổi
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal xem text đầy đủ */}
+      <Modal
+        title={modalText.title}
+        open={showTextModal}
+        onCancel={handleCloseTextModal}
+        footer={[
+          <Button key="close" onClick={handleCloseTextModal}>
+            Đóng
+          </Button>
+        ]}
+        width={400}
+        centered
+      >
+        <div className="p-4">
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <div className="text-sm text-gray-600 mb-2">{modalText.title}:</div>
+            <div className="font-mono text-base break-all">{modalText.content}</div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal xem mô tả đầy đủ */}
+      <Modal
+        title="Mô tả sản phẩm"
+        open={showDescriptionModal}
+        onCancel={handleCloseDescriptionModal}
+        footer={[
+          <Button key="close" onClick={handleCloseDescriptionModal}>
+            Đóng
+          </Button>
+        ]}
+        width={600}
+        centered
+      >
+        <div className="p-4">
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <div className="text-base text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {product?.description || "Chưa có mô tả cho sản phẩm này."}
             </div>
           </div>
         </div>

@@ -468,7 +468,7 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Sản phẩm biến thể</h3>
         <div className="flex gap-2">
-          <Button type="primary" icon={<FaPlus />} onClick={addVariant}>
+          <Button type="primary" className="admin-primary-button" icon={<FaPlus />} onClick={addVariant}>
             Thêm biến thể
           </Button>
         </div>

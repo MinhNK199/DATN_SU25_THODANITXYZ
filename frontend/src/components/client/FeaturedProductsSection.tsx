@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import EnhancedProductCard from './EnhancedProductCard';
+import ProductCard from './ProductCard';
 
 interface Product {
   _id: string;
@@ -22,6 +22,7 @@ interface Product {
   stock: number;
   variants?: any[];
   isFeatured?: boolean;
+  createdAt?: string;
 }
 
 const FeaturedProductsSection: React.FC = () => {
@@ -87,26 +88,36 @@ const FeaturedProductsSection: React.FC = () => {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {featuredProducts.slice(0, 10).map((product) => {
-            // Map product data to ProductCard props
-            const mappedProduct = {
-              _id: product._id,
-              name: product.name,
-              price: product.salePrice || product.price,
-              originalPrice: product.salePrice ? product.price : undefined,
-              image: product.image || (product.images && product.images.length > 0 ? product.images[0] : ''),
-              brand: product.brand,
-              category: product.category,
-              rating: product.rating || product.averageRating || 0,
-              reviewCount: product.reviewCount || product.numReviews || 0,
-              discount: product.salePrice ? Math.round(100 - (product.salePrice / product.price) * 100) : undefined,
-              isNew: product.isNew || false,
-              isHot: product.isHot || false,
-              stock: product.stock || 0,
-              variants: product.variants || [],
-            };
-            return <EnhancedProductCard key={mappedProduct._id} product={mappedProduct} />;
-          })}
+          {featuredProducts
+            .filter(product => product.isFeatured === true) // Chỉ hiển thị sản phẩm nổi bật
+            .slice(0, 10)
+            .map((product) => {
+              // Kiểm tra sản phẩm được tạo trong vòng 3 ngày gần nhất
+              const isRecentlyAdded = product.createdAt && 
+                new Date().getTime() - new Date(product.createdAt).getTime() <= 3 * 24 * 60 * 60 * 1000;
+              
+              // Map product data to ProductCard props
+              const mappedProduct = {
+                _id: product._id,
+                name: product.name,
+                price: product.price,
+                salePrice: product.salePrice,
+                originalPrice: product.originalPrice,
+                image: product.image || (product.images && product.images.length > 0 ? product.images[0] : ''),
+                images: product.images,
+                brand: product.brand,
+                category: product.category,
+                rating: product.rating || product.averageRating || 0,
+                reviewCount: product.reviewCount || product.numReviews || 0,
+                discount: product.discount,
+                isNew: isRecentlyAdded || false, // Tự động dựa trên thời gian tạo
+                isHot: true, // Tự động HOT vì đã được check nổi bật
+                stock: product.stock || 0,
+                variants: product.variants || [],
+                createdAt: product.createdAt,
+              };
+              return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
+            })}
         </div>
 
         {/* Show more button */}

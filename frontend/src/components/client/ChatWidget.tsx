@@ -237,6 +237,7 @@ const ChatWidget: React.FC<ChatWidgetProps> = ({ className = '' }) => {
           icon={<MessageCircle size={24} />}
           onClick={() => setIsOpen(true)}
           className="shadow-lg hover:shadow-xl transition-all duration-300 bg-blue-600 hover:bg-blue-700"
+          data-chat-trigger="true"
         />
       </div>
     );

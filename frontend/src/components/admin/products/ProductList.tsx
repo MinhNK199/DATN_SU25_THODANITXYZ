@@ -35,6 +35,7 @@ import {
   SearchOutlined,
   UndoOutlined,
   ExclamationCircleFilled,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
 import { debounce } from "lodash";
@@ -51,13 +52,12 @@ const formatPrice = (price: number) => {
 };
 
 const getTotalStock = (product: Product) => {
-  let total = product.stock || 0;
+  // Chỉ tính tổng stock từ các biến thể
   if (product.variants && product.variants.length > 0) {
-    for (const v of product.variants) {
-      total += v.stock || 0;
-    }
+    return product.variants.reduce((total, variant) => total + (variant.stock || 0), 0);
   }
-  return total;
+  // Nếu không có biến thể, trả về 0
+  return 0;
 };
 
 const ProductListPage: React.FC = () => {
@@ -197,8 +197,9 @@ const ProductListPage: React.FC = () => {
 
   // Client-side filtering for stock (backend doesn't support stock filtering yet)
   const filteredProducts = products.filter((p) => {
-    if (filterStock === "inStock") return p.stock > 0;
-    if (filterStock === "outOfStock") return p.stock === 0;
+    const totalStock = getTotalStock(p);
+    if (filterStock === "inStock") return totalStock > 0;
+    if (filterStock === "outOfStock") return totalStock === 0;
     return true;
   });
 
@@ -213,7 +214,7 @@ const ProductListPage: React.FC = () => {
       title: "Sản phẩm",
       dataIndex: "name",
       key: "name",
-      width: "30%",
+      width: "25%",
       render: (_, record) => {
         const mainImage = record.images && record.images.length > 0 ? record.images[0] : '/placeholder-product.png';
         
@@ -244,9 +245,6 @@ const ProductListPage: React.FC = () => {
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <Text strong>{record.name}</Text>
-              <Text type="secondary">
-                SKU: {record.sku || record.variants?.[0]?.sku || "N/A"}
-              </Text>
               {/* Hiển thị thông tin ảnh phụ */}
               {record.additionalImages && record.additionalImages.length > 0 && (
                 <Text type="secondary" style={{ fontSize: "11px" }}>
@@ -259,30 +257,36 @@ const ProductListPage: React.FC = () => {
       },
     },
     {
-      title: "Giá",
-      dataIndex: "price",
-      key: "price",
-      width: "15%",
-      render: (price, record) => (
-        <div>
-          {record.salePrice && record.salePrice < price ? (
-            <>
-              <Text delete type="secondary">
-                {formatPrice(price)}
-              </Text>
-              <br />
-              <Text type="danger" strong>
-                {formatPrice(record.salePrice)}
-              </Text>
-            </>
-          ) : (
-            <Text strong>{formatPrice(price)}</Text>
-          )}
-        </div>
+      title: "SKU",
+      dataIndex: "sku",
+      key: "sku",
+      width: "12%",
+      render: (_, record) => (
+        <Text code>{record.sku || record.variants?.[0]?.sku || "N/A"}</Text>
       ),
     },
     {
-      title: "Kho hàng",
+      title: "Số lượng biến thể",
+      key: "variantCount",
+      align: "center",
+      width: "15%",
+      render: (_, record) => {
+        const variantCount = record.variants?.length || 0;
+        const totalVariantStock = getTotalStock(record);
+        return (
+          <div>
+            <Tag color="blue">
+              {variantCount} biến thể
+            </Tag>
+            <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>
+              Tổng: {totalVariantStock}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Tổng kho hàng",
       dataIndex: "stock",
       key: "stock",
       align: "center",
@@ -297,9 +301,22 @@ const ProductListPage: React.FC = () => {
       },
     },
     {
+      title: "Thương hiệu",
+      dataIndex: "brand",
+      key: "brand",
+      width: "12%",
+      render: (brand) =>
+        typeof brand === "object" && brand !== null
+          ? brand.name
+          : typeof brand === "string"
+            ? brand
+            : "N/A",
+    },
+    {
       title: "Danh mục",
       dataIndex: "category",
       key: "category",
+      width: "12%",
       render: (category) =>
         typeof category === "object" && category !== null
           ? category.name
@@ -330,6 +347,8 @@ const ProductListPage: React.FC = () => {
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
             <Button
+              type="primary"
+              className="admin-primary-button"
               icon={<EyeOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
@@ -339,6 +358,8 @@ const ProductListPage: React.FC = () => {
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button
+              type="primary"
+              className="admin-primary-button"
               icon={<EditOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
@@ -348,7 +369,8 @@ const ProductListPage: React.FC = () => {
           </Tooltip>
           <Tooltip title="Xóa (Thùng rác)">
             <Button
-              danger
+              type="primary"
+              className="admin-primary-button"
               icon={<DeleteOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
@@ -440,6 +462,16 @@ const ProductListPage: React.FC = () => {
                 value: brand._id,
               }))}
             />
+          </Col>
+          <Col xs={24} sm={12} md={3} lg={2}>
+            <Button 
+              onClick={() => fetchData()} 
+              icon={<ReloadOutlined />}
+              className="admin-primary-button"
+              style={{ width: "100%" }}
+            >
+              Làm mới
+            </Button>
           </Col>
           <Col xs={24} sm={12} md={5} lg={4}>
             <Select
