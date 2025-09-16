@@ -690,10 +690,12 @@ const SettingsPage: React.FC = () => {
               
               <div className="flex gap-3">
                 <Button
+                  type="primary"
+                  className="admin-primary-button"
                   icon={<ReloadOutlined />}
                   onClick={handleReset}
                   size="large"
-                  className="rounded-lg"
+                  className="admin-primary-button rounded-lg"
                 >
                   Khôi phục mặc định
                 </Button>

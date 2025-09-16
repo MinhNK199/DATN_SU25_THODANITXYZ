@@ -44,7 +44,7 @@ const AdminNotFound: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
           <button
             onClick={handleGoBack}
-            className="flex items-center px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors shadow-lg"
+            className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg font-medium transition-all duration-200 shadow-lg"
           >
             <FaArrowLeft className="w-4 h-4 mr-2" />
             Quay lại

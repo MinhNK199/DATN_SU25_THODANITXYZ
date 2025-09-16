@@ -140,6 +140,8 @@ const VariantDetail: React.FC = () => {
           <Col xs={24} sm={6} className="text-right mt-4 sm:mt-0">
             <Space direction="horizontal" size="middle" className="flex-wrap">
               <Button
+                type="primary"
+                className="admin-primary-button"
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate("/admin/variants")}
               >
@@ -154,7 +156,8 @@ const VariantDetail: React.FC = () => {
                 Chỉnh sửa
               </Button>
               <Button
-                danger
+                type="primary"
+                className="admin-primary-button"
                 icon={<DeleteOutlined />}
                 onClick={handleSoftDelete}
               >

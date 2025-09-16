@@ -361,7 +361,7 @@ const Contact: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 Gửi email cho chúng tôi và nhận phản hồi trong vòng 24 giờ
               </p>
-              <p className="text-lg font-semibold text-blue-600">support@electronstore.com</p>
+              <p className="text-lg font-semibold text-blue-600">support@techtrend.com</p>
             </div>
 
             <div className="text-center p-6 rounded-2xl bg-gray-50">

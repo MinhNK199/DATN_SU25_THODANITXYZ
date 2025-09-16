@@ -40,7 +40,7 @@ const Home: React.FC = () => {
                 <FaHeadset className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Hotline</h3>
-              <p className="text-gray-600">1900-xxxx</p>
+              <p className="text-gray-600">1900-1234</p>
               <p className="text-sm text-gray-500">24/7 hỗ trợ</p>
             </div>
             <div className="text-center">
@@ -48,7 +48,7 @@ const Home: React.FC = () => {
                 <FaGift className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Email</h3>
-              <p className="text-gray-600">support@example.com</p>
+              <p className="text-gray-600">support@techtrend.com</p>
               <p className="text-sm text-gray-500">Phản hồi trong 24h</p>
             </div>
             <div className="text-center">

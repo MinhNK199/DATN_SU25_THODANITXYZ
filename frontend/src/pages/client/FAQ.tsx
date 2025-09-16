@@ -11,8 +11,8 @@ const FAQ: React.FC = () => {
       icon: FaQuestionCircle,
       items: [
         {
-          question: 'ElectronStore là gì?',
-          answer: 'ElectronStore là một nhà bán lẻ điện tử trực tuyến cao cấp chuyên về smartphone, laptop, máy tính bảng và phụ kiện mới nhất từ các thương hiệu hàng đầu thế giới.'
+          question: 'TechTrend Store là gì?',
+          answer: 'TechTrend Store là một nhà bán lẻ điện tử trực tuyến cao cấp chuyên về smartphone, laptop, máy tính bảng và phụ kiện mới nhất từ các thương hiệu hàng đầu thế giới.'
         },
         {
           question: 'Làm thế nào để tạo tài khoản?',

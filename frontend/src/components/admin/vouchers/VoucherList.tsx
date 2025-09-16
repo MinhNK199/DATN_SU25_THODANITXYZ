@@ -81,9 +81,9 @@ const VoucherList: React.FC = () => {
         <h1 className="text-2xl font-bold text-gray-800">Quản lý Voucher</h1>
         <Button
           type="primary"
+          className="admin-primary-button"
           size="large"
           onClick={() => navigate("/admin/vouchers/add")}
-          className="bg-gradient-to-r from-blue-500 to-purple-500 border-none hover:from-blue-600 hover:to-purple-600 shadow-lg"
         >
           Thêm voucher
         </Button>
@@ -145,19 +145,19 @@ const VoucherList: React.FC = () => {
               <Space size="small">
                 <Button
                   type="primary"
+                  className="admin-primary-button"
                   size="small"
                   icon={<EyeOutlined />}
                   onClick={() => handleViewDetail(record)}
                   title="Xem chi tiết"
-                  className="bg-blue-500 hover:bg-blue-600 border-blue-500"
                 />
                 <Button
-                  type="default"
+                  type="primary"
+                  className="admin-primary-button"
                   size="small"
                   icon={<EditOutlined />}
                   onClick={() => handleEdit(record)}
                   title="Sửa"
-                  className="border-orange-500 text-orange-500 hover:bg-orange-50"
                 />
                 <Popconfirm
                   title="Tạm dừng voucher"
@@ -168,12 +168,11 @@ const VoucherList: React.FC = () => {
                   okButtonProps={{ className: "bg-yellow-500 hover:bg-yellow-600 border-yellow-500" }}
                 >
                   <Button
-                    type="default"
+                    type="primary"
+                    className="admin-primary-button"
                     size="small"
-                    danger
                     icon={<DeleteOutlined />}
                     title="Tạm dừng"
-                    className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
                   />
                 </Popconfirm>
                 <Popconfirm
@@ -188,11 +187,10 @@ const VoucherList: React.FC = () => {
                   }}
                 >
                   <Button
-                    type="default"
+                    type="primary"
+                    className="admin-primary-button"
                     size="small"
-                    danger
                     title="Xóa vĩnh viễn"
-                    className="border-red-500 text-red-600 hover:bg-red-50"
                   >
                     Xóa
                   </Button>
@@ -223,7 +221,7 @@ const VoucherList: React.FC = () => {
           <Button
             key="close"
             type="primary"
-            className="bg-gradient-to-r from-blue-500 to-purple-500 border-none hover:from-blue-600 hover:to-purple-600"
+            className="admin-primary-button"
             onClick={() => setDetailModalVisible(false)}
           >
             Đóng

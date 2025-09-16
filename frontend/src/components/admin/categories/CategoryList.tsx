@@ -207,6 +207,8 @@ const CategoryList: React.FC = () => {
         <Space size="middle">
           <Tooltip title="Xem chi tiết">
             <Button
+              type="primary"
+              className="admin-primary-button"
               icon={<EyeOutlined />}
               onClick={e => {
                 e.stopPropagation();
@@ -217,6 +219,8 @@ const CategoryList: React.FC = () => {
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Button
+              type="primary"
+              className="admin-primary-button"
               icon={<EditOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
@@ -226,7 +230,8 @@ const CategoryList: React.FC = () => {
           </Tooltip>
           <Tooltip title="Xóa (Chuyển vào thùng rác)">
             <Button
-              danger
+              type="primary"
+              className="admin-primary-button"
               icon={<DeleteOutlined />}
               onClick={(e) => {
                   e.stopPropagation();

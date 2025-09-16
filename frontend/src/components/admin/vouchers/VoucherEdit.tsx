@@ -356,7 +356,12 @@ const VoucherEdit: React.FC = () => {
             <Button type="primary" className="admin-primary-button" htmlType="submit" loading={loading}>
               Cập nhật voucher
             </Button>
-            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/admin/vouchers")}>
+            <Button 
+              type="primary"
+              className="admin-primary-button"
+              icon={<ArrowLeftOutlined />} 
+              onClick={() => navigate("/admin/vouchers")}
+            >
               Quay lại
             </Button>
           </Space>

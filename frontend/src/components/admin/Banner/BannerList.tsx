@@ -241,12 +241,17 @@ const getImageSrc = (image?: string) => {
           </Tooltip>
           <Tooltip title="Chỉnh sửa">
             <Link to={`/admin/banners/edit/${record._id}`}>
-              <Button type="default" icon={<FaEdit />} />
+              <Button 
+                type="primary" 
+                className="admin-primary-button"
+                icon={<FaEdit />} 
+              />
             </Link>
           </Tooltip>
           <Tooltip title="Xoá">
             <Button
-              danger
+              type="primary"
+              className="admin-primary-button"
               icon={<FaTrash />}
               onClick={() => handleHardDelete(record._id!)}
             />
@@ -323,9 +328,13 @@ const getImageSrc = (image?: string) => {
                 </Col>
                 <Col>
                   <Space>
-                    <Button onClick={() => setIsModalVisible(false)}>
+                    <Button 
+                      type="primary"
+                      className="admin-primary-button"
+                      onClick={() => setIsModalVisible(false)}
+                    >
                       Đóng
-</Button>
+                    </Button>
                     <Button
                       type="primary"
                       className="admin-primary-button"

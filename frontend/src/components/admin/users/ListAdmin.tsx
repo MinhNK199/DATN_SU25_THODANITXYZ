@@ -165,6 +165,8 @@ const Listadmin: React.FC = () => {
         <Space>
           <Tooltip title="Xem chi tiết">
             <Button
+              type="primary"
+              className="admin-primary-button"
               icon={<FaEye />}
               onClick={() => {
                 setSelectedUser(record);
@@ -183,7 +185,8 @@ const Listadmin: React.FC = () => {
           </Tooltip>
           <Tooltip title="Từ chối">
             <Button
-              danger
+              type="primary"
+              className="admin-primary-button"
               icon={<FaTimes />}
               onClick={() => handleApprove(record._id!, false)}
               disabled={record.adminRequestStatus !== "pending"}

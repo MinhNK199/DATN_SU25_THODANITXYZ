@@ -260,9 +260,9 @@ const OrderList: React.FC = () => {
           {record.status === 'pending' && (
             <Tooltip title="Xác nhận đơn hàng">
               <Button
-                type="default"
+                type="primary"
+                className="admin-primary-button"
                 onClick={() => handleConfirmOrder(record._id)}
-                style={{ backgroundColor: '#1890ff', borderColor: '#1890ff', color: 'white' }}
               >
                 ✅ Xác nhận
               </Button>
@@ -271,9 +271,9 @@ const OrderList: React.FC = () => {
           {(record.status === 'confirmed' || record.status === 'processing') && !record.shipper && (
             <Tooltip title="Phân công Shipper">
               <Button
-                type="default"
+                type="primary"
+                className="admin-primary-button"
                 onClick={() => handleAssignShipper(record._id, setAssigningOrderId, setShowAssignModal)}
-                style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
               >
                 🚚 Phân công
               </Button>

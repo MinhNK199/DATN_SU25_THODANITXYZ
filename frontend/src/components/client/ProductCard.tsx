@@ -60,8 +60,6 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [availableStock, setAvailableStock] = useState<number | null>(null);
-  const [stockLoading, setStockLoading] = useState(false);
   const { addToCart } = useCart();
   const { addToCompare, isInCompare, canAddToCompare } = useCompare();
   const [isFavorite, setIsFavorite] = useState(false);
@@ -78,22 +76,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     }).format(price);
   };
 
-  useEffect(() => {
-    const fetchAvailability = async () => {
-      try {
-        setStockLoading(true);
-        const availability = await cartApi.getProductAvailability(product._id);
-        setAvailableStock(availability.availableStock);
-      } catch (error) {
-        console.error("Error fetching product availability:", error);
-        setAvailableStock(getTotalStock(product));
-      } finally {
-        setStockLoading(false);
-      }
-    };
-
-    fetchAvailability();
-  }, [product._id, product.stock]);
+  // Không cần fetch availability nữa vì đã tính totalStock từ variants
 
   const openVariantModal = () => {
     setShowVariantModal(true);
@@ -236,34 +219,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   const getTotalStock = (product: any) => {
-    let total = product.stock || 0;
+    // Nếu có variants, tính tổng stock từ variants
     if (product.variants && product.variants.length > 0) {
+      let total = 0;
       for (const v of product.variants) {
         total += v.stock || 0;
       }
+      return total;
     }
-    return total;
+    // Nếu không có variants, dùng stock gốc
+    return product.stock || 0;
   };
 
+  const totalStock = getTotalStock(product);
+  const isOutOfStock = totalStock === 0;
+
   const getStockStatus = () => {
-    if (stockLoading) {
-      return <span className="text-gray-500 text-sm">Đang kiểm tra...</span>;
-    }
-    if (availableStock === null) {
-      return <span className="text-gray-500 text-sm">Còn hàng</span>;
-    }
-    if (availableStock === 0) {
+    if (totalStock === 0) {
       return <span className="text-red-500 text-sm font-medium">Hết hàng</span>;
     }
-    if (availableStock <= 5) {
+    if (totalStock <= 5) {
       return (
         <span className="text-orange-500 text-sm font-medium">Chỉ còn ít</span>
       );
     }
     return <span className="text-green-500 text-sm">Còn hàng</span>;
   };
-
-  const isOutOfStock = availableStock === 0;
 
   const bestPrice = product.variants && product.variants.length > 0
     ? Math.min(...product.variants.map((v: any) => v.salePrice && v.salePrice > 0 && v.salePrice < v.price ? v.salePrice : v.price))
