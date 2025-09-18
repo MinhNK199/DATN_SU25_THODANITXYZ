@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaArrowLeft, FaCheck, FaChevronDown, FaChevronUp } from "react-icons/fa";
 import { useCart } from "../../contexts/CartContext";
@@ -7,6 +7,10 @@ import { useToast } from "../../components/client/ToastContainer";
 import axios from "axios";
 import { createOrder, createMomoPayment } from "../../services/orderApi";
 import { getTaxConfig } from "../../services/cartApi";
+import { getAvailableCoupons, getUsedCoupons, applyCoupon, removeCoupon } from "../../services/couponApi";
+import { Coupon } from "../../interfaces/Coupon";
+import { Modal, Button, Input } from "antd";
+import { calculateDisplayPrice } from "../../utils/priceUtils";
 import ScrollToTop from "../../components/ScrollToTop";
 import CheckoutReview from "./CheckoutReview";
 
@@ -36,12 +40,101 @@ const CheckoutReviewPage: React.FC = () => {
   const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<any>(null);
+  
+  // Coupon states
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
+  const [isCouponModalVisible, setIsCouponModalVisible] = useState(false);
+  const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState("");
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
 
   const { state: cartState, removeOrderedItemsFromCart } = useCart();
   const { voucher } = useCheckout();
   const navigate = useNavigate();
   const { showSuccess, showError } = useToast();
   const location = useLocation();
+
+  // Load coupons function
+  const loadCoupons = useCallback(async () => {
+    try {
+      setLoadingCoupons(true);
+      console.log('🔄 Loading coupons for checkout...');
+
+      const [availableResponse, usedResponse] = await Promise.all([
+        getAvailableCoupons(),
+        getUsedCoupons()
+      ]);
+
+      console.log('✅ Available coupons response:', availableResponse);
+      setAvailableCoupons(availableResponse.coupons || []);
+    } catch (error: any) {
+      console.error('❌ Error loading coupons:', error);
+      setAvailableCoupons([]);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  }, []);
+
+  // Load coupons on component mount
+  useEffect(() => {
+    loadCoupons();
+  }, [loadCoupons]);
+
+  // Coupon handlers
+  const handleApplyDiscountCoupon = async (couponId: string) => {
+    console.log('🔍 handleApplyDiscountCoupon called with couponId:', couponId);
+
+    if (!couponId) {
+      console.log('❌ No couponId provided, setting appliedDiscountCoupon to null');
+      setAppliedDiscountCoupon(null);
+      return;
+    }
+
+    try {
+      console.log('🔍 Looking for coupon in availableCoupons:', availableCoupons.length, 'coupons available');
+      const coupon = availableCoupons.find(c => c._id === couponId);
+      console.log('🔍 Found coupon:', coupon);
+
+      if (!coupon) {
+        console.log('❌ Coupon not found in availableCoupons');
+        showError("Mã giảm giá không tồn tại");
+        return;
+      }
+
+      const selectedSubtotal = selectedCartItems
+        .reduce((sum, item) => sum + (calculateDisplayPrice(item) * item.quantity), 0);
+
+      console.log('🔍 Selected subtotal:', selectedSubtotal);
+
+      const minAmount = coupon.minAmount || coupon.minOrderValue || 0;
+      console.log('🔍 Min amount check:', selectedSubtotal, 'vs', minAmount);
+
+      if (selectedSubtotal < minAmount) {
+        console.log('❌ Subtotal too low:', selectedSubtotal, 'min required:', minAmount);
+        showError(`Đơn hàng tối thiểu ${formatPrice(minAmount)} để sử dụng mã này`);
+        return;
+      }
+
+      // Set applied coupon directly
+      console.log('✅ Setting appliedDiscountCoupon to:', coupon);
+      setAppliedDiscountCoupon(coupon);
+      showSuccess(`Đã áp dụng mã giảm giá "${coupon.name}"`);
+    } catch (error) {
+      console.log('❌ Error in handleApplyDiscountCoupon:', error);
+      showError("Có lỗi xảy ra khi áp dụng mã giảm giá");
+    }
+  };
+
+  const handleRemoveDiscountCoupon = async () => {
+    if (appliedDiscountCoupon) {
+      try {
+        setAppliedDiscountCoupon(null);
+        showSuccess("Đã hủy áp dụng mã giảm giá");
+      } catch {
+        showError("Có lỗi xảy ra khi hủy mã giảm giá");
+      }
+    }
+  };
 
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
@@ -395,10 +488,17 @@ const CheckoutReviewPage: React.FC = () => {
           navigate(`/checkout/failed?orderId=${res._id}&paymentMethod=vnpay&error=payment_error&amount=${orderData.totalPrice}`);
           return;
         }
-      } else {
+      } else if (formData.paymentMethod === "COD") {
         // ✅ COD - Chuyển đến trang CheckoutStatus
+        console.log("🚀 COD Payment - Redirecting to success page");
         navigate(
           `/checkout/status?orderId=${res._id}&paymentMethod=COD&status=success`
+        );
+      } else {
+        // ✅ Other payment methods - Chuyển đến trang CheckoutStatus
+        console.log("🚀 Other Payment - Redirecting to success page");
+        navigate(
+          `/checkout/status?orderId=${res._id}&paymentMethod=${formData.paymentMethod}&status=success`
         );
       }
     } catch (err: unknown) {
@@ -485,10 +585,15 @@ const CheckoutReviewPage: React.FC = () => {
 
   const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
   const totalDiscount = couponDiscount + voucherDiscount;
-  const subtotalAfterDiscount = subtotal - totalDiscount;
-  const shippingFee = subtotalAfterDiscount >= 10000000 ? 0 : 30000; // Đồng bộ với giỏ hàng: freeship từ 10tr
-  const taxPrice = subtotalAfterDiscount * taxRate;
-  const finalTotal = subtotalAfterDiscount + shippingFee + taxPrice;
+  
+  // Tính thuế trước khi áp dụng mã giảm giá
+  const taxPrice = subtotal * taxRate;
+  
+  // Tính phí vận chuyển dựa trên subtotal gốc (trước mã giảm giá)
+  const shippingFee = subtotal >= 10000000 ? 0 : 30000; // Đồng bộ với giỏ hàng: freeship từ 10tr
+  
+  // Tổng cuối cùng: (subtotal + thuế + vận chuyển) - mã giảm giá
+  const finalTotal = subtotal + taxPrice + shippingFee - totalDiscount;
 
   // Kiểm tra giới hạn COD (100 triệu)
   const COD_LIMIT = 100000000; // 100 triệu VND
@@ -738,6 +843,16 @@ const CheckoutReviewPage: React.FC = () => {
                           <span className="text-gray-700 text-sm">Tạm tính:</span>
                           <span className="font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                         </div>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                          <span className="text-gray-700 text-sm">Thuế VAT (8%):</span>
+                          <span className="font-semibold text-gray-900">{formatPrice(taxPrice)}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                          <span className="text-gray-700 text-sm">Phí vận chuyển:</span>
+                          <span className={`font-semibold ${shippingFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                            {shippingFee === 0 ? "Miễn phí" : formatPrice(shippingFee)}
+                          </span>
+                        </div>
                         {couponDiscount > 0 && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-200">
                             <span className="text-green-700 text-sm">Giảm giá coupon:</span>
@@ -750,16 +865,6 @@ const CheckoutReviewPage: React.FC = () => {
                             <span className="font-semibold text-green-600">-{formatPrice(voucherDiscount)}</span>
                           </div>
                         )}
-                        <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                          <span className="text-gray-700 text-sm">Phí vận chuyển:</span>
-                          <span className={`font-semibold ${shippingFee === 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                            {shippingFee === 0 ? "Miễn phí" : formatPrice(shippingFee)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                          <span className="text-gray-700 text-sm">Thuế VAT (8%):</span>
-                          <span className="font-semibold text-gray-900">{formatPrice(taxPrice)}</span>
-                        </div>
 
                         <div className="pt-3">
                           <div className="flex justify-between items-center">
@@ -769,6 +874,63 @@ const CheckoutReviewPage: React.FC = () => {
                             </span>
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Coupon Section */}
+                    <div className="mb-6">
+                      <h4 className="text-base font-bold text-gray-800 mb-3 flex items-center">
+                        <span className="mr-2">🎫</span>
+                        Mã khuyến mãi
+                      </h4>
+                      <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-4 border border-orange-200">
+                        {appliedDiscountCoupon ? (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <span className="text-lg">✅</span>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-green-800">{appliedDiscountCoupon.name}</p>
+                                <p className="text-sm text-green-600">
+                                  {appliedDiscountCoupon.type === 'percentage' 
+                                    ? `Giảm ${appliedDiscountCoupon.discount || appliedDiscountCoupon.value}%`
+                                    : `Giảm ${formatPrice(appliedDiscountCoupon.discount || appliedDiscountCoupon.value)}`
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-semibold text-green-600">
+                                -{formatPrice(couponDiscount)}
+                              </span>
+                              <button
+                                onClick={handleRemoveDiscountCoupon}
+                                className="text-red-500 hover:text-red-700 text-sm font-medium"
+                              >
+                                Hủy
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <span className="text-lg">🎫</span>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-orange-800">Chưa áp dụng mã khuyến mãi</p>
+                                <p className="text-sm text-orange-600">Tiết kiệm thêm với mã giảm giá</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setIsCouponModalVisible(true)}
+                              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Chọn mã
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -954,6 +1116,159 @@ const CheckoutReviewPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Coupon Selection Modal */}
+      <Modal
+        title={
+          <div className="flex justify-between items-center">
+            <span className="text-lg font-semibold">Chọn mã giảm giá</span>
+            <a href="#" className="text-orange-500 text-sm hover:underline">Hỗ trợ</a>
+          </div>
+        }
+        open={isCouponModalVisible}
+        onCancel={() => {
+          setIsCouponModalVisible(false);
+          setSelectedCouponId(null);
+        }}
+        afterOpenChange={(open) => {
+          if (open) {
+            // Khi mở modal, set coupon hiện tại đã được chọn (nếu có)
+            setSelectedCouponId(appliedDiscountCoupon?._id || null);
+          }
+        }}
+        footer={[
+          <Button key="back" onClick={() => setIsCouponModalVisible(false)}>
+            TRỞ LẠI
+          </Button>,
+          <Button
+            key="ok"
+            type="primary"
+            className="bg-orange-500 hover:bg-orange-600 border-orange-500"
+            onClick={() => {
+              console.log('🔍 Modal OK button clicked');
+              console.log('🔍 selectedCouponId:', selectedCouponId);
+              console.log('🔍 appliedDiscountCoupon before:', appliedDiscountCoupon);
+
+              if (selectedCouponId) {
+                const coupon = availableCoupons.find(c => c._id === selectedCouponId);
+                console.log('🔍 Found coupon in modal:', coupon);
+                if (coupon) {
+                  handleApplyDiscountCoupon(selectedCouponId);
+                  showSuccess("Áp dụng mã giảm giá thành công!");
+                }
+              } else {
+                // Nếu không chọn coupon nào, hủy áp dụng coupon hiện tại
+                if (appliedDiscountCoupon) {
+                  handleRemoveDiscountCoupon();
+                  showSuccess("Đã hủy áp dụng mã giảm giá");
+                }
+              }
+              setIsCouponModalVisible(false);
+              setSelectedCouponId(null);
+            }}
+          >
+            OK
+          </Button>,
+        ]}
+        width={600}
+        className="coupon-modal"
+      >
+        <div className="space-y-4">
+          {/* Manual Input */}
+          <div className="flex space-x-2">
+            <Input
+              placeholder="Mã Voucher"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              type="primary"
+              className="bg-orange-500 hover:bg-orange-600 border-orange-500"
+              onClick={() => {
+                if (promoCode.trim()) {
+                  const coupon = availableCoupons.find(c => c.code.toLowerCase() === promoCode.toLowerCase());
+                  if (coupon) {
+                    handleApplyDiscountCoupon(coupon._id);
+                    showSuccess("Áp dụng mã giảm giá thành công!");
+                    setIsCouponModalVisible(false);
+                    setPromoCode("");
+                  } else {
+                    showError("Mã giảm giá không hợp lệ");
+                  }
+                } else {
+                  showError("Vui lòng nhập mã giảm giá");
+                }
+              }}
+            >
+              ÁP DỤNG
+            </Button>
+          </div>
+
+          {/* Discount Vouchers */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-800">Mã Giảm Giá</h3>
+              <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                Chỉ được chọn 1 voucher/1 đơn
+              </span>
+            </div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {loadingCoupons ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto"></div>
+                  <p className="text-sm text-gray-500 mt-2">Đang tải mã giảm giá...</p>
+                </div>
+              ) : availableCoupons.length > 0 ? (
+                availableCoupons.map((coupon) => (
+                  <div
+                    key={coupon._id}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedCouponId === coupon._id
+                        ? 'border-orange-500 bg-orange-50'
+                        : 'border-gray-200 hover:border-orange-300'
+                    }`}
+                    onClick={() => setSelectedCouponId(selectedCouponId === coupon._id ? null : coupon._id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-semibold text-gray-800">{coupon.name}</h4>
+                          <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
+                            {coupon.type === 'percentage' ? 'Phần trăm' : 'Cố định'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{coupon.description}</p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                          <span>Mã: {coupon.code}</span>
+                          {coupon.minAmount && (
+                            <span>Đơn tối thiểu: {formatPrice(coupon.minAmount)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-orange-600">
+                          {coupon.type === 'percentage' 
+                            ? `${coupon.discount || coupon.value}%`
+                            : formatPrice(coupon.discount || coupon.value)
+                          }
+                        </div>
+                        <div className="text-xs text-gray-500">Giảm giá</div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-gray-400 text-4xl mb-2">🎫</div>
+                  <p className="text-gray-600">Không có mã giảm giá khả dụng</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Modal>
+
       <ScrollToTop />
     </div>
   );

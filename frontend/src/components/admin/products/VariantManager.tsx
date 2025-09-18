@@ -382,10 +382,10 @@ const VariantManager: React.FC<VariantManagerProps> = ({ variants, onVariantsCha
             const formData = new FormData();
             formData.append("image", file.originFileObj);
             
-            console.log("📸 Sending request to: http://localhost:8000/api/upload/");
+            console.log("📸 Sending request to: http://localhost:8000/api/upload/image");
             console.log("📸 Token exists:", !!token);
             
-            const response = await fetch("http://localhost:8000/api/upload/", {
+            const response = await fetch("http://localhost:8000/api/upload/image", {
               method: "POST",
               headers: { Authorization: `Bearer ${token}` },
               body: formData,

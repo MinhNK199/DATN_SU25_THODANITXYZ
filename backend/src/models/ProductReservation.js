@@ -11,6 +11,10 @@ const productReservationSchema = new mongoose.Schema({
         ref: 'User',
         required: [true, 'Người dùng không được để trống'],
     },
+    variantId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false, // Optional vì có thể không có variant
+    },
     quantity: {
         type: Number,
         required: [true, 'Số lượng không được để trống'],
@@ -40,16 +44,27 @@ const productReservationSchema = new mongoose.Schema({
 productReservationSchema.index({ product: 1, isActive: 1 });
 productReservationSchema.index({ user: 1, isActive: 1 });
 productReservationSchema.index({ expiresAt: 1 });
+productReservationSchema.index({ product: 1, variantId: 1, isActive: 1 });
 
 // Static method để lấy tổng số lượng đã được đặt trước của một sản phẩm
-productReservationSchema.statics.getReservedQuantity = async function (productId) {
+productReservationSchema.statics.getReservedQuantity = async function (productId, variantId = null) {
+    const matchCondition = {
+        product: new mongoose.Types.ObjectId(productId),
+        isActive: true,
+        expiresAt: { $gt: new Date() }
+    };
+    
+    // Nếu có variantId, chỉ tính reservation của variant đó
+    if (variantId) {
+        matchCondition.variantId = new mongoose.Types.ObjectId(variantId);
+    } else {
+        // Nếu không có variantId, chỉ tính reservation không có variantId
+        matchCondition.variantId = { $exists: false };
+    }
+
     const result = await this.aggregate([
         {
-            $match: {
-                product: new mongoose.Types.ObjectId(productId),
-                isActive: true,
-                expiresAt: { $gt: new Date() }
-            }
+            $match: matchCondition
         },
         {
             $group: {
@@ -89,11 +104,12 @@ productReservationSchema.statics.cleanupExpiredReservations = async function () 
 };
 
 // Static method để tạo reservation mới
-productReservationSchema.statics.createReservation = async function (productId, userId, quantity) {
-    // Kiểm tra xem user đã có reservation cho sản phẩm này chưa
+productReservationSchema.statics.createReservation = async function (productId, userId, quantity, variantId = null) {
+    // Kiểm tra xem user đã có reservation cho sản phẩm này chưa (cùng variant)
     const existingReservation = await this.findOne({
         product: productId,
         user: userId,
+        variantId: variantId || { $exists: false },
         isActive: true
     });
 
@@ -108,7 +124,8 @@ productReservationSchema.statics.createReservation = async function (productId, 
         return await this.create({
             product: productId,
             user: userId,
-            quantity: quantity
+            quantity: quantity,
+            variantId: variantId || undefined
         });
     }
 };

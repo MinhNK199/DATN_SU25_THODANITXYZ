@@ -834,7 +834,28 @@ export const addProductVariant = async(req, res) => {
         } else if (req.files && Array.isArray(req.files)) {
             variantImages = req.files.map(f => `/uploads/images/${f.filename}`);
         } else if (req.body.images) {
-            variantImages = req.body.images;
+            // Validate existing images
+            const fs = await import('fs');
+            const path = await import('path');
+            const validImages = [];
+            
+            for (const imageUrl of req.body.images) {
+                // Extract filename from URL
+                const filename = imageUrl.split('/').pop();
+                const filePath = path.join(process.cwd(), 'uploads', 'images', filename);
+                
+                if (fs.existsSync(filePath)) {
+                    validImages.push(imageUrl);
+                } else {
+                    console.warn(`Image not found: ${filename}`);
+                }
+            }
+            variantImages = validImages;
+        }
+
+        // Fallback to placeholder if no valid images
+        if (variantImages.length === 0) {
+            variantImages = ['/placeholder-product.png'];
         }
 
         const newVariant = processVariantData({

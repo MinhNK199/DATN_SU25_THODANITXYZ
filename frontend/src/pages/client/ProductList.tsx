@@ -51,6 +51,7 @@ const ProductList: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const search = params.get('search') || '';
     const category = params.get('category') || '';
+    const brand = params.get('brand') || '';
     
     if (search) {
       debouncedSearch(search);
@@ -69,7 +70,19 @@ const ProductList: React.FC = () => {
       // Reset filter nếu không có category trong URL
       setFilterCategory('');
     }
-  }, [location.search, debouncedSearch, categories]); // Thêm categories vào dependency
+
+    // Nếu có brand từ URL, sử dụng trực tiếp
+    if (brand) {
+      const foundBrand = brands.find(b => b._id === brand);
+      setFilterBrand(brand);
+      setPage(1); // Reset về trang 1 khi có brand mới
+      setSearchTerm(''); // Clear search term khi có brand
+      setFilterCategory(''); // Clear category filter khi có brand
+    } else {
+      // Reset filter nếu không có brand trong URL
+      setFilterBrand('');
+    }
+  }, [location.search, debouncedSearch, categories, brands]); // Thêm brands vào dependency
 
   // Update active filters
   useEffect(() => {
@@ -199,6 +212,11 @@ const ProductList: React.FC = () => {
                       const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
                       return selectedCategory ? selectedCategory.name : 'Danh mục sản phẩm';
                     })() :
+                    filterBrand ?
+                    (() => {
+                      const selectedBrand = brands.find(brand => brand._id === filterBrand);
+                      return selectedBrand ? `Thương hiệu ${selectedBrand.name}` : 'Thương hiệu sản phẩm';
+                    })() :
                     'Tất cả sản phẩm'
                   }
                 </h1>
@@ -208,6 +226,13 @@ const ProductList: React.FC = () => {
                       const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
                       return selectedCategory ? 
                         `Khám phá ${total.toLocaleString()} sản phẩm trong danh mục "${selectedCategory.name}"` :
+                        `Khám phá ${total.toLocaleString()} sản phẩm`;
+                    })() :
+                    filterBrand ?
+                    (() => {
+                      const selectedBrand = brands.find(brand => brand._id === filterBrand);
+                      return selectedBrand ? 
+                        `Khám phá ${total.toLocaleString()} sản phẩm của thương hiệu "${selectedBrand.name}"` :
                         `Khám phá ${total.toLocaleString()} sản phẩm`;
                     })() :
                     `Khám phá ${total.toLocaleString()} sản phẩm chất lượng cao`
@@ -230,6 +255,23 @@ const ProductList: React.FC = () => {
                   >
                     <FaTimes className="w-4 h-4" />
                     Xóa bộ lọc danh mục
+                  </button>
+                )}
+                {filterBrand && (
+                  <button
+                    onClick={() => {
+                      setFilterBrand('');
+                      setPage(1);
+                      // Update URL to remove brand parameter
+                      const params = new URLSearchParams(location.search);
+                      params.delete('brand');
+                      const newUrl = params.toString() ? `?${params.toString()}` : '/products';
+                      window.history.replaceState({}, '', newUrl);
+                    }}
+                    className="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <FaTimes className="w-4 h-4" />
+                    Xóa bộ lọc thương hiệu
                   </button>
                 )}
                 <div className="bg-blue-50 rounded-2xl px-4 py-2">
@@ -333,6 +375,11 @@ const ProductList: React.FC = () => {
                 <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                   Thương hiệu
+                  {filterBrand && (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                      Đã chọn
+                    </span>
+                  )}
                 </h3>
                 <select
                   className="w-full px-3 py-2 border-0 rounded-lg focus:outline-none focus:ring-1 focus:ring-green-500 text-sm text-gray-700 bg-white shadow-sm"
@@ -344,6 +391,14 @@ const ProductList: React.FC = () => {
                     <option key={brand._id} value={brand._id}>{brand.name}</option>
                   ))}
                 </select>
+                {filterBrand && (
+                  <div className="mt-2 text-xs text-green-700 bg-green-50 px-2 py-1 rounded-lg">
+                    Đã chọn: {(() => {
+                      const selectedBrand = brands.find(brand => brand._id === filterBrand);
+                      return selectedBrand ? selectedBrand.name : filterBrand;
+                    })()}
+                  </div>
+                )}
               </div>
 
               {/* Price Range Filter */}
@@ -470,8 +525,30 @@ const ProductList: React.FC = () => {
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-gray-400 text-2xl">🔍</span>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">Không tìm thấy sản phẩm</h3>
-                <p className="text-gray-500 mb-4">Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  {filterCategory ? 
+                    (() => {
+                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      return selectedCategory ? 
+                        `Không tìm thấy sản phẩm nào trong danh mục "${selectedCategory.name}"` :
+                        'Không tìm thấy sản phẩm';
+                    })() :
+                    filterBrand ?
+                    (() => {
+                      const selectedBrand = brands.find(brand => brand._id === filterBrand);
+                      return selectedBrand ? 
+                        `Không tìm thấy sản phẩm nào thuộc thương hiệu "${selectedBrand.name}"` :
+                        'Không tìm thấy sản phẩm';
+                    })() :
+                    'Không tìm thấy sản phẩm'
+                  }
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  {filterCategory || filterBrand ? 
+                    'Hãy thử thay đổi bộ lọc hoặc xem các sản phẩm khác' :
+                    'Hãy thử thay đổi bộ lọc hoặc từ khóa tìm kiếm'
+                  }
+                </p>
                 <button
                   onClick={resetFilters}
                   className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-medium transition-colors"

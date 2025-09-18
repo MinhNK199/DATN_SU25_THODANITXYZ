@@ -161,13 +161,13 @@ const Cart: React.FC = () => {
   );
 
   const tax = useMemo(() =>
-    (subtotal - couponDiscount) * taxRate,
-    [subtotal, couponDiscount, taxRate]
+    subtotal * taxRate,
+    [subtotal, taxRate]
   );
 
   const total = useMemo(() =>
-    subtotal - couponDiscount + shipping + tax,
-    [subtotal, couponDiscount, shipping, tax]
+    subtotal + tax + shipping - couponDiscount,
+    [subtotal, tax, shipping, couponDiscount]
   );
 
   const handleShowDetail = (item: any) => {
@@ -999,6 +999,12 @@ const Cart: React.FC = () => {
                       <span className="text-sm font-semibold text-gray-900">{formatPrice(subtotal)}</span>
                     </div>
 
+                    {/* Thuế VAT */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Thuế VAT (8%):</span>
+                      <span className="text-sm font-semibold text-gray-900">{formatPrice(tax)}</span>
+                    </div>
+
                     {/* Phí vận chuyển */}
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-700">Phí vận chuyển:</span>
@@ -1018,12 +1024,6 @@ const Cart: React.FC = () => {
                         <span className="text-sm font-semibold text-green-600">-{formatPrice(couponDiscount)}</span>
                       </div>
                     )}
-
-                    {/* Thuế VAT */}
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Thuế VAT (8%):</span>
-                      <span className="text-sm font-semibold text-gray-900">{formatPrice(tax)}</span>
-                    </div>
                   </div>
 
                   {/* Divider */}
@@ -1082,7 +1082,7 @@ const Cart: React.FC = () => {
                   <span>
                     {selectedItems.size === 0
                       ? "CHỌN SẢN PHẨM ĐỂ THANH TOÁN"
-                      : `THANH TOÁN (${selectedItems.size} sản phẩm)`
+                      : `THANH TOÁN (${selectedCartItems.reduce((total, item) => total + item.quantity, 0)} sản phẩm)`
                     }
                   </span>
                 </Link>

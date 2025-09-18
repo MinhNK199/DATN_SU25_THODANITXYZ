@@ -14,6 +14,7 @@ interface Category {
   name: string;
   slug: string;
   description?: string;
+  image?: string;
   parent?: string | Category;
   isActive: boolean;
 }
@@ -36,12 +37,26 @@ const Header: React.FC = () => {
   const [isLoadingBrands, setIsLoadingBrands] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const [isBrandsOpen, setIsBrandsOpen] = useState(false);
   const miniCartRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const { state: cartState, loadCart } = useCart();
   const { state: wishlistState } = useWishlist();
   const { compareList } = useCompare();
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Check login status
   useEffect(() => {
@@ -156,6 +171,20 @@ const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showMiniCart]);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (!target.closest('.categories-dropdown') && !target.closest('.brands-dropdown')) {
+        setIsCategoriesOpen(false);
+        setIsBrandsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -176,7 +205,7 @@ const Header: React.FC = () => {
   return (
     <>
       {/* Top Bar */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2">
+      <div className={`bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 ${isScrolled ? 'fixed top-0 left-0 right-0 z-40' : 'relative'}`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center space-x-6">
@@ -197,7 +226,7 @@ const Header: React.FC = () => {
       </div>
 
       {/* Main Header */}
-      <header className="bg-white">
+      <header className={`bg-white transition-all duration-300 ${isScrolled ? 'fixed top-0 left-0 right-0 z-50 shadow-lg' : 'relative'}`}>
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             {/* Logo */}
@@ -220,25 +249,51 @@ const Header: React.FC = () => {
               </Link>
 
               {/* Categories Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              <div className="relative group categories-dropdown">
+                <button 
+                  onClick={() => {
+                    setIsCategoriesOpen(!isCategoriesOpen);
+                    setIsBrandsOpen(false);
+                  }}
+                  className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                >
                   <span>Danh mục</span>
-                  <FaChevronDown className="w-3 h-3" />
+                  <FaChevronDown className={`w-3 h-3 transition-transform ${isCategoriesOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white shadow-xl rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                <div className={`absolute top-full left-0 mt-2 bg-white shadow-xl rounded-lg transition-all duration-300 z-50 min-w-56 max-w-72 ${isCategoriesOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                   <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Mua sắm theo danh mục</h3>
+                    <h3 className="font-semibold text-gray-900 mb-3 text-base">Mua sắm theo danh mục</h3>
                     {isLoadingCategories ? (
                       <div className="text-gray-500 text-sm">Đang tải...</div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 gap-2">
                         {categories.map((category) => (
                           <Link
                             key={category._id}
                             to={`/products?category=${category.slug}`}
-                            className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
+                            onClick={() => setIsCategoriesOpen(false)}
+                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
                           >
-                            {category.name}
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                              {category.image ? (
+                                <img 
+                                  src={category.image} 
+                                  alt={category.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                                  <span className="text-white font-bold text-sm">
+                                    {category.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-base font-medium text-gray-900 group-hover:text-blue-600 truncate">
+                                {category.name}
+                              </p>
+                            </div>
                           </Link>
                         ))}
                       </div>
@@ -248,25 +303,51 @@ const Header: React.FC = () => {
               </div>
 
               {/* Brands Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 font-medium transition-colors">
+              <div className="relative group brands-dropdown">
+                <button 
+                  onClick={() => {
+                    setIsBrandsOpen(!isBrandsOpen);
+                    setIsCategoriesOpen(false);
+                  }}
+                  className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                >
                   <span>Thương hiệu</span>
-                  <FaChevronDown className="w-3 h-3" />
+                  <FaChevronDown className={`w-3 h-3 transition-transform ${isBrandsOpen ? 'rotate-180' : ''}`} />
                 </button>
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                <div className={`absolute top-full left-0 mt-2 bg-white shadow-xl rounded-lg transition-all duration-300 z-50 min-w-48 max-w-64 ${isBrandsOpen ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                   <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Thương hiệu nổi bật</h3>
+                    <h3 className="font-semibold text-gray-900 mb-3 text-base">Thương hiệu nổi bật</h3>
                     {isLoadingBrands ? (
                       <div className="text-gray-500 text-sm">Đang tải...</div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 gap-2">
                         {brands.map((brand) => (
                           <Link
                             key={brand._id}
-                            to={`/products?brand=${brand.name.toLowerCase()}`}
-                            className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
+                            to={`/products?brand=${brand._id}`}
+                            onClick={() => setIsBrandsOpen(false)}
+                            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 transition-colors group"
                           >
-                            {brand.name}
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                              {brand.logo ? (
+                                <img 
+                                  src={brand.logo} 
+                                  alt={brand.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                                  <span className="text-white font-bold text-sm">
+                                    {brand.name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-base font-medium text-gray-900 group-hover:text-blue-600 truncate">
+                                {brand.name}
+                              </p>
+                            </div>
                           </Link>
                         ))}
                       </div>
@@ -290,12 +371,6 @@ const Header: React.FC = () => {
                     <h3 className="font-semibold text-gray-900 mb-3">Tùy chọn khác</h3>
                     <div className="space-y-2">
                       <Link
-                        to="/compare"
-                        className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
-                      >
-                        So sánh sản phẩm
-                      </Link>
-                      <Link
                         to="/about"
                         className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
                       >
@@ -312,12 +387,6 @@ const Header: React.FC = () => {
                         className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
                       >
                         Câu hỏi thường gặp
-                      </Link>
-                      <Link
-                        to="/checkout"
-                        className="block text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded transition-colors"
-                      >
-                        Thanh toán
                       </Link>
                     </div>
                   </div>
@@ -341,7 +410,7 @@ const Header: React.FC = () => {
               </button>
 
               {/* Wishlist */}
-              <Link to="/profile?tab=wishlist" className="relative text-gray-700 hover:text-blue-600 transition-colors">
+              <Link to="/profile/wishlist" className="relative text-gray-700 hover:text-blue-600 transition-colors">
                 <FaHeart className="w-5 h-5" />
                 {wishlistState.itemCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
@@ -479,13 +548,13 @@ const Header: React.FC = () => {
                           Tài khoản của tôi
                         </Link>
                         <Link
-                          to="/profile?tab=orders"
+                          to="/profile/orders"
                           className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
                         >
                           Đơn hàng của tôi
                         </Link>
                         <Link
-                          to="/profile?tab=wishlist"
+                          to="/profile/wishlist"
                           className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded transition-colors"
                         >
                           Danh sách yêu thích
@@ -558,10 +627,25 @@ const Header: React.FC = () => {
                       <Link
                         key={category._id}
                         to={`/products?category=${category.slug}`}
-                        className="block text-gray-600 hover:text-blue-600"
+                        className="flex items-center space-x-3 py-2 text-gray-600 hover:text-blue-600"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        {category.name}
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {category.image ? (
+                            <img 
+                              src={category.image} 
+                              alt={category.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                              <span className="text-white font-bold text-sm">
+                                {category.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-base font-medium">{category.name}</span>
                       </Link>
                     ))}
                   </div>
@@ -577,11 +661,26 @@ const Header: React.FC = () => {
                     {brands.map((brand) => (
                       <Link
                         key={brand._id}
-                        to={`/products?brand=${brand.name.toLowerCase()}`}
-                        className="block text-gray-600 hover:text-blue-600"
+                        to={`/products?brand=${brand._id}`}
+                        className="flex items-center space-x-3 py-2 text-gray-600 hover:text-blue-600"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
-                        {brand.name}
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {brand.logo ? (
+                            <img 
+                              src={brand.logo} 
+                              alt={brand.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                              <span className="text-white font-bold text-sm">
+                                {brand.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-base font-medium">{brand.name}</span>
                       </Link>
                     ))}
                   </div>
@@ -600,13 +699,6 @@ const Header: React.FC = () => {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Thêm</h3>
                 <div className="space-y-2 ml-4">
-                  <Link
-                    to="/compare"
-                    className="block text-gray-600 hover:text-blue-600"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    So sánh sản phẩm
-                  </Link>
                   <Link
                     to="/about"
                     className="block text-gray-600 hover:text-blue-600"
@@ -627,13 +719,6 @@ const Header: React.FC = () => {
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Câu hỏi thường gặp
-                  </Link>
-                  <Link
-                    to="/checkout"
-                    className="block text-gray-600 hover:text-blue-600"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Thanh toán
                   </Link>
                 </div>
               </div>
@@ -672,6 +757,11 @@ const Header: React.FC = () => {
           </div>
         )}
       </header>
+      
+      {/* Spacer for fixed header */}
+      {isScrolled && (
+        <div className="h-24"></div>
+      )}
     </>
   );
 };

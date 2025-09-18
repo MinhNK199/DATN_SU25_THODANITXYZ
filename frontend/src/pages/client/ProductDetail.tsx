@@ -1,5 +1,5 @@
   import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   FaStar,
   FaHeart,
@@ -30,19 +30,6 @@ interface Rating {
   createdAt: string;
 }
 
-type Variant = {
-  _id: string;
-  name?: string;
-  size?: string;
-  price: number;
-  salePrice?: number;
-  stock: number;
-  sku?: string;
-  weight?: number;
-  isActive?: boolean;
-  images?: string[];
-  specifications?: Record<string, any>;
-};
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
@@ -51,7 +38,6 @@ const ProductDetail: React.FC = () => {
   const [product, setProduct] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [variantQuantities] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -64,6 +50,9 @@ const ProductDetail: React.FC = () => {
     hasImage: false,
     star: 0,
   });
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 });
+  const [autoSlide, setAutoSlide] = useState(true);
 
   useEffect(() => {
     if (!id || id === "undefined" || id === "null") {
@@ -190,7 +179,69 @@ const ProductDetail: React.FC = () => {
     fetchTrendingProducts();
   }, [relatedProducts]);
 
+  // Get all images (product + variants + additional)
+  const getAllImages = () => {
+    if (!product) return [];
+    
+    let images = [...(product.images || [])];
+    
+    // Add variant images
+    if (product.variants && product.variants.length > 0) {
+      product.variants.forEach((variant: any) => {
+        if (variant.images && variant.images.length > 0) {
+          variant.images.forEach((img: any) => {
+            if (!images.includes(img)) {
+              images.push(img);
+            }
+          });
+        }
+      });
+    }
+    
+    // Add additional images
+    if (product.additionalImages && product.additionalImages.length > 0) {
+      product.additionalImages.forEach((img: any) => {
+        if (!images.includes(img)) {
+          images.push(img);
+        }
+      });
+    }
+    
+    return images;
+  };
 
+  // Auto-slide effect
+  useEffect(() => {
+    if (!product || !autoSlide) return;
+    
+    const images = getAllImages();
+    if (images.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setSelectedImage((prev) => (prev + 1) % images.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [product, autoSlide]);
+
+  // Zoom functions
+  const handleMouseEnter = () => {
+    setIsZoomed(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsZoomed(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isZoomed) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setZoomPosition({ x, y });
+  };
 
   const formatPrice = (price: number | undefined | null) => {
     if (!price || price === 0) {
@@ -237,15 +288,12 @@ const ProductDetail: React.FC = () => {
     
     // Bắt buộc chọn variant nếu sản phẩm có variants
     if (product.variants && product.variants.length > 0 && !selectedVariantId) {
-       toast.error("Vui lòng chọn sản phẩm trước khi thêm vào giỏ hàng");
+      toast.error("Vui lòng chọn sản phẩm trước khi thêm vào giỏ hàng");
       return;
     }
     
     try {
-      const finalQuantity = selectedVariantId
-        ? getVariantQuantity(selectedVariantId)
-        : quantity;
-      await addToCart(product._id, finalQuantity, selectedVariantId);
+      await addToCart(product._id, quantity, selectedVariantId);
       toast.success("Đã thêm sản phẩm vào giỏ hàng");
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -258,7 +306,7 @@ const ProductDetail: React.FC = () => {
     
     // Bắt buộc chọn variant nếu sản phẩm có variants
     if (product.variants && product.variants.length > 0 && !selectedVariantId) {
-       toast.error("Vui lòng chọn sản phẩm trước khi mua ngay");
+      toast.error("Vui lòng chọn sản phẩm trước khi mua ngay");
       return;
     }
     
@@ -273,67 +321,13 @@ const ProductDetail: React.FC = () => {
     }
     
     try {
-      const finalQuantity = selectedVariantId
-        ? getVariantQuantity(selectedVariantId)
-        : quantity;
+      // Thêm sản phẩm vào giỏ hàng trước
+      await addToCart(product._id, quantity, selectedVariantId);
       
-      // Tạo sản phẩm tạm thời cho checkout
-      const selectedVariant = selectedVariantId ? product.variants?.find((v: any) => v._id === selectedVariantId) : null;
-      const displayPrice = selectedVariant ? 
-        (selectedVariant.salePrice && selectedVariant.salePrice < selectedVariant.price ? selectedVariant.salePrice : selectedVariant.price) :
-        (product.salePrice || product.price);
-      
-      console.log('🔍 ProductDetail - Selected variant debug:', {
-        selectedVariantId,
-        selectedVariant,
-        variantImages: selectedVariant?.images,
-        productImages: product.images,
-        hasVariantImages: !!selectedVariant?.images?.length,
-        variantColor: selectedVariant?.color,
-        variantSize: selectedVariant?.size,
-        allVariants: product.variants
-      });
-      
-      const tempProduct = {
-        _id: `temp_${Date.now()}`,
-        product: {
-          _id: product._id,
-          name: product.name,
-          images: product.images,
-          price: product.price,
-          salePrice: product.salePrice,
-          stock: product.stock,
-          availableStock: product.availableStock
-        },
-        variantId: selectedVariantId,
-        variantInfo: selectedVariant ? {
-          _id: selectedVariant._id,
-          name: selectedVariant.name,
-          color: selectedVariant.color,
-          size: selectedVariant.size,
-          sku: selectedVariant.sku,
-          images: selectedVariant.images,
-          price: selectedVariant.price,
-          salePrice: selectedVariant.salePrice,
-          stock: selectedVariant.stock
-        } : null,
-        quantity: finalQuantity,
-        price: displayPrice
-      };
-      
-      // Lưu sản phẩm tạm thời vào localStorage
-      localStorage.setItem('buyNowProduct', JSON.stringify(tempProduct));
-      console.log('🔍 ProductDetail - Lưu buyNowProduct:', tempProduct);
-      console.log('🔍 ProductDetail - selectedVariantId:', selectedVariantId);
-      console.log('🔍 ProductDetail - selectedVariant:', selectedVariant);
-      console.log('🔍 ProductDetail - tempProduct.variantId:', tempProduct.variantId);
-      console.log('🔍 ProductDetail - localStorage buyNowProduct:', localStorage.getItem('buyNowProduct'));
-      
-      // Chuyển đến trang checkout
+      // Sau khi thêm vào giỏ thành công, chuyển đến trang checkout
       navigate('/checkout/shipping', { 
         state: { 
-          buyNow: true,
-          product: tempProduct 
+          buyNow: true
         } 
       });
       
@@ -343,29 +337,61 @@ const ProductDetail: React.FC = () => {
     }
   };
 
-  const getVariantQuantity = (variantId: string) => {
-    return variantQuantities[variantId] || 1;
+
+  // Helper function to get current stock (variant or product)
+  const getCurrentStock = (product: any, selectedVariantId?: string) => {
+    if (!product) return 0;
+    
+    // If variant is selected, use variant stock
+    if (selectedVariantId && product.variants) {
+      const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+      if (variant) {
+        return variant.stock || 0;
+      }
+    }
+    
+    // If no variants, use product stock
+    if (!product.variants || product.variants.length === 0) {
+      return product.stock || 0;
+    }
+    
+    // If has variants but no variant selected, return total stock of all variants
+    // This allows the button to be enabled if any variant has stock
+    return product.variants.reduce((total: number, variant: any) => total + (variant.stock || 0), 0);
+  };
+
+  // Helper function to check if product is in stock
+  const isInStock = (product: any, selectedVariantId?: string) => {
+    return getCurrentStock(product, selectedVariantId) > 0;
   };
 
   // Helper function to map product data
-  const mapProductData = (product: any) => ({
-    _id: product._id || product.id,
-    name: product.name,
-    price: product.salePrice || product.price,
-    originalPrice: product.salePrice ? product.price : undefined,
-    image: product.images && product.images.length > 0 ? product.images[0] : "",
-    brand: typeof product.brand === "object" ? product.brand?.name : product.brand,
-    category: typeof product.category === "object" ? product.category?.name : product.category,
-    rating: product.averageRating || 0,
-    reviewCount: product.numReviews || 0,
-    discount: product.salePrice
-      ? Math.round(100 - (product.salePrice / product.price) * 100)
-      : undefined,
-    isNew: product.isFeatured || false,
-    isHot: product.isActive || false,
-    stock: product.stock || 0,
-    variants: product.variants || [],
-  });
+  const mapProductData = (product: any) => {
+    // Calculate total stock for products with variants
+    let totalStock = product.stock || 0;
+    if (product.variants && product.variants.length > 0) {
+      totalStock = product.variants.reduce((total: number, variant: any) => total + (variant.stock || 0), 0);
+    }
+    
+    return {
+      _id: product._id || product.id,
+      name: product.name,
+      price: product.salePrice || product.price,
+      originalPrice: product.salePrice ? product.price : undefined,
+      image: product.images && product.images.length > 0 ? product.images[0] : "",
+      brand: typeof product.brand === "object" ? product.brand?.name || 'N/A' : product.brand || 'N/A',
+      category: typeof product.category === "object" ? product.category?.name || 'N/A' : product.category || 'N/A',
+      rating: product.averageRating || 0,
+      reviewCount: product.numReviews || 0,
+      discount: product.salePrice
+        ? Math.round(100 - (product.salePrice / product.price) * 100)
+        : undefined,
+      isNew: product.isFeatured || false,
+      isHot: product.isActive || false,
+      stock: totalStock,
+      variants: product.variants || [],
+    };
+  };
 
   // Helper function to switch to variant image
   const switchToVariantImage = (variant: any) => {
@@ -402,7 +428,7 @@ const ProductDetail: React.FC = () => {
         setSelectedImage(variantImageIndex);
       } else {
         // Nếu không tìm thấy trong allImages, thử tìm trong ảnh gốc
-        const originalIndex = (product.images || []).findIndex(img => img === variantFirstImage);
+        const originalIndex = (product.images || []).findIndex((img: any) => img === variantFirstImage);
         if (originalIndex !== -1) {
           setSelectedImage(originalIndex);
         }
@@ -463,11 +489,14 @@ const ProductDetail: React.FC = () => {
               <li>
                 <div className="flex items-center">
                   <span className="mx-2 text-gray-400">/</span>
-                  <a href="#" className="text-gray-700 hover:text-blue-600">
+                  <Link 
+                    to={`/products?category=${typeof product.category === "object" ? product.category?.slug || product.category?._id : product.category}`} 
+                    className="text-gray-700 hover:text-blue-600"
+                  >
                     {typeof product.category === "object"
-                      ? product.category.name
-                      : product.category}
-                  </a>
+                      ? product.category?.name || 'N/A'
+                      : product.category || 'N/A'}
+                  </Link>
                 </div>
               </li>
               <li>
@@ -485,99 +514,109 @@ const ProductDetail: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {/* Product Images Section - TechTrend Style */}
             <div className="flex flex-col space-y-4">
-              {/* Main Image/Video with Navigation */}
-              <div className="relative bg-white rounded-lg border border-gray-200 overflow-hidden group">
-                {(() => {
-                  const allImages = [...(product.images || [])];
-                  
-                  if (product.variants && product.variants.length > 0) {
-                    product.variants.forEach((variant: any) => {
-                      if (variant.images && variant.images.length > 0) {
-                        variant.images.forEach((img: string) => {
-                          if (!allImages.includes(img)) {
-                            allImages.push(img);
-                          }
-                        });
-                      }
-                    });
-                  }
-                  
-                  if (product.additionalImages && product.additionalImages.length > 0) {
-                    product.additionalImages.forEach((img: string) => {
-                      if (!allImages.includes(img)) {
-                        allImages.push(img);
-                      }
-                    });
-                  }
-
-                  return allImages.length > 1 && (
-                    <>
-                      {/* Left Navigation Arrow */}
-                      <button
-                        onClick={() => setSelectedImage(selectedImage > 0 ? selectedImage - 1 : allImages.length - 1)}
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full flex items-center justify-center z-10 transition-all duration-200 opacity-0 group-hover:opacity-100"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-
-                      {/* Right Navigation Arrow */}
-                      <button
-                        onClick={() => setSelectedImage(selectedImage < allImages.length - 1 ? selectedImage + 1 : 0)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full flex items-center justify-center z-10 transition-all duration-200 opacity-0 group-hover:opacity-100"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </>
-                  );
-                })()}
-
-                <div className="aspect-square flex items-center justify-center bg-gray-50">
+                {/* Main Image/Video with Navigation */}
+                <div className="relative bg-white rounded-lg border border-gray-200 overflow-hidden group max-w-2xl mx-auto aspect-square">
                   {(() => {
-                    const allImages = [...(product.images || [])];
-                    
-                    if (product.variants && product.variants.length > 0) {
-                      product.variants.forEach((variant: any) => {
-                        if (variant.images && variant.images.length > 0) {
-                          variant.images.forEach((img: string) => {
-                            if (!allImages.includes(img)) {
-                              allImages.push(img);
-                            }
-                          });
-                        }
-                      });
-                    }
-                    
-                    if (product.additionalImages && product.additionalImages.length > 0) {
-                      product.additionalImages.forEach((img: string) => {
-                        if (!allImages.includes(img)) {
-                          allImages.push(img);
-                        }
-                      });
-                    }
+                    const allImages = getAllImages();
 
-                    return allImages.length > 0 ? (
-                      <img
-                        src={allImages[selectedImage]}
-                        alt={product.name}
-                        className="max-w-full max-h-full object-contain cursor-zoom-in"
-                        onClick={() => {
-                          // Có thể thêm modal xem ảnh phóng to ở đây
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
-                        <div className="text-center">
-                          <div className="text-6xl mb-4">📷</div>
-                          <div className="text-lg">Không có ảnh</div>
-                        </div>
-                      </div>
+                    return allImages.length > 1 && (
+                      <>
+                        {/* Left Navigation Arrow */}
+                        <button
+                          onClick={() => {
+                            setSelectedImage(selectedImage > 0 ? selectedImage - 1 : allImages.length - 1);
+                            setAutoSlide(false); // Tắt auto-slide khi click
+                          }}
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full flex items-center justify-center z-10 transition-all duration-200 opacity-0 group-hover:opacity-100"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+
+                        {/* Right Navigation Arrow */}
+                        <button
+                          onClick={() => {
+                            setSelectedImage(selectedImage < allImages.length - 1 ? selectedImage + 1 : 0);
+                            setAutoSlide(false); // Tắt auto-slide khi click
+                          }}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black bg-opacity-60 hover:bg-opacity-80 text-white rounded-full flex items-center justify-center z-10 transition-all duration-200 opacity-0 group-hover:opacity-100"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </>
                     );
                   })()}
-                </div>
+
+                  <div 
+                    className="aspect-square flex items-center justify-center bg-gray-50 relative overflow-hidden group cursor-zoom-in"
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseMove={handleMouseMove}
+                  >
+                    {(() => {
+                      const allImages = getAllImages();
+                      
+                      return allImages.length > 0 ? (
+                        <div className="relative w-full h-full overflow-hidden">
+                          <img
+                            src={allImages[selectedImage]}
+                            alt={product.name}
+                            className={`w-96 h-96 object-contain transition-transform duration-300 ${
+                              isZoomed ? 'scale-150' : 'scale-100'
+                            }`}
+                            style={{
+                              transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                              imageRendering: 'auto'
+                            }}
+                            onClick={() => {
+                              // Có thể thêm modal xem ảnh phóng to ở đây
+                            }}
+                          />
+                          
+                          {/* Zoom lens */}
+                          {isZoomed && (
+                            <div 
+                              className="absolute w-32 h-32 border-2 border-gray-400 bg-transparent pointer-events-none z-20"
+                              style={{
+                                left: `${zoomPosition.x}%`,
+                                top: `${zoomPosition.y}%`,
+                                transform: 'translate(-50%, -50%)',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 0 1px rgba(0,0,0,0.1)'
+                              }}
+                            />
+                          )}
+                          
+                          {/* Auto-slide indicator */}
+                          {allImages.length > 1 && (
+                            <div className="absolute top-4 right-4 flex space-x-1">
+                              {allImages.map((_, index) => (
+                                <div
+                                  key={index}
+                                  className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                                    index === selectedImage ? 'bg-blue-500' : 'bg-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          {/* Auto-slide control */}
+                        
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
+                          <div className="text-center">
+                            <div className="text-6xl mb-4">📷</div>
+                            <div className="text-lg">Không có ảnh</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
                 
                 {/* Discount Badge */}
                 {product.salePrice && product.salePrice < product.price && (
@@ -594,79 +633,61 @@ const ProductDetail: React.FC = () => {
                 )}
               </div>
 
-              {/* Thumbnail Gallery - TechTrend Style */}
-              {(() => {
-                const allImages = [...(product.images || [])];
-                
-                if (product.variants && product.variants.length > 0) {
-                  product.variants.forEach((variant: any) => {
-                    if (variant.images && variant.images.length > 0) {
-                      variant.images.forEach((img: string) => {
-                        if (!allImages.includes(img)) {
-                          allImages.push(img);
-                        }
-                      });
-                    }
-                  });
-                }
-
-                if (product.additionalImages && product.additionalImages.length > 0) {
-                  product.additionalImages.forEach((img: string) => {
-                    if (!allImages.includes(img)) {
-                      allImages.push(img);
-                    }
-                  });
-                }
-                
-                return (
-                  <div className="relative">
-                    <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
-                      {/* All Images */}
-                      {allImages.length > 0 ? (
-                        allImages.map((image: string, index: number) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              setSelectedImage(index);
-                            }}
-                            onMouseEnter={() => {
-                              // Khi hover vào thumbnail, chuyển sang ảnh đó
-                              setSelectedImage(index);
-                            }}
-                            className={`flex-shrink-0 w-28 h-28 rounded-lg border-2 transition-all duration-200 overflow-hidden ${
-                              selectedImage === index
-                                ? "border-red-500"
-                                : "border-gray-200 hover:border-gray-300"
-                            }`}
-                          >
-                            <img
-                              src={image}
-                              alt={`${product.name} ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          </button>
-                        ))
-                      ) : (
-                        <div className="flex-shrink-0 w-28 h-28 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-gray-100">
-                          <div className="text-center text-gray-500">
-                            <div className="text-sm">📷</div>
-                            <div className="text-xs">No images</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                        
-                    {/* Right Navigation Arrow for Thumbnails */}
-                    {allImages.length > 4 && (
-                      <button className="absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-24 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-lg rounded-l transition-all duration-200">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
+               {/* Thumbnail Gallery - TechTrend Style */}
+               {(() => {
+                 const allImages = getAllImages();
+                 
+                 return (
+                   <div className="relative">
+                     <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+                       {/* All Images */}
+                       {allImages.length > 0 ? (
+                         allImages.map((image: string, index: number) => (
+                           <button
+                             key={index}
+                             onClick={() => {
+                               setSelectedImage(index);
+                               setAutoSlide(false); // Tắt auto-slide khi click
+                             }}
+                             onMouseEnter={() => {
+                               // Khi hover vào thumbnail, chuyển sang ảnh đó
+                               setSelectedImage(index);
+                               setAutoSlide(false); // Tắt auto-slide khi hover
+                             }}
+                             className={`flex-shrink-0 w-28 h-28 rounded-lg border-2 transition-all duration-200 overflow-hidden ${
+                               selectedImage === index
+                                 ? "border-red-500"
+                                 : "border-gray-200 hover:border-gray-300"
+                             }`}
+                           >
+                             <img
+                               src={image}
+                               alt={`${product.name} ${index + 1}`}
+                               className="w-full h-full object-cover"
+                             />
+                           </button>
+                         ))
+                       ) : (
+                         <div className="flex-shrink-0 w-28 h-28 rounded-lg border-2 border-gray-200 flex items-center justify-center bg-gray-100">
+                           <div className="text-center text-gray-500">
+                             <div className="text-sm">📷</div>
+                             <div className="text-xs">No images</div>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                         
+                     {/* Right Navigation Arrow for Thumbnails */}
+                     {allImages.length > 4 && (
+                       <button className="absolute right-0 top-1/2 transform -translate-y-1/2 w-8 h-24 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-600 hover:text-gray-800 flex items-center justify-center shadow-lg rounded-l transition-all duration-200">
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                         </svg>
+                       </button>
+                     )}
+                   </div>
+                 );
+               })()}
             </div>
 
             {/* Product Information Section - TechTrend Style */}
@@ -675,8 +696,8 @@ const ProductDetail: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
                   {typeof product.brand === "object"
-                    ? product.brand.name
-                    : product.brand}
+                    ? product.brand?.name || 'N/A'
+                    : product.brand || 'N/A'}
                 </span>
                 <span className="text-xs text-gray-500">Mall</span>
               </div>
@@ -751,57 +772,17 @@ const ProductDetail: React.FC = () => {
                   })()}
                 </div>
 
-                {/* Voucher Section */}
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Voucher của shop</span>
-                    <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                      Giảm 50k
-                    </button>
-                  </div>
-                </div>
-
-                {/* Installment Section */}
-                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-bold text-blue-600">0% TRẢ GÓP</span>
-                      <div className="text-xs text-gray-600 mt-1">
-                        12 tháng x {formatPrice(Math.round(getDisplayPrice(product, selectedVariantId) / 12))} (Lãi suất 0%)
-                      </div>
-                    </div>
-                    <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                      Xem thêm &gt;
-                    </button>
-                  </div>
-                </div>
+                          
               </div>
 
-              {/* Shipping Information */}
-              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <FaTruck className="text-green-600 w-4 h-4" />
-                    <span className="text-sm font-medium text-gray-700">Vận Chuyển</span>
-                  </div>
-                  <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                    Mua trước 18:00, Cam kết nhận hàng trong 4 Giờ &gt;
-                  </button>
-                </div>
-                <div className="text-sm text-gray-600 mt-1">
-                  Phí ship 0₫
-                </div>
-                <div className="text-sm text-gray-600">
-                  Tặng Voucher ₫15.000 nếu đơn giao sau thời gian trên.
-                </div>
-              </div>
+            
 
               {/* TechTrend Guarantee */}
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <div className="text-sm font-medium text-gray-700 mb-2">An Tâm Mua Sắm Cùng TechTrend</div>
                 <div className="flex items-center space-x-1 text-xs text-gray-600">
                   <FaCheck className="text-green-500" />
-                  <span>Trả hàng miễn phí 15 ngày. Chính hãng 100% - Miễn phí vận chuyển</span>
+                  <span>Trả hàng miễn phí 15 ngày. Chính hãng 100% - Miễn phí vận chuyển với đơn hàng trên 10 Triệu đồng</span>
                   <button className="text-blue-600 hover:text-blue-800 ml-1">▼</button>
                 </div>
               </div>
@@ -810,38 +791,20 @@ const ProductDetail: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <span
                   className={`w-2 h-2 rounded-full ${
-                    (selectedVariantId
-                      ? product.variants.find(
-                          (v: Variant) => v._id === selectedVariantId
-                        )?.stock
-                      : product.stock) > 0
+                    isInStock(product, selectedVariantId)
                       ? "bg-green-500"
                       : "bg-red-500"
                   }`}
                 ></span>
                 <span
                   className={`font-medium ${
-                    (selectedVariantId
-                      ? product.variants.find(
-                          (v: Variant) => v._id === selectedVariantId
-                        )?.stock
-                      : product.stock) > 0
+                    isInStock(product, selectedVariantId)
                       ? "text-green-600"
                       : "text-red-600"
                   }`}
                 >
-                  {(selectedVariantId
-                    ? product.variants.find(
-                        (v: Variant) => v._id === selectedVariantId
-                      )?.stock
-                    : product.stock) > 0
-                    ? `Còn ${
-                        selectedVariantId
-                          ? product.variants.find(
-                              (v: Variant) => v._id === selectedVariantId
-                            )?.stock
-                          : product.stock
-                      } sản phẩm`
+                  {isInStock(product, selectedVariantId)
+                    ? `Còn ${getCurrentStock(product, selectedVariantId)} sản phẩm`
                     : "Hết hàng"}
                 </span>
               </div>
@@ -941,7 +904,7 @@ const ProductDetail: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleAddToCart}
-                    disabled={product.stock <= 0 || (product.variants && product.variants.length > 0 && !selectedVariantId)}
+                    disabled={!isInStock(product, selectedVariantId)}
                     className="flex-1 bg-white border-2 border-red-500 text-red-500 py-3 md:py-4 px-6 rounded-lg font-semibold hover:bg-red-50 disabled:bg-gray-100 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                   >
                     <FaShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
@@ -949,7 +912,7 @@ const ProductDetail: React.FC = () => {
                   </button>
                   <button 
                     onClick={handleBuyNow}
-                    disabled={product.stock <= 0 || (product.variants && product.variants.length > 0 && !selectedVariantId)}
+                    disabled={!isInStock(product, selectedVariantId)}
                     className="flex-1 bg-red-600 text-white py-3 md:py-4 px-6 rounded-lg font-semibold hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm md:text-base"
                   >
                     Mua Ngay
@@ -1114,26 +1077,60 @@ const ProductDetail: React.FC = () => {
                    <div className="space-y-4">
                      <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">Thương hiệu:</span>
-                       <span className="text-gray-900">{typeof product.brand === "object" ? product.brand.name : product.brand}</span>
+                       <span className="text-gray-900">{typeof product.brand === "object" ? product.brand?.name || 'N/A' : product.brand || 'N/A'}</span>
                      </div>
                      <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">Danh mục:</span>
-                       <span className="text-gray-900">{typeof product.category === "object" ? product.category.name : product.category}</span>
+                       <span className="text-gray-900">{typeof product.category === "object" ? product.category?.name || 'N/A' : product.category || 'N/A'}</span>
                      </div>
                      <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">SKU:</span>
-                       <span className="text-gray-900">{product.sku || 'N/A'}</span>
+                       <span className="text-gray-900">
+                         {selectedVariantId && product.variants ? 
+                           (() => {
+                             const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+                             return variant?.sku || product.sku || 'N/A';
+                           })() : 
+                           product.sku || 'N/A'
+                         }
+                       </span>
                      </div>
                      <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">Trọng lượng:</span>
-                       <span className="text-gray-900">{product.weight ? `${product.weight}g` : 'N/A'}</span>
+                       <span className="text-gray-900">
+                         {selectedVariantId && product.variants ? 
+                           (() => {
+                             const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+                             return variant?.weight ? `${variant.weight}g` : (product.weight ? `${product.weight}g` : 'N/A');
+                           })() : 
+                           (product.weight ? `${product.weight}g` : 'N/A')
+                         }
+                       </span>
                      </div>
+                     {selectedVariantId && product.variants && (() => {
+                       const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+                       return variant?.color ? (
+                         <div className="flex justify-between py-2 border-b border-gray-100">
+                           <span className="font-medium text-gray-600">Màu sắc:</span>
+                           <span className="text-gray-900">{typeof variant.color === 'object' ? variant.color.name || variant.color.code || 'N/A' : variant.color}</span>
+                         </div>
+                       ) : null;
+                     })()}
+                     {selectedVariantId && product.variants && (() => {
+                       const variant = product.variants.find((v: any) => v._id === selectedVariantId);
+                       return variant?.size ? (
+                         <div className="flex justify-between py-2 border-b border-gray-100">
+                           <span className="font-medium text-gray-600">Kích thước:</span>
+                           <span className="text-gray-900">{typeof variant.size === 'object' ? variant.size.name || variant.size.code || 'N/A' : variant.size}</span>
+                         </div>
+                       ) : null;
+                     })()}
                    </div>
                    <div className="space-y-4">
                      <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">Tình trạng:</span>
-                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                         {product.stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${isInStock(product, selectedVariantId) ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                         {isInStock(product, selectedVariantId) ? 'Còn hàng' : 'Hết hàng'}
                        </span>
                      </div>
                      <div className="flex justify-between py-2 border-b border-gray-100">
@@ -1145,45 +1142,58 @@ const ProductDetail: React.FC = () => {
                        </div>
                      </div>
                      <div className="flex justify-between py-2 border-b border-gray-100">
+                       <span className="font-medium text-gray-600">Số lượng còn:</span>
+                       <span className="text-gray-900 font-semibold">
+                         {getCurrentStock(product, selectedVariantId)} sản phẩm
+                       </span>
+                     </div>
+                      {(() => {
+                        const variant = selectedVariantId && product.variants ? 
+                          product.variants.find((v: any) => v._id === selectedVariantId) : null;
+                        const specs = variant?.specifications || {};
+                        
+                        // Mapping các key từ database sang label tiếng Việt
+                        const specLabels: Record<string, string> = {
+                          'RAM': 'RAM',
+                          'ROM': 'Bộ nhớ',
+                          'CPU': 'CPU',
+                          'GPU': 'Card đồ họa',
+                          'Screen': 'Màn hình',
+                          'Camera': 'Camera',
+                          'Battery': 'Pin',
+                          'OS': 'Hệ điều hành',
+                          'Connectivity': 'Kết nối',
+                          'Dimensions': 'Kích thước',
+                          'Weight': 'Trọng lượng',
+                          'Material': 'Chất liệu',
+                          'Storage': 'Lưu trữ',
+                          'Display': 'Màn hình',
+                          'Processor': 'Bộ xử lý',
+                          'Graphics': 'Card đồ họa',
+                          'Memory': 'Bộ nhớ'
+                        };
+                        
+                        // Chỉ hiển thị những thông số có dữ liệu
+                        return Object.entries(specs)
+                          .filter(([, value]) => value && value.toString().trim() !== '')
+                          .map(([key, value]) => (
+                            <div key={key} className="flex justify-between py-2 border-b border-gray-100">
+                              <span className="font-medium text-gray-600">
+                                {specLabels[key] || key}:
+                              </span>
+                              <span className="text-gray-900">{String(value)}</span>
+                            </div>
+                          ));
+                      })()}
+                     <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">Đã bán:</span>
                        <span className="text-gray-900">{product.soldCount || 0}+ sản phẩm</span>
-                     </div>
-                     <div className="flex justify-between py-2 border-b border-gray-100">
-                       <span className="font-medium text-gray-600">Ngày tạo:</span>
-                       <span className="text-gray-900">{new Date(product.createdAt).toLocaleDateString('vi-VN')}</span>
                      </div>
                    </div>
                  </div>
                </div>
              </div>
 
-             {/* FAQ Section */}
-             <div>
-               <h2 className="relative inline-block text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">
-                 Câu hỏi thường gặp
-                 <span className="absolute left-0 -bottom-1 h-0.5 w-full bg-gradient-to-r from-indigo-500 to-purple-500"></span>
-               </h2>
-               <div className="bg-white rounded-2xl shadow-lg p-6">
-                 <div className="space-y-4">
-                   <div className="border border-gray-200 rounded-lg p-4">
-                     <h3 className="font-semibold text-gray-900 mb-2">Sản phẩm có chính hãng không?</h3>
-                     <p className="text-gray-600 text-sm">Tất cả sản phẩm đều được nhập khẩu chính hãng với đầy đủ giấy tờ chứng nhận chất lượng.</p>
-                   </div>
-                   <div className="border border-gray-200 rounded-lg p-4">
-                     <h3 className="font-semibold text-gray-900 mb-2">Thời gian giao hàng bao lâu?</h3>
-                     <p className="text-gray-600 text-sm">Chúng tôi cam kết giao hàng trong vòng 2-4 ngày làm việc tại Hà Nội và TP.HCM, 3-7 ngày tại các tỉnh thành khác.</p>
-                   </div>
-                   <div className="border border-gray-200 rounded-lg p-4">
-                     <h3 className="font-semibold text-gray-900 mb-2">Có được đổi trả không?</h3>
-                     <p className="text-gray-600 text-sm">Khách hàng có thể đổi trả sản phẩm trong vòng 15 ngày kể từ ngày nhận hàng nếu sản phẩm còn nguyên vẹn.</p>
-                   </div>
-                   <div className="border border-gray-200 rounded-lg p-4">
-                     <h3 className="font-semibold text-gray-900 mb-2">Có bảo hành không?</h3>
-                     <p className="text-gray-600 text-sm">Tất cả sản phẩm đều có bảo hành chính hãng theo tiêu chuẩn của nhà sản xuất.</p>
-                   </div>
-                 </div>
-               </div>
-             </div>
 
              {/* Mô tả */}
              <div>
@@ -1295,6 +1305,33 @@ const ProductDetail: React.FC = () => {
                  </div>
                </div>
              )}
+
+             {/* FAQ Section - Moved to right column */}
+             <div className="mt-8">
+               <h2 className="text-lg font-bold text-gray-900 mb-4">
+                 Câu hỏi thường gặp
+               </h2>
+               <div className="bg-white rounded-2xl shadow-lg p-4">
+                 <div className="space-y-3">
+                   <div className="border border-gray-200 rounded-lg p-3">
+                     <h3 className="font-semibold text-gray-900 mb-1 text-sm">Sản phẩm có chính hãng không?</h3>
+                     <p className="text-gray-600 text-xs">Tất cả sản phẩm đều được nhập khẩu chính hãng với đầy đủ giấy tờ chứng nhận chất lượng.</p>
+                   </div>
+                   <div className="border border-gray-200 rounded-lg p-3">
+                     <h3 className="font-semibold text-gray-900 mb-1 text-sm">Thời gian giao hàng bao lâu?</h3>
+                     <p className="text-gray-600 text-xs">Chúng tôi cam kết giao hàng trong vòng 2-4 ngày làm việc tại Hà Nội và TP.HCM, 3-7 ngày tại các tỉnh thành khác.</p>
+                   </div>
+                   <div className="border border-gray-200 rounded-lg p-3">
+                     <h3 className="font-semibold text-gray-900 mb-1 text-sm">Có được đổi trả không?</h3>
+                     <p className="text-gray-600 text-xs">Khách hàng có thể đổi trả sản phẩm trong vòng 15 ngày kể từ ngày nhận hàng nếu sản phẩm còn nguyên vẹn.</p>
+                   </div>
+                   <div className="border border-gray-200 rounded-lg p-3">
+                     <h3 className="font-semibold text-gray-900 mb-1 text-sm">Có bảo hành không?</h3>
+                     <p className="text-gray-600 text-xs">Tất cả sản phẩm đều có bảo hành chính hãng theo tiêu chuẩn của nhà sản xuất.</p>
+                   </div>
+                 </div>
+               </div>
+             </div>
            </div>
          </div>
 

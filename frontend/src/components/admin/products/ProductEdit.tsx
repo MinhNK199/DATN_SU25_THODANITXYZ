@@ -3,6 +3,10 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
+import { useFormPersistence } from "../../../hooks/useFormPersistence"
+import { useFormChangeDetector } from "../../../hooks/useFormChangeDetector"
+import { useUnsavedChangesProtection } from "../../../hooks/useUnsavedChangesProtection"
+import UnsavedChangesWarning from "../UnsavedChangesWarning"
 import {
   Form,
   Input,
@@ -72,6 +76,39 @@ const ProductEdit: React.FC = () => {
   const [previewImage, setPreviewImage] = useState<string>("")
   // Thêm state cho ảnh đại diện
   const [mainImageFileList, setMainImageFileList] = useState<UploadFile[]>([])
+
+  // Form persistence and change detection
+  const { clearSavedData, markAsSaved, manualSave } = useFormPersistence({
+    formKey: `product_edit_${id}`,
+    form,
+    enabled: true,
+    autoSaveInterval: 30000 // 30 seconds
+  })
+
+  const { hasChanges, resetInitialValues } = useFormChangeDetector({
+    form,
+    onFormChange: (hasFormChanges) => {
+      console.log('Form changes detected:', hasFormChanges)
+    }
+  })
+
+  const {
+    showWarning,
+    handleNavigation,
+    handleConfirmNavigation,
+    handleCancelNavigation,
+    handleSaveAndContinue,
+    handleDiscardChanges
+  } = useUnsavedChangesProtection({
+    hasUnsavedChanges: hasChanges,
+    onSave: async () => {
+      await handleSubmit(form.getFieldsValue())
+    },
+    onDiscard: () => {
+      clearSavedData()
+      resetInitialValues()
+    }
+  })
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value
@@ -186,6 +223,9 @@ const ProductEdit: React.FC = () => {
             height: productData.dimensions?.height || 0,
           },
         })
+        
+        // Reset initial values after loading
+        resetInitialValues()
       } catch (error) {
         handleError(error, "Không thể tải dữ liệu sản phẩm.")
       } finally {
@@ -327,6 +367,11 @@ const ProductEdit: React.FC = () => {
       const updatedProduct = await response.json()
       console.log("✅ Product updated successfully:", updatedProduct)
       success("Cập nhật sản phẩm thành công!")
+      
+      // Mark form as saved and clear saved data
+      markAsSaved()
+      resetInitialValues()
+      
       navigate("/admin/products")
     } catch (err: unknown) {
       console.error("❌ Error submitting form:", err)
@@ -626,7 +671,7 @@ const ProductEdit: React.FC = () => {
                 <Button type="primary" className="admin-primary-button" htmlType="submit" loading={submitting} block icon={<SaveOutlined />}>
                   Lưu thay đổi
                 </Button>
-                <Button block icon={<ArrowLeftOutlined />} onClick={() => navigate("/admin/products")}>
+                <Button block icon={<ArrowLeftOutlined />} onClick={() => handleNavigation("/admin/products")}>
                   Quay lại
                 </Button>
               </Space>
@@ -634,6 +679,18 @@ const ProductEdit: React.FC = () => {
           </Col>
         </Row>
       </Form>
+      
+      {/* Unsaved Changes Warning Modal */}
+      <UnsavedChangesWarning
+        visible={showWarning}
+        onConfirm={handleConfirmNavigation}
+        onCancel={handleCancelNavigation}
+        onSave={handleSaveAndContinue}
+        onDiscard={handleDiscardChanges}
+        title="Có thay đổi chưa được lưu"
+        content="Bạn có thay đổi chưa được lưu. Bạn có muốn lưu trước khi rời khỏi trang không?"
+        showSaveOption={true}
+      />
     </div>
   )
 }

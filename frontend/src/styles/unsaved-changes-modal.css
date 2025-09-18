@@ -1,0 +1,108 @@
+/* Unsaved Changes Modal Styles */
+.unsaved-changes-modal .ant-modal-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 20px 24px 16px;
+}
+
+.unsaved-changes-modal .ant-modal-body {
+  padding: 0 24px 24px;
+}
+
+.unsaved-changes-modal .ant-modal-close {
+  top: 20px;
+  right: 24px;
+}
+
+.unsaved-changes-modal .ant-modal-close:hover {
+  background-color: #f3f4f6;
+}
+
+/* Button styles */
+.unsaved-changes-modal .ant-btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.unsaved-changes-modal .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.unsaved-changes-modal .ant-btn:active {
+  transform: translateY(0);
+}
+
+/* Info box styles */
+.unsaved-changes-modal .info-box {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.unsaved-changes-modal .info-box .info-icon {
+  width: 8px;
+  height: 8px;
+  background: #0ea5e9;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .unsaved-changes-modal {
+    margin: 16px;
+  }
+  
+  .unsaved-changes-modal .ant-modal {
+    max-width: calc(100vw - 32px);
+  }
+  
+  .unsaved-changes-modal .ant-space {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .unsaved-changes-modal .ant-space .ant-btn {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* Animation for modal appearance */
+.unsaved-changes-modal.ant-modal-zoom-enter .ant-modal {
+  animation: unsavedModalZoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes unsavedModalZoomIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Focus styles for accessibility */
+.unsaved-changes-modal .ant-btn:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Icon colors */
+.unsaved-changes-modal .anticon-exclamation-circle {
+  color: #f59e0b;
+}
+
+.unsaved-changes-modal .anticon-save {
+  color: #ffffff;
+}
+
+.unsaved-changes-modal .anticon-close {
+  color: #6b7280;
+}

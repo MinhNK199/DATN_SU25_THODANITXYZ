@@ -3,6 +3,10 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useFormPersistence } from "../../../hooks/useFormPersistence"
+import { useFormChangeDetector } from "../../../hooks/useFormChangeDetector"
+import { useUnsavedChangesProtection } from "../../../hooks/useUnsavedChangesProtection"
+import UnsavedChangesWarning from "../UnsavedChangesWarning"
 import {
   Form,
   Input,
@@ -53,6 +57,39 @@ const ProductAddPage: React.FC = () => {
   const { success, error } = useNotification()
   const { handleError } = useErrorNotification()
   const [loading, setLoading] = useState(false)
+
+  // Form persistence and change detection
+  const { clearSavedData, markAsSaved, manualSave } = useFormPersistence({
+    formKey: 'product_add',
+    form,
+    enabled: true,
+    autoSaveInterval: 30000 // 30 seconds
+  })
+
+  const { hasChanges, resetInitialValues } = useFormChangeDetector({
+    form,
+    onFormChange: (hasFormChanges) => {
+      console.log('Form changes detected:', hasFormChanges)
+    }
+  })
+
+  const {
+    showWarning,
+    handleNavigation,
+    handleConfirmNavigation,
+    handleCancelNavigation,
+    handleSaveAndContinue,
+    handleDiscardChanges
+  } = useUnsavedChangesProtection({
+    hasUnsavedChanges: hasChanges,
+    onSave: async () => {
+      await handleSubmit(form.getFieldsValue())
+    },
+    onDiscard: () => {
+      clearSavedData()
+      resetInitialValues()
+    }
+  })
   const [categories, setCategories] = useState<Category[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [variants, setVariants] = useState<any[]>([]) // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -118,7 +155,7 @@ const ProductAddPage: React.FC = () => {
     setVariants(cleanedVariants)
   }
 
-  const onFinish = async (values: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const handleSubmit = async (values: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const validation = validateAllVariants(variants)
     if (!validation.isValid) {
       error(`Lỗi:\n${validation.errors.join('\n')}`)
@@ -228,6 +265,11 @@ const ProductAddPage: React.FC = () => {
         return
       }
       success("Thêm sản phẩm thành công!")
+      
+      // Mark form as saved and clear saved data
+      markAsSaved()
+      resetInitialValues()
+      
       navigate("/admin/products")
     } catch (err: unknown) {
       handleError(err, "Đã xảy ra lỗi khi thêm sản phẩm. Vui lòng thử lại.")
@@ -274,7 +316,7 @@ const ProductAddPage: React.FC = () => {
         initialValues={{
           specifications: {},
         }}
-        onFinish={onFinish}
+        onFinish={handleSubmit}
         onFinishFailed={() => error("Vui lòng kiểm tra lại các trường thông tin!")}
       >
         <Row gutter={24}>
@@ -519,7 +561,7 @@ const ProductAddPage: React.FC = () => {
                 <Button
                   type="default"
                   icon={<ArrowLeftOutlined />}
-                  onClick={() => navigate("/admin/products")}
+                  onClick={() => handleNavigation("/admin/products")}
                   shape="round"
                   size="large"
                   block
@@ -537,6 +579,18 @@ const ProductAddPage: React.FC = () => {
           </Col>
         </Row>
       </Form>
+      
+      {/* Unsaved Changes Warning Modal */}
+      <UnsavedChangesWarning
+        visible={showWarning}
+        onConfirm={handleConfirmNavigation}
+        onCancel={handleCancelNavigation}
+        onSave={handleSaveAndContinue}
+        onDiscard={handleDiscardChanges}
+        title="Có thay đổi chưa được lưu"
+        content="Bạn có thay đổi chưa được lưu. Bạn có muốn lưu trước khi rời khỏi trang không?"
+        showSaveOption={true}
+      />
     </div>
   )
 }

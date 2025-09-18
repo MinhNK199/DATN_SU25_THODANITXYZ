@@ -5,11 +5,11 @@ import Product from "../models/Product.js";
 import VariantStockService from "../services/variantStockService.js";
 
 // Helper function để lấy số lượng có sẵn thực tế
-const getAvailableStock = async(productId) => {
+const getAvailableStock = async(productId, variantId = null) => {
     const product = await Product.findById(productId);
     if (!product) return 0;
 
-    const reservedQuantity = await ProductReservation.getReservedQuantity(productId);
+    const reservedQuantity = await ProductReservation.getReservedQuantity(productId, variantId);
     return Math.max(0, product.stock - reservedQuantity);
 };
 
@@ -156,7 +156,18 @@ export const addToCart = async(req, res) => {
         }
 
         // Lấy số lượng có sẵn thực tế
-        const availableStock = await getAvailableStock(productId);
+        let availableStock;
+        if (variantId) {
+            // Nếu có variant, lấy stock của variant
+            console.log(`🔍 Checking variant stock for product ${productId}, variant ${variantId}`);
+            availableStock = await VariantStockService.getAvailableVariantStock(productId, variantId, req.user._id);
+            console.log(`📊 Available variant stock: ${availableStock}`);
+        } else {
+            // Nếu không có variant, lấy stock của product
+            console.log(`🔍 Checking product stock for ${productId}`);
+            availableStock = await getAvailableStock(productId, null);
+            console.log(`📊 Available product stock: ${availableStock}`);
+        }
 
         // Tìm hoặc tạo giỏ hàng
         let cart = await Cart.findOne({ user: req.user._id });
@@ -170,14 +181,16 @@ export const addToCart = async(req, res) => {
             }
         }
         // Kiểm tra số lượng có đủ không (tổng số lượng cũ + mới)
+        console.log(`🔍 Stock check: availableStock=${availableStock}, totalQuantity=${totalQuantity}`);
         if (availableStock < totalQuantity) {
+            console.log(`❌ Not enough stock: need ${totalQuantity}, have ${availableStock}`);
             return res.status(400).json({
                 message: `Chỉ còn ${availableStock} sản phẩm trong kho`,
                 availableStock: availableStock
             });
         }
         // Tạo hoặc cập nhật reservation
-        await ProductReservation.createReservation(productId, req.user._id, totalQuantity);
+        await ProductReservation.createReservation(productId, req.user._id, totalQuantity, variantId);
         if (cart) {
             if (itemIndex > -1) {
                 cart.items[itemIndex].quantity = totalQuantity;
@@ -377,7 +390,7 @@ export const updateCartItem = async(req, res) => {
             });
 
             const currentQuantity = currentReservation ? currentReservation.quantity : 0;
-            const otherReservedQuantity = await ProductReservation.getReservedQuantity(productId) - currentQuantity;
+            const otherReservedQuantity = await ProductReservation.getReservedQuantity(productId, null) - currentQuantity;
             availableStock = Math.max(0, product.stock - otherReservedQuantity);
 
             // Kiểm tra số lượng mới có hợp lệ không
@@ -394,7 +407,7 @@ export const updateCartItem = async(req, res) => {
         console.log(`✅ Stock validation thành công: có thể cập nhật ${quantity} sản phẩm`);
 
         // Cập nhật reservation
-        await ProductReservation.createReservation(productId, req.user._id, quantity);
+        await ProductReservation.createReservation(productId, req.user._id, quantity, variantId);
 
         // Cập nhật giỏ hàng
         const cart = await Cart.findOne({ user: req.user._id });
@@ -578,7 +591,7 @@ export const getProductAvailability = async(req, res) => {
             return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
         }
 
-        const reservedQuantity = await ProductReservation.getReservedQuantity(productId);
+        const reservedQuantity = await ProductReservation.getReservedQuantity(productId, null);
         const availableStock = Math.max(0, product.stock - reservedQuantity);
 
         res.json({

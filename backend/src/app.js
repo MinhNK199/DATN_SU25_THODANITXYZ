@@ -57,6 +57,9 @@ app.use(passport.initialize());
 // Serve static files từ thư mục uploads
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// Serve placeholder images
+app.use('/placeholder-product.png', express.static(path.join(process.cwd(), 'frontend/public/placeholder-product.png')));
+
 // Test route
 app.get('/', (req, res) => {
     res.json({
