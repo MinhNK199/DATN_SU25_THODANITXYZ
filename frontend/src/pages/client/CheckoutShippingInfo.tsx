@@ -3,6 +3,7 @@ import { FaMapMarkerAlt, FaPlus, FaEdit } from "react-icons/fa";
 import { Address } from "../../services/userApi";
 import AddressSelector from "../../components/client/AddressSelector";
 import AddressForm from "../../components/client/AddressForm";
+import { useToast } from "../../components/client/ToastContainer";
 import axios from "axios";
 
 // Local interface for form data
@@ -69,6 +70,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   setShowAddressSelector,
   onRefreshAddresses,
 }) => {
+  const { showSuccess, showError } = useToast();
   const [showManualInput, setShowManualInput] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
@@ -81,6 +83,8 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [loading, setLoading] = useState(false);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState('');
 
   // Load provinces on component mount
   useEffect(() => {
@@ -137,7 +141,10 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   };
 
   const handleSaveAddress = (address: Address) => {
+    // Cập nhật selectedAddress
     setSelectedAddress(address);
+    
+    // Cập nhật formData
     setFormData({
       lastName: address.fullName.split(" ").slice(-1).join(" "),
       phone: address.phone,
@@ -145,18 +152,55 @@ const CheckoutShippingInfo: React.FC<Props> = ({
       province_code: address.city,
       ward_code: address.ward,
     });
+    
+    // Cập nhật danh sách addresses nếu địa chỉ mới
+    const isNewAddress = !addresses.find(addr => addr._id === address._id);
+    if (isNewAddress) {
+      setAddresses(prev => [...prev, address]);
+      showSuccess('Thêm địa chỉ mới thành công!');
+    } else {
+      // Nếu là cập nhật, cập nhật địa chỉ trong danh sách
+      setAddresses(prev => prev.map(addr => 
+        addr._id === address._id ? address : addr
+      ));
+      showSuccess('Cập nhật địa chỉ thành công!');
+    }
+    
     setShowAddressForm(false);
     setShowManualInput(false);
     setValidationErrors({});
   };
 
-  const handleRefreshAddresses = () => {
-    // Call parent refresh function if provided
-    if (onRefreshAddresses) {
-      onRefreshAddresses();
+  const handleRefreshAddresses = async () => {
+    try {
+      setAddressesLoading(true);
+      setAddressesError('');
+      
+      // Fetch addresses from API
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8000/api/address', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update local addresses state
+      setAddresses(response.data);
+      
+      // Call parent refresh function if provided
+      if (onRefreshAddresses) {
+        onRefreshAddresses();
+      }
+      
+      // Close the form
+      setShowAddressForm(false);
+      
+      showSuccess('Danh sách địa chỉ đã được cập nhật!');
+    } catch (error) {
+      console.error('Error refreshing addresses:', error);
+      setAddressesError('Không thể tải danh sách địa chỉ');
+      showError('Không thể tải danh sách địa chỉ');
+    } finally {
+      setAddressesLoading(false);
     }
-    // Close the form
-    setShowAddressForm(false);
   };
 
   const handleManualInputToggle = () => {
@@ -551,6 +595,9 @@ const CheckoutShippingInfo: React.FC<Props> = ({
                 onAddressSelect={handleAddressSelect}
                 onAddNewAddress={handleAddNewAddress}
                 onRefresh={handleRefreshAddresses}
+                addresses={addresses}
+                loading={addressesLoading}
+                error={addressesError}
               />
             </div>
           </div>

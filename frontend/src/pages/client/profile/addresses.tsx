@@ -188,16 +188,6 @@ const Addresses = () => {
                   : 'border-gray-200 hover:border-gray-300 bg-white'
               }`}
             >
-              {/* Default Badge */}
-              {address.isDefault && (
-                <div className="absolute top-4 left-4">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    <Star className="w-3 h-3 mr-1" />
-                    Mặc định
-                  </span>
-                </div>
-              )}
-
               {/* Address Type Icon */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-2">
@@ -240,10 +230,18 @@ const Addresses = () => {
 
                 <p className="text-gray-700">{address.address}</p>
 
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <span>{address.wardName || address.ward}</span>
-                  <span>•</span>
-                  <span>{address.cityName || address.city}</span>
+                {/* Phường xã và thành phố - hiển thị rõ ràng hơn */}
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex items-center space-x-2 text-sm text-gray-700">
+                    <MapPinIcon className="w-4 h-4 text-blue-500" />
+                    <span className="font-medium">Phường/Xã:</span>
+                    <span>{address.wardName || `Phường ${address.ward}`}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-700 mt-1">
+                    <MapPinIcon className="w-4 h-4 text-blue-500" />
+                    <span className="font-medium">Thành phố/Tỉnh:</span>
+                    <span>{address.cityName || `Tỉnh ${address.city}`}</span>
+                  </div>
                 </div>
 
                 {address.postalCode && (
@@ -264,6 +262,16 @@ const Addresses = () => {
                   >
                     Đặt làm mặc định
                   </button>
+                </div>
+              )}
+
+              {/* Default Badge - di chuyển xuống góc dưới bên phải */}
+              {address.isDefault && (
+                <div className="absolute bottom-4 right-4">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <Star className="w-3 h-3 mr-1" />
+                    Mặc định
+                  </span>
                 </div>
               )}
             </div>

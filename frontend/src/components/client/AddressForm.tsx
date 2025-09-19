@@ -77,6 +77,27 @@ const AddressForm: React.FC<AddressFormProps> = ({
     }
   }, [address]);
 
+  // Effect để đảm bảo ward được set đúng sau khi wards được load
+  useEffect(() => {
+    if (address && address.ward && wards.length > 0) {
+      // Tìm ward code từ ward name nếu cần
+      const wardCode = address.ward;
+      const wardExists = wards.find(w => w.code.toString() === wardCode.toString());
+      
+      if (wardExists) {
+        // Nếu tìm thấy ward, đảm bảo formData.ward được set đúng
+        setFormData(prev => ({ ...prev, ward: wardExists.code.toString() }));
+      } else if (address.wardName) {
+        // Nếu không tìm thấy ward code, thử tìm bằng name
+        const wardByName = wards.find(w => w.name === address.wardName);
+        
+        if (wardByName) {
+          setFormData(prev => ({ ...prev, ward: wardByName.code.toString() }));
+        }
+      }
+    }
+  }, [wards, address]);
+
   const fetchProvinces = async () => {
     try {
       const response = await axios.get('http://localhost:8000/api/address/provinces');
@@ -105,6 +126,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
+
 
     // Clear error when user starts typing
     if (errors[name]) {

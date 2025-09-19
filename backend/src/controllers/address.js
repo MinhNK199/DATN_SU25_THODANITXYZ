@@ -74,31 +74,31 @@ const mapCodeToName = async (code, type) => {
                 return wardCodeToNameCache[code];
             }
             
-            // Sử dụng API depth=3 để lấy wards
+            // Thử tìm ward bằng cách duyệt qua tất cả provinces
             try {
-                const response = await axios.get(`${PROVINCE_API_BASE}/?depth=3`);
-                const provinces = response.data;
+                const provinces = await getProvinces();
                 
                 for (const province of provinces) {
-                    if (province.districts) {
-                        for (const district of province.districts) {
-                            if (district.wards) {
-                                const ward = district.wards.find(w => w.code === Number(code));
-                                if (ward) {
-                                    console.log(`✅ Found ward ${code}: ${ward.name} in ${district.name}, ${province.name}`);
-                                    
-                                    // Cache kết quả
-                                    if (!wardCodeToNameCache) wardCodeToNameCache = {};
-                                    wardCodeToNameCache[code] = ward.name;
-                                    
-                                    return ward.name;
-                                }
-                            }
+                    try {
+                        const wards = await getWardsByProvince(province.code);
+                        const ward = wards.find(w => w.code === Number(code));
+                        if (ward) {
+                            console.log(`✅ Found ward ${code}: ${ward.name} in ${province.name}`);
+                            
+                            // Cache kết quả
+                            if (!wardCodeToNameCache) wardCodeToNameCache = {};
+                            wardCodeToNameCache[code] = ward.name;
+                            
+                            return ward.name;
                         }
+                    } catch (error) {
+                        // Tiếp tục với province tiếp theo nếu có lỗi
+                        console.warn(`Error fetching wards for province ${province.code}:`, error.message);
+                        continue;
                     }
                 }
             } catch (error) {
-                console.error('Error fetching wards with depth=3:', error);
+                console.error('Error fetching provinces for ward mapping:', error);
             }
             
             // Fallback cho ward codes không hợp lệ
@@ -124,10 +124,14 @@ const addNamesToAddress = async (address) => {
     const addressObj = address.toObject ? address.toObject() : address;
     
     try {
+        console.log(`🔍 Mapping address: city=${addressObj.city}, ward=${addressObj.ward}`);
+        
         const [cityName, wardName] = await Promise.all([
             mapCodeToName(addressObj.city, 'province'),
             mapCodeToName(addressObj.ward, 'ward')
         ]);
+        
+        console.log(`✅ Mapped names: cityName=${cityName}, wardName=${wardName}`);
         
         return {
             ...addressObj,
@@ -145,11 +149,27 @@ const addNamesToAddress = async (address) => {
     }
 };
 
+// Helper function để clear cache
+const clearWardCache = () => {
+    wardCodeToNameCache = null;
+    console.log('🧹 Cleared ward cache');
+};
+
 // API để lấy danh sách tỉnh/thành
 export const getProvincesAPI = async (req, res) => {
     try {
         const provinces = await getProvinces();
         res.json(provinces);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// API để clear cache (dành cho debug)
+export const clearCacheAPI = async (req, res) => {
+    try {
+        clearWardCache();
+        res.json({ message: 'Cache cleared successfully' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
