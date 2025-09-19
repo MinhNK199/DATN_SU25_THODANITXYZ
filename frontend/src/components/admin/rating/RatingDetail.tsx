@@ -5,16 +5,17 @@ import {
   Spin,
   Button,
   Input,
-  message,
   Descriptions,
   Image,
 } from "antd";
 import axiosInstance from "../../../api/axiosInstance";
 import dayjs from "dayjs";
+import { useNotification } from "../../../hooks/useNotification";
 
 const { TextArea } = Input;
 
 const RatingDetail: React.FC = () => {
+  const { success, error, warning } = useNotification();
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -34,25 +35,25 @@ const RatingDetail: React.FC = () => {
       setRating(res.data);
       setReply(res.data.reply || "");
     } catch (err) {
-      message.error("Không thể tải chi tiết đánh giá");
+      error("Không thể tải chi tiết đánh giá");
     } finally {
       setLoading(false);
     }
   };
 
   const handleReply = async () => {
-    if (!reply.trim()) return message.warning("Vui lòng nhập phản hồi");
+    if (!reply.trim()) return warning("Vui lòng nhập phản hồi");
     setReplyLoading(true);
     try {
       await axiosInstance.post(`/rating/${id}/reply`, { reply });
-      message.success("Phản hồi thành công");
+      success("Phản hồi thành công");
       setShowReplyForm(false);
       fetchDetail();
     } catch (err: any) {
       if (err.response?.data?.error?.code === "ALREADY_REPLIED") {
-        message.error("Đánh giá đã được phản hồi");
+        error("Đánh giá đã được phản hồi");
       } else {
-        message.error("Phản hồi thất bại");
+        error("Phản hồi thất bại");
       }
     } finally {
       setReplyLoading(false);

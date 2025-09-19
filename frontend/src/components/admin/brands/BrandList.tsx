@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Checkbox, message, Tag, Space, Typography, Spin, Upload, Image } from "antd";
+import { Table, Button, Modal, Form, Input, Checkbox, Tag, Space, Typography, Spin, Upload, Image } from "antd";
 import type { Brand } from "../../../interfaces/Brand";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { PlusOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd/es/upload/interface";
-import { useErrorNotification } from "../../../hooks/useErrorNotification";
+import { useNotification } from "../../../hooks/useNotification";
 
 const API_URL = "http://localhost:8000/api/brand";
 
 const BrandList: React.FC = () => {
-  const { handleError } = useErrorNotification();
+  const { success, error } = useNotification();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [messageApi, contextHolder] = message.useMessage();
   const [newBrand] = useState<Partial<Brand>>({
     name: "",
     description: "",
@@ -70,10 +69,10 @@ const BrandList: React.FC = () => {
               });
               setLogoFileList(updatedFileList);
               form.setFieldsValue({ logo: fullUrl });
-              messageApi.success("Upload logo thành công!");
+              success("Upload logo thành công!");
             }
           } else {
-            messageApi.error("Upload logo thất bại!");
+            error("Upload logo thất bại!");
           }
         } catch (error) {
           console.error("Upload error:", error);
@@ -119,10 +118,10 @@ const BrandList: React.FC = () => {
               });
               setEditLogoFileList(updatedFileList);
               editForm.setFieldsValue({ logo: fullUrl });
-              messageApi.success("Upload logo thành công!");
+              success("Upload logo thành công!");
             }
           } else {
-            messageApi.error("Upload logo thất bại!");
+            error("Upload logo thất bại!");
           }
         } catch (error) {
           console.error("Upload error:", error);
@@ -162,7 +161,7 @@ const BrandList: React.FC = () => {
           });
 
           if (res.ok) {
-            messageApi.success("Xóa thành công!");
+            success("Xóa thành công!");
             fetchBrands();
           } else {
             const errorData = await res.json();
@@ -184,7 +183,7 @@ const BrandList: React.FC = () => {
       });
 
       if (res.ok) {
-        messageApi.success("Thêm thương hiệu thành công!");
+        success("Thêm thương hiệu thành công!");
         setIsAdding(false);
         form.resetFields();
         setLogoFileList([]);
@@ -209,7 +208,7 @@ const BrandList: React.FC = () => {
       });
 
       if (res.ok) {
-        messageApi.success("Cập nhật thương hiệu thành công!");
+        success("Cập nhật thương hiệu thành công!");
         setEditingBrand(null);
         setEditLogoFileList([]);
         fetchBrands();
@@ -301,7 +300,6 @@ const BrandList: React.FC = () => {
 
   return (
     <div>
-      {contextHolder}
       <div className="flex justify-between items-center mb-4">
         <Typography.Title level={3}>Danh sách Thương hiệu</Typography.Title>
         <Button type="primary" className="admin-primary-button" onClick={() => setIsAdding(true)}>

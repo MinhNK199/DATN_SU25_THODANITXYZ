@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import {
   Table,
   Spin,
-  message,
   Button,
   Tooltip,
   Input,
@@ -17,6 +16,7 @@ import axiosInstance from "../../../api/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { EyeOutlined } from "@ant-design/icons";
 import AdminPagination from "../common/AdminPagination";
+import { useNotification } from "../../../hooks/useNotification";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -47,6 +47,7 @@ interface Rating {
 }
 
 const RatingList: React.FC = () => {
+  const { success, error } = useNotification();
   const [data, setData] = useState<Rating[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,7 +106,7 @@ const RatingList: React.FC = () => {
       setData(res.data.data || res.data || []);
       setTotalRatings(res.data.total || res.data.data?.length || 0);
     } catch (err) {
-      message.error("Không thể tải danh sách đánh giá");
+      error("Không thể tải danh sách đánh giá");
     } finally {
       setLoading(false);
     }

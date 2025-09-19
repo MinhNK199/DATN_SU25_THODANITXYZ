@@ -11,6 +11,7 @@ import axiosInstance from "../../../api/axiosInstance";
 import { useErrorNotification } from "../../../hooks/useErrorNotification";
 import AdminPagination from "../common/AdminPagination";
 import { useOrder } from "../../../contexts/OrderContext";
+import { useNotification } from "../../../contexts/NotificationContext";
 
 const API_URL = '/api/order';
 
@@ -19,6 +20,7 @@ const { Option } = Select;
 const OrderList: React.FC = () => {
   const { handleError } = useErrorNotification();
   const { orders: contextOrders, updateOrder, addOrder } = useOrder();
+  const { showNotification } = useNotification();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -262,7 +264,7 @@ const OrderList: React.FC = () => {
               <Button
                 type="primary"
                 className="admin-primary-button"
-                onClick={() => handleConfirmOrder(record._id)}
+                onClick={() => handleConfirmOrder(record._id, showNotification)}
               >
                 ✅ Xác nhận
               </Button>
@@ -408,7 +410,7 @@ const OrderList: React.FC = () => {
         isOpen={showAssignModal}
         onClose={() => setShowAssignModal(false)}
         onAssign={(shipperId) => {
-          handleAssignConfirm(shipperId, assigningOrderId, page, fetchOrders);
+          handleAssignConfirm(shipperId, assigningOrderId, page, fetchOrders, showNotification);
           setShowAssignModal(false);
         }}
         orderId={assigningOrderId}
@@ -423,12 +425,18 @@ const handleAssignShipper = (orderId: string, setAssigningOrderId: (id: string) 
   setShowAssignModal(true);
 };
 
-const handleConfirmOrder = async (orderId: string) => {
+const handleConfirmOrder = async (orderId: string, showNotification: any) => {
   try {
     const response = await axiosInstance.put(`/order/${orderId}/confirm`);
 
     if (response.status === 200) {
-      antdMessage.success('Xác nhận đơn hàng thành công!');
+      // Hiển thị thông báo admin
+      showNotification({
+        title: 'Xác nhận đơn hàng thành công',
+        message: `Đơn hàng #${orderId.slice(-6)} đã được xác nhận thành công`,
+        type: 'success',
+        actionUrl: `/admin/orders/${orderId}`
+      });
       window.location.reload(); // Refresh để cập nhật danh sách
     } else {
       const errorData = response.data;
@@ -440,7 +448,7 @@ const handleConfirmOrder = async (orderId: string) => {
   }
 };
 
-const handleAssignConfirm = async (shipperId: string, assigningOrderId: string, page: number, fetchOrders: (page: number) => void) => {
+const handleAssignConfirm = async (shipperId: string, assigningOrderId: string, page: number, fetchOrders: (page: number) => void, showNotification: any) => {
   try {
     const response = await axiosInstance.post('/admin/shipper/assign-order', {
       orderId: assigningOrderId,
@@ -448,7 +456,13 @@ const handleAssignConfirm = async (shipperId: string, assigningOrderId: string, 
     });
 
     if (response.status === 200) {
-      antdMessage.success('Phân công shipper thành công!');
+      // Hiển thị thông báo admin
+      showNotification({
+        title: 'Phân công shipper thành công',
+        message: `Đơn hàng #${assigningOrderId.slice(-6)} đã được phân công cho shipper thành công`,
+        type: 'success',
+        actionUrl: `/admin/orders/${assigningOrderId}`
+      });
       fetchOrders(page);
     } else {
       const errorData = response.data;

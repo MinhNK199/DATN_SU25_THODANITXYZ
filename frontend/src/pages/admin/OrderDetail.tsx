@@ -38,6 +38,7 @@ import {
   FaBan,
 } from "react-icons/fa";
 import { useNotification } from "../../hooks/useNotification";
+import { useNotification as useAdminNotification } from "../../contexts/NotificationContext";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -165,6 +166,7 @@ const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { success, error: showError } = useNotification();
+  const { showNotification } = useAdminNotification();
   const { updateOrder } = useOrder();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -232,6 +234,16 @@ const OrderDetail: React.FC = () => {
         setOrder(updatedOrder);
         form.resetFields();
         success("Cập nhật trạng thái đơn hàng thành công!");
+        
+        // Hiển thị thông báo admin nếu là xác nhận đơn hàng
+        if (values.status === 'confirmed') {
+          showNotification({
+            title: 'Xác nhận đơn hàng thành công',
+            message: `Đơn hàng #${id?.slice(-6)} đã được xác nhận thành công`,
+            type: 'success',
+            actionUrl: `/admin/orders/${id}`
+          });
+        }
         
         // ✅ CẬP NHẬT: Reload lại danh sách trạng thái có thể chuyển đổi
         try {

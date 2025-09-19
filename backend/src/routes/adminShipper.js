@@ -9,7 +9,8 @@ import {
   deleteShipper,
   assignOrderToShipper,
   getOnlineShippers,
-  getShipperStats
+  getShipperStats,
+  getShipperPerformance
 } from '../controllers/adminShipper.js';
 import { protect, checkAdmin } from '../middlewares/authMiddleware.js';
 
@@ -22,6 +23,7 @@ router.get('/', getAllShippers);
 router.get('/online', getOnlineShippers);
 router.get('/stats', getShipperStats);
 router.get('/:id', getShipperById);
+router.get('/:id/performance', getShipperPerformance);
 router.post('/', createShipper);
 router.put('/:id', updateShipper);
 router.put('/:id/status', updateShipperStatus);

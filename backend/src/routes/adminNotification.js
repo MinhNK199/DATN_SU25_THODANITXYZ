@@ -13,7 +13,7 @@ import { protect, checkAdmin } from "../middlewares/authMiddleware.js";
 const router = express.Router();
 
 // Tất cả routes đều yêu cầu admin
-router.use(protect, checkAdmin(['superadmin', 'admin']));
+router.use(protect, checkAdmin(['view_user']));
 
 router.get("/", getAdminNotifications);
 router.get("/unread-count", getUnreadAdminNotificationCount);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Statistic, Button, List, Tag, Space, Typography, Avatar, message, notification, Spin } from 'antd';
+import { Card, Row, Col, Statistic, Button, List, Tag, Space, Typography, Avatar, message, notification, Spin, Modal, Form, Input, Select } from 'antd';
 import { 
   UserOutlined, 
   LogoutOutlined, 
@@ -10,19 +10,18 @@ import {
   StarOutlined,
   EyeOutlined,
   PlayCircleOutlined,
-  EnvironmentOutlined
+  EnvironmentOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
 import { useShipper } from '../../contexts/ShipperContext';
 import { useOrder } from '../../contexts/OrderContext';
-import { shipperApi } from '../../services/shipperApi';
 import { Order } from '../../interfaces/Order';
-import { OrderTracking } from '../../interfaces/Shipper';
 
 const { Title, Text } = Typography;
 
 const ShipperDashboard: React.FC = () => {
-  const { state, logout, updateOnlineStatus } = useShipper();
-  const { orders: contextOrders, updateOrder } = useOrder();
+  const { state, logout } = useShipper();
+  const { orders: contextOrders } = useOrder();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -38,6 +37,12 @@ const ShipperDashboard: React.FC = () => {
     const savedStatus = localStorage.getItem('shipperOnlineStatus');
     return savedStatus ? JSON.parse(savedStatus) : (state.shipper?.isOnline || false);
   });
+  
+  // Profile modal states
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [profileForm] = Form.useForm();
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -180,7 +185,7 @@ const ShipperDashboard: React.FC = () => {
       console.log('✅ Orders loaded:', orders.length);
       
       // Check if there are pending orders and show/hide notification accordingly
-      const pendingOrders = orders.filter(order => 
+      const pendingOrders = orders.filter((order: any) => 
         !['delivered', 'delivered_success', 'completed', 'cancelled'].includes(order.status)
       );
       
@@ -233,6 +238,102 @@ const ShipperDashboard: React.FC = () => {
     }
   };
 
+  // Profile functions
+  const handleOpenProfile = async () => {
+    try {
+      setProfileLoading(true);
+      const token = localStorage.getItem('shipperToken');
+      if (!token) {
+        message.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8000/api/shipper/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Profile API response:', data); // Debug log
+        
+        // API returns: { success: true, data: { shipper: {...} } }
+        const shipperData = data.data?.shipper || data.shipper || data;
+        setProfileData(shipperData);
+        
+        profileForm.setFieldsValue({
+          fullName: shipperData.fullName || '',
+          email: shipperData.email || '',
+          phone: shipperData.phone || '',
+          vehicleType: shipperData.vehicleType || '',
+          licensePlate: shipperData.licensePlate || '',
+          address: shipperData.address || '',
+          idCard: shipperData.idCard || ''
+        });
+        setProfileModalVisible(true);
+      } else {
+        message.error('Không thể tải thông tin profile');
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      message.error('Lỗi khi tải thông tin profile');
+      
+      // Fallback: use data from context if available
+      if (state.shipper) {
+        setProfileData(state.shipper);
+        profileForm.setFieldsValue({
+          fullName: state.shipper.fullName || '',
+          email: state.shipper.email || '',
+          phone: state.shipper.phone || '',
+          vehicleType: state.shipper.vehicleType || '',
+          licensePlate: state.shipper.licensePlate || '',
+          address: state.shipper.address || '',
+          idCard: state.shipper.idCard || ''
+        });
+        setProfileModalVisible(true);
+      }
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (values: any) => {
+    try {
+      setProfileLoading(true);
+      const token = localStorage.getItem('shipperToken');
+      if (!token) {
+        message.error('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const response = await fetch('http://localhost:8000/api/shipper/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(values)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        message.success(result.message || 'Cập nhật thông tin thành công!');
+        setProfileModalVisible(false);
+        // Refresh profile data
+        await handleOpenProfile();
+      } else {
+        const errorData = await response.json();
+        message.error(errorData.message || 'Cập nhật thông tin thất bại');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      message.error('Lỗi khi cập nhật thông tin');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'assigned':
@@ -267,7 +368,7 @@ const ShipperDashboard: React.FC = () => {
     }
   };
 
-  const getActionButton = (order: Order) => {
+  const getActionButton = (order: any) => {
     switch (order.status) {
       case 'assigned':
       case 'processing':
@@ -339,6 +440,14 @@ const ShipperDashboard: React.FC = () => {
               <Space align="center">
                 <Avatar icon={<UserOutlined />} />
                 <Text>Xin chào, {state.shipper?.fullName}</Text>
+                <Button
+                  type="default"
+                  icon={<SettingOutlined />}
+                  onClick={handleOpenProfile}
+                  loading={profileLoading}
+                >
+                  Profile
+                </Button>
                 <Button
                   type="primary"
                   danger
@@ -431,7 +540,7 @@ const ShipperDashboard: React.FC = () => {
         ) : (
           <List
             dataSource={orders}
-            renderItem={(order) => (
+            renderItem={(order: any) => (
               <List.Item
                 actions={[
                   getActionButton(order)
@@ -449,8 +558,8 @@ const ShipperDashboard: React.FC = () => {
                   description={
                     <Space direction="vertical" size="small">
                       <div>
-                        <Text strong>Khách hàng:</Text> {order.user?.fullName || 'N/A'} | 
-                        <Text strong> SĐT:</Text> {order.user?.phone || 'N/A'}
+                        <Text strong>Khách hàng:</Text> {order.user?.name || 'N/A'} | 
+                        <Text strong> SĐT:</Text> {(order.user as any)?.phone || 'N/A'}
                       </div>
                       <div>
                         <Text strong>Tổng tiền:</Text> {order.totalPrice?.toLocaleString('vi-VN') || 0} VNĐ
@@ -479,6 +588,144 @@ const ShipperDashboard: React.FC = () => {
           />
         )}
       </Card>
+
+      {/* Profile Modal */}
+      <Modal
+        title="Thông tin cá nhân"
+        open={profileModalVisible}
+        onCancel={() => setProfileModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={profileForm}
+          layout="vertical"
+          onFinish={handleUpdateProfile}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Họ và tên"
+                name="fullName"
+                rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Email"
+                name="email"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập email!' },
+                  { type: 'email', message: 'Email không hợp lệ!' }
+                ]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Số điện thoại"
+                name="phone"
+                rules={[
+                  { required: true, message: 'Vui lòng nhập số điện thoại!' },
+                  { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại không hợp lệ!' }
+                ]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Loại phương tiện"
+                name="vehicleType"
+                rules={[{ required: true, message: 'Vui lòng chọn loại phương tiện!' }]}
+              >
+                <Select>
+                  <Select.Option value="motorbike">Xe máy</Select.Option>
+                  <Select.Option value="car">Ô tô</Select.Option>
+                  <Select.Option value="bicycle">Xe đạp</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="CCCD/CMND"
+                name="idCard"
+                rules={[{ required: true, message: 'Vui lòng nhập CCCD/CMND!' }]}
+              >
+                <Input disabled />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Biển số xe"
+                name="licensePlate"
+                rules={[{ required: true, message: 'Vui lòng nhập biển số xe!' }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                label="Địa chỉ"
+                name="address"
+                rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
+              >
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item label="Thông tin bổ sung">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div>
+                    <Text strong>Trạng thái: </Text>
+                    <Tag color={profileData?.status === 'active' ? 'green' : 'red'}>
+                      {profileData?.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                    </Tag>
+                  </div>
+                  
+                  <div>
+                    <Text strong>Tổng đơn giao: </Text>
+                    <Text>{profileData?.totalDeliveries || 0} đơn</Text>
+                  </div>
+                  <div>
+                    <Text strong>Trạng thái online: </Text>
+                    <Tag color={profileData?.isOnline ? 'green' : 'red'}>
+                      {profileData?.isOnline ? 'Online' : 'Offline'}
+                    </Tag>
+                  </div>
+                 
+                </Space>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => setProfileModalVisible(false)}>
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit" loading={profileLoading}>
+                Cập nhật
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

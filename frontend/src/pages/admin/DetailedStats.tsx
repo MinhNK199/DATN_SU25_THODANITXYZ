@@ -9,7 +9,7 @@ import {
   Area, AreaChart, PieChart, Pie, Cell, RadialBarChart, RadialBar, ComposedChart
 } from 'recharts';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import { useNotification } from '../../hooks/useNotification';
 
 interface ChartDataItem {
   name: string;
@@ -62,6 +62,7 @@ interface StatsData {
 const DetailedStats: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'revenue' | 'customers' | 'products'>('revenue');
   const [loading, setLoading] = useState(true);
+  const { error } = useNotification();
   const [statsData, setStatsData] = useState<StatsData>({
     revenue: {
       total: 0,
@@ -119,9 +120,9 @@ const DetailedStats: React.FC = () => {
         customers: customersRes.data.data || customersRes.data,
         products: productsRes.data.data || productsRes.data
       });
-    } catch (error) {
-      console.error('Error fetching detailed stats:', error);
-      toast.error('Không thể tải dữ liệu thống kê chi tiết');
+    } catch (err) {
+      console.error('Error fetching detailed stats:', err);
+      error('Không thể tải dữ liệu thống kê chi tiết', 'Lỗi tải dữ liệu');
     } finally {
       setLoading(false);
     }
