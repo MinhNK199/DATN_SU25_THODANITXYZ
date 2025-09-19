@@ -128,11 +128,26 @@ const PersonalInfo = () => {
       );
 
       if (response.data?.avatar) {
-        const avatarUrl = formatAvatarUrl(response.data.avatar);
-        const updatedUser = { ...user!, avatar: avatarUrl };
-        setUser(updatedUser);
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        toast.success("Cập nhật ảnh đại diện thành công!");
+        // Lấy thông tin user mới nhất từ server sau khi upload
+        const meResponse = await axiosInstance.get("/auth/me");
+        if (meResponse.data) {
+          const userData = meResponse.data.user || meResponse.data;
+          // Đảm bảo format avatar URL đúng
+          userData.avatar = formatAvatarUrl(userData.avatar);
+          
+          // Cập nhật state và localStorage
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+          
+          // Cập nhật formData nếu cần
+          setFormData({
+            name: userData.name || "",
+            phone: userData.phone || "",
+            email: userData.email || "",
+          });
+          
+          toast.success("Cập nhật ảnh đại diện thành công!");
+        }
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Lỗi upload ảnh");

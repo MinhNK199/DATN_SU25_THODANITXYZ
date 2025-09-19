@@ -4,7 +4,7 @@ import { FaSearch, FaShoppingCart, FaUser, FaHeart, FaBars, FaTimes, FaPhone, Fa
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useCompare } from '../../contexts/CompareContext';
-import SearchBar from './SearchBar';
+import SmartSearchBar from './SmartSearchBar';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { calculateDisplayPrice } from '../../utils/priceUtils';
@@ -43,7 +43,7 @@ const Header: React.FC = () => {
   const miniCartRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  const { state: cartState, loadCart } = useCart();
+  const { state: cartState } = useCart();
   const { state: wishlistState } = useWishlist();
   const { compareList } = useCompare();
 
@@ -77,10 +77,8 @@ const Header: React.FC = () => {
       setUserRole(null);
     }
 
-    if (token) {
-      loadCart();
-    }
-  }, [loadCart]);
+    // Cart will be loaded automatically by CartContext
+  }, []); // Chỉ chạy một lần khi component mount
 
   // Listen for login/logout events
   useEffect(() => {
@@ -102,14 +100,12 @@ const Header: React.FC = () => {
         setUserRole(null);
       }
 
-      if (token) {
-        loadCart();
-      }
+      // Cart will be loaded automatically by CartContext
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [loadCart]);
+  }, []); // Chỉ chạy một lần khi component mount
 
   // Fetch categories
   useEffect(() => {
@@ -396,7 +392,7 @@ const Header: React.FC = () => {
 
             {/* Search Bar */}
             <div className="hidden md:flex flex-1 max-w-md mx-8">
-              <SearchBar />
+              <SmartSearchBar />
             </div>
 
             {/* Right Icons */}
@@ -600,7 +596,7 @@ const Header: React.FC = () => {
           {/* Mobile Search */}
           {isSearchOpen && (
             <div className="md:hidden pb-4">
-              <SearchBar />
+              <SmartSearchBar />
             </div>
           )}
         </div>

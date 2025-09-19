@@ -20,6 +20,7 @@ interface AddressSelectorProps {
   selectedAddress?: Address | null;
   onAddressSelect: (address: Address) => void;
   onAddNewAddress: () => void;
+  onRefresh?: () => void;
   className?: string;
 }
 
@@ -27,6 +28,7 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
   selectedAddress,
   onAddressSelect,
   onAddNewAddress,
+  onRefresh,
   className = ''
 }) => {
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -90,9 +92,9 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
   if (loading) {
     return (
       <div className={`animate-pulse ${className}`}>
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-gray-200 h-20 rounded-lg"></div>
+            <div key={i} className="bg-gradient-to-r from-gray-200 to-gray-300 h-24 rounded-2xl"></div>
           ))}
         </div>
       </div>
@@ -101,14 +103,15 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
 
   if (error) {
     return (
-      <div className={`text-center py-8 ${className}`}>
-        <div className="text-red-500 mb-4">
-          <FaMapMarkerAlt className="mx-auto text-2xl" />
+      <div className={`text-center py-12 ${className}`}>
+        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <FaMapMarkerAlt className="text-red-500 text-3xl" />
         </div>
-        <p className="text-gray-600 mb-4">{error}</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Có lỗi xảy ra</h3>
+        <p className="text-gray-600 mb-6">{error}</p>
         <button
           onClick={fetchAddresses}
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl font-bold hover:from-red-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 shadow-lg"
         >
           Thử lại
         </button>
@@ -118,16 +121,17 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
 
   if (addresses.length === 0) {
     return (
-      <div className={`text-center py-8 ${className}`}>
-        <div className="text-gray-400 mb-4">
-          <FaMapMarkerAlt className="mx-auto text-3xl" />
+      <div className={`text-center py-12 ${className}`}>
+        <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <FaMapMarkerAlt className="text-blue-500 text-3xl" />
         </div>
-        <p className="text-gray-600 mb-4">Bạn chưa có địa chỉ nào</p>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">Chưa có địa chỉ nào</h3>
+        <p className="text-gray-600 mb-6">Hãy thêm địa chỉ giao hàng đầu tiên của bạn</p>
         <button
           onClick={onAddNewAddress}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
         >
-          <FaPlus className="mr-2" />
+          <FaPlus className="mr-3 text-xl" />
           Thêm địa chỉ mới
         </button>
       </div>
@@ -135,76 +139,77 @@ const AddressSelector: React.FC<AddressSelectorProps> = ({
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Chọn địa chỉ giao hàng</h3>
+    <div className={`space-y-6 ${className}`}>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-2xl font-bold text-gray-900">Chọn địa chỉ giao hàng</h3>
+          <p className="text-gray-600 mt-1">Chọn địa chỉ để giao hàng</p>
+        </div>
         <button
           onClick={onAddNewAddress}
-          className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
         >
-          <FaPlus className="mr-1" />
+          <FaPlus className="mr-2 text-lg" />
           Thêm mới
         </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {addresses.map((address) => (
           <div
             key={address._id}
-            className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+            className={`relative p-6 border-2 rounded-2xl cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
               selectedAddress?._id === address._id
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-200 hover:border-gray-300 bg-white'
+                ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-xl'
+                : 'border-gray-200 hover:border-gray-300 bg-white hover:shadow-lg'
             }`}
             onClick={() => onAddressSelect(address)}
           >
             {/* Check mark for selected address */}
             {selectedAddress?._id === address._id && (
-              <div className="absolute top-3 right-3">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <FaCheck className="text-white text-xs" />
+              <div className="absolute top-4 right-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                  <FaCheck className="text-white text-sm" />
                 </div>
               </div>
             )}
 
-            {/* Default badge */}
+            {/* Default badge - moved to bottom right */}
             {address.isDefault && (
-              <div className="absolute top-3 left-3">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Mặc định
+              <div className="absolute bottom-4 right-4">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-200 shadow-md">
+                  ⭐ Mặc định
                 </span>
               </div>
             )}
 
-            <div className="flex items-start space-x-3">
-              <div className="text-xl">
-                {getAddressTypeIcon(address.type)}
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center shadow-md">
+                <span className="text-2xl">{getAddressTypeIcon(address.type)}</span>
               </div>
               
               <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2 mb-1">
-                  <span className="font-medium text-gray-900">{address.fullName}</span>
-                  <span className="text-gray-500">•</span>
-                  <span className="text-gray-600">{address.phone}</span>
+                <div className="flex items-center space-x-3 mb-2">
+                  <span className="text-xl font-bold text-gray-900 truncate">{address.fullName}</span>
+                  <span className="text-gray-400 text-xl">•</span>
+                  <span className="text-gray-600 font-semibold text-lg">{address.phone}</span>
                 </div>
                 
-                <p className="text-gray-700 mb-1">
-                  {address.address}
-                </p>
+                <p className="text-gray-700 text-lg mb-3 font-medium">{address.address}</p>
                 
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <span>{address.wardName || address.ward}</span>
-                  <span>•</span>
-                  <span>{address.cityName || address.city}</span>
+                <div className="flex items-center space-x-3 text-base text-gray-600">
+                  <span className="font-semibold">{address.wardName || address.ward}</span>
+                  <span className="text-gray-400">•</span>
+                  <span className="font-semibold">{address.cityName || address.city}</span>
                 </div>
                 
-                <div className="flex items-center space-x-2 mt-2">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                <div className="flex items-center space-x-3 mt-3">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300">
                     {getAddressTypeText(address.type)}
                   </span>
                   {address.note && (
-                    <span className="text-xs text-gray-500">
-                      Ghi chú: {address.note}
+                    <span className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">
+                      📝 {address.note}
                     </span>
                   )}
                 </div>

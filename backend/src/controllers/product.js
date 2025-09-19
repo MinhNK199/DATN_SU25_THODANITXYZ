@@ -237,6 +237,20 @@ export const getProducts = async(req, res) => {
             .limit(pageSize)
             .skip(pageSize * (page - 1));
 
+        // Tính toán rating thực tế từ bảng Rating cho tất cả sản phẩm
+        const Rating = (await import("../models/Rating.js")).default;
+        const productIds = products.map(p => p._id);
+        const ratings = await Rating.find({ productId: { $in: productIds } });
+        
+        // Tạo map rating theo productId
+        const ratingMap = {};
+        ratings.forEach(rating => {
+            if (!ratingMap[rating.productId]) {
+                ratingMap[rating.productId] = [];
+            }
+            ratingMap[rating.productId].push(rating);
+        });
+
         // 🧩 Đảm bảo luôn có mảng biến thể và các trường quan trọng không null
         const productsWithVariants = products.map((product) => {
             const productObj = typeof product.toObject === "function" ? product.toObject() : product
@@ -247,6 +261,26 @@ export const getProducts = async(req, res) => {
             if (!productObj.brand) productObj.brand = null
             if (typeof productObj.price !== "number") productObj.price = 0
             if (!Array.isArray(productObj.images)) productObj.images = []
+            
+            // Tính toán rating thực tế từ bảng Rating
+            const productRatings = ratingMap[product._id] || [];
+            let averageRating = 0;
+            let numReviews = 0;
+            let reviewCount = 0;
+            
+            if (productRatings.length > 0) {
+                const totalRating = productRatings.reduce((acc, rating) => acc + rating.rating, 0);
+                averageRating = totalRating / productRatings.length;
+                numReviews = productRatings.length;
+                reviewCount = productRatings.length;
+            }
+            
+            // Cập nhật rating từ dữ liệu thực tế
+            productObj.rating = averageRating;
+            productObj.averageRating = averageRating;
+            productObj.numReviews = numReviews;
+            productObj.reviewCount = reviewCount;
+            
             return productObj
         })
 
@@ -291,6 +325,21 @@ export const getProductById = async(req, res) => {
             .populate("questions.user", "name email avatar");
         if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
 
+        // Tính toán rating thực tế từ bảng Rating
+        const Rating = (await import("../models/Rating.js")).default;
+        const ratings = await Rating.find({ productId: req.params.id });
+        
+        let averageRating = 0;
+        let numReviews = 0;
+        let reviewCount = 0;
+        
+        if (ratings.length > 0) {
+            const totalRating = ratings.reduce((acc, rating) => acc + rating.rating, 0);
+            averageRating = totalRating / ratings.length;
+            numReviews = ratings.length;
+            reviewCount = ratings.length;
+        }
+
         // Thêm thống kê Q&A
         const qaStats = {
             totalQuestions: product.questions.length,
@@ -301,11 +350,17 @@ export const getProductById = async(req, res) => {
         const productWithStats = {
             ...product.toObject(),
             qaStats,
+            // Cập nhật rating từ dữ liệu thực tế
+            rating: averageRating,
+            averageRating: averageRating,
+            numReviews: numReviews,
+            reviewCount: reviewCount,
         }
 
         console.log("🔍 getProductById - Product additionalImages:", product.additionalImages);
         console.log("🔍 getProductById - Product additionalImages type:", typeof product.additionalImages);
         console.log("🔍 getProductById - Product additionalImages isArray:", Array.isArray(product.additionalImages));
+        console.log("🔍 getProductById - Real rating data:", { averageRating, numReviews, reviewCount });
 
         res.json(productWithStats)
     } catch (error) {
@@ -761,6 +816,47 @@ export const createProductReview = async(req, res) => {
         res.status(400).json({ message: error.message })
     }
 }
+
+// Đồng bộ rating từ bảng Rating vào Product model
+export const syncProductRatings = async (req, res) => {
+    try {
+        const Rating = (await import("../models/Rating.js")).default;
+        
+        // Lấy tất cả sản phẩm
+        const products = await Product.find({});
+        let updatedCount = 0;
+        
+        for (const product of products) {
+            // Lấy tất cả rating của sản phẩm này
+            const ratings = await Rating.find({ productId: product._id });
+            
+            let averageRating = 0;
+            let numReviews = 0;
+            
+            if (ratings.length > 0) {
+                const totalRating = ratings.reduce((acc, rating) => acc + rating.rating, 0);
+                averageRating = totalRating / ratings.length;
+                numReviews = ratings.length;
+            }
+            
+            // Cập nhật product với rating mới
+            await Product.findByIdAndUpdate(product._id, {
+                averageRating: averageRating,
+                numReviews: numReviews
+            });
+            
+            updatedCount++;
+        }
+        
+        res.json({
+            message: `Đã đồng bộ rating cho ${updatedCount} sản phẩm`,
+            updatedCount: updatedCount
+        });
+    } catch (error) {
+        console.error("Error syncing product ratings:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
 
 // Lấy top sản phẩm đánh giá cao
 export const getTopProducts = async(req, res) => {
@@ -2147,7 +2243,7 @@ export const getFavorites = async(req, res) => {
         // Tìm user với populate favorites
         const user = await User.findById(req.user._id).populate({
             path: "favorites",
-            select: "name price images averageRating numReviews stock isActive category brand",
+            select: "name price salePrice images averageRating numReviews stock isActive category brand variants rating reviewCount",
             populate: [
                 { path: "category", select: "name" },
                 { path: "brand", select: "name" },
@@ -2161,8 +2257,45 @@ export const getFavorites = async(req, res) => {
         // Lọc chỉ sản phẩm đang hoạt động
         const activeFavorites = user.favorites.filter((p) => p.isActive)
 
+        // Tính toán rating thực tế từ bảng Rating cho favorites
+        const Rating = (await import("../models/Rating.js")).default;
+        const productIds = activeFavorites.map(p => p._id);
+        const ratings = await Rating.find({ productId: { $in: productIds } });
+        
+        // Tạo map rating theo productId
+        const ratingMap = {};
+        ratings.forEach(rating => {
+            if (!ratingMap[rating.productId]) {
+                ratingMap[rating.productId] = [];
+            }
+            ratingMap[rating.productId].push(rating);
+        });
+
+        // Cập nhật rating cho từng sản phẩm
+        const favoritesWithRating = activeFavorites.map(product => {
+            const productRatings = ratingMap[product._id] || [];
+            let averageRating = 0;
+            let numReviews = 0;
+            let reviewCount = 0;
+            
+            if (productRatings.length > 0) {
+                const totalRating = productRatings.reduce((acc, rating) => acc + rating.rating, 0);
+                averageRating = totalRating / productRatings.length;
+                numReviews = productRatings.length;
+                reviewCount = productRatings.length;
+            }
+            
+            return {
+                ...product.toObject(),
+                rating: averageRating,
+                averageRating: averageRating,
+                numReviews: numReviews,
+                reviewCount: reviewCount,
+            };
+        });
+
         // Sắp xếp
-        activeFavorites.sort((a, b) => {
+        favoritesWithRating.sort((a, b) => {
             if (order === "desc") {
                 return new Date(b[sort]) - new Date(a[sort])
             } else {
@@ -2173,18 +2306,18 @@ export const getFavorites = async(req, res) => {
         // Phân trang
         const startIndex = (page - 1) * limit
         const endIndex = page * limit
-        const paginatedFavorites = activeFavorites.slice(startIndex, endIndex)
+        const paginatedFavorites = favoritesWithRating.slice(startIndex, endIndex)
 
         res.json({
             favorites: paginatedFavorites,
             pagination: {
                 page: Number.parseInt(page),
                 limit: Number.parseInt(limit),
-                total: activeFavorites.length,
-                pages: Math.ceil(activeFavorites.length / limit),
+                total: favoritesWithRating.length,
+                pages: Math.ceil(favoritesWithRating.length / limit),
             },
             totalFavorites: user.favorites.length,
-            activeFavorites: activeFavorites.length,
+            activeFavorites: favoritesWithRating.length,
         })
     } catch (error) {
         console.error("Error getting favorites:", error)

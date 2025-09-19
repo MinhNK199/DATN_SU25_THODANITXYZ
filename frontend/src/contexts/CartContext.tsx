@@ -121,6 +121,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load cart from backend on mount
   const loadCart = useCallback(async (forceRefresh = false) => {
     const token = localStorage.getItem('token');
+    
     if (!token) {
       // Nếu chưa đăng nhập, load từ localStorage
       const savedCart = localStorage.getItem('cart');
@@ -141,7 +142,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
           // Silently handle localStorage error
         }
+      } else {
       }
+      // ✅ QUAN TRỌNG: Set loading = false ngay cả khi không có token
+      dispatch({ type: 'SET_LOADING', payload: false });
       return;
     }
 
@@ -175,6 +179,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (localError) {
           // Silently handle localStorage error
         }
+      } else {
       }
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
@@ -183,7 +188,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     loadCart();
-  }, [loadCart]);
+  }, []); // Chỉ chạy một lần khi component mount
 
   const addToCart = useCallback(async (productId: string, quantity: number = 1, variantId?: string) => {
     const token = localStorage.getItem('token');

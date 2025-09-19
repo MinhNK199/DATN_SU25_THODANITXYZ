@@ -217,8 +217,18 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
   }
 };
-export const getCurrentUser = (req, res) => {
-  res.json({ user: req.user });
+export const getCurrentUser = async (req, res) => {
+  try {
+    // Lấy thông tin user mới nhất từ database để đảm bảo dữ liệu được cập nhật
+    const user = await User.findById(req.user._id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "Người dùng không tồn tại" });
+    }
+    res.json({ user });
+  } catch (error) {
+    console.error("Error getting current user:", error);
+    res.status(500).json({ message: "Lỗi server khi lấy thông tin người dùng" });
+  }
 };
 
 export const toggleUserStatus = async (req, res) => {

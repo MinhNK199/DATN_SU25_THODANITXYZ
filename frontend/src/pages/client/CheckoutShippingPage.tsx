@@ -39,6 +39,7 @@ const CheckoutShippingPage: React.FC = () => {
   const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState<any>(null);
 
   const { state: cartState } = useCart();
+  
   const { voucher } = useCheckout();
   const { revalidateVoucher } = useVoucher();
   const navigate = useNavigate();
@@ -47,14 +48,20 @@ const CheckoutShippingPage: React.FC = () => {
 
   // Khởi tạo selectedItems và buyNowProduct
   useEffect(() => {
+
+    // Đợi cart load xong trước khi check
+    if (cartState.loading) {
+      return; // Đang loading, chưa check
+    }
+
     const buyNowProductData = localStorage.getItem('buyNowProduct');
+    
     if (buyNowProductData) {
       try {
         const product = JSON.parse(buyNowProductData);
         setBuyNowProduct(product);
         setSelectedItems(new Set([product._id]));
       } catch (error) {
-        console.error('❌ Error parsing buyNowProduct:', error);
         localStorage.removeItem('buyNowProduct');
         navigate('/cart');
         return;
@@ -63,10 +70,11 @@ const CheckoutShippingPage: React.FC = () => {
       const allItemIds = new Set(cartState.items.map(item => item._id));
       setSelectedItems(allItemIds);
     } else {
-      // Kiểm tra nếu không có sản phẩm trong giỏ hàng, redirect về Cart
-      navigate('/cart');
+      // TẠM THỜI VÔ HIỆU HÓA LOGIC REDIRECT VỀ GIỎ HÀNG
+      // navigate('/cart');
     }
-  }, [cartState.items, navigate]);
+  }, [cartState.items, cartState.loading, navigate]);
+
 
   // Nhận appliedDiscountCoupon từ state
   useEffect(() => {
@@ -81,10 +89,18 @@ const CheckoutShippingPage: React.FC = () => {
     : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
 
   useEffect(() => {
+    // Sử dụng API backend thay vì API trực tiếp
     axios
-      .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
+      .get<Province[]>("http://localhost:8000/api/address/provinces")
       .then((r) => setProvinces(r.data))
-      .catch(() => { });
+      .catch((error) => {
+        console.error('Error fetching provinces:', error);
+        // Fallback to direct API if backend fails
+        axios
+          .get<Province[]>("https://provinces.open-api.vn/api/?depth=1")
+          .then((r) => setProvinces(r.data))
+          .catch(() => { });
+      });
     getTaxConfig()
       .then((cfg) => setTaxRate(cfg.rate))
       .catch(() => setTaxRate(0.08));
@@ -97,37 +113,38 @@ const CheckoutShippingPage: React.FC = () => {
     }
   }, [voucher, cartState.total, revalidateVoucher]);
 
-  // Fetch addresses and set default
-  useEffect(() => {
-    const fetchAddresses = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:8000/api/address', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+  // Fetch addresses function
+  const fetchAddresses = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8000/api/address', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-        const addressesData = response.data;
-        setAddresses(addressesData);
+      const addressesData = response.data;
+      setAddresses(addressesData);
 
-        // Tự động chọn địa chỉ mặc định
-        const defaultAddress = addressesData.find((a: Address) => a.isDefault) || addressesData[0];
-        if (defaultAddress) {
-          setSelectedAddress(defaultAddress);
-          setFormData((f) => ({
-            ...f,
-            lastName: defaultAddress.fullName.split(" ").slice(-1).join(" "),
-            phone: defaultAddress.phone,
-            address: defaultAddress.address,
-            province_code: defaultAddress.city,
-            ward_code: defaultAddress.ward,
-            paymentMethod: f.paymentMethod || "",
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching addresses:', error);
+      // Tự động chọn địa chỉ mặc định
+      const defaultAddress = addressesData.find((a: Address) => a.isDefault) || addressesData[0];
+      if (defaultAddress) {
+        setSelectedAddress(defaultAddress);
+        setFormData((f) => ({
+          ...f,
+          lastName: defaultAddress.fullName.split(" ").slice(-1).join(" "),
+          phone: defaultAddress.phone,
+          address: defaultAddress.address,
+          province_code: defaultAddress.city,
+          ward_code: defaultAddress.ward,
+          paymentMethod: f.paymentMethod || "",
+        }));
       }
-    };
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+    }
+  };
 
+  // Fetch addresses on mount
+  useEffect(() => {
     fetchAddresses();
   }, []);
 
@@ -334,6 +351,7 @@ const CheckoutShippingPage: React.FC = () => {
                   setShowAddressForm={setShowAddressForm}
                   showAddressSelector={showAddressSelector}
                   setShowAddressSelector={setShowAddressSelector}
+                  onRefreshAddresses={fetchAddresses}
                 />
               </div>
             </div>

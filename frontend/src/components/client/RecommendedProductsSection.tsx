@@ -32,196 +32,46 @@ const RecommendedProductsSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch recommended products from backend
+  // Fetch newest products from backend
   useEffect(() => {
-    const fetchRecommendedProducts = async () => {
+    const fetchNewestProducts = async () => {
       try {
         setLoading(true);
         
-        // Try to fetch user-specific recommendations first
-        const response = await fetch('http://localhost:8000/api/product/recommendations/user', {
-          credentials: 'include',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        // Calculate date 3 days ago
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        const threeDaysAgoISO = threeDaysAgo.toISOString();
         
+        // Fetch newest products created within last 3 days
+        const response = await fetch(`/api/product?startDate=${threeDaysAgoISO}&sort=-createdAt&limit=8`);
         let products = [];
         
         if (response.ok) {
           const data = await response.json();
-          // Handle different response structures
-          if (data.recommendations && Array.isArray(data.recommendations)) {
-            products = data.recommendations;
-          } else if (data.products && Array.isArray(data.products)) {
-            products = data.products;
-          } else if (Array.isArray(data)) {
-            products = data;
-          } else {
-            products = [];
-          }
+          products = data.products || data;
+          
+          // Filter products that are actually within 3 days
+          products = products.filter((product: any) => {
+            if (!product.createdAt) return false;
+            const productDate = new Date(product.createdAt);
+            const now = new Date();
+            const diffTime = now.getTime() - productDate.getTime();
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+            return diffDays <= 3;
+          });
         } else {
-          // Fallback to general recommendations or featured products
-          const fallbackResponse = await fetch('http://localhost:8000/api/product?isFeatured=true&limit=5');
+          // Fallback to general newest products
+          const fallbackResponse = await fetch('/api/product?sort=-createdAt&limit=8');
           if (fallbackResponse.ok) {
             const fallbackData = await fallbackResponse.json();
-            if (fallbackData.products && Array.isArray(fallbackData.products)) {
-              products = fallbackData.products;
-            } else if (Array.isArray(fallbackData)) {
-              products = fallbackData;
-            } else {
-              products = [];
-            }
+            products = fallbackData.products || fallbackData;
           }
         }
         
-        // Add some demo data if no products found
-        if (products.length === 0) {
-          products = [
-            {
-              _id: '1',
-              name: 'iPhone 15 Pro Max 256GB',
-              price: 29990000,
-              salePrice: 27990000,
-              image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop',
-              brand: { name: 'Apple' },
-              rating: 5,
-              reviewCount: 12,
-              discount: 7,
-              stock: 50,
-              variants: []
-            },
-            {
-              _id: '2',
-              name: 'Samsung Galaxy S24 Ultra 512GB',
-              price: 24990000,
-              salePrice: 22990000,
-              image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&h=300&fit=crop',
-              brand: { name: 'Samsung' },
-              rating: 4.8,
-              reviewCount: 28,
-              discount: 8,
-              stock: 30,
-              variants: []
-            },
-            {
-              _id: '3',
-              name: 'MacBook Air M2 13 inch',
-              price: 25990000,
-              salePrice: 23990000,
-              image: 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=300&h=300&fit=crop',
-              brand: { name: 'Apple' },
-              rating: 4.9,
-              reviewCount: 15,
-              discount: 8,
-              stock: 20,
-              variants: []
-            },
-            {
-              _id: '4',
-              name: 'iPad Pro 12.9 inch M2',
-              price: 22990000,
-              salePrice: 20990000,
-              image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop',
-              brand: { name: 'Apple' },
-              rating: 4.7,
-              reviewCount: 22,
-              discount: 9,
-              stock: 25,
-              variants: []
-            },
-            {
-              _id: '5',
-              name: 'AirPods Pro 2nd Gen',
-              price: 5990000,
-              salePrice: 5490000,
-              image: 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=300&h=300&fit=crop',
-              brand: { name: 'Apple' },
-              rating: 4.8,
-              reviewCount: 45,
-              discount: 8,
-              stock: 100,
-              variants: []
-            },
-            {
-              _id: '6',
-              name: 'Samsung Galaxy Watch 6 Classic',
-              price: 8990000,
-              salePrice: 7990000,
-              image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop',
-              brand: { name: 'Samsung' },
-              rating: 4.7,
-              reviewCount: 32,
-              discount: 11,
-              stock: 40,
-              variants: []
-            },
-            {
-              _id: '7',
-              name: 'MacBook Pro 14 inch M3',
-              price: 45990000,
-              salePrice: 42990000,
-              image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=300&h=300&fit=crop',
-              brand: { name: 'Apple' },
-              rating: 4.9,
-              reviewCount: 18,
-              discount: 7,
-              stock: 15,
-              variants: []
-            },
-            {
-              _id: '8',
-              name: 'Sony WH-1000XM5',
-              price: 8990000,
-              salePrice: 7990000,
-              image: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop',
-              brand: { name: 'Sony' },
-              rating: 4.8,
-              reviewCount: 67,
-              discount: 11,
-              stock: 60,
-              variants: []
-            },
-            {
-              _id: '9',
-              name: 'iPad Air 5th Gen',
-              price: 15990000,
-              salePrice: 13990000,
-              image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=300&h=300&fit=crop',
-              brand: { name: 'Apple' },
-              rating: 4.6,
-              reviewCount: 38,
-              discount: 13,
-              stock: 35,
-              variants: []
-            },
-            {
-              _id: '10',
-              name: 'Xiaomi 13 Pro',
-              price: 19990000,
-              salePrice: 17990000,
-              image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&h=300&fit=crop',
-              brand: { name: 'Xiaomi' },
-              rating: 4.5,
-              reviewCount: 29,
-              discount: 10,
-              stock: 45,
-              variants: []
-            }
-          ];
-        }
-        
-        // Sort products by creation date (newest first) and take 8 products
-        const safeProducts = Array.isArray(products) ? products : [];
-        const newestProducts = safeProducts
-          .sort((a, b) => {
-            const dateA = new Date(a.createdAt || a.updatedAt || 0).getTime();
-            const dateB = new Date(b.createdAt || b.updatedAt || 0).getTime();
-            return dateB - dateA; // Sort from newest to oldest
-          })
-          .slice(0, 8); // Take only 8 newest products
-        
-        setRecommendedProducts(newestProducts);
+        // If no products found, don't show demo data for newest products
+        // Just show empty state
+        setRecommendedProducts(products);
       } catch (err: any) {
         setError(err.message);
         console.error('Error fetching recommended products:', err);
@@ -230,7 +80,7 @@ const RecommendedProductsSection: React.FC = () => {
       }
     };
 
-    fetchRecommendedProducts();
+    fetchNewestProducts();
   }, []);
 
   if (loading) {
@@ -263,23 +113,38 @@ const RecommendedProductsSection: React.FC = () => {
     );
   }
 
+  // Don't show section if no new products
+  if (recommendedProducts.length === 0) {
+    return <BlogSection />;
+  }
+
   return (
-    <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4">
+    <section className="py-20 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-100 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute top-40 right-10 w-72 h-72 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-gradient-to-r from-teal-400 to-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '4s'}}></div>
+      </div>
+      
+      <div className="container mx-auto px-4 relative z-10">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-2 rounded-full text-sm font-semibold mb-4 shadow-lg">
+            <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+            NEW ARRIVALS
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-emerald-900 to-teal-900 bg-clip-text text-transparent mb-4">
             SẢN PHẨM MỚI NHẤT
           </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Khám phá những sản phẩm công nghệ mới nhất, được cập nhật liên tục để mang đến trải nghiệm tuyệt vời nhất
+          </p>
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {recommendedProducts.map((product) => {
-            // Kiểm tra sản phẩm được tạo trong vòng 3 ngày gần nhất
-            const isRecentlyAdded = product.createdAt && 
-              new Date().getTime() - new Date(product.createdAt).getTime() <= 3 * 24 * 60 * 60 * 1000;
-            
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {recommendedProducts.map((product, index) => {
             const mappedProduct = {
               _id: product._id,
               name: product.name,
@@ -293,23 +158,35 @@ const RecommendedProductsSection: React.FC = () => {
               rating: product.rating || product.averageRating || 0,
               reviewCount: product.reviewCount || product.numReviews || 0,
               discount: product.discount,
-              isNew: isRecentlyAdded || false, // Tự động dựa trên thời gian tạo
-              isHot: false, // Không tự động HOT cho sản phẩm mới
+              isNew: true, // Always new since they're within 3 days
+              isHot: false,
               stock: product.stock || 0,
               variants: product.variants || [],
               createdAt: product.createdAt,
             };
-            return <ProductCard key={mappedProduct._id} product={mappedProduct} />;
+            return (
+              <div 
+                key={mappedProduct._id} 
+                className="transform hover:scale-105 transition-all duration-300 hover:-translate-y-2"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <ProductCard product={mappedProduct} />
+              </div>
+            );
           })}
         </div>
 
         {/* View All Button */}
-        <div className="text-center mt-12">
+        <div className="text-center mt-16">
           <button 
-            onClick={() => navigate('/products?recommended=true')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-semibold transition-colors shadow-lg hover:shadow-xl"
+            onClick={() => navigate('/products?sort=-createdAt')}
+            className="group relative inline-flex items-center gap-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-teal-500/25 transition-all duration-300 hover:scale-105"
           >
-            Xem tất cả
+            <span>Xem tất cả sản phẩm mới</span>
+            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-full blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
           </button>
         </div>
       </div>

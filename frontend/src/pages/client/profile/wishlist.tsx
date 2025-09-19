@@ -42,20 +42,34 @@ const Wishlist = () => {
 
       const favorites = response.data.favorites || [];
 
-      const mapped = favorites.map((item: any) => ({
-        _id: item._id,
-        productId: item._id,
-        productName: item.name,
-        productImage: item.images?.[0] || "",
-        price: item.price,
-        originalPrice: item.price,
-        discount: 0,
-        inStock: item.stock > 0,
-        category: item.category?.name || "Khác",
-        rating: item.averageRating || 0,
-        reviewCount: item.numReviews || 0,
-        addedAt: item.createdAt || new Date().toISOString(),
-      }));
+      const mapped = favorites.map((item: any) => {
+        // Tính tổng stock từ variants nếu có
+        let totalStock = item.stock || 0;
+        if (item.variants && item.variants.length > 0) {
+          totalStock = item.variants.reduce((total: number, variant: any) => total + (variant.stock || 0), 0);
+        }
+        
+        // Xử lý giá sale và giá gốc
+        const hasSalePrice = item.salePrice && item.salePrice > 0 && item.salePrice < item.price;
+        const displayPrice = hasSalePrice ? item.salePrice : item.price;
+        const originalPrice = hasSalePrice ? item.price : undefined;
+        const discount = hasSalePrice ? Math.round(100 - (item.salePrice / item.price) * 100) : 0;
+        
+        return {
+          _id: item._id,
+          productId: item._id,
+          productName: item.name,
+          productImage: item.images?.[0] || "",
+          price: displayPrice,
+          originalPrice: originalPrice,
+          discount: discount,
+          inStock: totalStock > 0,
+          category: item.category?.name || "Khác",
+          rating: item.rating || item.averageRating || 0,
+          reviewCount: item.reviewCount || item.numReviews || 0,
+          addedAt: item.createdAt || new Date().toISOString(),
+        };
+      });
 
       setWishlistItems(mapped);
     } catch (error: any) {
@@ -297,12 +311,18 @@ const Wishlist = () => {
 
                 <div className="mb-3">
                   <div className="flex items-center space-x-2">
-                    <span className="text-lg font-bold text-red-600">
-                      {formatPrice(item.price)}
-                    </span>
-                    {item.originalPrice && item.originalPrice > item.price && (
-                      <span className="text-sm text-gray-500 line-through">
-                        {formatPrice(item.originalPrice)}
+                    {item.originalPrice && item.originalPrice > item.price ? (
+                      <>
+                        <span className="text-lg font-bold text-red-600">
+                          {formatPrice(item.price)}
+                        </span>
+                        <span className="text-sm text-gray-500 line-through">
+                          {formatPrice(item.originalPrice)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-gray-900">
+                        {formatPrice(item.price)}
                       </span>
                     )}
                   </div>

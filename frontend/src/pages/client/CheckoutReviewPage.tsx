@@ -142,25 +142,27 @@ const CheckoutReviewPage: React.FC = () => {
     if (buyNowProductData) {
       try {
         const product = JSON.parse(buyNowProductData);
-        console.log('🔍 [DEBUG] buyNowProduct from localStorage:', product);
         
         // Check if product ID exists in current products
         if (product.product && product.product._id) {
-          console.log('🔍 [DEBUG] Product ID from buyNowProduct:', product.product._id);
           setSelectedItems(new Set([product._id]));
         } else {
-          console.log('❌ [DEBUG] Invalid buyNowProduct structure, clearing localStorage');
           localStorage.removeItem('buyNowProduct');
         }
       } catch (error) {
         console.error('❌ Error parsing buyNowProduct:', error);
         localStorage.removeItem('buyNowProduct');
       }
-    } else if (cartState.items && cartState.items.length > 0) {
+    }
+  }, []);
+
+  // Khởi tạo selectedItems ngay khi cartState.items có data
+  useEffect(() => {
+    if (cartState.items && cartState.items.length > 0 && selectedItems.size === 0) {
       const allItemIds = new Set(cartState.items.map(item => item._id));
       setSelectedItems(allItemIds);
     }
-  }, [cartState.items]);
+  }, [cartState.items, selectedItems.size]);
 
   // Nhận appliedDiscountCoupon từ state
   useEffect(() => {
@@ -190,10 +192,6 @@ const CheckoutReviewPage: React.FC = () => {
       ? [buyNowProduct]
       : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
     
-    console.log("🔍 [DEBUG] selectedCartItems:", items);
-    console.log("🔍 [DEBUG] buyNowProduct:", buyNowProduct);
-    console.log("🔍 [DEBUG] cartState.items:", cartState.items);
-    
     return items;
   }, [buyNowProduct, cartState.items, selectedItems]);
 
@@ -219,12 +217,20 @@ const CheckoutReviewPage: React.FC = () => {
       // Nếu không có thông tin đầy đủ và không có sản phẩm mua ngay, quay về trang shipping
       navigate('/checkout/shipping');
     }
+  }, [navigate, buyNowProduct]);
 
-    // Kiểm tra nếu không có sản phẩm trong giỏ hàng và không có sản phẩm mua ngay, redirect về Cart
-    if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
-      navigate('/cart');
+  // Kiểm tra cart riêng biệt để đợi cart load xong
+  useEffect(() => {
+    // Đợi cart load xong trước khi check
+    if (cartState.loading) {
+      return; // Đang loading, chưa check
     }
-  }, [navigate, cartState.items, buyNowProduct]);
+
+    // TẠM THỜI VÔ HIỆU HÓA LOGIC REDIRECT VỀ GIỎ HÀNG
+    // if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
+    //   navigate('/cart');
+    // }
+  }, [navigate, cartState.items, cartState.loading, buyNowProduct]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -585,6 +591,7 @@ const CheckoutReviewPage: React.FC = () => {
 
   const voucherDiscount = voucher && voucher.isValid ? voucher.discountAmount : 0;
   const totalDiscount = couponDiscount + voucherDiscount;
+  const subtotalAfterDiscount = subtotal - totalDiscount;
   
   // Tính thuế trước khi áp dụng mã giảm giá
   const taxPrice = subtotal * taxRate;

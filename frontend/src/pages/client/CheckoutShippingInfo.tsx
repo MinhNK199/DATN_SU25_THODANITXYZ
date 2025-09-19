@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaMapMarkerAlt, FaPlus, FaEdit } from "react-icons/fa";
 import { Address } from "../../services/userApi";
 import AddressSelector from "../../components/client/AddressSelector";
 import AddressForm from "../../components/client/AddressForm";
+import axios from "axios";
 
 // Local interface for form data
 interface FormAddress {
@@ -18,6 +19,22 @@ interface FormAddress {
   isDefault: boolean;
   type: 'home' | 'work' | 'other';
   note?: string;
+}
+
+interface Province {
+  code: number;
+  name: string;
+  codename: string;
+  division_type: string;
+  phone_code: number;
+}
+
+interface Ward {
+  code: number;
+  name: string;
+  codename: string;
+  division_type: string;
+  province_code: number;
 }
 
 export interface FormDataType {
@@ -38,6 +55,7 @@ interface Props {
   setShowAddressForm: React.Dispatch<React.SetStateAction<boolean>>;
   showAddressSelector: boolean;
   setShowAddressSelector: React.Dispatch<React.SetStateAction<boolean>>;
+  onRefreshAddresses?: () => void;
 }
 
 const CheckoutShippingInfo: React.FC<Props> = ({
@@ -49,6 +67,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
   setShowAddressForm,
   showAddressSelector,
   setShowAddressSelector,
+  onRefreshAddresses,
 }) => {
   const [showManualInput, setShowManualInput] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -59,6 +78,45 @@ const CheckoutShippingInfo: React.FC<Props> = ({
     province_code: "",
     ward_code: "",
   });
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load provinces on component mount
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:8000/api/address/provinces');
+        setProvinces(response.data);
+      } catch (error) {
+        console.error('Error fetching provinces:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
+  // Load wards when province changes
+  const fetchWards = async (provinceCode: string) => {
+    if (!provinceCode) {
+      setWards([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.get(`http://localhost:8000/api/address/provinces/${provinceCode}/wards`);
+      setWards(response.data);
+    } catch (error) {
+      console.error('Error fetching wards:', error);
+      setWards([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddressSelect = (address: Address) => {
     setSelectedAddress(address);
@@ -92,6 +150,15 @@ const CheckoutShippingInfo: React.FC<Props> = ({
     setValidationErrors({});
   };
 
+  const handleRefreshAddresses = () => {
+    // Call parent refresh function if provided
+    if (onRefreshAddresses) {
+      onRefreshAddresses();
+    }
+    // Close the form
+    setShowAddressForm(false);
+  };
+
   const handleManualInputToggle = () => {
     setShowManualInput(!showManualInput);
     if (!showManualInput) {
@@ -114,9 +181,16 @@ const CheckoutShippingInfo: React.FC<Props> = ({
       ...prev,
       [name]: value
     }));
+    
     // Clear validation error when user starts typing
     if (validationErrors[name]) {
       setValidationErrors(prev => ({ ...prev, [name]: "" }));
+    }
+
+    // If province changes, fetch new wards and reset ward selection
+    if (name === 'province_code') {
+      setFormData(prev => ({ ...prev, ward_code: '' }));
+      fetchWards(value);
     }
   };
 
@@ -225,20 +299,22 @@ const CheckoutShippingInfo: React.FC<Props> = ({
               </div>
               <div className="flex-1">
                 <div className="flex items-center space-x-4 mb-3">
-                  <span className="text-2xl font-bold text-gray-900">{selectedAddress.fullName}</span>
+                  <span className="text-2xl font-bold text-gray-900 truncate">{selectedAddress.fullName}</span>
                   <span className="text-gray-400 text-xl">•</span>
                   <span className="text-gray-600 font-semibold text-lg">{selectedAddress.phone}</span>
+                </div>
+                <p className="text-gray-700 text-lg mb-3 font-medium">{selectedAddress.address}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3 text-base text-gray-600">
+                    <span className="font-semibold">{selectedAddress.wardName || selectedAddress.ward}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="font-semibold">{selectedAddress.cityName || selectedAddress.city}</span>
+                  </div>
                   {selectedAddress.isDefault && (
                     <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-200 shadow-md">
                       ⭐ Mặc định
                     </span>
                   )}
-                </div>
-                <p className="text-gray-700 text-lg mb-3 font-medium">{selectedAddress.address}</p>
-                <div className="flex items-center space-x-3 text-base text-gray-600">
-                  <span className="font-semibold">{selectedAddress.wardName || selectedAddress.ward}</span>
-                  <span className="text-gray-400">•</span>
-                  <span className="font-semibold">{selectedAddress.cityName || selectedAddress.city}</span>
                 </div>
               </div>
             </div>
@@ -373,16 +449,21 @@ const CheckoutShippingInfo: React.FC<Props> = ({
               <label className="block text-lg font-bold text-gray-700 mb-4">
                 Tỉnh/Thành phố <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="province_code"
                 value={formData.province_code}
                 onChange={handleInputChange}
                 className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
                   validationErrors.province_code ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                 }`}
-                placeholder="VD: TP. Hồ Chí Minh"
-              />
+              >
+                <option value="">Chọn tỉnh/thành phố</option>
+                {provinces.map((province) => (
+                  <option key={province.code} value={province.code}>
+                    {province.name}
+                  </option>
+                ))}
+              </select>
               {validationErrors.province_code && (
                 <p className="mt-3 text-base text-red-600 flex items-center">
                   <span className="mr-2 text-lg">⚠️</span>
@@ -395,16 +476,25 @@ const CheckoutShippingInfo: React.FC<Props> = ({
               <label className="block text-lg font-bold text-gray-700 mb-4">
                 Phường/Xã <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="ward_code"
                 value={formData.ward_code}
                 onChange={handleInputChange}
+                disabled={!formData.province_code || loading}
                 className={`w-full px-6 py-5 border-2 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all duration-300 text-lg ${
                   validationErrors.ward_code ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-                placeholder="VD: Phường 1, Quận 1"
-              />
+                } ${!formData.province_code || loading ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              >
+                <option value="">
+                  {!formData.province_code ? 'Vui lòng chọn tỉnh/thành phố trước' : 
+                   loading ? 'Đang tải...' : 'Chọn phường/xã'}
+                </option>
+                {wards.map((ward) => (
+                  <option key={ward.code} value={ward.code}>
+                    {ward.name}
+                  </option>
+                ))}
+              </select>
               {validationErrors.ward_code && (
                 <p className="mt-3 text-base text-red-600 flex items-center">
                   <span className="mr-2 text-lg">⚠️</span>
@@ -444,7 +534,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
       {/* Address Selector Modal */}
       {showAddressSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-lg">
+          <div className="w-full max-w-6xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">Chọn địa chỉ giao hàng</h3>
@@ -460,6 +550,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
                 selectedAddress={selectedAddress}
                 onAddressSelect={handleAddressSelect}
                 onAddNewAddress={handleAddNewAddress}
+                onRefresh={handleRefreshAddresses}
               />
             </div>
           </div>
@@ -473,6 +564,7 @@ const CheckoutShippingInfo: React.FC<Props> = ({
             <AddressForm
               onSave={handleSaveAddress}
               onCancel={() => setShowAddressForm(false)}
+              onRefresh={handleRefreshAddresses}
             />
           </div>
         </div>

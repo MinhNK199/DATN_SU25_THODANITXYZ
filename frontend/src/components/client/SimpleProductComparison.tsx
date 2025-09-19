@@ -44,6 +44,24 @@ const SimpleProductComparison: React.FC = () => {
     }
   };
 
+  const getTotalStock = (product: any) => {
+    try {
+      // Nếu có variants, tính tổng stock từ variants
+      if (product.variants && product.variants.length > 0) {
+        let total = 0;
+        for (const v of product.variants) {
+          total += v.stock || 0;
+        }
+        return total;
+      }
+      // Nếu không có variants, dùng stock gốc
+      return product.stock || 0;
+    } catch (error) {
+      console.error('Error getting total stock:', error);
+      return 0;
+    }
+  };
+
   const handleAddToCart = (product: any) => {
     try {
       addToCart({
@@ -164,14 +182,14 @@ const SimpleProductComparison: React.FC = () => {
                       <FaStar
                         key={i}
                         className={`w-4 h-4 ${
-                          i < Math.floor(product.averageRating || 0)
+                          i < Math.floor(product.rating || product.averageRating || 0)
                             ? 'text-yellow-400 fill-current'
                             : 'text-gray-300'
                         }`}
                       />
                     ))}
                   </div>
-                  <span className="text-sm text-gray-600">({product.numReviews || 0})</span>
+                  <span className="text-sm text-gray-600">({product.reviewCount || product.numReviews || 0})</span>
                 </div>
 
                 {/* Price */}
@@ -183,18 +201,21 @@ const SimpleProductComparison: React.FC = () => {
 
                 {/* Stock Status */}
                 <div className="mb-3">
-                  {product.stock > 0 ? (
-                    <span className="text-sm text-green-600 font-medium">Còn hàng ({product.stock})</span>
-                  ) : (
-                    <span className="text-sm text-red-600 font-medium">Hết hàng</span>
-                  )}
+                  {(() => {
+                    const totalStock = getTotalStock(product);
+                    return totalStock > 0 ? (
+                      <span className="text-sm text-green-600 font-medium">Còn hàng ({totalStock})</span>
+                    ) : (
+                      <span className="text-sm text-red-600 font-medium">Hết hàng</span>
+                    );
+                  })()}
                 </div>
 
                 {/* Action Buttons */}
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleAddToCart(product)}
-                    disabled={product.stock === 0}
+                    disabled={getTotalStock(product) === 0}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-3 rounded text-sm font-medium transition-colors"
                   >
                     <FaShoppingCart className="w-4 h-4 inline mr-1" />

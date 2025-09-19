@@ -82,12 +82,6 @@ const CheckoutPaymentPage: React.FC = () => {
       ? [buyNowProduct]
       : (cartState.items?.filter(item => selectedItems.has(item._id)) || []);
 
-    console.log('🔍 CheckoutPayment Debug:', {
-      buyNowProduct: buyNowProduct ? 'Có sản phẩm mua ngay' : 'Không có sản phẩm mua ngay',
-      selectedCartItems: items.length,
-      cartStateItems: cartState.items?.length || 0
-    });
-
     return items;
   }, [buyNowProduct, cartState.items, selectedItems]);
 
@@ -122,16 +116,21 @@ const CheckoutPaymentPage: React.FC = () => {
     }
 
     // Load voucher từ localStorage và revalidate
-    if (voucher) {
-      // Revalidate voucher với giá trị đơn hàng hiện tại
-      revalidateVoucher(subtotal);
+    // Note: voucher revalidation moved to after subtotal calculation
+  }, [navigate, buyNowProduct]);
+
+  // Kiểm tra cart riêng biệt để đợi cart load xong
+  useEffect(() => {
+    // Đợi cart load xong trước khi check
+    if (cartState.loading) {
+      return; // Đang loading, chưa check
     }
 
-    // Kiểm tra nếu không có sản phẩm trong giỏ hàng và không có sản phẩm mua ngay, redirect về Cart
-    if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
-      navigate('/cart');
-    }
-  }, [navigate, cartState.items, buyNowProduct]);
+    // TẠM THỜI VÔ HIỆU HÓA LOGIC REDIRECT VỀ GIỎ HÀNG
+    // if ((!cartState.items || cartState.items.length === 0) && !buyNowProduct) {
+    //   navigate('/cart');
+    // }
+  }, [navigate, cartState.items, cartState.loading, buyNowProduct]);
 
   const handleRetryPayment = async (orderId: string) => {
     try {
@@ -291,6 +290,13 @@ const CheckoutPaymentPage: React.FC = () => {
   const shippingFee = subtotalAfterDiscount >= 10000000 ? 0 : 30000; // Đồng bộ với giỏ hàng: freeship từ 10tr
   const taxPrice = subtotalAfterDiscount * taxRate;
   const finalTotal = subtotalAfterDiscount + shippingFee + taxPrice;
+
+  // Revalidate voucher khi subtotal thay đổi
+  useEffect(() => {
+    if (voucher) {
+      revalidateVoucher(subtotal);
+    }
+  }, [voucher, subtotal, revalidateVoucher]);
 
   // Kiểm tra giới hạn COD (100 triệu)
   const COD_LIMIT = 100000000; // 100 triệu VND

@@ -381,8 +381,8 @@ const ProductDetail: React.FC = () => {
       image: product.images && product.images.length > 0 ? product.images[0] : "",
       brand: typeof product.brand === "object" ? product.brand?.name || 'N/A' : product.brand || 'N/A',
       category: typeof product.category === "object" ? product.category?.name || 'N/A' : product.category || 'N/A',
-      rating: product.averageRating || 0,
-      reviewCount: product.numReviews || 0,
+      rating: product.rating || product.averageRating || 0,
+      reviewCount: product.reviewCount || product.numReviews || 0,
       discount: product.salePrice
         ? Math.round(100 - (product.salePrice / product.price) * 100)
         : undefined,

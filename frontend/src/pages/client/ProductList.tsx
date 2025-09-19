@@ -53,6 +53,9 @@ const ProductList: React.FC = () => {
     const category = params.get('category') || '';
     const brand = params.get('brand') || '';
     
+    console.log('URL params:', { search, category, brand });
+    console.log('Available categories:', categories);
+    
     if (search) {
       debouncedSearch(search);
     } else {
@@ -61,8 +64,23 @@ const ProductList: React.FC = () => {
 
     // Nếu có category từ URL, sử dụng trực tiếp (backend đã hỗ trợ slug)
     if (category) {
-      const foundCategory = categories.find(cat => cat._id === category || cat.slug === category);
-      setFilterCategory(category);
+      // Tìm category theo slug hoặc _id
+      const foundCategory = categories.find(cat => 
+        cat.slug === category || cat._id === category
+      );
+      
+      console.log('Found category:', foundCategory);
+      
+      if (foundCategory) {
+        // Sử dụng _id của category để filter
+        console.log('Using category _id:', foundCategory._id);
+        setFilterCategory(foundCategory._id);
+      } else {
+        // Nếu không tìm thấy, sử dụng giá trị từ URL trực tiếp
+        console.log('Using category param directly:', category);
+        setFilterCategory(category);
+      }
+      
       setPage(1); // Reset về trang 1 khi có category mới
       setSearchTerm(''); // Clear search term khi có category
       setFilterBrand(''); // Clear brand filter khi có category
@@ -159,14 +177,19 @@ const ProductList: React.FC = () => {
     else if (sortBy === 'newest') sortParam = '-createdAt';
     url += `&sort=${encodeURIComponent(sortParam)}`;
     
+    console.log('Fetching products with URL:', url);
+    console.log('Filter category:', filterCategory);
+    
     try {
       const res = await axios.get(url);
       const filtered = res.data.products || [];
+      console.log('Products response:', res.data);
       setProducts(filtered);
       setPage(res.data.page || 1);
       setPages(res.data.pages || 1);
       setTotal(res.data.total || filtered.length);
     } catch (err: any) {
+      console.error('Error fetching products:', err);
       setError(err.message || 'Lỗi khi fetch sản phẩm');
       setProducts([]);
     } finally {

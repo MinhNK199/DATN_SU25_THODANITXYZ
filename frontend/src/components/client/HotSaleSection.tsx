@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaChevronLeft, FaChevronRight, FaFire, FaStar, FaShoppingCart } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import EnhancedProductCard from './EnhancedProductCard';
 
 interface Product {
   _id: string;
@@ -18,9 +17,14 @@ interface Product {
   reviewCount?: number;
   numReviews?: number;
   discount?: number;
+  discountAmount?: number;
   isNew?: boolean;
   isHot?: boolean;
   stock: number;
+  totalStock?: number;
+  soldStock?: number;
+  remainingStock?: number;
+  soldPercentage?: number;
   variants?: any[];
   isFeatured?: boolean;
 }
@@ -32,43 +36,48 @@ const HotSaleSection: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState({
-    days: 2,
-    hours: 14,
-    minutes: 30,
-    seconds: 45
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
   });
+
+  // Calculate time until end of day
+  const calculateTimeUntilEndOfDay = () => {
+    const now = new Date();
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999); // End of current day
+    
+    const timeDiff = endOfDay.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) {
+      // If past end of day, calculate until end of next day
+      endOfDay.setDate(endOfDay.getDate() + 1);
+      const nextDayDiff = endOfDay.getTime() - now.getTime();
+      return nextDayDiff;
+    }
+    
+    return timeDiff;
+  };
 
   // Countdown timer
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        let { days, hours, minutes, seconds } = prev;
-        
-        if (seconds > 0) {
-          seconds--;
-        } else if (minutes > 0) {
-          minutes--;
-          seconds = 59;
-        } else if (hours > 0) {
-          hours--;
-          minutes = 59;
-          seconds = 59;
-        } else if (days > 0) {
-          days--;
-          hours = 23;
-          minutes = 59;
-          seconds = 59;
-        } else {
-          // Reset when countdown ends
-          days = 2;
-          hours = 14;
-          minutes = 30;
-          seconds = 45;
-        }
-        
-        return { days, hours, minutes, seconds };
-      });
-    }, 1000); // Update every second
+    const updateCountdown = () => {
+      const timeDiff = calculateTimeUntilEndOfDay();
+      
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+      
+      setTimeLeft({ days, hours, minutes, seconds });
+    };
+
+    // Update immediately
+    updateCountdown();
+    
+    // Update every second
+    const timer = setInterval(updateCountdown, 1000);
 
     return () => clearInterval(timer);
   }, []);
@@ -141,6 +150,7 @@ const HotSaleSection: React.FC = () => {
             salePrice: salePrice,
             discount: bestDiscount,
             discountAmount: discountAmount,
+            stock: totalStock, // Add stock property
             totalStock: totalStock,
             soldStock: soldStock,
             remainingStock: remainingStock,
@@ -170,6 +180,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 12,
               discount: 14,
               discountAmount: 5000000,
+              stock: 100,
               totalStock: 100,
               soldStock: 65,
               remainingStock: 35,
@@ -188,6 +199,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 28,
               discount: 17,
               discountAmount: 5000000,
+              stock: 80,
               totalStock: 80,
               soldStock: 48,
               remainingStock: 32,
@@ -206,6 +218,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 15,
               discount: 17,
               discountAmount: 5000000,
+              stock: 60,
               totalStock: 60,
               soldStock: 42,
               remainingStock: 18,
@@ -224,6 +237,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 22,
               discount: 19,
               discountAmount: 5000000,
+              stock: 50,
               totalStock: 50,
               soldStock: 35,
               remainingStock: 15,
@@ -242,6 +256,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 45,
               discount: 21,
               discountAmount: 1500000,
+              stock: 150,
               totalStock: 150,
               soldStock: 90,
               remainingStock: 60,
@@ -260,6 +275,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 32,
               discount: 20,
               discountAmount: 2000000,
+              stock: 70,
               totalStock: 70,
               soldStock: 56,
               remainingStock: 14,
@@ -278,6 +294,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 18,
               discount: 14,
               discountAmount: 7000000,
+              stock: 30,
               totalStock: 30,
               soldStock: 21,
               remainingStock: 9,
@@ -296,6 +313,7 @@ const HotSaleSection: React.FC = () => {
               reviewCount: 67,
               discount: 20,
               discountAmount: 2000000,
+              stock: 90,
               totalStock: 90,
               soldStock: 72,
               remainingStock: 18,
@@ -365,9 +383,17 @@ const HotSaleSection: React.FC = () => {
   }
 
    return (
-     <section className="py-16">
-       <div className="container mx-auto px-4">
-         <div className="bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 rounded-3xl relative overflow-hidden">
+     <section className="py-20 relative overflow-hidden">
+       {/* Background decoration */}
+       <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50"></div>
+       <div className="absolute inset-0">
+         <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-red-400 to-orange-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+         <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-r from-orange-400 to-yellow-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
+         <div className="absolute -bottom-8 left-20 w-96 h-96 bg-gradient-to-r from-yellow-400 to-red-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style={{animationDelay: '4s'}}></div>
+       </div>
+       
+       <div className="container mx-auto px-4 relative z-10">
+         <div className="bg-white/80 backdrop-blur-sm rounded-3xl relative overflow-hidden shadow-2xl border border-white/20">
            {/* Background decoration */}
            <div className="absolute top-0 left-0 w-full h-full">
              <div className="absolute top-10 left-10 w-32 h-32 bg-red-200 rounded-full opacity-20 animate-pulse"></div>
@@ -378,25 +404,48 @@ const HotSaleSection: React.FC = () => {
            
            <div className="relative z-10 p-8">
         {/* Header with countdown */}
-        <div className="bg-gradient-to-r from-red-600 via-red-500 to-orange-500 rounded-2xl p-8 mb-12 relative overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-r from-red-600 via-red-500 to-orange-500 rounded-3xl p-8 mb-16 relative overflow-hidden shadow-2xl">
           <div className="flex flex-col lg:flex-row items-center justify-between relative z-10">
             {/* Title */}
-            <div className="flex items-center gap-4 mb-4 lg:mb-0">
-              <div className="bg-white bg-opacity-20 p-3 rounded-full">
-                <FaFire className="text-white text-4xl animate-pulse" />
+            <div className="flex items-center gap-6 mb-6 lg:mb-0">
+              <div className="bg-white bg-opacity-20 p-4 rounded-full shadow-lg">
+                <FaFire className="text-white text-5xl animate-pulse" />
               </div>
-              <h2 className="text-3xl lg:text-5xl font-bold text-white drop-shadow-lg">
-                HOT SALE CUỐI TUẦN
-              </h2>
+              <div>
+                <div className="inline-flex items-center gap-2 bg-white bg-opacity-20 px-4 py-1 rounded-full text-sm font-semibold mb-2">
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                  FLASH SALE
+                </div>
+                <h2 className="text-4xl lg:text-6xl font-bold text-white drop-shadow-2xl">
+                  HOT SALE
+                </h2>
+                <p className="text-white/90 text-lg mt-2">Giảm giá sốc - Cơ hội vàng!</p>
+              </div>
             </div>
 
             {/* Countdown Timer */}
-            <div className="flex items-center gap-4">
-              <span className="text-white text-lg font-medium">Kết thúc sau:</span>
-              <div className="flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-sm px-6 py-3 rounded-xl border border-white border-opacity-30">
-                <span className="text-white text-2xl font-bold drop-shadow-lg">
-                  {formatTime(timeLeft.days)} : {formatTime(timeLeft.hours)} : {formatTime(timeLeft.minutes)} : {formatTime(timeLeft.seconds)}
-                </span>
+            <div className="flex flex-col items-center lg:items-end gap-4">
+              <span className="text-white text-xl font-semibold">Kết thúc sau:</span>
+              <div className="flex items-center gap-3 bg-white bg-opacity-20 backdrop-blur-sm px-8 py-4 rounded-2xl border border-white border-opacity-30 shadow-xl">
+                <div className="text-center">
+                  <div className="text-white text-3xl font-bold drop-shadow-lg">{formatTime(timeLeft.days)}</div>
+                  <div className="text-white/80 text-sm">NGÀY</div>
+                </div>
+                <div className="text-white text-2xl font-bold">:</div>
+                <div className="text-center">
+                  <div className="text-white text-3xl font-bold drop-shadow-lg">{formatTime(timeLeft.hours)}</div>
+                  <div className="text-white/80 text-sm">GIỜ</div>
+                </div>
+                <div className="text-white text-2xl font-bold">:</div>
+                <div className="text-center">
+                  <div className="text-white text-3xl font-bold drop-shadow-lg">{formatTime(timeLeft.minutes)}</div>
+                  <div className="text-white/80 text-sm">PHÚT</div>
+                </div>
+                <div className="text-white text-2xl font-bold">:</div>
+                <div className="text-center">
+                  <div className="text-white text-3xl font-bold drop-shadow-lg">{formatTime(timeLeft.seconds)}</div>
+                  <div className="text-white/80 text-sm">GIÂY</div>
+                </div>
               </div>
             </div>
           </div>

@@ -57,7 +57,8 @@ import {
     createVoucher,
     checkVoucher,
     updateVoucherUsage,
-    checkSkuExists
+    checkSkuExists,
+    syncProductRatings
 } from "../controllers/product.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
@@ -73,6 +74,9 @@ routerProduct.get("/deleted", protect, getDeletedProducts);
 routerProduct.get("/deleted-count", protect, getDeletedProductsCount);
 routerProduct.get("/suggest", suggestProducts);
 routerProduct.get('/search', searchProducts);
+
+// Đồng bộ rating từ bảng Rating vào Product model (admin only)
+routerProduct.post("/sync-ratings", protect, syncProductRatings);
 
 // User Favorites
 routerProduct.get("/favorites", protect, getFavorites);

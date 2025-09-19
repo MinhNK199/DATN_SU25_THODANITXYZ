@@ -7,6 +7,7 @@ const PROVINCE_API_BASE = 'https://provinces.open-api.vn/api/v2';
 // Cache để lưu trữ dữ liệu tỉnh/thành và phường/xã
 let provincesCache = null;
 let wardsCache = null;
+let wardCodeToNameCache = null; // Cache mapping ward code -> name
 
 // Helper function để lấy danh sách tỉnh/thành
 const getProvinces = async () => {
@@ -29,14 +30,25 @@ const getWardsByProvince = async (provinceCode) => {
     
     try {
         const response = await axios.get(`${PROVINCE_API_BASE}/p/${provinceCode}?depth=2`);
+        // API trả về wards trực tiếp trong province, không có districts
         const wards = response.data.wards || [];
         
         if (!wardsCache) wardsCache = {};
         wardsCache[cacheKey] = wards;
         
+        console.log(`✅ Loaded ${wards.length} wards for province ${provinceCode}`);
         return wards;
     } catch (error) {
-        console.error('Error fetching wards:', error);
+        console.error('Error fetching wards for province', provinceCode, ':', error.response?.data || error.message);
+        
+        // Nếu province không tồn tại, trả về mảng rỗng thay vì throw error
+        if (error.response?.status === 404) {
+            console.warn(`Province code ${provinceCode} not found, returning empty wards list`);
+            if (!wardsCache) wardsCache = {};
+            wardsCache[cacheKey] = [];
+            return [];
+        }
+        
         throw new Error('Không thể lấy danh sách phường/xã');
     }
 };
@@ -49,18 +61,60 @@ const mapCodeToName = async (code, type) => {
         if (type === 'province') {
             const provinces = await getProvinces();
             const province = provinces.find(p => p.code === Number(code));
-            return province ? province.name : null;
+            if (province) {
+                return province.name;
+            } else {
+                // Fallback cho province codes không hợp lệ
+                console.warn(`Province code ${code} not found, using fallback name`);
+                return `Tỉnh ${code}`;
+            }
         } else if (type === 'ward') {
-            // Tìm trong cache hoặc fetch từ API
-            const provinceCode = code.toString().substring(0, 2); // Lấy 2 số đầu làm mã tỉnh
-            const wards = await getWardsByProvince(Number(provinceCode));
-            const ward = wards.find(w => w.code === Number(code));
-            return ward ? ward.name : null;
+            // Kiểm tra cache trước
+            if (wardCodeToNameCache && wardCodeToNameCache[code]) {
+                return wardCodeToNameCache[code];
+            }
+            
+            // Sử dụng API depth=3 để lấy wards
+            try {
+                const response = await axios.get(`${PROVINCE_API_BASE}/?depth=3`);
+                const provinces = response.data;
+                
+                for (const province of provinces) {
+                    if (province.districts) {
+                        for (const district of province.districts) {
+                            if (district.wards) {
+                                const ward = district.wards.find(w => w.code === Number(code));
+                                if (ward) {
+                                    console.log(`✅ Found ward ${code}: ${ward.name} in ${district.name}, ${province.name}`);
+                                    
+                                    // Cache kết quả
+                                    if (!wardCodeToNameCache) wardCodeToNameCache = {};
+                                    wardCodeToNameCache[code] = ward.name;
+                                    
+                                    return ward.name;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching wards with depth=3:', error);
+            }
+            
+            // Fallback cho ward codes không hợp lệ
+            console.warn(`Ward code ${code} not found in any province, using fallback name`);
+            const fallbackName = `Phường ${code}`;
+            
+            // Cache fallback
+            if (!wardCodeToNameCache) wardCodeToNameCache = {};
+            wardCodeToNameCache[code] = fallbackName;
+            
+            return fallbackName;
         }
     } catch (error) {
         console.error('Error mapping code to name:', error);
         // Return a fallback name instead of null to prevent crashes
-        return `${type} ${code}`;
+        return type === 'province' ? `Tỉnh ${code}` : `Phường ${code}`;
     }
     return null;
 };
@@ -69,16 +123,26 @@ const mapCodeToName = async (code, type) => {
 const addNamesToAddress = async (address) => {
     const addressObj = address.toObject ? address.toObject() : address;
     
-    const [cityName, wardName] = await Promise.all([
-        mapCodeToName(addressObj.city, 'province'),
-        mapCodeToName(addressObj.ward, 'ward')
-    ]);
-    
-    return {
-        ...addressObj,
-        cityName,
-        wardName,
-    };
+    try {
+        const [cityName, wardName] = await Promise.all([
+            mapCodeToName(addressObj.city, 'province'),
+            mapCodeToName(addressObj.ward, 'ward')
+        ]);
+        
+        return {
+            ...addressObj,
+            cityName: cityName || `Tỉnh ${addressObj.city}`,
+            wardName: wardName || `Phường ${addressObj.ward}`,
+        };
+    } catch (error) {
+        console.error('Error adding names to address:', error);
+        // Return address with fallback names
+        return {
+            ...addressObj,
+            cityName: `Tỉnh ${addressObj.city}`,
+            wardName: `Phường ${addressObj.ward}`,
+        };
+    }
 };
 
 // API để lấy danh sách tỉnh/thành
