@@ -345,7 +345,7 @@ const getAssignedOrders = async (req, res) => {
     }
 
     const orders = await Order.find(query)
-      .populate('user', 'fullName phone email')
+      .populate('user', 'name phone email')
       .populate('orderTracking')
       .sort({ createdAt: -1 })
       .limit(limit * 1)

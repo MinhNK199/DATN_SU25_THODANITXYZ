@@ -50,7 +50,7 @@ const ShipperDashboard: React.FC = () => {
     loadOnlineStatus();
     
     // Clear any existing notifications on page load
-    notification.destroy();
+    // notification.destroy(); // Không cần thiết nữa vì dùng admin notification
     
     // Auto refresh every 30 seconds
     const interval = setInterval(() => {
@@ -118,7 +118,7 @@ const ShipperDashboard: React.FC = () => {
                 message: 'Có đơn hàng mới được phân công!',
                 description: `Bạn có ${pendingOrders.length} đơn hàng cần xử lý`,
                 placement: 'topRight',
-                duration: 5, // Auto close after 5 seconds
+                duration: 5,
               });
             }
           }
@@ -191,7 +191,7 @@ const ShipperDashboard: React.FC = () => {
       
       if (pendingOrders.length === 0) {
         // Clear any existing notifications if no pending orders
-        notification.destroy();
+        // notification.destroy(); // Không cần thiết nữa vì dùng admin notification
       }
     } catch (error: any) {
       console.error('❌ Error fetching orders:', error);
@@ -227,14 +227,24 @@ const ShipperDashboard: React.FC = () => {
         setOnlineStatus(newStatus);
         // Save to localStorage for persistence
         localStorage.setItem('shipperOnlineStatus', JSON.stringify(newStatus));
-        message.success(`Đã ${newStatus ? 'bật' : 'tắt'} trạng thái online`);
+        notification.success({
+          message: 'Cập nhật trạng thái thành công',
+          description: `Đã ${newStatus ? 'bật' : 'tắt'} trạng thái online`,
+          placement: 'topRight',
+          duration: 3,
+        });
       } else {
         throw new Error(result.message || 'Cập nhật trạng thái thất bại');
       }
       
     } catch (error: any) {
       console.error('Error updating online status:', error);
-      message.error('Lỗi cập nhật trạng thái: ' + (error.message || 'Lỗi không xác định'));
+      notification.error({
+        message: 'Lỗi cập nhật trạng thái',
+        description: error.message || 'Lỗi không xác định',
+        placement: 'topRight',
+        duration: 5,
+      });
     }
   };
 
@@ -273,11 +283,21 @@ const ShipperDashboard: React.FC = () => {
         });
         setProfileModalVisible(true);
       } else {
-        message.error('Không thể tải thông tin profile');
+        notification.error({
+          message: 'Lỗi tải thông tin',
+          description: 'Không thể tải thông tin profile',
+          placement: 'topRight',
+          duration: 5,
+        });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
-      message.error('Lỗi khi tải thông tin profile');
+      notification.error({
+        message: 'Lỗi tải thông tin',
+        description: 'Lỗi khi tải thông tin profile',
+        placement: 'topRight',
+        duration: 5,
+      });
       
       // Fallback: use data from context if available
       if (state.shipper) {
@@ -318,17 +338,34 @@ const ShipperDashboard: React.FC = () => {
 
       if (response.ok) {
         const result = await response.json();
-        message.success(result.message || 'Cập nhật thông tin thành công!');
+        
+        // Hiển thị thông báo thành công
+        notification.success({
+          message: 'Cập nhật thông tin thành công',
+          description: result.message || 'Thông tin cá nhân đã được cập nhật thành công',
+          placement: 'topRight',
+          duration: 3,
+        });
+        
         setProfileModalVisible(false);
-        // Refresh profile data
-        await handleOpenProfile();
+        // Không cần mở lại modal, chỉ cần đóng
       } else {
         const errorData = await response.json();
-        message.error(errorData.message || 'Cập nhật thông tin thất bại');
+        notification.error({
+          message: 'Lỗi cập nhật',
+          description: errorData.message || 'Cập nhật thông tin thất bại',
+          placement: 'topRight',
+          duration: 5,
+        });
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      message.error('Lỗi khi cập nhật thông tin');
+      notification.error({
+        message: 'Lỗi cập nhật',
+        description: 'Lỗi khi cập nhật thông tin',
+        placement: 'topRight',
+        duration: 5,
+      });
     } finally {
       setProfileLoading(false);
     }
@@ -341,11 +378,19 @@ const ShipperDashboard: React.FC = () => {
       case 'picked_up':
         return 'blue';
       case 'in_transit':
+      case 'shipped':
         return 'purple';
+      case 'arrived':
+        return 'orange';
       case 'delivered':
+      case 'delivered_success':
+      case 'completed':
         return 'success';
+      case 'delivered_failed':
       case 'failed':
         return 'error';
+      case 'cancelled':
+        return 'default';
       default:
         return 'default';
     }
@@ -359,10 +404,22 @@ const ShipperDashboard: React.FC = () => {
         return 'Đã nhận hàng';
       case 'in_transit':
         return 'Đang giao hàng';
+      case 'arrived':
+        return 'Đã đến điểm giao';
+      case 'shipped':
+        return 'Đang giao hàng';
       case 'delivered':
         return 'Đã giao hàng';
+      case 'delivered_success':
+        return 'Giao hàng thành công';
+      case 'delivered_failed':
+        return 'Giao hàng thất bại';
       case 'failed':
         return 'Giao hàng thất bại';
+      case 'cancelled':
+        return 'Đã hủy';
+      case 'completed':
+        return 'Hoàn thành';
       default:
         return status;
     }
@@ -468,7 +525,7 @@ const ShipperDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="Tổng đơn hàng"
-              value={orders.length}
+              value={orders.filter(order => !['delivered', 'delivered_success', 'completed', 'cancelled'].includes(order.status)).length}
               prefix={<ShoppingCartOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
