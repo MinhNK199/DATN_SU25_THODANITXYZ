@@ -562,24 +562,56 @@ const Cart: React.FC = () => {
                                   {/* Product Options - Hidden on mobile */}
                                   <div className="mt-2 flex flex-wrap gap-2 hidden sm:flex">
                                     {displayColor && (
-                                      <div className="flex items-center space-x-1">
+                                      <div className="flex items-center space-x-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-200">
                                         <div
-                                          className="w-4 h-4 rounded-full border border-gray-300"
+                                          className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
                                           style={{ backgroundColor: displayColor }}
                                           title={displayColor}
                                         />
-                                        <span className="text-xs text-gray-600">Màu</span>
+                                        <span className="text-xs text-gray-700 font-medium">Màu</span>
                                       </div>
                                     )}
                                     {displaySize && (
-                                      <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                        Size: {displaySize} inch
-                                      </span>
+                                      <div className="flex items-center bg-gray-50 px-2 py-1 rounded-md border border-gray-200">
+                                        <span className="text-xs text-gray-700 font-medium">
+                                          Size: {displaySize} inch
+                                        </span>
+                                      </div>
                                     )}
                                     {displaySKU && (
-                                      <span className="text-xs text-gray-500 font-mono">
-                                        SKU: {displaySKU}
-                                      </span>
+                                      <div className="flex items-center bg-gray-50 px-2 py-1 rounded-md border border-gray-200">
+                                        <span className="text-xs text-gray-600 font-mono">
+                                          SKU: {displaySKU}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Product Options - Mobile version */}
+                                  <div className="mt-2 flex flex-wrap gap-2 sm:hidden">
+                                    {displayColor && (
+                                      <div className="flex items-center space-x-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-200">
+                                        <div
+                                          className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
+                                          style={{ backgroundColor: displayColor }}
+                                          title={displayColor}
+                                        />
+                                        <span className="text-xs text-gray-700 font-medium">Màu</span>
+                                      </div>
+                                    )}
+                                    {displaySize && (
+                                      <div className="flex items-center bg-gray-50 px-2 py-1 rounded-md border border-gray-200">
+                                        <span className="text-xs text-gray-700 font-medium">
+                                          Size: {displaySize} inch
+                                        </span>
+                                      </div>
+                                    )}
+                                    {displaySKU && (
+                                      <div className="flex items-center bg-gray-50 px-2 py-1 rounded-md border border-gray-200">
+                                        <span className="text-xs text-gray-600 font-mono">
+                                          SKU: {displaySKU}
+                                        </span>
+                                      </div>
                                     )}
                                   </div>
 
