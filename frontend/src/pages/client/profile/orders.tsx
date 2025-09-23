@@ -40,7 +40,6 @@ interface OrderItem {
     size?: number;
     specifications?: Record<string, string>;
   };
-  // Giữ lại variant cũ để tương thích ngược
   variant?: {
     _id: string;
     name: string;
@@ -70,7 +69,10 @@ interface Order {
     | "cancelled"
     | "refund_requested"
     | "refunded"
-    | "payment_failed";
+    | "payment_failed"
+    | "picked_up"
+    | "in_transit"
+    | "arrived";
   paymentStatus: "pending" | "paid" | "failed" | "awaiting_payment";
   paymentMethod: string;
   isPaid?: boolean;
@@ -117,7 +119,6 @@ const Orders = () => {
     };
   }, []);
 
-  // Sync with context orders
   useEffect(() => {
     if (contextOrders.length > 0) {
       setOrders(contextOrders);
@@ -140,8 +141,16 @@ const Orders = () => {
     }
   };
 
+  const mapClientStatus = (status: string) => {
+    if (["picked_up", "in_transit", "arrived"].includes(status)) {
+      return "shipped";
+    }
+    return status;
+  };
+
   const getStatusIcon = (status: string) => {
-    switch (status) {
+    const clientStatus = mapClientStatus(status);
+    switch (clientStatus) {
       case "draft":
         return <Clock className="w-4 h-4 text-gray-500" />;
       case "pending":
@@ -178,7 +187,8 @@ const Orders = () => {
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
+    const clientStatus = mapClientStatus(status);
+    switch (clientStatus) {
       case "draft":
         return "Đang tạo";
       case "pending":
@@ -216,9 +226,7 @@ const Orders = () => {
 
   const getPaymentStatusText = (order: Order) => {
     if (order.paymentMethod === "COD") {
-      return order.isPaid
-        ? "Đã thanh toán COD"
-        : "Chưa thanh toán COD";
+      return order.isPaid ? "Đã thanh toán COD" : "Chưa thanh toán COD";
     } else {
       if (order.isPaid || order.paymentStatus === "paid") {
         return `Đã thanh toán ${order.paymentMethod.toUpperCase()}`;
@@ -235,7 +243,8 @@ const Orders = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const clientStatus = mapClientStatus(status);
+    switch (clientStatus) {
       case "draft":
         return "bg-gray-100 text-gray-800";
       case "pending":
@@ -272,11 +281,9 @@ const Orders = () => {
   };
 
   const getDeliveryInfo = (order: Order) => {
-    if (order.status === "shipped" && order.estimatedDeliveryDate) {
+    if (mapClientStatus(order.status) === "shipped" && order.estimatedDeliveryDate) {
       return {
-        estimatedDate: new Date(order.estimatedDeliveryDate).toLocaleDateString(
-          "vi-VN"
-        ),
+        estimatedDate: new Date(order.estimatedDeliveryDate).toLocaleDateString("vi-VN"),
         deliveryPerson: order.deliveryPerson,
         notes: order.deliveryNotes,
       };
@@ -285,41 +292,34 @@ const Orders = () => {
   };
 
   const getOrderTimeline = (order: Order) => {
-  if (!order.statusHistory || order.statusHistory.length === 0) return [];
-  return order.statusHistory.map((history, index) => ({
-    id: index,
-    status: history.status,
-    text: getStatusText(history.status),
-    date: new Date(history.date).toLocaleString("vi-VN"),
-    note: history.note || "",
-    isLatest: index === (order.statusHistory?.length ?? 0) - 1,
-  }));
-};
-
+    if (!order.statusHistory || order.statusHistory.length === 0) return [];
+    return order.statusHistory.map((history, index) => ({
+      id: index,
+      status: history.status,
+      text: getStatusText(history.status),
+      date: new Date(history.date).toLocaleString("vi-VN"),
+      note: history.note || "",
+      isLatest: index === (order.statusHistory?.length ?? 0) - 1,
+    }));
+  };
 
   const filteredOrders = React.useMemo(() => {
     if (!Array.isArray(orders)) return [];
     return orders.filter((order) => {
+      const clientStatus = mapClientStatus(order.status);
       const matchesSearch =
         order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.orderItems?.some((item) =>
           item.name?.toLowerCase().includes(searchTerm.toLowerCase())
         );
-      const matchesStatus =
-        statusFilter === "all" || order.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || clientStatus === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [orders, searchTerm, statusFilter]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredOrders.length / ordersPerPage)
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ordersPerPage));
   const startIndex = (currentPage - 1) * ordersPerPage;
-  const currentOrders = filteredOrders.slice(
-    startIndex,
-    startIndex + ordersPerPage
-  );
+  const currentOrders = filteredOrders.slice(startIndex, startIndex + ordersPerPage);
 
   const handlePageChange = (page: number) => setCurrentPage(page);
 
@@ -345,15 +345,12 @@ const Orders = () => {
       toast.success("Hủy đơn hàng thành công!");
       fetchOrders();
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Có lỗi xảy ra khi hủy đơn hàng"
-      );
+      toast.error(error.response?.data?.message || "Có lỗi xảy ra khi hủy đơn hàng");
     }
   };
 
   const handleConfirmDelivery = async (orderId: string) => {
     if (!window.confirm("Bạn có chắc chắn đã nhận được hàng?")) return;
-
     try {
       await axiosInstance.put(`/order/${orderId}/confirm-delivery`);
       toast.success("Xác nhận đã nhận hàng thành công!");
@@ -364,11 +361,8 @@ const Orders = () => {
   };
 
   const handleReturnRequest = async (orderId: string) => {
-    const reason = window.prompt(
-      "Vui lòng nhập lý do yêu cầu hoàn hàng/hoàn tiền:"
-    );
+    const reason = window.prompt("Vui lòng nhập lý do yêu cầu hoàn hàng/hoàn tiền:");
     if (!reason || reason.trim() === "") return;
-
     try {
       await axiosInstance.put(`/order/${orderId}/return-request`, {
         reason: reason.trim(),
@@ -382,7 +376,6 @@ const Orders = () => {
 
   const handleConfirmSatisfaction = async (orderId: string) => {
     if (!window.confirm("Bạn có chắc chắn hài lòng với đơn hàng này?")) return;
-
     try {
       await axiosInstance.put(`/order/${orderId}/confirm-satisfaction`);
       toast.success("Xác nhận hài lòng thành công! Đơn hàng đã hoàn thành.");
@@ -392,7 +385,7 @@ const Orders = () => {
     }
   };
 
-  if (isLoading) {
+    if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -405,12 +398,9 @@ const Orders = () => {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Đơn hàng của tôi</h1>
-        <p className="text-gray-600 mt-1">
-          Theo dõi và quản lý đơn hàng của bạn
-        </p>
+        <p className="text-gray-600 mt-1">Theo dõi và quản lý đơn hàng của bạn</p>
       </div>
 
-      {/* Thanh tìm kiếm + filter */}
       <div className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
@@ -433,16 +423,15 @@ const Orders = () => {
               <option value="all">Tất cả trạng thái</option>
               <option value="pending">Chờ xác nhận</option>
               <option value="confirmed">Đã xác nhận</option>
-              <option value="processing">Đang xử lý</option>
               <option value="shipped">Đang giao hàng</option>
               <option value="delivered_success">Đã giao</option>
+              <option value="completed">Thành công</option>
               <option value="cancelled">Đã hủy</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Nếu không có đơn */}
       {filteredOrders.length === 0 ? (
         <div className="text-center py-12">
           <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -472,7 +461,6 @@ const Orders = () => {
               key={order._id}
               className="bg-white border border-blue-200 rounded-lg shadow-sm hover:shadow-lg transition-all overflow-hidden"
             >
-              {/* Header */}
               <div className="bg-blue-50 px-6 py-4 border-b border-blue-200 flex justify-between items-center">
                 <div>
                   <h3 className="font-semibold text-gray-900">
@@ -484,16 +472,16 @@ const Orders = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                   <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                      order.status
-                    )}`}
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}
                   >
                     {getStatusIcon(order.status)}
                     <span className="ml-2">{getStatusText(order.status)}</span>
                   </span>
                   <span
                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      (order.paymentMethod === "COD" ? order.isPaid : order.paymentStatus === "paid")
+                      (order.paymentMethod === "COD"
+                        ? order.isPaid
+                        : order.paymentStatus === "paid")
                         ? "bg-green-100 text-green-800"
                         : order.paymentStatus === "failed"
                         ? "bg-red-100 text-red-800"
@@ -511,7 +499,6 @@ const Orders = () => {
                 </div>
               </div>
 
-              {/* Items (chỉ preview) */}
               <div className="px-6 py-4 space-y-4">
                 {order.orderItems?.slice(0, 2).map((item, index) => (
                   <div
@@ -532,9 +519,11 @@ const Orders = () => {
                         <h4 className="font-medium text-gray-900">
                           {item.name}
                         </h4>
-                        {(item.variantInfo && item.variantInfo.name) || (item.variant && item.variant.name) ? (
+                        {(item.variantInfo && item.variantInfo.name) ||
+                        (item.variant && item.variant.name) ? (
                           <p className="text-sm text-blue-600 font-medium">
-                            Chi tiết sản phẩm: {item.variantInfo?.name || item.variant?.name}
+                            Chi tiết sản phẩm:{" "}
+                            {item.variantInfo?.name || item.variant?.name}
                           </p>
                         ) : null}
                         <p className="text-sm text-gray-600">
@@ -554,104 +543,100 @@ const Orders = () => {
                 )}
               </div>
 
-              {/* Footer */}
               <div className="bg-blue-50 px-6 py-4 border-t border-blue-200 flex justify-between items-start sm:items-center">
-                <div className="text-sm text-gray-700">
-                  <span>Giao đến: </span>
-                  <span className="font-medium">
-                    {order.shippingAddress?.fullName} -{" "}
-                    {order.shippingAddress?.phone}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Tổng tiền:</p>
-                  <p className="text-lg font-bold text-blue-700">
-                    {formatPrice(order.totalPrice)}
-                  </p>
+  <div className="text-sm text-gray-700">
+    <span>Giao đến: </span>
+    <span className="font-medium">
+      {order.shippingAddress?.fullName} - {order.shippingAddress?.phone}
+    </span>
+  </div>
+  <div className="text-right">
+    <p className="text-sm text-gray-600">Tổng tiền:</p>
+    <p className="text-lg font-bold text-blue-700">
+      {formatPrice(order.totalPrice)}
+    </p>
 
-                  {/* Nút hành động */}
-                  {order.status === "pending" && (
-                    <button
-                      onClick={() => handleCancelOrder(order._id)}
-                      className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
-                    >
-                      Hủy đơn hàng
-                    </button>
-                  )}
+    {mapClientStatus(order.status) === "pending" && (
+      <button
+        onClick={() => handleCancelOrder(order._id)}
+        className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+      >
+        Hủy đơn hàng
+      </button>
+    )}
 
-                  {order.status === "shipped" && (
-                    <>
-                      <button
-                        onClick={() => handleConfirmDelivery(order._id)}
-                        className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm mr-2"
-                      >
-                        Đã nhận được hàng
-                      </button>
-                      <button
-                        onClick={() => handleReturnRequest(order._id)}
-                        className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm mr-2"
-                      >
-                        {order.paymentMethod === "COD"
-                          ? "Yêu cầu hoàn hàng"
-                          : "Yêu cầu hoàn tiền"}
-                      </button>
-                    </>
-                  )}
+    {mapClientStatus(order.status) === "shipped" && (
+      <>
+        <button
+          onClick={() => handleConfirmDelivery(order._id)}
+          className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-sm mr-2"
+        >
+          Đã nhận được hàng
+        </button>
+        <button
+          onClick={() => handleReturnRequest(order._id)}
+          className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm mr-2"
+        >
+          {order.paymentMethod === "COD"
+            ? "Yêu cầu hoàn hàng"
+            : "Yêu cầu hoàn tiền"}
+        </button>
+      </>
+    )}
 
-                  {order.status === "delivered_success" && order.isPaid && (
-                    <button
-                      onClick={() => navigate(`/profile/orders/${order._id}`)}
-                      className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm mr-2"
-                    >
-                      Yêu cầu hoàn tiền
-                    </button>
-                  )}
+    {mapClientStatus(order.status) === "delivered_success" &&
+  order.isPaid &&
+  order.status !== "refund_requested" &&
+  order.status !== "refunded" && (
+    <button
+      onClick={() => navigate(`/profile/orders/${order._id}`)}
+      className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm mr-2"
+    >
+      Yêu cầu hoàn tiền
+    </button>
+)}
 
-                  {order.status === "delivered_success" && (
-                    <button
-                      onClick={() => handleConfirmSatisfaction(order._id)}
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm mr-2"
-                    >
-                      Hài lòng với đơn hàng
-                    </button>
-                  )}
 
-                  {(order.status === "completed" ||
-                    order.status === "delivered_success") && (
-                    <button
-                      onClick={() =>
-                        setExpandedOrderId(
-                          expandedOrderId === order._id ? null : order._id
-                        )
-                      }
-                      className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
-                    >
-                      {expandedOrderId === order._id
-                        ? "Ẩn đánh giá"
-                        : "Xem / Đánh giá sản phẩm"}
-                    </button>
-                  )}
-                </div>
-              </div>
+    {mapClientStatus(order.status) === "delivered_success" && (
+      <button
+        onClick={() => handleConfirmSatisfaction(order._id)}
+        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm mr-2"
+      >
+        Hài lòng với đơn hàng
+      </button>
+    )}
 
-              {/* RatingForm hiển thị khi mở */}
+    {(mapClientStatus(order.status) === "completed" ||
+      mapClientStatus(order.status) === "delivered_success") && (
+      <button
+        onClick={() =>
+          setExpandedOrderId(
+            expandedOrderId === order._id ? null : order._id
+          )
+        }
+        className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
+      >
+        {expandedOrderId === order._id
+          ? "Ẩn đánh giá"
+          : "Xem / Đánh giá sản phẩm"}
+      </button>
+    )}
+  </div>
+</div>
+
+
               {expandedOrderId === order._id && (
                 <div className="px-6 py-4 bg-gray-200 border-t">
                   {order.orderItems.map((item) => (
                     <div key={item._id} className="mb-4">
                       <p className="font-medium">{item.name}</p>
-                      <RatingForm
-                        productId={item.product!}
-                        orderId={order._id}
-                      />
+                      <RatingForm productId={item.product!} orderId={order._id} />
                     </div>
                   ))}
                 </div>
               )}
             </div>
           ))}
-
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center space-x-2 mt-8">
               <button
@@ -692,3 +677,4 @@ const Orders = () => {
 };
 
 export default Orders;
+

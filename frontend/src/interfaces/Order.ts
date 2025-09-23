@@ -36,7 +36,7 @@ export interface Order {
     paidAt?: string;
     isDelivered: boolean;
     deliveredAt?: string;
-    status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'confirmed' | 'delivered_success' | 'delivered_failed' | 'completed';
+    status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'confirmed' | 'delivered_success' | 'delivered_failed' | 'completed' | 'refund_requested'| 'refunded';
     shipper?: {
         _id: string;
         fullName: string;

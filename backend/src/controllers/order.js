@@ -1088,86 +1088,67 @@ export const getRevenueStats = async (req, res) => {
 export const requestRefund = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
-    if (!order)
+    if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    // ❌ Đếm số lần yêu cầu hoàn tiền trong lịch sử
+    const refundCount =
+      order.statusHistory && order.statusHistory.length > 0
+        ? order.statusHistory.filter((s) => s.status === "refund_requested")
+            .length
+        : 0;
+
+    const maxRefund = 1; // chỉ cho phép 1 lần
+    if (refundCount >= maxRefund) {
+      return res.status(400).json({
+        message: "Bạn đã đạt giới hạn số lần yêu cầu hoàn tiền.",
+      });
+    }
+
+    // ❌ Chỉ cho phép hoàn tiền khi đơn hàng đã giao thành công
     if (order.status !== "delivered_success") {
       return res.status(400).json({
-        message:
-          "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã giao thành công.",
+        message: "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã giao thành công.",
       });
     }
+
+    // ❌ Chỉ cho phép hoàn tiền khi đơn hàng đã được thanh toán
     if (!order.isPaid) {
       return res.status(400).json({
-        message:
-          "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã được thanh toán.",
+        message: "Chỉ có thể yêu cầu hoàn tiền khi đơn hàng đã được thanh toán.",
       });
     }
-    const refundCount = order.statusHistory && order.statusHistory.length > 0
-      ? order.statusHistory.filter((s) => s.status === "refund_requested").length
-      : 0;
-    const maxRefund = 3;
-    const remain = Math.max(0, maxRefund - refundCount);
-    if (refundCount > maxRefund) {
-      // Tự động từ chối hoàn tiền
-      order.status = "delivered_success";
 
-      // Đảm bảo statusHistory là array
-      if (!order.statusHistory) {
-        order.statusHistory = [];
-      }
-
-      order.statusHistory.push({
-        status: "delivered_success",
-        note: "Tự động từ chối hoàn tiền do vượt quá số lần cho phép",
-        date: Date.now(),
-      });
-
-      await order.save();
-      await createNotificationForUser(
-        order.user,
-        "Từ chối hoàn tiền",
-        `Bạn đã vượt quá số lần yêu cầu hoàn tiền cho đơn hàng #${order._id}. Mọi yêu cầu tiếp theo sẽ bị từ chối.`,
-        "order",
-        `/profile?tab=orders`,
-        { orderId: order._id, remain: 0 }
-      );
-      return res.status(400).json({
-        message:
-          "Bạn đã vượt quá số lần yêu cầu hoàn tiền. Mọi yêu cầu tiếp theo sẽ bị từ chối.",
-      });
-    }
-    // Kiểm tra xem đơn hàng đã có yêu cầu hoàn tiền chưa
-    if (order.status === "refund_requested") {
-      return res
-        .status(400)
-        .json({ message: "Đơn hàng đã có yêu cầu hoàn tiền." });
-    }
+    // ✅ Đổi trạng thái sang refund_requested
     order.status = "refund_requested";
-
-    // Đảm bảo statusHistory là array
-    if (!order.statusHistory) {
-      order.statusHistory = [];
-    }
-
+    if (!order.statusHistory) order.statusHistory = [];
     order.statusHistory.push({
       status: "refund_requested",
       note: req.body.reason || "",
       date: Date.now(),
     });
+
     await order.save();
+
+    // 🔔 Gửi thông báo cho user
     await createNotificationForUser(
       order.user,
       "Yêu cầu hoàn tiền",
-      `Bạn đã gửi yêu cầu hoàn tiền cho đơn hàng #${order._id}. Bạn còn ${remain} lần yêu cầu hoàn tiền.`,
+      `Bạn đã gửi yêu cầu hoàn tiền cho đơn hàng #${order._id}.`,
       "order",
       `/profile?tab=orders`,
-      { orderId: order._id, remain }
+      { orderId: order._id }
     );
+
     res.json(order);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
+
+
+
 
 // API yêu cầu hoàn hàng
 export const requestReturn = async (req, res) => {

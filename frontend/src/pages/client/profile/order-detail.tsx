@@ -254,13 +254,13 @@ const OrderDetail = () => {
   };
 
   const canRequestRefund = (order: OrderDetail) => {
-    console.log('🔍 canRequestRefund check:', {
-      status: order.status,
-      isPaid: order.isPaid,
-      paymentStatus: order.paymentStatus
-    });
-    return order.status === 'delivered_success' && order.isPaid;
-  };
+  return (
+    order.status === "delivered_success" &&
+    order.isPaid &&
+    !["refund_requested", "refunded"].includes(order.status)
+  );
+};
+
 
   const canReview = (order: OrderDetail) => {
     return ['delivered_success', 'completed'].includes(order.status);

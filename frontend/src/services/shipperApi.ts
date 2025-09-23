@@ -1,5 +1,13 @@
 import axiosInstance from '../api/axiosInstance';
-import { ShipperAuthResponse, ShipperProfileResponse, AssignedOrdersResponse, OrderTracking } from '../interfaces/Shipper';
+import { ShipperAuthResponse, ShipperProfileResponse, AssignedOrdersResponse } from '../interfaces/Shipper';
+
+// ✅ Hàm gom nhóm status shipper thành status client
+const normalizeStatus = (status: string): string => {
+  if (["picked_up", "in_transit", "delivered"].includes(status)) {
+    return "shipped";
+  }
+  return status;
+};
 
 export const shipperApi = {
   // Đăng ký shipper
@@ -107,8 +115,29 @@ export const shipperApi = {
     console.log('🔍 Calling /shipper/orders API...');
     console.log('🔍 Request headers:', axiosInstance.defaults.headers.common);
     const response = await axiosInstance.get('/shipper/orders', { params });
-    console.log('📡 API response:', response);
-    return response.data as AssignedOrdersResponse;
+    console.log('📡 Raw API response:', response);
+
+    // ✅ Chuẩn hóa status trước khi return
+    const mapped = {
+      ...response.data,
+      data: {
+        ...response.data.data,
+        orders: response.data.data.orders.map((order: any) => {
+          if (order.orderTracking) {
+            return {
+              ...order,
+              orderTracking: {
+                ...order.orderTracking,
+                status: normalizeStatus(order.orderTracking.status),
+              },
+            };
+          }
+          return order;
+        }),
+      },
+    };
+
+    return mapped as AssignedOrdersResponse;
   },
 
   // Bắt đầu giao hàng
@@ -120,7 +149,7 @@ export const shipperApi = {
     formData.append('orderId', orderId);
     if (data.notes) formData.append('notes', data.notes);
     if (data.pickupImages) {
-      data.pickupImages.forEach((file, index) => {
+      data.pickupImages.forEach((file) => {
         formData.append('pickupImages', file);
       });
     }
@@ -156,7 +185,7 @@ export const shipperApi = {
     if (data.customerSignature) formData.append('customerSignature', data.customerSignature);
     if (data.notes) formData.append('notes', data.notes);
     if (data.deliveryImages) {
-      data.deliveryImages.forEach((file, index) => {
+      data.deliveryImages.forEach((file) => {
         formData.append('deliveryImages', file);
       });
     }
@@ -176,7 +205,7 @@ export const shipperApi = {
   }) => {
     const response = await axiosInstance.post(`/shipper/orders/${orderId}/report-failure`, {
       orderId,
-      ...data
+      ...data,
     });
     return response.data;
   },
