@@ -15,6 +15,13 @@ const OrderDetail: React.FC = () => {
   const [deliveryImages, setDeliveryImages] = useState<File[]>([]);
   const [notes, setNotes] = useState('');
   const [currentStep, setCurrentStep] = useState<'pickup' | 'start' | 'arrived' | 'complete'>('pickup');
+  const [failureReason, setFailureReason] = useState('');
+  const [failureImages, setFailureImages] = useState<File[]>([]);
+  const [isReportingFailure, setIsReportingFailure] = useState(false);
+  const [returnImages, setReturnImages] = useState<File[]>([]);
+  const [returnStartImages, setReturnStartImages] = useState<File[]>([]);
+  const [returnNotes, setReturnNotes] = useState('');
+  const [isReturning, setIsReturning] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -201,6 +208,68 @@ const OrderDetail: React.FC = () => {
     }
   };
 
+  // Báo cáo giao hàng thất bại
+  const handleReportFailure = async () => {
+    if (!orderId || !failureReason.trim()) {
+      alert('Vui lòng nhập lý do giao hàng thất bại');
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem('shipperToken');
+      if (!token) {
+        alert('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      // Tạo FormData cho multipart/form-data
+      const formData = new FormData();
+      formData.append('failureReason', failureReason);
+      formData.append('notes', notes || '');
+      
+      // Thêm ảnh bằng chứng nếu có
+      failureImages.forEach((file) => {
+        formData.append('failureImages', file);
+      });
+
+      console.log('❌ Reporting delivery failure for order:', orderId);
+      console.log('📝 Failure reason:', failureReason);
+
+      const response = await fetch(`http://localhost:8000/api/shipper/orders/${orderId}/report-failure`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      });
+      
+      let result;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+        console.log('📦 Response data:', result);
+      } else {
+        const text = await response.text();
+        console.log('📄 Response text:', text);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+      }
+      
+      if (response.ok) {
+        alert('✅ Đã báo cáo giao hàng thất bại!');
+        navigate('/shipper/dashboard');
+      } else {
+        throw new Error(result.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error: any) {
+      console.error('Error reporting failure:', error);
+      alert(`Lỗi: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Bước 4: Hoàn thành giao hàng
   const handleConfirmDelivery = async () => {
     if (!orderId || deliveryImages.length === 0) {
@@ -263,31 +332,111 @@ const OrderDetail: React.FC = () => {
     }
   };
 
-  const handleReportFailure = async () => {
-    const failureReason = prompt('Lý do giao hàng thất bại:');
-    if (!failureReason || !orderId) return;
+  // Bắt đầu hoàn trả hàng
+  const handleStartReturn = async () => {
+    if (!orderId) return;
     
     setIsProcessing(true);
     try {
-      await shipperApi.reportDeliveryFailure(orderId, {
-        failureReason,
-        notes
+      const token = localStorage.getItem('shipperToken');
+      if (!token) {
+        alert('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      // Tạo FormData để hỗ trợ upload ảnh
+      const formData = new FormData();
+      formData.append('notes', returnNotes || 'Bắt đầu hoàn trả hàng về shop');
+      
+      // Thêm ảnh bắt đầu hoàn trả nếu có
+      returnStartImages.forEach((file) => {
+        formData.append('returnStartImages', file);
       });
-      alert('Báo cáo giao hàng thất bại thành công!');
-      navigate('/shipper/dashboard');
+
+      const response = await fetch(`http://localhost:8000/api/shipper/orders/${orderId}/start-return`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert('✅ Đã bắt đầu hoàn trả hàng!');
+        setIsReturning(true);
+        fetchOrderDetail(); // Refresh order data
+      } else {
+        throw new Error(result.message || `HTTP ${response.status}`);
+      }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+      console.error('Error starting return:', error);
+      alert(`Lỗi: ${error.message}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'pickup' | 'delivery') => {
+  // Hoàn thành hoàn trả hàng
+  const handleCompleteReturn = async () => {
+    if (!orderId || returnImages.length === 0) {
+      alert('Vui lòng chọn ảnh bằng chứng hoàn trả');
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem('shipperToken');
+      if (!token) {
+        alert('Vui lòng đăng nhập lại');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('notes', returnNotes || 'Hoàn trả hàng thành công');
+      
+      // Thêm ảnh hoàn trả
+      returnImages.forEach((file) => {
+        formData.append('returnImages', file);
+      });
+
+      const response = await fetch(`http://localhost:8000/api/shipper/orders/${orderId}/complete-return`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert('✅ Hoàn trả hàng thành công! Chờ admin xác nhận.');
+        navigate('/shipper/dashboard');
+      } else {
+        throw new Error(result.message || `HTTP ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error('Error completing return:', error);
+      alert(`Lỗi: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'pickup' | 'delivery' | 'return' | 'returnStart' | 'failure') => {
     const files = Array.from(e.target.files || []);
     if (type === 'pickup') {
       setPickupImages(files);
-    } else {
+    } else if (type === 'delivery') {
       setDeliveryImages(files);
+    } else if (type === 'return') {
+      setReturnImages(files);
+    } else if (type === 'returnStart') {
+      setReturnStartImages(files);
+    } else if (type === 'failure') {
+      setFailureImages(files);
     }
   };
 
@@ -317,16 +466,44 @@ const OrderDetail: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      // OrderTracking statuses
       case 'assigned':
         return 'bg-yellow-100 text-yellow-800';
       case 'picked_up':
         return 'bg-blue-100 text-blue-800';
       case 'in_transit':
         return 'bg-purple-100 text-purple-800';
+      case 'arrived':
+        return 'bg-orange-100 text-orange-800';
       case 'delivered':
         return 'bg-green-100 text-green-800';
       case 'failed':
         return 'bg-red-100 text-red-800';
+      case 'returning':
+        return 'bg-orange-100 text-orange-800';
+      case 'returned':
+        return 'bg-orange-100 text-orange-800';
+      case 'return_pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'return_confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'return_processing':
+        return 'bg-purple-100 text-purple-800';
+      case 'return_completed':
+        return 'bg-green-100 text-green-800';
+      // Order statuses
+      case 'delivered_failed':
+        return 'bg-red-100 text-red-800';
+      case 'delivered_success':
+        return 'bg-green-100 text-green-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -334,16 +511,44 @@ const OrderDetail: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      // OrderTracking statuses
       case 'assigned':
         return 'Đã phân công';
       case 'picked_up':
         return 'Đã nhận hàng';
       case 'in_transit':
         return 'Đang giao hàng';
+      case 'arrived':
+        return 'Đã đến điểm giao';
       case 'delivered':
         return 'Đã giao hàng';
       case 'failed':
         return 'Giao hàng thất bại';
+      case 'returning':
+        return 'Đang hoàn trả về shop';
+      case 'returned':
+        return 'Đã hoàn trả về shop';
+      case 'return_pending':
+        return 'Chờ admin xác nhận hoàn trả';
+      case 'return_confirmed':
+        return 'Admin đã xác nhận nhận hàng';
+      case 'return_processing':
+        return 'Đang xử lý hoàn trả';
+      case 'return_completed':
+        return 'Hoàn tất xử lý hoàn trả';
+      // Order statuses
+      case 'delivered_failed':
+        return 'Giao hàng thất bại';
+      case 'delivered_success':
+        return 'Giao hàng thành công';
+      case 'processing':
+        return 'Đang xử lý';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'pending':
+        return 'Chờ xử lý';
+      case 'cancelled':
+        return 'Đã hủy';
       default:
         return status;
     }
@@ -362,6 +567,10 @@ const OrderDetail: React.FC = () => {
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                 {getStatusText(order.status)}
               </span>
+              {/* Debug info */}
+              <div className="text-xs text-gray-500 mt-1">
+                Order: {order.status} | Tracking: {orderTracking?.status || 'N/A'}
+              </div>
             </div>
           </div>
         </div>
@@ -592,6 +801,58 @@ const OrderDetail: React.FC = () => {
                   />
                 </div>
 
+                {/* Form báo cáo thất bại */}
+                {isReportingFailure && (
+                  <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                    <h4 className="text-sm font-medium text-red-800 mb-3">⚠️ Báo cáo giao hàng thất bại</h4>
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-red-700 mb-2">Lý do thất bại *</label>
+                      <textarea
+                        value={failureReason}
+                        onChange={(e) => setFailureReason(e.target.value)}
+                        rows={3}
+                        className="block w-full border-red-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500 sm:text-sm"
+                        placeholder="Vui lòng mô tả lý do giao hàng thất bại (bắt buộc)..."
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-sm font-medium text-red-700 mb-2">Upload ảnh bằng chứng</label>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => handleImageChange(e, 'failure')}
+                        className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                      />
+                      {failureImages.length > 0 && (
+                        <p className="text-sm text-red-600 mt-1">✓ Đã chọn {failureImages.length} ảnh</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">* Chụp ảnh bằng chứng giao hàng thất bại (tùy chọn)</p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleReportFailure}
+                        disabled={isProcessing || !failureReason.trim()}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isProcessing ? 'Đang xử lý...' : '❌ Xác nhận giao thất bại'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsReportingFailure(false);
+                          setFailureReason('');
+                          setFailureImages([]);
+                        }}
+                        disabled={isProcessing}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md font-medium disabled:opacity-50"
+                      >
+                        Hủy
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex space-x-2">
                   <button
                     onClick={handleConfirmDelivery}
@@ -605,12 +866,134 @@ const OrderDetail: React.FC = () => {
                     {isProcessing ? 'Đang xử lý...' : 
                      order.paymentMethod === 'COD' ? '💰 Giao hàng & Thu tiền COD' : '✅ Giao hàng thành công'}
                   </button>
+                  
+                  <button
+                    onClick={() => setIsReportingFailure(true)}
+                    disabled={isProcessing || isReportingFailure}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ❌ Giao thất bại
+                  </button>
                 </div>
               </div>
             )}
           </div>
         )}
 
+              {/* Return Process for Failed Delivery */}
+              {order && ['delivered_failed', 'return_pending'].includes(order.status) && (
+          <div className="bg-white shadow rounded-lg mt-6">
+            <div className="px-6 py-4 border-b border-red-200 bg-red-50">
+              <h2 className="text-lg font-medium text-red-900">🔄 Hoàn trả hàng về shop</h2>
+              <p className="text-sm text-red-700 mt-1">
+                Đơn hàng giao thất bại - Cần hoàn trả hàng về shop
+              </p>
+            </div>
+            
+            <div className="px-6 py-4">
+              {/* Shop Address */}
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <span className="text-blue-500 text-xl">🏪</span>
+                  </div>
+                  <div className="ml-3">
+                    <h4 className="text-sm font-medium text-blue-800">
+                      Địa chỉ hoàn trả (Shop)
+                    </h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      📍 241 Phúc Diễn, Xuân Phương, Nam Từ Liêm, Hà Nội
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      * Đây là địa chỉ cố định để hoàn trả hàng
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Return Process */}
+              {!isReturning && order.status === 'delivered_failed' && (
+                <div>
+                  <h3 className="text-lg font-medium text-orange-900 mb-4">🚚 Bắt đầu hoàn trả</h3>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Upload ảnh bắt đầu hoàn trả</label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, 'returnStart')}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    />
+                    {returnStartImages.length > 0 && (
+                      <p className="text-sm text-orange-600 mt-1">✓ Đã chọn {returnStartImages.length} ảnh</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">* Chụp ảnh hàng hóa trước khi bắt đầu hoàn trả</p>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú hoàn trả</label>
+                    <textarea
+                      value={returnNotes}
+                      onChange={(e) => setReturnNotes(e.target.value)}
+                      rows={2}
+                      className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                      placeholder="Ghi chú về việc hoàn trả hàng về shop..."
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={handleStartReturn}
+                    disabled={isProcessing}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Đang xử lý...' : '🚚 Bắt đầu hoàn trả'}
+                  </button>
+                </div>
+              )}
+
+              {/* Complete Return Process */}
+              {(isReturning || ['returned', 'return_pending'].includes(order.status)) && (
+                <div>
+                  <h3 className="text-lg font-medium text-green-900 mb-4">✅ Hoàn thành hoàn trả</h3>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Upload ảnh hoàn trả *</label>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, 'return')}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                    />
+                    {returnImages.length > 0 && (
+                      <p className="text-sm text-green-600 mt-1">✓ Đã chọn {returnImages.length} ảnh</p>
+                    )}
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Ghi chú hoàn trả</label>
+                    <textarea
+                      value={returnNotes}
+                      onChange={(e) => setReturnNotes(e.target.value)}
+                      rows={2}
+                      className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                      placeholder="Ghi chú về việc hoàn trả hàng thành công..."
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={handleCompleteReturn}
+                    disabled={isProcessing || returnImages.length === 0}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isProcessing ? 'Đang xử lý...' : '✅ Hoàn trả thành công'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Order Tracking Info */}
         {orderTracking && (
@@ -628,12 +1011,26 @@ const OrderDetail: React.FC = () => {
                     </p>
                   </div>
                 )}
-                {orderTracking.deliveryTime && (
+                {orderTracking.deliveryFailureTime && (
+                  <div>
+                    <label className="block text-sm font-medium text-red-700">Thời gian giao thất bại</label>
+                    <p className="mt-1 text-sm text-red-900">
+                      {new Date(orderTracking.deliveryFailureTime).toLocaleString('vi-VN')}
+                    </p>
+                  </div>
+                )}
+                {orderTracking.deliveryTime && !orderTracking.deliveryFailureTime && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Thời gian giao hàng</label>
                     <p className="mt-1 text-sm text-gray-900">
                       {new Date(orderTracking.deliveryTime).toLocaleString('vi-VN')}
                     </p>
+                  </div>
+                )}
+                {orderTracking.deliveryFailureReason && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-red-700">Lý do giao thất bại</label>
+                    <p className="mt-1 text-sm text-red-900">{orderTracking.deliveryFailureReason}</p>
                   </div>
                 )}
                 {orderTracking.notes && (

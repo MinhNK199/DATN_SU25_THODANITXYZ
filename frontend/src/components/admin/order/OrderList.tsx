@@ -129,6 +129,10 @@ const OrderList: React.FC = () => {
       case "delivered_failed": return "red";
       case "partially_delivered": return "orange";
       case "returned": return "volcano";
+      case "return_pending": return "orange";
+      case "return_confirmed": return "blue";
+      case "return_processing": return "purple";
+      case "return_completed": return "green";
       case "return_requested": return "orange";
       case "on_hold": return "gray";
       case "completed": return "green";
@@ -150,20 +154,24 @@ const OrderList: React.FC = () => {
       case "picked_up": return "Đã nhận hàng";
       case "in_transit": return "Đang giao hàng";
       case "arrived": return "Đã đến điểm giao";
-      case "shipped": return "Đang giao hàng";
-      case "delivered": return "Đã giao";
+      case "shipped": return "Đã giao hàng";
+      case "delivered": return "Đã giao hàng";
       case "delivered_success": return "Giao hàng thành công";
       case "delivered_failed": return "Giao hàng thất bại";
       case "partially_delivered": return "Giao hàng một phần";
-      case "returned": return "Hoàn hàng";
+      case "returned": return "Đã hoàn hàng";
+      case "return_pending": return "Chờ xác nhận hoàn trả";
+      case "return_confirmed": return "Đã xác nhận nhận hoàn trả";
+      case "return_processing": return "Đang xử lý hoàn trả";
+      case "return_completed": return "Hoàn tất xử lý hoàn trả";
       case "return_requested": return "Yêu cầu hoàn hàng";
       case "on_hold": return "Tạm dừng";
-      case "completed": return "Thành công";
+      case "completed": return "Hoàn thành";
       case "cancelled": return "Đã hủy";
       case "refund_requested": return "Yêu cầu hoàn tiền";
-      case "refunded": return "Hoàn tiền thành công";
+      case "refunded": return "Đã hoàn tiền";
       case "payment_failed": return "Thanh toán thất bại";
-      default: return "Không xác định";
+      default: return status;
     }
   };
 
@@ -287,6 +295,18 @@ const OrderList: React.FC = () => {
                 style={{ backgroundColor: '#f0f0f0', borderColor: '#d9d9d9', color: '#00b96b' }}
               >
                 ✅ Đã phân công
+              </Button>
+            </Tooltip>
+          )}
+          {(record.status === 'return_pending' || record.status === 'return_confirmed' || record.status === 'return_processing') && (
+            <Tooltip title="Quản lý hoàn trả">
+              <Button
+                type="primary"
+                className="admin-primary-button"
+                style={{ backgroundColor: '#ff7a00', borderColor: '#ff7a00' }}
+                onClick={() => window.location.href = '/admin/returns'}
+              >
+                🔄 Hoàn trả
               </Button>
             </Tooltip>
           )}

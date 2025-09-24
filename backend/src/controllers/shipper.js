@@ -50,7 +50,10 @@ const uploadMiddleware = upload.fields([
 // Middleware upload cho delivery
 const deliveryUploadMiddleware = upload.fields([
   { name: 'pickupImages', maxCount: 10 },
-  { name: 'deliveryImages', maxCount: 10 }
+  { name: 'deliveryImages', maxCount: 10 },
+  { name: 'failureImages', maxCount: 10 },
+  { name: 'returnStartImages', maxCount: 10 },
+  { name: 'returnImages', maxCount: 10 }
 ]);
 
 // Đăng ký shipper
@@ -952,10 +955,20 @@ const completeDelivery = async (req, res) => {
   }
 };
 
-// Báo cáo giao hàng thất bại
+// Báo cáo giao hàng thất bại (CẬP NHẬT)
 const reportDeliveryFailure = async (req, res) => {
   try {
-    const { orderId, failureReason, notes } = req.body;
+    const { orderId } = req.params;
+    const { failureReason, notes } = req.body;
+    const files = req.files;
+
+    // Bắt buộc phải có lý do thất bại
+    if (!failureReason || failureReason.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng nhập lý do giao hàng thất bại'
+      });
+    }
 
     const order = await Order.findById(orderId);
     if (!order) {
@@ -965,7 +978,7 @@ const reportDeliveryFailure = async (req, res) => {
       });
     }
 
-    if (order.shipper.toString() !== req.shipperId) {
+    if (order.shipper && order.shipper.toString() !== req.shipperId?.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Bạn không có quyền xử lý đơn hàng này'
@@ -980,15 +993,25 @@ const reportDeliveryFailure = async (req, res) => {
       });
     }
 
+    // Lưu ảnh bằng chứng thất bại nếu có
+    if (files && files.failureImages) {
+      const failureImages = files.failureImages.map(file => ({
+        url: file.path,
+        description: 'Ảnh bằng chứng giao hàng thất bại'
+      }));
+      orderTracking.deliveryFailureImages = failureImages;
+    }
+
     orderTracking.status = 'failed';
-    orderTracking.failureReason = failureReason;
+    orderTracking.deliveryFailureReason = failureReason;
+    orderTracking.deliveryFailureTime = new Date();
     orderTracking.notes = notes || orderTracking.notes;
 
     await orderTracking.save();
 
     // Cập nhật trạng thái đơn hàng
     order.status = 'delivered_failed';
-    order.retryDeliveryCount += 1;
+    order.retryDeliveryCount = (order.retryDeliveryCount || 0) + 1;
     order.statusHistory.push({
       status: 'delivered_failed',
       note: `Giao hàng thất bại: ${failureReason}`,
@@ -1091,6 +1114,199 @@ const updateShipperStatus = async (req, res) => {
   }
 };
 
+// Bắt đầu hoàn trả hàng về shop
+const startReturn = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { notes } = req.body;
+    const files = req.files;
+
+    console.log('🔄 Start return for order:', orderId);
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng'
+      });
+    }
+
+    if (order.shipper && order.shipper.toString() !== req.shipperId?.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền xử lý đơn hàng này'
+      });
+    }
+
+    // Chỉ cho phép hoàn trả khi giao hàng thất bại
+    if (order.status !== 'delivered_failed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Chỉ có thể hoàn trả đơn hàng giao thất bại'
+      });
+    }
+
+    const orderTracking = await OrderTracking.findOne({ orderId });
+    if (!orderTracking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin tracking đơn hàng'
+      });
+    }
+
+    // Lưu ảnh bắt đầu hoàn trả nếu có
+    if (files && files.returnStartImages) {
+      const returnStartImages = files.returnStartImages.map(file => ({
+        url: file.path,
+        description: 'Ảnh bắt đầu hoàn trả hàng'
+      }));
+      orderTracking.returnStartImages = returnStartImages;
+    }
+
+    orderTracking.status = 'returning';
+    orderTracking.returnStartTime = new Date();
+    orderTracking.returnNotes = notes || '';
+    
+    await orderTracking.save();
+
+    // Cập nhật trạng thái đơn hàng
+    order.status = 'return_pending';
+    order.statusHistory.push({
+      status: 'return_pending',
+      note: 'Shipper đang hoàn trả hàng về shop - Chờ admin xác nhận',
+      date: new Date()
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Bắt đầu hoàn trả hàng thành công',
+      data: { orderTracking }
+    });
+  } catch (error) {
+    console.error('Start return error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi bắt đầu hoàn trả',
+      error: error.message
+    });
+  }
+};
+
+// Hoàn thành hoàn trả hàng
+const completeReturn = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { notes } = req.body;
+    const files = req.files;
+
+    console.log('✅ Complete return for order:', orderId);
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng'
+      });
+    }
+
+    if (order.shipper && order.shipper.toString() !== req.shipperId?.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền xử lý đơn hàng này'
+      });
+    }
+
+    const orderTracking = await OrderTracking.findOne({ orderId });
+    if (!orderTracking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin tracking đơn hàng'
+      });
+    }
+
+    // Lưu ảnh hoàn trả nếu có
+    if (files && files.returnImages) {
+      const returnImages = files.returnImages.map(file => ({
+        url: file.path,
+        description: 'Ảnh bằng chứng hoàn trả hàng'
+      }));
+      orderTracking.returnImages = returnImages;
+    }
+
+    orderTracking.status = 'returned';
+    orderTracking.returnCompletedTime = new Date();
+    if (notes) orderTracking.returnNotes = notes;
+    
+    await orderTracking.save();
+
+    // Cập nhật trạng thái đơn hàng - chờ admin xác nhận
+    order.status = 'return_pending';
+    order.statusHistory.push({
+      status: 'return_pending',
+      note: 'Shipper đã hoàn trả hàng về shop - Chờ admin xác nhận',
+      date: new Date()
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Hoàn trả hàng thành công - Chờ admin xác nhận',
+      data: { orderTracking }
+    });
+  } catch (error) {
+    console.error('Complete return error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi hoàn thành hoàn trả',
+      error: error.message
+    });
+  }
+};
+
+// Lấy danh sách đơn hàng cần hoàn trả
+const getFailedOrders = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const query = { 
+      shipper: req.shipperId,
+      status: { $in: ['delivered_failed', 'return_pending'] }
+    };
+
+    const orders = await Order.find(query)
+      .populate('user', 'fullName phone email')
+      .populate('orderTracking')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Order.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: parseInt(limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get failed orders error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy danh sách đơn hàng thất bại',
+      error: error.message
+    });
+  }
+};
+
 export {
   registerShipper,
   loginShipper,
@@ -1106,6 +1322,9 @@ export {
   confirmDelivery,
   completeDelivery,
   reportDeliveryFailure,
+  startReturn,
+  completeReturn,
+  getFailedOrders,
   updateShipperStatus,
   uploadMiddleware,
   deliveryUploadMiddleware

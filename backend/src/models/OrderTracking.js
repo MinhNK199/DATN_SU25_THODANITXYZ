@@ -14,13 +14,19 @@ const orderTrackingSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: [
-      'assigned',      // Đã phân công
-      'picked_up',     // Đã nhận hàng
-      'in_transit',    // Đang giao hàng
-      'arrived',       // Đã đến điểm giao
-      'delivered',     // Đã giao hàng
-      'failed',        // Giao hàng thất bại
-      'cancelled'      // Hủy giao hàng
+      'assigned',         // Đã phân công
+      'picked_up',        // Đã nhận hàng
+      'in_transit',       // Đang giao hàng
+      'arrived',          // Đã đến điểm giao
+      'delivered',        // Đã giao hàng
+      'failed',           // Giao hàng thất bại
+      'returning',        // Đang hoàn trả về shop
+      'returned',         // Đã hoàn trả về shop
+      'return_pending',   // Chờ admin xác nhận
+      'return_confirmed', // Admin đã xác nhận nhận hoàn trả
+      'return_processing',// Admin đang xử lý hoàn trả
+      'return_completed', // Admin hoàn tất xử lý
+      'cancelled'         // Hủy giao hàng
     ],
     default: 'assigned'
   },
@@ -92,6 +98,70 @@ const orderTrackingSchema = new mongoose.Schema({
   autoConfirmAt: {
     type: Date,
     default: null // Thời gian tự động xác nhận đơn hàng
+  },
+  // Thông tin giao hàng thất bại
+  deliveryFailureReason: {
+    type: String,
+    default: null
+  },
+  deliveryFailureTime: {
+    type: Date,
+    default: null
+  },
+  deliveryFailureImages: [{
+    url: String,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    },
+    description: String
+  }],
+  // Thông tin hoàn trả
+  returnStartTime: {
+    type: Date,
+    default: null
+  },
+  returnCompletedTime: {
+    type: Date,
+    default: null
+  },
+  returnStartImages: [{
+    url: String,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    },
+    description: String
+  }],
+  returnImages: [{
+    url: String,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    },
+    description: String
+  }],
+  returnNotes: {
+    type: String,
+    default: null
+  },
+  // Thông tin xử lý hoàn trả (Admin)
+  returnProcessingType: {
+    type: String,
+    enum: ['refund', 'exchange', 'restock', 'disposal'],
+    default: null
+  },
+  returnProcessingStartTime: {
+    type: Date,
+    default: null
+  },
+  returnProcessingEndTime: {
+    type: Date,
+    default: null
+  },
+  returnCompletionDetails: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

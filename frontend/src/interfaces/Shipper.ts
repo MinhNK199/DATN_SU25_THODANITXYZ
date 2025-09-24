@@ -32,7 +32,7 @@ export interface OrderTracking {
   _id: string;
   orderId: string;
   shipperId: string;
-  status: 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed' | 'cancelled';
+  status: 'assigned' | 'picked_up' | 'in_transit' | 'arrived' | 'delivered' | 'failed' | 'returning' | 'returned' | 'return_pending' | 'return_confirmed' | 'return_processing' | 'return_completed' | 'cancelled';
   pickupImages: Array<{
     url: string;
     uploadedAt: string;
@@ -58,6 +58,33 @@ export interface OrderTracking {
     timestamp: string;
   }>;
   autoConfirmAt?: string;
+  // Delivery failure fields
+  deliveryFailureReason?: string;
+  deliveryFailureTime?: string;
+  deliveryFailureImages?: Array<{
+    url: string;
+    uploadedAt: string;
+    description: string;
+  }>;
+  // Return fields
+  returnStartTime?: string;
+  returnCompletedTime?: string;
+  returnStartImages?: Array<{
+    url: string;
+    uploadedAt: string;
+    description: string;
+  }>;
+  returnImages?: Array<{
+    url: string;
+    uploadedAt: string;
+    description: string;
+  }>;
+  returnNotes?: string;
+  // Admin processing fields
+  returnProcessingType?: 'refund' | 'exchange' | 'restock' | 'disposal';
+  returnProcessingStartTime?: string;
+  returnProcessingEndTime?: string;
+  returnCompletionDetails?: string;
   createdAt: string;
   updatedAt: string;
 }

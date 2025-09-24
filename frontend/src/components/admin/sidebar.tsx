@@ -182,6 +182,20 @@ const AdminSidebar = () => {
           <span className="truncate">Đơn hàng</span>
         </button>
 
+        {/* Returns */}
+        <button
+          onClick={() => navigate("/admin/returns")}
+          className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-200 
+          ${
+            location.pathname.includes("/admin/returns")
+              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg border-l-4 border-white"
+              : "text-gray-600 hover:bg-gradient-to-r hover:from-purple-500 hover:to-blue-500 hover:text-white hover:shadow-md"
+          }`}
+        >
+          <FaExclamationTriangle className={iconClass} />
+          <span className="truncate">🔄 Hoàn trả</span>
+        </button>
+
         {/* Shipper */}
         <button
           onClick={() => navigate("/admin/shipper")}

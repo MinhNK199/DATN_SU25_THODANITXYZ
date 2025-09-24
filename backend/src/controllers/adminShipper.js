@@ -498,6 +498,233 @@ const getShipperStats = async (req, res) => {
   }
 };
 
+// Xác nhận nhận hoàn trả từ shipper
+const confirmReturnReceived = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { notes } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng'
+      });
+    }
+
+    if (order.status !== 'return_pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng chưa ở trạng thái chờ xác nhận hoàn trả'
+      });
+    }
+
+    const orderTracking = await OrderTracking.findOne({ orderId });
+    if (!orderTracking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy thông tin tracking đơn hàng'
+      });
+    }
+
+    // Cập nhật tracking
+    orderTracking.status = 'return_confirmed';
+    await orderTracking.save();
+
+    // Cập nhật trạng thái đơn hàng
+    order.status = 'return_confirmed';
+    order.statusHistory.push({
+      status: 'return_confirmed',
+      note: notes || 'Admin đã xác nhận nhận hoàn trả',
+      date: new Date()
+    });
+
+    await order.save();
+
+    // Emit WebSocket events for realtime updates
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('return_confirmed', {
+        orderId: order._id,
+        status: 'return_confirmed',
+        statusHistory: order.statusHistory
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Đã xác nhận nhận hoàn trả thành công',
+      data: { order, orderTracking }
+    });
+  } catch (error) {
+    console.error('Confirm return received error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi xác nhận hoàn trả',
+      error: error.message
+    });
+  }
+};
+
+// Bắt đầu xử lý hoàn trả
+const startReturnProcessing = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { notes, processingType } = req.body; // processingType: 'refund', 'exchange', 'restock'
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng'
+      });
+    }
+
+    if (order.status !== 'return_confirmed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng chưa được xác nhận nhận hoàn trả'
+      });
+    }
+
+    const orderTracking = await OrderTracking.findOne({ orderId });
+    if (orderTracking) {
+      orderTracking.status = 'return_processing';
+      orderTracking.returnProcessingType = processingType;
+      orderTracking.returnProcessingStartTime = new Date();
+      await orderTracking.save();
+    }
+
+    // Cập nhật trạng thái đơn hàng
+    order.status = 'return_processing';
+    order.statusHistory.push({
+      status: 'return_processing',
+      note: notes || `Đang xử lý hoàn trả - Loại: ${processingType}`,
+      date: new Date()
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Đã bắt đầu xử lý hoàn trả',
+      data: { order, orderTracking }
+    });
+  } catch (error) {
+    console.error('Start return processing error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi bắt đầu xử lý hoàn trả',
+      error: error.message
+    });
+  }
+};
+
+// Hoàn tất xử lý hoàn trả
+const completeReturnProcessing = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { notes, refundAmount, completionDetails } = req.body;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy đơn hàng'
+      });
+    }
+
+    if (order.status !== 'return_processing') {
+      return res.status(400).json({
+        success: false,
+        message: 'Đơn hàng không ở trạng thái đang xử lý hoàn trả'
+      });
+    }
+
+    const orderTracking = await OrderTracking.findOne({ orderId });
+    if (orderTracking) {
+      orderTracking.status = 'return_completed';
+      orderTracking.returnProcessingEndTime = new Date();
+      orderTracking.returnCompletionDetails = completionDetails;
+      await orderTracking.save();
+    }
+
+    // Cập nhật trạng thái đơn hàng
+    order.status = 'return_completed';
+    if (refundAmount) {
+      order.refundAmount = refundAmount;
+    }
+    order.statusHistory.push({
+      status: 'return_completed',
+      note: notes || 'Đã hoàn tất xử lý hoàn trả',
+      date: new Date()
+    });
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message: 'Đã hoàn tất xử lý hoàn trả',
+      data: { order, orderTracking }
+    });
+  } catch (error) {
+    console.error('Complete return processing error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi hoàn tất xử lý hoàn trả',
+      error: error.message
+    });
+  }
+};
+
+// Lấy danh sách đơn hàng cần xác nhận hoàn trả
+const getReturnOrders = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status } = req.query;
+    
+    // Lọc theo trạng thái hoàn trả
+    let query = {};
+    if (status) {
+      query.status = status;
+    } else {
+      // Mặc định lấy tất cả đơn hàng liên quan đến hoàn trả
+      query.status = { 
+        $in: ['return_pending', 'return_confirmed', 'return_processing', 'return_completed'] 
+      };
+    }
+
+    const orders = await Order.find(query)
+      .populate('user', 'fullName phone email')
+      .populate('shipper', 'fullName phone email')
+      .populate('orderTracking')
+      .sort({ updatedAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Order.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          currentPage: parseInt(page),
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: parseInt(limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get return orders error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy danh sách đơn hàng hoàn trả',
+      error: error.message
+    });
+  }
+};
+
 export {
   getAllShippers,
   getShipperById,
@@ -507,5 +734,9 @@ export {
   deleteShipper,
   assignOrderToShipper,
   getOnlineShippers,
-  getShipperStats
+  getShipperStats,
+  confirmReturnReceived,
+  startReturnProcessing,
+  completeReturnProcessing,
+  getReturnOrders
 };

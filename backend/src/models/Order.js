@@ -175,7 +175,11 @@ const orderSchema = new mongoose.Schema({
             "delivered_success", // Giao hàng thành công
             "delivered_failed", // Giao hàng thất bại
             "partially_delivered", // Giao hàng một phần
-            "returned", // Hoàn hàng
+            "returned", // Hoàn hàng (legacy)
+            "return_pending", // Chờ xác nhận hoàn trả
+            "return_confirmed", // Đã xác nhận nhận hoàn trả  
+            "return_processing", // Đang xử lý hoàn trả
+            "return_completed", // Hoàn tất xử lý hoàn trả
             "on_hold", // Tạm dừng xử lý
             "completed", // Hoàn thành
             "cancelled", // Đã hủy

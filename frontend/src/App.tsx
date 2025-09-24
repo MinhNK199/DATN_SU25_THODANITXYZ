@@ -91,6 +91,7 @@ import ShipperRegister from './components/shipper/ShipperRegister';
 import ShipperDashboard from './components/shipper/ShipperDashboard';
 import ShipperOrderDetail from './components/shipper/OrderDetail';
 import ShipperManagement from './components/admin/shipper/ShipperManagement';
+import ReturnOrderList from './components/admin/return/ReturnOrderList';
 import { ShipperProvider } from './contexts/ShipperContext';
 import PrivateRouteShipper from './components/PrivateRouteShipper';
 
@@ -218,6 +219,7 @@ function App() {
                         <Route path="categories/:id" element={<CategoryDetail />} />
                         <Route path="orders" element={<OrderList />} />
                         <Route path="orders/:id" element={<OrderDetail />} />
+                        <Route path="returns" element={<ReturnOrderList />} />
                         <Route path="brands" element={<BrandList />} />
                         <Route path="banners" element={<BannerList />} />
                         <Route path="banners/add" element={<BannerAdd />} />

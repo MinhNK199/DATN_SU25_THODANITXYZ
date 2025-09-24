@@ -15,6 +15,9 @@ import {
   confirmDelivery,
   completeDelivery,
   reportDeliveryFailure,
+  startReturn,
+  completeReturn,
+  getFailedOrders,
   updateShipperStatus,
   uploadMiddleware,
   deliveryUploadMiddleware
@@ -44,7 +47,12 @@ router.post('/orders/:orderId/start-delivery', deliveryUploadMiddleware, startDe
 router.post('/orders/:orderId/complete-delivery', deliveryUploadMiddleware, completeDelivery);
 
 router.put('/location', updateLocation);
-router.post('/orders/:orderId/report-failure', reportDeliveryFailure);
+
+// Delivery failure and return routes
+router.post('/orders/:orderId/report-failure', deliveryUploadMiddleware, reportDeliveryFailure);
+router.get('/failed-orders', getFailedOrders);
+router.post('/orders/:orderId/start-return', deliveryUploadMiddleware, startReturn);
+router.post('/orders/:orderId/complete-return', deliveryUploadMiddleware, completeReturn);
 
 // Admin routes (no auth middleware for now, will be handled by admin routes)
 router.put('/:shipperId/status', updateShipperStatus);

@@ -235,16 +235,44 @@ const ShipperDashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      // OrderTracking statuses
       case 'assigned':
         return 'processing';
       case 'picked_up':
         return 'blue';
       case 'in_transit':
         return 'purple';
+      case 'arrived':
+        return 'orange';
       case 'delivered':
         return 'success';
       case 'failed':
         return 'error';
+      case 'returning':
+        return 'orange';
+      case 'returned':
+        return 'orange';
+      case 'return_pending':
+        return 'warning';
+      case 'return_confirmed':
+        return 'blue';
+      case 'return_processing':
+        return 'purple';
+      case 'return_completed':
+        return 'success';
+      // Order statuses
+      case 'delivered_failed':
+        return 'error';
+      case 'delivered_success':
+        return 'success';
+      case 'processing':
+        return 'blue';
+      case 'confirmed':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'cancelled':
+        return 'default';
       default:
         return 'default';
     }
@@ -252,16 +280,44 @@ const ShipperDashboard: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
+      // OrderTracking statuses
       case 'assigned':
         return 'Đã phân công';
       case 'picked_up':
         return 'Đã nhận hàng';
       case 'in_transit':
         return 'Đang giao hàng';
+      case 'arrived':
+        return 'Đã đến điểm giao';
       case 'delivered':
         return 'Đã giao hàng';
       case 'failed':
         return 'Giao hàng thất bại';
+      case 'returning':
+        return 'Đang hoàn trả về shop';
+      case 'returned':
+        return 'Đã hoàn trả về shop';
+      case 'return_pending':
+        return 'Chờ admin xác nhận hoàn trả';
+      case 'return_confirmed':
+        return 'Admin đã xác nhận nhận hàng';
+      case 'return_processing':
+        return 'Đang xử lý hoàn trả';
+      case 'return_completed':
+        return 'Hoàn tất xử lý hoàn trả';
+      // Order statuses
+      case 'delivered_failed':
+        return 'Giao hàng thất bại';
+      case 'delivered_success':
+        return 'Giao hàng thành công';
+      case 'processing':
+        return 'Đang xử lý';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'pending':
+        return 'Chờ xử lý';
+      case 'cancelled':
+        return 'Đã hủy';
       default:
         return status;
     }
