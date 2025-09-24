@@ -14,7 +14,7 @@ import {
 import ProductCard from "../../components/client/ProductCard";
 import { useCart } from "../../contexts/CartContext";
 import axios from "axios";
-import { toast } from "react-hot-toast";
+import { useModernNotification } from "../../components/client/ModernNotification";
 import { ImageIcon, Star } from "lucide-react";
 
 interface Rating {
@@ -35,6 +35,7 @@ const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { showSuccess, showError } = useModernNotification();
   const [product, setProduct] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -288,16 +289,16 @@ const ProductDetail: React.FC = () => {
     
     // Bắt buộc chọn variant nếu sản phẩm có variants
     if (product.variants && product.variants.length > 0 && !selectedVariantId) {
-      toast.error("Vui lòng chọn sản phẩm trước khi thêm vào giỏ hàng");
+      showError("Chọn sản phẩm", "Vui lòng chọn sản phẩm trước khi thêm vào giỏ hàng");
       return;
     }
     
     try {
       await addToCart(product._id, quantity, selectedVariantId);
-      toast.success("Đã thêm sản phẩm vào giỏ hàng");
+      showSuccess("Thêm vào giỏ hàng", "Đã thêm sản phẩm vào giỏ hàng");
     } catch (error) {
       console.error("Error adding to cart:", error);
-      toast.error("Không thể thêm sản phẩm vào giỏ hàng");
+      showError("Lỗi thêm vào giỏ hàng", "Không thể thêm sản phẩm vào giỏ hàng");
     }
   };
 
@@ -306,7 +307,7 @@ const ProductDetail: React.FC = () => {
     
     // Bắt buộc chọn variant nếu sản phẩm có variants
     if (product.variants && product.variants.length > 0 && !selectedVariantId) {
-      toast.error("Vui lòng chọn sản phẩm trước khi mua ngay");
+      showError("Chọn sản phẩm", "Vui lòng chọn sản phẩm trước khi mua ngay");
       return;
     }
     
@@ -314,7 +315,7 @@ const ProductDetail: React.FC = () => {
     if (selectedVariantId && product.variants && product.variants.length > 0) {
       const variantExists = product.variants.find((v: any) => v._id === selectedVariantId);
       if (!variantExists) {
-        toast.error("Sản phẩm đã chọn không hợp lệ. Vui lòng chọn lại.");
+        showError("Sản phẩm không hợp lệ", "Sản phẩm đã chọn không hợp lệ. Vui lòng chọn lại.");
         setSelectedVariantId(undefined);
         return;
       }
@@ -333,7 +334,7 @@ const ProductDetail: React.FC = () => {
       
     } catch (error) {
       console.error("Error processing buy now:", error);
-      toast.error("Không thể xử lý mua ngay");
+      showError("Lỗi mua ngay", "Không thể xử lý mua ngay");
     }
   };
 
@@ -732,7 +733,7 @@ const ProductDetail: React.FC = () => {
                 </span>
                 <div className="hidden md:block h-4 w-px bg-gray-300"></div>
                 <span className="text-sm text-gray-600">
-                  Đã Bán {product.soldCount || 0}+
+                  Đã Bán {product.sold || 0}+
                 </span>
                 <div className="hidden md:block h-4 w-px bg-gray-300"></div>
                 <button className="text-sm text-gray-500 hover:text-gray-700">
@@ -1187,7 +1188,7 @@ const ProductDetail: React.FC = () => {
                       })()}
                      <div className="flex justify-between py-2 border-b border-gray-100">
                        <span className="font-medium text-gray-600">Đã bán:</span>
-                       <span className="text-gray-900">{product.soldCount || 0}+ sản phẩm</span>
+                       <span className="text-gray-900">{product.sold || 0}+ sản phẩm</span>
                      </div>
                    </div>
                  </div>

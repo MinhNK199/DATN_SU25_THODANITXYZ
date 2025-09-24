@@ -529,13 +529,18 @@ const OrderDetail = () => {
                 <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
                 <div>
                   <p>{order.shippingAddress?.address || 'N/A'}</p>
-                  <p className="text-sm text-gray-500">
-                    {[
-                      order.shippingAddress?.ward,
-                      order.shippingAddress?.district,
-                      order.shippingAddress?.city
-                    ].filter(Boolean).join(', ') || 'N/A'}
-                  </p>
+                  <div className="space-y-1">
+                    {order.shippingAddress?.wardName && (
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
+                        <span className="font-medium">Phường/Xã:</span>
+                        <span>{order.shippingAddress.wardName}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <span className="font-medium">Thành phố/Tỉnh:</span>
+                      <span>{order.shippingAddress?.cityName || order.shippingAddress?.city || 'N/A'}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

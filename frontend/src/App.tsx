@@ -38,7 +38,6 @@ import VariantAdd from "./components/admin/variants/VariantAdd";
 import VariantEdit from "./components/admin/variants/VariantEdit";
 import VariantDetail from "./components/admin/variants/VariantDetail";
 import VariantTrash from "./components/admin/variants/VariantTrash";
-import { Toaster } from "react-hot-toast";
 import Cart from './pages/client/Cart';
 import ProductListClient from './pages/client/ProductList';
 import ProductDetailClient from './pages/client/ProductDetail';
@@ -55,6 +54,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { CheckoutProvider } from './contexts/CheckoutContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { NotificationProvider as ModernNotificationProvider } from './components/client/ModernNotification';
 import { InventoryProvider } from './contexts/InventoryContext';
 import { OrderProvider } from './contexts/OrderContext';
 import { CompareProvider } from './contexts/CompareContext';
@@ -110,9 +110,10 @@ function App() {
     <div className="App">
       <AuthProvider>
         <NotificationProvider>
-          <InventoryProvider>
-            <OrderProvider>
-              <CartProvider>
+          <ModernNotificationProvider>
+            <InventoryProvider>
+              <OrderProvider>
+                <CartProvider>
                 <WishlistProvider>
                   <CompareProvider>
                     <ChatProvider>
@@ -248,7 +249,6 @@ function App() {
 
                     {/* Global Components */}
                     <PromotionBanner />
-                    <Toaster />
                       </CheckoutProvider>
                     </ChatProvider>
                   </CompareProvider>
@@ -256,6 +256,7 @@ function App() {
               </CartProvider>
             </OrderProvider>
           </InventoryProvider>
+          </ModernNotificationProvider>
         </NotificationProvider>
       </AuthProvider>
     </div>

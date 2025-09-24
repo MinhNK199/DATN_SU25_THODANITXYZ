@@ -49,6 +49,7 @@ export interface Product {
     category: Category | string; // Có thể là object Category đầy đủ hoặc chỉ là ID
     brand: Brand | string | null;       // Có thể là object Brand đầy đủ hoặc chỉ là ID
     stock: number;
+    sold?: number;
     variants: ProductVariant[];
     specifications?: Record<string, string>; // Sử dụng Record cho kiểu dữ liệu Map
     features?: string[];

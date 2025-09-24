@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Order } from '../../../interfaces/Order';
-import { Card, Spin, Descriptions, Table, Tag, Timeline, Button, Image, Row, Col, Divider, Space, Typography } from 'antd';
+import { Card, Spin, Descriptions, Table, Tag, Timeline, Button, Image, Row, Col, Divider, Space, Typography, Form, Select, Input } from 'antd';
 import { 
   FaUser, 
   FaTruck, 
@@ -16,16 +16,24 @@ import {
   FaEnvelope
 } from 'react-icons/fa';
 import axiosInstance from '../../../api/axiosInstance';
+import { updateOrderStatus } from '../../../services/orderApi';
+import { useNotification } from '../../../contexts/NotificationContext';
 
 const { Text, Title } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
 
 interface OrderDetailModalProps {
   orderId: string;
+  onClose?: () => void;
 }
 
-const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId }) => {
+const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId, onClose }) => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [form] = Form.useForm();
+  const [updating, setUpdating] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     if (orderId) {
@@ -42,6 +50,40 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId }) => {
       console.error('Error fetching order detail:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusUpdate = async (values: { status: string; note: string }) => {
+    if (!orderId) return;
+    
+    setUpdating(true);
+    try {
+      await updateOrderStatus(orderId, values.status, values.note);
+      showNotification({
+        title: 'Cập nhật trạng thái thành công',
+        message: 'Cập nhật trạng thái đơn hàng thành công!',
+        type: 'success',
+        actionUrl: `/admin/orders/${orderId}`
+      });
+      form.resetFields();
+      
+      // Đóng modal sau khi cập nhật thành công
+      if (onClose) {
+        onClose();
+      }
+      
+      // Refresh data
+      await fetchOrderDetail();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      showNotification({
+        title: 'Cập nhật trạng thái thất bại',
+        message: 'Có lỗi xảy ra khi cập nhật trạng thái',
+        type: 'error',
+        actionUrl: `/admin/orders/${orderId}`
+      });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -250,8 +292,13 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId }) => {
               <Descriptions.Item label="Địa chỉ">
                 <Text>{order.shippingAddress?.address || 'N/A'}</Text>
               </Descriptions.Item>
+              {order.shippingAddress?.wardName && (
+                <Descriptions.Item label="Phường/Xã">
+                  <Text>{order.shippingAddress.wardName}</Text>
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Thành phố">
-                <Text>{order.shippingAddress?.city || 'N/A'}</Text>
+                <Text>{order.shippingAddress?.cityName || order.shippingAddress?.city || 'N/A'}</Text>
               </Descriptions.Item>
             </Descriptions>
           </Card>
@@ -409,6 +456,47 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ orderId }) => {
           </Card>
         </>
       )}
+
+      {/* Form chuyển trạng thái */}
+      <Divider />
+      <Card title="Cập nhật trạng thái" size="small">
+        <Form form={form} onFinish={handleStatusUpdate} layout="vertical">
+          <Form.Item
+            name="status"
+            label="Trạng thái mới"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
+          >
+            <Select placeholder="Chọn trạng thái mới">
+              <Option value="pending">Chờ xác nhận</Option>
+              <Option value="confirmed">Đã xác nhận</Option>
+              <Option value="processing">Đang xử lý</Option>
+              <Option value="shipped">Đang giao hàng</Option>
+              <Option value="delivered_success">Giao hàng thành công</Option>
+              <Option value="delivered_failed">Giao hàng thất bại</Option>
+              <Option value="completed">Thành công</Option>
+              <Option value="cancelled">Đã hủy</Option>
+              <Option value="refunded">Đã hoàn tiền</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="note" label="Ghi chú">
+            <TextArea
+              rows={3}
+              placeholder="Thêm ghi chú cho lần cập nhật này..."
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={updating}
+              block
+              className="admin-primary-button"
+            >
+              Cập nhật trạng thái
+            </Button>
+          </Form.Item>
+        </Form>
+      </Card>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from 'react-hot-toast';
+import { useModernNotification } from '../components/client/ModernNotification';
 import { Product } from '../interfaces/Product';
 
 interface CompareContextType {
@@ -20,6 +20,7 @@ interface CompareProviderProps {
 export const CompareProvider: React.FC<CompareProviderProps> = ({ children }) => {
   const [compareList, setCompareList] = useState<Product[]>([]);
   const MAX_COMPARE_ITEMS = 4; // Giới hạn tối đa 4 sản phẩm
+  const { showError, showSuccess } = useModernNotification();
 
   // Load từ localStorage khi component mount
   useEffect(() => {
@@ -42,17 +43,17 @@ export const CompareProvider: React.FC<CompareProviderProps> = ({ children }) =>
 
   const addToCompare = (product: Product) => {
     if (compareList.length >= MAX_COMPARE_ITEMS) {
-      toast.error(`Bạn chỉ có thể so sánh tối đa ${MAX_COMPARE_ITEMS} sản phẩm`);
+      showError('Giới hạn so sánh', `Bạn chỉ có thể so sánh tối đa ${MAX_COMPARE_ITEMS} sản phẩm`);
       return;
     }
 
     if (isInCompare(product._id)) {
-      toast.error('Sản phẩm này đã có trong danh sách so sánh');
+      showError('Đã có trong so sánh', 'Sản phẩm này đã có trong danh sách so sánh');
       return;
     }
 
     setCompareList(prev => [...prev, product]);
-    toast.success('Đã thêm vào danh sách so sánh');
+    showSuccess('Thêm vào so sánh', 'Đã thêm vào danh sách so sánh');
   };
 
   const removeFromCompare = (productId: string) => {

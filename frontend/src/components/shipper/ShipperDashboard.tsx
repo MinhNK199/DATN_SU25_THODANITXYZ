@@ -632,7 +632,7 @@ const ShipperDashboard: React.FC = () => {
                         )}
                       </div>
                       <div>
-                        <Text strong>Địa chỉ giao:</Text> {order.shippingAddress?.address || 'N/A'}, {order.shippingAddress?.city || 'N/A'}
+                        <Text strong>Địa chỉ giao:</Text> {order.shippingAddress?.address || 'N/A'}{order.shippingAddress?.wardName ? `, ${order.shippingAddress.wardName}` : ''}, {order.shippingAddress?.cityName || order.shippingAddress?.city || 'N/A'}
                       </div>
                       <div>
                         <Text strong>Ngày tạo:</Text> {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}

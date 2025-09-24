@@ -17,7 +17,8 @@ import {
   getValidOrderStatusOptions,
   handlePaymentFailed,
   confirmOrderAfterPayment,
-  confirmOrder
+  confirmOrder,
+  recalculateProductSoldCount
 } from "../controllers/order.js";
 import { protect } from "../middlewares/authMiddleware.js";
 import Order from "../models/Order.js";
@@ -44,6 +45,9 @@ routerOrder.put("/:id/confirm-delivery", protect, confirmDelivery);
 routerOrder.put("/:id/cancel", protect, cancelOrder);
 routerOrder.put("/:id/confirm", protect, confirmOrder);
 routerOrder.get("/:id/valid-status", protect, getValidOrderStatusOptions);
+
+// ========== ADMIN UTILITIES ==========
+routerOrder.post("/admin/recalculate-sold-count", protect, recalculateProductSoldCount);
 
 // ========== PAYMENT STATUS MANAGEMENT ==========
 // Route để cập nhật thanh toán thành công

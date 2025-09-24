@@ -32,6 +32,7 @@ import {
 } from '@ant-design/icons';
 import { useNotification } from '../../hooks/useNotification';
 import { getSettings, updateSettings, resetSettings, SettingsData } from '../../services/settingsService';
+import axios from 'axios';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -127,6 +128,33 @@ const SettingsPage: React.FC = () => {
     loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
+
+  // Handle recalculate sold count
+  const handleRecalculateSoldCount = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      
+      const response = await axios.post(
+        'http://localhost:8000/api/order/admin/recalculate-sold-count',
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      
+      if (response.data.success) {
+        success('Tính toán lại thành công', response.data.message);
+      } else {
+        error('Lỗi tính toán', response.data.message || 'Có lỗi xảy ra');
+      }
+    } catch (err: any) {
+      console.error('Error recalculating sold count:', err);
+      error('Lỗi tính toán', err.response?.data?.message || 'Không thể tính toán lại số lượng sản phẩm đã bán');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Real-time sync between tabs/windows
   useEffect(() => {
@@ -669,6 +697,52 @@ const SettingsPage: React.FC = () => {
                       </Form.Item>
                     </Col>
                   </Row>
+                </Card>
+              </div>
+            </TabPane>
+
+            {/* Tab Công cụ quản trị */}
+            <TabPane 
+              tab={
+                <span className="flex items-center gap-2">
+                  <SyncOutlined />
+                  Công cụ quản trị
+                </span>
+              } 
+              key="admin-tools"
+            >
+              <div className="p-6">
+                <Card 
+                  title="Tính toán lại số lượng sản phẩm đã bán" 
+                  className="shadow-sm hover:shadow-md transition-shadow"
+                  extra={<SyncOutlined className="text-blue-500" />}
+                >
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <Text className="text-blue-800">
+                        <strong>Chức năng:</strong> Tính toán lại số lượng sản phẩm đã bán dựa trên tất cả đơn hàng có trạng thái "Thành công" (completed) trong hệ thống.
+                      </Text>
+                    </div>
+                    
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <Text className="text-yellow-800">
+                        <strong>Lưu ý:</strong> Quá trình này có thể mất vài giây tùy thuộc vào số lượng đơn hàng trong hệ thống.
+                      </Text>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <Button
+                        type="primary"
+                        size="large"
+                        icon={<SyncOutlined />}
+                        loading={loading}
+                        onClick={handleRecalculateSoldCount}
+                        className="admin-primary-button"
+                      >
+                        Tính toán lại số lượng đã bán
+                      </Button>
+                    </div>
+                  </div>
                 </Card>
               </div>
             </TabPane>

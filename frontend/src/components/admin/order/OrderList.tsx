@@ -403,7 +403,7 @@ const OrderList: React.FC = () => {
         width={1000}
         className="order-detail-modal"
       >
-        {modalOrderId && <OrderDetailModal orderId={modalOrderId} />}
+        {modalOrderId && <OrderDetailModal orderId={modalOrderId} onClose={() => setShowOrderIdModal(false)} />}
       </Modal>
 
       <AssignShipperModal
@@ -444,7 +444,7 @@ const handleConfirmOrder = async (orderId: string, showNotification: any) => {
     }
   } catch (error) {
     console.error('Error confirming order:', error);
-    handleError(error, 'Có lỗi xảy ra khi xác nhận đơn hàng');
+    antdMessage.error('Có lỗi xảy ra khi xác nhận đơn hàng');
   }
 };
 

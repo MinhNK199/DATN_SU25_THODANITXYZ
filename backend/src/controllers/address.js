@@ -125,19 +125,30 @@ const addNamesToAddress = async (address) => {
     
     try {
         console.log(`🔍 Mapping address: city=${addressObj.city}, ward=${addressObj.ward}`);
+        console.log(`🔍 Address object:`, JSON.stringify(addressObj, null, 2));
         
-        const [cityName, wardName] = await Promise.all([
-            mapCodeToName(addressObj.city, 'province'),
-            mapCodeToName(addressObj.ward, 'ward')
-        ]);
+        // Xử lý cả city và ward (nếu có)
+        const cityName = await mapCodeToName(addressObj.city, 'province');
+        let wardName = null;
         
-        console.log(`✅ Mapped names: cityName=${cityName}, wardName=${wardName}`);
+        // Chỉ xử lý ward nếu có trường ward
+        if (addressObj.ward) {
+            wardName = await mapCodeToName(addressObj.ward, 'ward');
+        }
         
-        return {
+        console.log(`✅ Mapped names: cityName=${cityName}, wardName=${wardName}, hasWard=${!!addressObj.ward}`);
+        
+        const result = {
             ...addressObj,
             cityName: cityName || `Tỉnh ${addressObj.city}`,
-            wardName: wardName || `Phường ${addressObj.ward}`,
         };
+        
+        // Chỉ thêm wardName nếu có ward
+        if (addressObj.ward) {
+            result.wardName = wardName || `Phường ${addressObj.ward}`;
+        }
+        
+        return result;
     } catch (error) {
         console.error('Error adding names to address:', error);
         // Return address with fallback names
@@ -154,6 +165,9 @@ const clearWardCache = () => {
     wardCodeToNameCache = null;
     console.log('🧹 Cleared ward cache');
 };
+
+// Export addNamesToAddress function
+export { addNamesToAddress };
 
 // API để lấy danh sách tỉnh/thành
 export const getProvincesAPI = async (req, res) => {

@@ -27,6 +27,9 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
   const [pageSize, setPageSize] = useState(5);
   const [orderDetailModalVisible, setOrderDetailModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderSearchTerm, setOrderSearchTerm] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('');
+  const [orderDateFilter, setOrderDateFilter] = useState('');
   const { success, error } = useNotification();
 
   useEffect(() => {
@@ -127,7 +130,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
     try {
       setSelectedShipper(shipper);
       setPerformanceModalVisible(true);
-      setPerformancePage(1);
+      resetOrderFilters();
       
       // Fetch performance data
       const response = await fetch(`http://localhost:8000/api/admin/shipper/${shipper._id}/performance`, {
@@ -163,15 +166,61 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
     setOrderDetailModalVisible(true);
   };
 
+  // Lọc và tìm kiếm đơn hàng
+  const getFilteredOrders = (orders: any[]) => {
+    if (!orders) return [];
+    
+    let filtered = [...orders];
+    
+    // Tìm kiếm theo từ khóa
+    if (orderSearchTerm) {
+      const searchLower = orderSearchTerm.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.orderNumber?.toLowerCase().includes(searchLower) ||
+        order.user?.name?.toLowerCase().includes(searchLower) ||
+        order.user?.fullName?.toLowerCase().includes(searchLower) ||
+        order.user?.email?.toLowerCase().includes(searchLower) ||
+        order.shippingAddress?.fullName?.toLowerCase().includes(searchLower) ||
+        order.shippingAddress?.address?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Lọc theo trạng thái
+    if (orderStatusFilter) {
+      filtered = filtered.filter(order => order.status === orderStatusFilter);
+    }
+    
+    // Lọc theo ngày
+    if (orderDateFilter) {
+      const filterDate = new Date(orderDateFilter);
+      filtered = filtered.filter(order => {
+        const orderDate = new Date(order.createdAt);
+        return orderDate.toDateString() === filterDate.toDateString();
+      });
+    }
+    
+    return filtered;
+  };
+
   // Tính toán phân trang cho danh sách đơn hàng
   const getPaginatedOrders = (orders: any[]) => {
+    const filteredOrders = getFilteredOrders(orders);
     const startIndex = (performancePage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
-    return orders.slice(startIndex, endIndex);
+    return filteredOrders.slice(startIndex, endIndex);
   };
 
   const getTotalPages = (orders: any[]) => {
-    return Math.ceil(orders.length / pageSize);
+    const filteredOrders = getFilteredOrders(orders);
+    return Math.ceil(filteredOrders.length / pageSize);
+  };
+
+  // Reset filters khi mở modal mới
+  const resetOrderFilters = () => {
+    setOrderSearchTerm('');
+    setOrderStatusFilter('');
+    setOrderDateFilter('');
+    setPerformancePage(1);
   };
 
   const columns = [
@@ -251,31 +300,13 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
       ),
     },
     {
-      title: 'Tài liệu',
-      key: 'documents',
+      title: 'Đơn đang đi',
+      key: 'currentOrders',
       render: (record: Shipper) => (
-        <div className="space-y-1">
-          {record.documents && record.documents.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
-              {record.documents.slice(0, 3).map((doc, index) => (
-                <Button
-                  key={index}
-                  type="link"
-                  size="small"
-                  onClick={() => handlePreviewImage(`http://localhost:8000/${doc.url}`)}
-                >
-                  {doc.type === 'id_card' ? 'CCCD' : 
-                   doc.type === 'driver_license' ? 'GPLX' :
-                   doc.type === 'vehicle_registration' ? 'Đăng ký xe' : 'Bảo hiểm'}
-                </Button>
-              ))}
-              {record.documents.length > 3 && (
-                <span className="text-xs text-gray-500">+{record.documents.length - 3}</span>
-              )}
-            </div>
-          ) : (
-            <span className="text-gray-400 text-sm">Chưa có</span>
-          )}
+        <div className="text-center">
+          <span className="text-lg font-semibold text-blue-600">
+            {record.currentOrders || 0}
+          </span>
         </div>
       ),
     },
@@ -482,7 +513,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
                                     </div>
                                     <div className="text-sm text-gray-600 mb-1">
                                       <strong>Địa chỉ:</strong> {order.shippingAddress ? 
-                                        `${order.shippingAddress.fullName || ''} - ${order.shippingAddress.address || ''}${order.shippingAddress.ward ? `, ${order.shippingAddress.ward}` : ''}${order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}${order.shippingAddress.province ? `, ${order.shippingAddress.province}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
+                                        `${order.shippingAddress.fullName || ''} - ${order.shippingAddress.address || ''}${order.shippingAddress.wardName ? `, ${order.shippingAddress.wardName}` : ''}${order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}${order.shippingAddress.cityName ? `, ${order.shippingAddress.cityName}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
                                         order.deliveryAddress || 'N/A'}
                                     </div>
                                     <div className="text-sm text-gray-600 mb-1">
@@ -665,7 +696,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
                                     </div>
                                     <div className="text-sm text-gray-600 mb-1">
                                       <strong>Địa chỉ:</strong> {order.shippingAddress ? 
-                                        `${order.shippingAddress.fullName || ''} - ${order.shippingAddress.address || ''}${order.shippingAddress.ward ? `, ${order.shippingAddress.ward}` : ''}${order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}${order.shippingAddress.province ? `, ${order.shippingAddress.province}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
+                                        `${order.shippingAddress.fullName || ''} - ${order.shippingAddress.address || ''}${order.shippingAddress.wardName ? `, ${order.shippingAddress.wardName}` : ''}${order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}${order.shippingAddress.cityName ? `, ${order.shippingAddress.cityName}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
                                         order.deliveryAddress || 'N/A'}
                                     </div>
                                     <div className="text-sm text-gray-600 mb-1">
@@ -832,6 +863,80 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
                   ),
                   children: (
                     <div className="space-y-4">
+                      {/* Tìm kiếm và lọc */}
+                      <Card size="small" className="bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Tìm kiếm
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Mã đơn, tên khách hàng, email..."
+                              value={orderSearchTerm}
+                              onChange={(e) => {
+                                setOrderSearchTerm(e.target.value);
+                                setPerformancePage(1);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Trạng thái
+                            </label>
+                            <select
+                              value={orderStatusFilter}
+                              onChange={(e) => {
+                                setOrderStatusFilter(e.target.value);
+                                setPerformancePage(1);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Tất cả trạng thái</option>
+                              <option value="pending">Chờ xử lý</option>
+                              <option value="confirmed">Đã xác nhận</option>
+                              <option value="assigned">Đã phân công</option>
+                              <option value="picked_up">Đã lấy hàng</option>
+                              <option value="in_transit">Đang giao</option>
+                              <option value="delivered_success">Giao thành công</option>
+                              <option value="delivered_failed">Giao thất bại</option>
+                              <option value="cancelled">Đã hủy</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Ngày tạo
+                            </label>
+                            <input
+                              type="date"
+                              value={orderDateFilter}
+                              onChange={(e) => {
+                                setOrderDateFilter(e.target.value);
+                                setPerformancePage(1);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div className="flex items-end">
+                            <Button
+                              onClick={() => {
+                                setOrderSearchTerm('');
+                                setOrderStatusFilter('');
+                                setOrderDateFilter('');
+                                setPerformancePage(1);
+                              }}
+                              className="w-full"
+                            >
+                              Xóa bộ lọc
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600">
+                          Hiển thị {getFilteredOrders(performanceData.allOrders).length} / {performanceData.allOrders?.length || 0} đơn hàng
+                        </div>
+                      </Card>
+
                       {performanceData.allOrders && performanceData.allOrders.length > 0 ? (
                         <>
                           <div className="space-y-3">
@@ -858,7 +963,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
                                     </div>
                                     <div className="text-sm text-gray-600 mb-1">
                                       <strong>Địa chỉ:</strong> {order.shippingAddress ? 
-                                        `${order.shippingAddress.fullName || ''} - ${order.shippingAddress.address || ''}${order.shippingAddress.ward ? `, ${order.shippingAddress.ward}` : ''}${order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}${order.shippingAddress.province ? `, ${order.shippingAddress.province}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
+                                        `${order.shippingAddress.fullName || ''} - ${order.shippingAddress.address || ''}${order.shippingAddress.wardName ? `, ${order.shippingAddress.wardName}` : ''}${order.shippingAddress.district ? `, ${order.shippingAddress.district}` : ''}${order.shippingAddress.cityName ? `, ${order.shippingAddress.cityName}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
                                         order.deliveryAddress || 'N/A'}
                                     </div>
                                     <div className="text-sm text-gray-600 mb-1">
@@ -983,11 +1088,11 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
                           ))}
                         </div>
                         {/* Phân trang */}
-                        {performanceData.allOrders.length > pageSize && (
+                        {getFilteredOrders(performanceData.allOrders).length > pageSize && (
                           <div className="flex justify-center mt-4">
                             <Pagination
                               current={performancePage}
-                              total={performanceData.allOrders.length}
+                              total={getFilteredOrders(performanceData.allOrders).length}
                               pageSize={pageSize}
                               onChange={(page) => setPerformancePage(page)}
                               showSizeChanger={false}
@@ -1136,7 +1241,7 @@ const ShipperList: React.FC<ShipperListProps> = ({ onViewPerformance, onToggleSt
                     <span className="text-gray-400 mt-1">📍</span>
                     <div className="text-sm">
                       {selectedOrder.shippingAddress ? 
-                        `${selectedOrder.shippingAddress.fullName || ''} - ${selectedOrder.shippingAddress.address || ''}${selectedOrder.shippingAddress.ward ? `, ${selectedOrder.shippingAddress.ward}` : ''}${selectedOrder.shippingAddress.district ? `, ${selectedOrder.shippingAddress.district}` : ''}${selectedOrder.shippingAddress.province ? `, ${selectedOrder.shippingAddress.province}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
+                        `${selectedOrder.shippingAddress.fullName || ''} - ${selectedOrder.shippingAddress.address || ''}${selectedOrder.shippingAddress.wardName ? `, ${selectedOrder.shippingAddress.wardName}` : ''}${selectedOrder.shippingAddress.district ? `, ${selectedOrder.shippingAddress.district}` : ''}${selectedOrder.shippingAddress.cityName ? `, ${selectedOrder.shippingAddress.cityName}` : ''}`.replace(/^[,\s-]+|[,\s-]+$/g, '') : 
                         'N/A'}
                     </div>
                   </div>

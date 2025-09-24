@@ -383,7 +383,7 @@ const OrderDetail: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Địa chỉ giao hàng</label>
                 <p className="mt-1 text-sm text-gray-900">
-                  {order.shippingAddress?.address}, {order.shippingAddress?.city}
+                  {order.shippingAddress?.address}{order.shippingAddress?.wardName ? `, ${order.shippingAddress.wardName}` : ''}, {order.shippingAddress?.cityName || order.shippingAddress?.city}
                 </p>
                 <p className="text-sm text-gray-500">Mã bưu chính: {order.shippingAddress?.postalCode}</p>
               </div>

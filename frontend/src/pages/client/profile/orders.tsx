@@ -142,10 +142,22 @@ const Orders = () => {
   };
 
   const mapClientStatus = (status: string) => {
-    if (["picked_up", "in_transit", "arrived"].includes(status)) {
-      return "shipped";
-    }
-    return status;
+    // Map các trạng thái backend thành trạng thái hiển thị cho client
+    const statusMap: Record<string, string> = {
+      "picked_up": "shipped",
+      "in_transit": "shipped", 
+      "arrived": "shipped",
+      "processing": "confirmed", // Xử lý = Đã xác nhận
+      "delivered_success": "delivered_success",
+      "partially_delivered": "delivered_success",
+      "returned": "cancelled", // Hoàn hàng = Hủy
+      "on_hold": "pending", // Tạm dừng = Chờ xác nhận
+      "refund_requested": "cancelled", // Yêu cầu hoàn tiền = Hủy
+      "refunded": "cancelled", // Đã hoàn tiền = Hủy
+      "payment_failed": "cancelled", // Thanh toán thất bại = Hủy
+    };
+    
+    return statusMap[status] || status;
   };
 
   const getStatusIcon = (status: string) => {
@@ -427,6 +439,7 @@ const Orders = () => {
               <option value="delivered_success">Đã giao</option>
               <option value="completed">Thành công</option>
               <option value="cancelled">Đã hủy</option>
+              <option value="refunded">Đã hoàn tiền</option>
             </select>
           </div>
         </div>

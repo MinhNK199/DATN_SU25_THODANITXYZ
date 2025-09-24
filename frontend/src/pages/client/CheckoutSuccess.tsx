@@ -39,6 +39,10 @@ interface OrderDetails {
     address: string;
     city: string;
     phone: string;
+    ward?: string;
+    district?: string;
+    wardName?: string;
+    cityName?: string;
   };
   createdAt: string;
 }
@@ -283,7 +287,7 @@ const CheckoutSuccess: React.FC = () => {
         <div className="text-center mb-8">
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Thanh toán thành công!
+           Đặt hàng thành công!
           </h1>
           <p className="text-lg text-gray-600">
             Cảm ơn bạn đã mua hàng. Đơn hàng của bạn đã được xác nhận.
@@ -335,9 +339,29 @@ const CheckoutSuccess: React.FC = () => {
                 <h3 className="font-medium text-gray-900 mb-3">Địa chỉ giao hàng</h3>
                 <div className="text-sm text-gray-600 space-y-1">
                   <p className="font-medium">{orderDetails.shippingAddress.fullName}</p>
-                  <p>{orderDetails.shippingAddress.address}</p>
-                  <p>{orderDetails.shippingAddress.city}</p>
                   <p>Điện thoại: {orderDetails.shippingAddress.phone}</p>
+                  <div className="flex items-start space-x-2">
+                    <div className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0">
+                      <svg viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p>{orderDetails.shippingAddress.address}</p>
+                      <div className="space-y-1">
+                        {orderDetails.shippingAddress.wardName && (
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <span className="font-medium">Phường/Xã:</span>
+                            <span>{orderDetails.shippingAddress.wardName}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          <span className="font-medium">Thành phố/Tỉnh:</span>
+                          <span>{orderDetails.shippingAddress.cityName || orderDetails.shippingAddress.city}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

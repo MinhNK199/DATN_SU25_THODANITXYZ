@@ -17,6 +17,7 @@ export interface Shipper {
   };
   rating: number;
   totalDeliveries: number;
+  currentOrders?: number;
   avatar?: string;
   documents: Array<{
     type: 'id_card' | 'driver_license' | 'vehicle_registration' | 'insurance';

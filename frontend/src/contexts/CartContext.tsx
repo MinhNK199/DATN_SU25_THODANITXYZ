@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import toast from 'react-hot-toast';
+import { useModernNotification } from '../components/client/ModernNotification';
 import cartApi, { Cart, CartItem } from '../services/cartApi';
 import { calculateSubtotal } from '../utils/priceUtils';
 
@@ -118,6 +118,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: null
   });
 
+  const { showSuccess, showError, showWarning } = useModernNotification();
+
   // Load cart from backend on mount
   const loadCart = useCallback(async (forceRefresh = false) => {
     const token = localStorage.getItem('token');
@@ -195,7 +197,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!token) {
       // Nếu chưa đăng nhập, lưu vào localStorage
-      toast.error('Vui lòng đăng nhập để thêm vào giỏ hàng');
+      showError('Đăng nhập yêu cầu', 'Vui lòng đăng nhập để thêm vào giỏ hàng');
       return;
     }
 
@@ -205,12 +207,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const user = JSON.parse(userStr);
         if (user.role !== 'customer') {
-          toast.error('Chỉ khách hàng mới được thêm sản phẩm vào giỏ hàng');
+          showError('Quyền truy cập bị từ chối', 'Chỉ khách hàng mới được thêm sản phẩm vào giỏ hàng');
           return;
         }
       } catch (error) {
         // Silently handle user data parsing error
-        toast.error('Lỗi xác thực người dùng');
+        showError('Lỗi xác thực', 'Lỗi xác thực người dùng');
         return;
       }
     }
@@ -221,11 +223,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const product = cart.items.find(item => item.product._id === productId && String(item.variantId || '') === String(variantId || ''));
       if (product) {
-        toast.success(`Đã thêm "${product.product.name}" vào giỏ hàng`);
+        showSuccess('Thêm vào giỏ hàng', `Đã thêm "${product.product.name}" vào giỏ hàng`);
       }
     } catch (error: any) {
       // Silently handle error - show user-friendly message
-      toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
+      showError('Lỗi thêm vào giỏ hàng', error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
     }
   }, []);
 
@@ -233,7 +235,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('token');
 
     if (!token) {
-      toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
+      showError('Đăng nhập yêu cầu', 'Vui lòng đăng nhập để thao tác giỏ hàng');
       return;
     }
 
@@ -241,10 +243,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Truyền variantId nếu có để backend có thể xử lý đúng
       const cart = await cartApi.removeFromCart(productId, variantId);
       dispatch({ type: 'LOAD_CART', payload: cart });
-      toast.success('Đã xóa sản phẩm khỏi giỏ hàng');
+      showSuccess('Xóa sản phẩm', 'Đã xóa sản phẩm khỏi giỏ hàng');
     } catch (error: any) {
       // Silently handle error - show user-friendly message
-      toast.error(error.response?.data?.message || 'Không thể xóa sản phẩm');
+      showError('Lỗi xóa sản phẩm', error.response?.data?.message || 'Không thể xóa sản phẩm');
     }
   }, []);
 
@@ -252,7 +254,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('token');
 
     if (!token) {
-      toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
+      showError('Đăng nhập yêu cầu', 'Vui lòng đăng nhập để thao tác giỏ hàng');
       return;
     }
 
@@ -262,7 +264,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       String(item.variantId || '') === String(variantId || '')
     );
     if (!item) {
-      toast.error('Không tìm thấy sản phẩm trong giỏ hàng');
+      showError('Không tìm thấy sản phẩm', 'Không tìm thấy sản phẩm trong giỏ hàng');
       return;
     }
 
@@ -274,12 +276,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       item.product.stock ?? 0;
 
     if (quantity > maxStock) {
-      toast.error(`Chỉ còn ${maxStock} sản phẩm trong kho!`);
+      showError('Hết hàng', `Chỉ còn ${maxStock} sản phẩm trong kho!`);
       return;
     }
 
     if (quantity < 1) {
-      toast.error('Số lượng phải lớn hơn 0!');
+      showError('Số lượng không hợp lệ', 'Số lượng phải lớn hơn 0!');
       return;
     }
 
@@ -290,7 +292,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // ✅ HIỂN THỊ THÔNG BÁO THÀNH CÔNG
       if (quantity === maxStock) {
-        toast.warning(`Đã đạt số lượng tối đa tồn kho (${maxStock})`);
+        showWarning('Đạt giới hạn tồn kho', `Đã đạt số lượng tối đa tồn kho (${maxStock})`);
       }
     } catch (error: any) {
       // ✅ XỬ LÝ LỖI CHI TIẾT HƠN
@@ -298,9 +300,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const availableStock = error.response?.data?.availableStock;
 
       if (availableStock !== undefined) {
-        toast.error(`${errorMessage} (Còn lại: ${availableStock} sản phẩm)`);
+        showError('Lỗi cập nhật', `${errorMessage} (Còn lại: ${availableStock} sản phẩm)`);
       } else {
-        toast.error(errorMessage);
+        showError('Lỗi cập nhật', errorMessage);
       }
     }
   }, [state.items]);
@@ -309,17 +311,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('token');
 
     if (!token) {
-      toast.error('Vui lòng đăng nhập để thao tác giỏ hàng');
+      showError('Đăng nhập yêu cầu', 'Vui lòng đăng nhập để thao tác giỏ hàng');
       return;
     }
 
     try {
       await cartApi.clearCart();
       dispatch({ type: 'CLEAR_CART' });
-      toast.success('Đã xóa toàn bộ giỏ hàng');
+      showSuccess('Xóa giỏ hàng', 'Đã xóa toàn bộ giỏ hàng');
     } catch (error: any) {
       // Silently handle error - show user-friendly message
-      toast.error(error.response?.data?.message || 'Không thể xóa giỏ hàng');
+      showError('Lỗi xóa giỏ hàng', error.response?.data?.message || 'Không thể xóa giỏ hàng');
     }
   }, []);
 

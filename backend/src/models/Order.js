@@ -44,6 +44,7 @@ const orderSchema = new mongoose.Schema({
             required: [true, "Vui lòng nhập địa chỉ giao hàng"],
         },
         city: { type: String, required: [true, "Vui lòng nhập tỉnh/thành phố"] },
+        ward: { type: String, required: false },
         postalCode: {
             type: String,
             required: [true, "Vui lòng nhập mã bưu chính"],

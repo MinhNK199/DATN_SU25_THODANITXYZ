@@ -179,7 +179,7 @@ const AssignOrderModal: React.FC<AssignOrderModalProps> = ({
                               <div>
                                 <Text strong>Địa chỉ:</Text>
                                 <Text className="ml-1">
-                                  {order.shippingAddress?.address}, {order.shippingAddress?.ward}, {order.shippingAddress?.district}, {order.shippingAddress?.province}
+                                  {order.shippingAddress?.address}{order.shippingAddress?.wardName ? `, ${order.shippingAddress.wardName}` : ''}{order.shippingAddress?.district ? `, ${order.shippingAddress.district}` : ''}{order.shippingAddress?.cityName ? `, ${order.shippingAddress.cityName}` : ''}
                                 </Text>
                               </div>
                             </div>

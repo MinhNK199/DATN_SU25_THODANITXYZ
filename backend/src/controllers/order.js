@@ -414,8 +414,18 @@ export const getOrderById = async (req, res) => {
       const { getOrderStatusMessage } = await import('../utils/orderStatusHelper.js');
       const statusInfo = getOrderStatusMessage(order);
 
+      // ✅ THÊM: Chuyển đổi mã ID thành tên thực tế cho địa chỉ
+      const { addNamesToAddress } = await import('./address.js');
+      const orderObj = order.toObject();
+      
+      // Chỉ xử lý shippingAddress
+      if (orderObj.shippingAddress) {
+        const addressWithNames = await addNamesToAddress(orderObj.shippingAddress);
+        orderObj.shippingAddress = addressWithNames;
+      }
+
       const orderWithStatus = {
-        ...order.toObject(),
+        ...orderObj,
         statusInfo
       };
 
@@ -825,6 +835,16 @@ export const updateOrderStatus = async (req, res) => {
       // Bỏ kiểm tra thanh toán - cho phép chuyển sang completed từ delivered_success
       // Đơn hàng có thể hoàn thành ngay cả khi chưa thanh toán (ví dụ: COD)
       // 📋 LƯU Ý: Trạng thái completed là trạng thái cuối, admin không thể thay đổi nữa
+      
+      // ✅ CẬP NHẬT: Tính toán lại số lượng sản phẩm đã bán từ tất cả đơn hàng completed
+      try {
+        const { calculateProductSoldCount } = await import('../utils/calculateProductSold.js');
+        await calculateProductSoldCount();
+        console.log('✅ Recalculated product sold count from all completed orders');
+      } catch (error) {
+        console.error('❌ Error recalculating product sold count:', error);
+        // Không fail request nếu cập nhật sold count lỗi
+      }
     }
 
     // ✅ CẬP NHẬT: Xử lý các trường hợp đặc biệt
@@ -1305,6 +1325,27 @@ export const confirmDelivery = async (req, res) => {
   }
 };
 
+// API tính toán lại số lượng sản phẩm đã bán (cho admin)
+export const recalculateProductSoldCount = async (req, res) => {
+  try {
+    console.log('🔄 Admin requested recalculation of product sold counts...');
+    
+    const { calculateProductSoldCount } = await import('../utils/calculateProductSold.js');
+    await calculateProductSoldCount();
+    
+    res.json({
+      success: true,
+      message: "Đã tính toán lại số lượng sản phẩm đã bán thành công"
+    });
+  } catch (error) {
+    console.error("Lỗi khi tính toán lại số lượng sản phẩm đã bán:", error);
+    res.status(500).json({
+      success: false,
+      message: "Có lỗi xảy ra khi tính toán lại số lượng sản phẩm đã bán"
+    });
+  }
+};
+
 // API hủy đơn hàng (cho khách hàng)
 export const cancelOrder = async (req, res) => {
   try {
@@ -1389,16 +1430,31 @@ export const cancelOrder = async (req, res) => {
 // Xác nhận đơn hàng (chuyển từ pending sang confirmed)
 export const confirmOrder = async (req, res) => {
   try {
+    console.log('🔍 Confirm order request:', req.params.id);
+    console.log('🔍 User ID from token:', req.user?.id);
+    console.log('🔍 Request headers:', req.headers.authorization ? 'Token present' : 'No token');
+    
     const order = await Order.findById(req.params.id);
+    console.log('🔍 Order found:', order ? 'Yes' : 'No');
+    console.log('🔍 Order status:', order?.status);
+    console.log('🔍 Order details:', order ? {
+      id: order._id,
+      status: order.status,
+      user: order.user,
+      statusHistory: order.statusHistory?.length || 0
+    } : 'No order');
 
     if (!order) {
+      console.log('❌ Order not found');
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
     if (order.status !== 'pending' && order.status !== 'draft') {
+      console.log('❌ Invalid status for confirmation:', order.status);
       return res.status(400).json({ message: "Chỉ có thể xác nhận đơn hàng ở trạng thái pending hoặc draft" });
     }
 
+    console.log('✅ Updating order status to confirmed');
     order.status = 'confirmed';
     order.statusHistory.push({
       status: 'confirmed',
@@ -1406,7 +1462,19 @@ export const confirmOrder = async (req, res) => {
       date: new Date()
     });
 
-    await order.save();
+    console.log('💾 Saving order...');
+    try {
+      await order.save();
+      console.log('✅ Order saved successfully');
+    } catch (saveError) {
+      console.error('❌ Error saving order:', saveError);
+      console.error('❌ Save error details:', {
+        message: saveError.message,
+        name: saveError.name,
+        code: saveError.code
+      });
+      throw saveError;
+    }
 
     res.json({
       success: true,
@@ -1414,7 +1482,8 @@ export const confirmOrder = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Confirm order error:', error);
+    console.error('❌ Confirm order error:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Lỗi server khi xác nhận đơn hàng',

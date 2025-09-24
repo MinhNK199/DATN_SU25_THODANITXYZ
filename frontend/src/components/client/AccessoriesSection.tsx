@@ -49,11 +49,10 @@ const AccessoriesSection: React.FC = () => {
   }, []);
 
   const handleCategoryClick = (category: AccessoryCategory) => {
-    // Sử dụng slug nếu có, nếu không thì sử dụng _id
-    const categoryParam = category.slug || category._id;
+    // Sử dụng trực tiếp _id để đơn giản hóa
     console.log('Category clicked:', category);
-    console.log('Category param:', categoryParam);
-    navigate(`/products?category=${categoryParam}`);
+    console.log('Category _id:', category._id);
+    navigate(`/products?category=${category._id}`);
   };
 
   if (loading) {

@@ -565,7 +565,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{product.name}</p>
-                      <p className="text-sm text-gray-600">Đã bán: {product.soldCount}</p>
+                      <p className="text-sm text-gray-600">Đã bán: {product.sold || 0}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-gray-900">{formatCurrency(product.revenue)}</p>

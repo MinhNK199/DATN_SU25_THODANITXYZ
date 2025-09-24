@@ -41,12 +41,27 @@ const getAllShippers = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+    // Thêm số lượng đơn hàng đang đi cho mỗi shipper
+    const shippersWithCurrentOrders = await Promise.all(
+      shippers.map(async (shipper) => {
+        const currentOrdersCount = await Order.countDocuments({
+          shipper: shipper._id,
+          status: { $in: ['assigned', 'picked_up', 'in_transit'] }
+        });
+        
+        return {
+          ...shipper.toObject(),
+          currentOrders: currentOrdersCount
+        };
+      })
+    );
+
     const total = await Shipper.countDocuments(query);
 
     res.json({
       success: true,
       data: {
-        shippers,
+        shippers: shippersWithCurrentOrders,
         pagination: {
           currentPage: parseInt(page),
           totalPages: Math.ceil(total / limit),

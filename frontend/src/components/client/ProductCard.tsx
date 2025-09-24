@@ -10,7 +10,7 @@ import {
 import { useCart } from "../../contexts/CartContext";
 import { useCompare } from "../../contexts/CompareContext";
 import cartApi from "../../services/cartApi";
-import { toast } from "react-hot-toast";
+import { useModernNotification } from "./ModernNotification";
 import wishlistApi from "../../services/wishlistApi";
 import { Modal, Button, Popover, Input, Select, Tag, Badge } from 'antd';
 
@@ -62,6 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { addToCart } = useCart();
   const { addToCompare, isInCompare, canAddToCompare } = useCompare();
+  const { showSuccess, showError } = useModernNotification();
   const [isFavorite, setIsFavorite] = useState(false);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(undefined);
@@ -89,16 +90,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   const handleVariantSelect = async () => {
     if (!selectedVariantId) {
-      toast.error("Vui lòng chọn một loại sản phẩm!");
+      showError("Chọn sản phẩm", "Vui lòng chọn một loại sản phẩm!");
       return;
     }
     const validVariant = product.variants?.find(v => v._id === selectedVariantId);
     if (!validVariant) {
-      toast.error("Loại sản phẩm không hợp lệ hoặc không tồn tại!");
+      showError("Sản phẩm không hợp lệ", "Loại sản phẩm không hợp lệ hoặc không tồn tại!");
       return;
     }
     if (validVariant.stock <= 0) {
-      toast.error("Loại sản phẩm đã hết hàng!");
+      showError("Hết hàng", "Loại sản phẩm đã hết hàng!");
       return;
     }
 
@@ -106,11 +107,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     setIsLoading(true);
     try {
       await addToCart(product._id, 1, selectedVariantId); // Gửi productId và variantId riêng biệt
-      toast.success("Đã thêm vào giỏ hàng!");
+      showSuccess("Thêm vào giỏ hàng", "Đã thêm vào giỏ hàng!");
       closeVariantModal();
     } catch (error: any) {
       console.error("Error adding to cart:", error);
-      toast.error(error.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng!");
+      showError("Lỗi thêm vào giỏ hàng", error.response?.data?.message || "Không thể thêm sản phẩm vào giỏ hàng!");
     } finally {
       setIsLoading(false);
     }
@@ -143,6 +144,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   useEffect(() => {
     const checkIsFavorite = async () => {
+      // Chỉ kiểm tra yêu thích nếu đã đăng nhập
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsFavorite(false);
+        return;
+      }
+
       try {
         const res = await wishlistApi.getFavorites();
         const isFav = res.data.favorites.some(
@@ -151,36 +159,44 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         setIsFavorite(isFav);
       } catch (err) {
         console.error("Lỗi khi kiểm tra yêu thích", err);
+        setIsFavorite(false);
       }
     };
     checkIsFavorite();
   }, [product._id]);
 
   const handleAddFavorite = async () => {
+    // Kiểm tra đăng nhập trước khi thao tác yêu thích
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showError("Đăng nhập yêu cầu", "Vui lòng đăng nhập để sử dụng tính năng yêu thích");
+      return;
+    }
+
     try {
       if (isFavorite) {
         await wishlistApi.removeFromWishlist(product._id);
         setIsFavorite(false);
-        toast.success("Đã xóa khỏi yêu thích");
+        showSuccess("Xóa yêu thích", "Đã xóa khỏi yêu thích");
       } else {
         await wishlistApi.addToWishlist(product._id);
         setIsFavorite(true);
-        toast.success("Đã thêm vào yêu thích");
+        showSuccess("Thêm yêu thích", "Đã thêm vào yêu thích");
       }
     } catch (error) {
       console.error("Lỗi xử lý yêu thích:", error);
-      toast.error("Có lỗi xảy ra khi xử lý yêu thích");
+      showError("Lỗi yêu thích", "Có lỗi xảy ra khi xử lý yêu thích");
     }
   };
 
   const handleCompare = () => {
     if (isInCompare(product._id)) {
-      toast.error("Sản phẩm này đã có trong danh sách so sánh");
+      showError("Đã có trong so sánh", "Sản phẩm này đã có trong danh sách so sánh");
       return;
     }
     
     if (!canAddToCompare) {
-      toast.error("Bạn chỉ có thể so sánh tối đa 4 sản phẩm");
+      showError("Giới hạn so sánh", "Bạn chỉ có thể so sánh tối đa 4 sản phẩm");
       return;
     }
 
@@ -215,7 +231,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     };
 
     addToCompare(productForCompare);
-    toast.success("Đã thêm vào danh sách so sánh");
+    showSuccess("Thêm vào so sánh", "Đã thêm vào danh sách so sánh");
   };
 
   const getTotalStock = (product: any) => {

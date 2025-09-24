@@ -37,7 +37,6 @@ import {
   FaShippingFast,
   FaBan,
 } from "react-icons/fa";
-import { useNotification } from "../../hooks/useNotification";
 import { useNotification as useAdminNotification } from "../../contexts/NotificationContext";
 
 const { Option } = Select;
@@ -165,7 +164,6 @@ const getStepStatus = (
 const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { success, error: showError } = useNotification();
   const { showNotification } = useAdminNotification();
   const { updateOrder } = useOrder();
   const [order, setOrder] = useState<Order | null>(null);
@@ -233,7 +231,12 @@ const OrderDetail: React.FC = () => {
         );
         setOrder(updatedOrder);
         form.resetFields();
-        success("Cập nhật trạng thái đơn hàng thành công!");
+        showNotification({
+          title: 'Cập nhật trạng thái đơn hàng thành công',
+          message: `Đơn hàng #${id?.slice(-6)} đã được cập nhật trạng thái thành công`,
+          type: 'success',
+          actionUrl: `/admin/orders/${id}`
+        });
         
         // Hiển thị thông báo admin nếu là xác nhận đơn hàng
         if (values.status === 'confirmed') {
@@ -261,7 +264,12 @@ const OrderDetail: React.FC = () => {
           // Maybe auto-update payment status for COD? Depends on business logic.
         }
       } catch (err: any) {
-        showError(err.message || "Cập nhật thất bại!");
+        showNotification({
+          title: 'Cập nhật trạng thái thất bại',
+          message: err.message || "Cập nhật thất bại!",
+          type: 'error',
+          actionUrl: `/admin/orders/${id}`
+        });
       } finally {
         setUpdating(false);
       }
@@ -594,8 +602,13 @@ const OrderDetail: React.FC = () => {
               <Descriptions.Item label="Địa chỉ">
                 {order.shippingAddress.address}
               </Descriptions.Item>
+              {order.shippingAddress.wardName && (
+                <Descriptions.Item label="Phường/Xã">
+                  {order.shippingAddress.wardName}
+                </Descriptions.Item>
+              )}
               <Descriptions.Item label="Thành phố">
-                {order.shippingAddress.city}
+                {order.shippingAddress.cityName || order.shippingAddress.city}
               </Descriptions.Item>
               <Descriptions.Item label="Số điện thoại">
                 {order.shippingAddress.phone}
@@ -687,9 +700,12 @@ const OrderDetail: React.FC = () => {
                         "refunded",
                         "Tự động hoàn tiền do vượt quá 3 lần yêu cầu"
                       );
-                      success(
-                        "Đã hoàn tiền cho khách hàng (tự động do quá 3 lần yêu cầu)!"
-                      );
+                      showNotification({
+                        title: 'Hoàn tiền tự động',
+                        message: "Đã hoàn tiền cho khách hàng (tự động do quá 3 lần yêu cầu)!",
+                        type: 'success',
+                        actionUrl: `/admin/orders/${order._id}`
+                      });
                       fetchOrder();
                       return;
                     }
@@ -699,10 +715,20 @@ const OrderDetail: React.FC = () => {
                         "refunded",
                         "Chấp nhận hoàn tiền"
                       );
-                      success("Đã hoàn tiền cho khách hàng!");
+                      showNotification({
+                        title: 'Hoàn tiền thành công',
+                        message: "Đã hoàn tiền cho khách hàng!",
+                        type: 'success',
+                        actionUrl: `/admin/orders/${order._id}`
+                      });
                       fetchOrder();
                     } catch (err: any) {
-                      showError(err.message || "Thao tác thất bại!");
+                      showNotification({
+                        title: 'Thao tác thất bại',
+                        message: err.message || "Thao tác thất bại!",
+                        type: 'error',
+                        actionUrl: `/admin/orders/${order._id}`
+                      });
                     }
                   }}
                 >
@@ -759,12 +785,22 @@ const OrderDetail: React.FC = () => {
                           "delivered_success",
                           rejectReason || "Từ chối hoàn tiền"
                         );
-                        success("Đã từ chối yêu cầu hoàn tiền!");
+                        showNotification({
+                          title: 'Từ chối hoàn tiền',
+                          message: "Đã từ chối yêu cầu hoàn tiền!",
+                          type: 'success',
+                          actionUrl: `/admin/orders/${order._id}`
+                        });
                         setShowRejectModal(false);
                         setRejectReason("");
                         fetchOrder();
                       } catch (err: any) {
-                        showError(err.message || "Thao tác thất bại!");
+                        showNotification({
+                          title: 'Thao tác thất bại',
+                          message: err.message || "Thao tác thất bại!",
+                          type: 'error',
+                          actionUrl: `/admin/orders/${order._id}`
+                        });
                       } finally {
                         setRejectLoading(false);
                       }

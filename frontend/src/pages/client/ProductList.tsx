@@ -47,60 +47,55 @@ const ProductList: React.FC = () => {
       .catch(() => setBrands([]));
   }, []);
 
+  // Xử lý URL params khi categories được load lần đầu
   useEffect(() => {
+    if (categories.length === 0) return;
+    
     const params = new URLSearchParams(location.search);
-    const search = params.get('search') || '';
     const category = params.get('category') || '';
     const brand = params.get('brand') || '';
     
-    console.log('URL params:', { search, category, brand });
-    console.log('Available categories:', categories);
+    // Chỉ xử lý nếu có category hoặc brand trong URL
+    if (category || brand) {
+      console.log('Processing URL params after categories loaded:', { category, brand });
+      
+      if (category) {
+        // Đơn giản: sử dụng trực tiếp category ID từ URL
+        console.log('Setting category filter to:', category);
+        setFilterCategory(category);
+        setPage(1);
+        setSearchTerm('');
+        setFilterBrand('');
+        
+        // Fetch products ngay với category ID để đảm bảo filter được áp dụng
+        console.log('Fetching products with category filter:', category);
+        fetchProducts(1, category);
+      }
+      
+      if (brand) {
+        setFilterBrand(brand);
+        setPage(1);
+        setSearchTerm('');
+        setFilterCategory('');
+        
+        // Fetch products ngay với brand ID để đảm bảo filter được áp dụng
+        console.log('Fetching products with brand filter:', brand);
+        fetchProducts(1, undefined);
+      }
+    }
+  }, [categories, location.search]);
+
+  // Xử lý search term từ URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get('search') || '';
     
     if (search) {
       debouncedSearch(search);
     } else {
       setSearchTerm('');
     }
-
-    // Nếu có category từ URL, sử dụng trực tiếp (backend đã hỗ trợ slug)
-    if (category) {
-      // Tìm category theo slug hoặc _id
-      const foundCategory = categories.find(cat => 
-        cat.slug === category || cat._id === category
-      );
-      
-      console.log('Found category:', foundCategory);
-      
-      if (foundCategory) {
-        // Sử dụng _id của category để filter
-        console.log('Using category _id:', foundCategory._id);
-        setFilterCategory(foundCategory._id);
-      } else {
-        // Nếu không tìm thấy, sử dụng giá trị từ URL trực tiếp
-        console.log('Using category param directly:', category);
-        setFilterCategory(category);
-      }
-      
-      setPage(1); // Reset về trang 1 khi có category mới
-      setSearchTerm(''); // Clear search term khi có category
-      setFilterBrand(''); // Clear brand filter khi có category
-    } else {
-      // Reset filter nếu không có category trong URL
-      setFilterCategory('');
-    }
-
-    // Nếu có brand từ URL, sử dụng trực tiếp
-    if (brand) {
-      const foundBrand = brands.find(b => b._id === brand);
-      setFilterBrand(brand);
-      setPage(1); // Reset về trang 1 khi có brand mới
-      setSearchTerm(''); // Clear search term khi có brand
-      setFilterCategory(''); // Clear category filter khi có brand
-    } else {
-      // Reset filter nếu không có brand trong URL
-      setFilterBrand('');
-    }
-  }, [location.search, debouncedSearch, categories, brands]); // Thêm brands vào dependency
+  }, [location.search, debouncedSearch]);
 
   // Update active filters
   useEffect(() => {
@@ -151,7 +146,7 @@ const ProductList: React.FC = () => {
     }
   };
 
-  const fetchProducts = async (pageNum = 1) => {
+  const fetchProducts = async (pageNum = 1, categoryId?: string) => {
     if (loading) {
       return;
     }
@@ -159,8 +154,10 @@ const ProductList: React.FC = () => {
     setError(null);
     let url = `/api/product?page=${pageNum}`;
     
-    if (filterCategory) {
-      url += `&category=${filterCategory}`;
+    // Sử dụng categoryId được truyền vào hoặc filterCategory hiện tại
+    const categoryToUse = categoryId || filterCategory;
+    if (categoryToUse) {
+      url += `&category=${categoryToUse}`;
     }
     if (filterBrand) url += `&brand=${filterBrand}`;
     if (filterPriceRange[0]) url += `&minPrice=${filterPriceRange[0]}`;
@@ -179,6 +176,9 @@ const ProductList: React.FC = () => {
     
     console.log('Fetching products with URL:', url);
     console.log('Filter category:', filterCategory);
+    console.log('Category ID passed to function:', categoryId);
+    console.log('Category to use:', categoryToUse);
+    console.log('Categories available:', categories.length);
     
     try {
       const res = await axios.get(url);
@@ -201,6 +201,7 @@ const ProductList: React.FC = () => {
     fetchProducts();
     // eslint-disable-next-line
   }, [searchTerm, filterCategory, filterBrand, filterPriceRange, filterInStock, sortBy]);
+
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -232,7 +233,7 @@ const ProductList: React.FC = () => {
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
                   {filterCategory ? 
                     (() => {
-                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      const selectedCategory = categories.find(cat => cat._id === filterCategory);
                       return selectedCategory ? selectedCategory.name : 'Danh mục sản phẩm';
                     })() :
                     filterBrand ?
@@ -246,7 +247,7 @@ const ProductList: React.FC = () => {
                 <p className="text-gray-600 text-lg">
                   {filterCategory ? 
                     (() => {
-                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      const selectedCategory = categories.find(cat => cat._id === filterCategory);
                       return selectedCategory ? 
                         `Khám phá ${total.toLocaleString()} sản phẩm trong danh mục "${selectedCategory.name}"` :
                         `Khám phá ${total.toLocaleString()} sản phẩm`;
@@ -363,13 +364,13 @@ const ProductList: React.FC = () => {
                 >
                   <option value="">Tất cả danh mục</option>
                   {categories.map((cat: any) => (
-                    <option key={cat._id} value={cat.slug || cat._id}>{cat.name}</option>
+                    <option key={cat._id} value={cat._id}>{cat.name}</option>
                   ))}
                 </select>
                 {filterCategory && (
                   <div className="mt-2 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
                     Đang hiển thị: {(() => {
-                      const selectedCategory = categories.find(cat => cat.slug === filterCategory || cat._id === filterCategory);
+                      const selectedCategory = categories.find(cat => cat._id === filterCategory);
                       return selectedCategory ? selectedCategory.name : filterCategory;
                     })()}
                   </div>

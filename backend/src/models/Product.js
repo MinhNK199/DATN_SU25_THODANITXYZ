@@ -145,6 +145,12 @@ const productSchema = new mongoose.Schema({
         default: 0,
         index: true,
     },
+    sold: {
+        type: Number,
+        default: 0,
+        min: [0, "Số lượng đã bán không được nhỏ hơn 0"],
+        index: true,
+    },
     variants: [productVariantSchema],
     specifications: {
         type: mongoose.Schema.Types.Mixed,
