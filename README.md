@@ -1,3 +1,1 @@
-# Empty Repository
-
-This repository has been cleared and is ready for merge from another branch.
+Dự án tốt nghiệp của nhóm Thổ Dân IT kỳ Fall 2025
